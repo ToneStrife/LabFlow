@@ -22,25 +22,11 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-
-// Mock data for vendors and projects
-const mockVendors = [
-  { id: "v1", name: "Thermo Fisher Scientific" },
-  { id: "v2", name: "Sigma-Aldrich" },
-  { id: "v3", name: "Bio-Rad Laboratories" },
-  { id: "v4", name: "Qiagen" },
-];
-
-const mockProjects = [
-  { id: "p1", name: "Project Alpha", code: "PA-001" },
-  { id: "p2", name: "Project Beta", code: "PB-002" },
-  { id: "p3", name: "Project Gamma", code: "PG-003" },
-  { id: "p4", name: "Project Delta", code: "PD-004" },
-];
+import { mockVendors, mockProjects, addRequest } from "@/data/mockData"; // Import shared mock data and addRequest function
 
 const itemSchema = z.object({
   productName: z.string().min(1, { message: "Product name is required." }),
-  catalogNumber: z.string().min(1, { message: "Catalog number is required." }), // Now mandatory
+  catalogNumber: z.string().min(1, { message: "Catalog number is required." }),
   quantity: z.preprocess(
     (val) => Number(val),
     z.number().min(1, { message: "Quantity must be at least 1." })
@@ -49,16 +35,16 @@ const itemSchema = z.object({
     (val) => Number(val),
     z.number().min(0, { message: "Unit price cannot be negative." }).optional()
   ),
-  format: z.string().optional(), // New field for format
+  format: z.string().optional(),
   link: z.string().url({ message: "Must be a valid URL." }).optional().or(z.literal("")),
   notes: z.string().optional(),
 });
 
 const formSchema = z.object({
-  vendorId: z.string().min(1, { message: "Vendor is required." }), // Single mandatory vendor
+  vendorId: z.string().min(1, { message: "Vendor is required." }),
   items: z.array(itemSchema).min(1, { message: "At least one item is required." }),
-  attachments: z.any().optional(), // For file uploads, handled separately
-  projectCodes: z.array(z.string()).optional(), // Multi-select project codes, moved to end
+  attachments: z.any().optional(),
+  projectCodes: z.array(z.string()).optional(),
 });
 
 type RequestFormValues = z.infer<typeof formSchema>;
@@ -79,14 +65,12 @@ const RequestForm: React.FC = () => {
   });
 
   const onSubmit = (data: RequestFormValues) => {
-    console.log(data);
-    const selectedVendor = mockVendors.find(v => v.id === data.vendorId)?.name;
+    const newRequest = addRequest(data); // Add the new request to our mock data
+    const selectedVendor = mockVendors.find(v => v.id === newRequest.vendorId)?.name;
     toast.success("Request submitted successfully!", {
       description: `Vendor: ${selectedVendor || 'N/A'}`,
     });
-    // In a real application, you would send this data to your backend.
-    // For file uploads, you'd typically use FormData and a separate API endpoint.
-    form.reset(); // Reset form after submission
+    form.reset();
   };
 
   return (
@@ -189,7 +173,7 @@ const RequestForm: React.FC = () => {
                 />
                 <FormField
                   control={form.control}
-                  name={`items.${index}.format`} // New format field
+                  name={`items.${index}.format`}
                   render={({ field: itemField }) => (
                     <FormItem>
                       <FormLabel>Format (Optional)</FormLabel>

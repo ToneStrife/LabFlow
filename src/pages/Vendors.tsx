@@ -7,63 +7,18 @@ import { PlusCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import VendorForm, { VendorFormValues } from "@/components/VendorForm";
 import { toast } from "sonner";
-
-// Define a type for a vendor, now including brands as an array of strings
-interface Vendor {
-  id: string;
-  name: string;
-  contactPerson?: string;
-  email?: string;
-  phone?: string;
-  notes?: string;
-  brands: string[]; // Brands are now an array of strings
-}
-
-// Mock data for vendors
-const initialMockVendors: Vendor[] = [
-  {
-    id: "v1",
-    name: "Thermo Fisher Scientific",
-    contactPerson: "Jane Doe",
-    email: "jane.doe@thermofisher.com",
-    phone: "1-800-123-4567",
-    notes: "Primary vendor for reagents and consumables.",
-    brands: ["Invitrogen", "Applied Biosystems", "Gibco"],
-  },
-  {
-    id: "v2",
-    name: "Sigma-Aldrich",
-    contactPerson: "John Smith",
-    email: "john.smith@sigmaaldrich.com",
-    phone: "1-800-765-4321",
-    notes: "Specializes in chemicals and custom synthesis.",
-    brands: ["Sigma", "Aldrich", "Supelco"],
-  },
-  {
-    id: "v3",
-    name: "Bio-Rad Laboratories",
-    contactPerson: "Emily White",
-    email: "emily.white@bio-rad.com",
-    phone: "1-800-987-6543",
-    notes: "Equipment and kits for molecular biology.",
-    brands: ["Bio-Rad"],
-  },
-  {
-    id: "v4",
-    name: "Qiagen",
-    contactPerson: "David Green",
-    email: "david.green@qiagen.com",
-    phone: "1-800-234-5678",
-    notes: "DNA/RNA purification and assay technologies.",
-    brands: ["Qiagen"],
-  },
-];
+import { mockVendors, addVendor, updateVendor, deleteVendor, Vendor } from "@/data/mockData"; // Import shared mock data and functions
 
 const Vendors = () => {
-  const [vendors, setVendors] = React.useState<Vendor[]>(initialMockVendors);
+  const [vendors, setVendors] = React.useState<Vendor[]>(mockVendors); // Use local state to trigger re-renders
   const [isAddVendorDialogOpen, setIsAddVendorDialogOpen] = React.useState(false);
   const [isEditVendorDialogOpen, setIsEditVendorDialogOpen] = React.useState(false);
   const [editingVendor, setEditingVendor] = React.useState<Vendor | undefined>(undefined);
+
+  // Effect to update local state when mockVendors might change
+  React.useEffect(() => {
+    setVendors([...mockVendors]); // Create a new array to ensure state update
+  }, [mockVendors]); // Depend on mockVendors array reference
 
   const parseBrandsString = (brandsString: string | undefined): string[] => {
     return brandsString
@@ -72,12 +27,11 @@ const Vendors = () => {
   };
 
   const handleAddVendor = (newVendorData: VendorFormValues) => {
-    const newVendor: Vendor = {
-      id: `v${vendors.length + 1}`, // Simple ID generation for mock data
+    const newVendor = addVendor({
       ...newVendorData,
-      brands: parseBrandsString(newVendorData.brands), // Parse brands string to array
-    };
-    setVendors((prevVendors) => [...prevVendors, newVendor]);
+      brands: parseBrandsString(newVendorData.brands),
+    });
+    setVendors((prevVendors) => [...prevVendors, newVendor]); // Update local state
     setIsAddVendorDialogOpen(false);
     toast.success("Vendor added successfully!", {
       description: `Vendor: ${newVendor.name}`,
@@ -85,25 +39,31 @@ const Vendors = () => {
   };
 
   const handleEditVendor = (vendorId: string, updatedData: VendorFormValues) => {
-    setVendors((prevVendors) =>
-      prevVendors.map((vendor) =>
-        vendor.id === vendorId
-          ? { ...vendor, ...updatedData, brands: parseBrandsString(updatedData.brands) }
-          : vendor
-      )
-    );
+    const updated = updateVendor(vendorId, {
+      ...updatedData,
+      brands: parseBrandsString(updatedData.brands),
+    });
+    if (updated) {
+      setVendors((prevVendors) =>
+        prevVendors.map((vendor) =>
+          vendor.id === vendorId ? updated : vendor
+        )
+      );
+    }
     setIsEditVendorDialogOpen(false);
     setEditingVendor(undefined);
     toast.success("Vendor updated successfully!");
   };
 
   const handleDeleteVendor = (vendorId: string) => {
-    setVendors((prevVendors) => prevVendors.filter((vendor) => vendor.id !== vendorId));
-    toast.success("Vendor deleted successfully!");
+    if (deleteVendor(vendorId)) {
+      setVendors((prevVendors) => prevVendors.filter((vendor) => vendor.id !== vendorId));
+      toast.success("Vendor deleted successfully!");
+    }
   };
 
   const openEditDialog = (vendor: Vendor) => {
-    setEditingVendor({ ...vendor, brands: vendor.brands.join(", ") }); // Convert brands array to string for form
+    setEditingVendor({ ...vendor, brands: vendor.brands.join(", ") });
     setIsEditVendorDialogOpen(true);
   };
 
@@ -130,7 +90,7 @@ const Vendors = () => {
       </p>
       <VendorTable
         vendors={vendors}
-        onEdit={openEditDialog} // Pass openEditDialog for editing
+        onEdit={openEditDialog}
         onDelete={handleDeleteVendor}
       />
 

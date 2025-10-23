@@ -15,46 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ArrowLeft } from "lucide-react";
-
-// Define a type for the request status
-type RequestStatus = "Pending" | "Approved" | "Ordered" | "Received";
-
-// Mock data for a single lab order request
-const mockRequestDetails = {
-  id: "req1",
-  title: "Antibodies for Project X",
-  requester: "Dr. Alice Smith",
-  projectCode: "P12345",
-  status: "Pending" as RequestStatus,
-  date: "2023-10-26",
-  notes: "Need these urgently for upcoming experiments. Please prioritize.",
-  items: [
-    {
-      id: "item1",
-      productName: "Anti-GFP Antibody (Rabbit Polyclonal)",
-      catalogNumber: "ab12345",
-      quantity: 2,
-      unitPrice: 120.50,
-      vendor: "Abcam",
-      link: "https://www.abcam.com/anti-gfp-antibody-ab12345.html",
-      notes: "Lot specific, check expiry date.",
-    },
-    {
-      id: "item2",
-      productName: "Secondary Antibody (Goat Anti-Rabbit IgG)",
-      catalogNumber: "SA-2000",
-      quantity: 1,
-      unitPrice: 85.00,
-      vendor: "Vector Labs",
-      link: "https://vectorlabs.com/goat-anti-rabbit-igg.html",
-      notes: "",
-    },
-  ],
-  attachments: [
-    { name: "Quote_Abcam_ab12345.pdf", url: "#" },
-    { name: "ProjectX_ReagentList.xlsx", url: "#" },
-  ],
-};
+import { mockRequests, mockVendors, mockProjects, RequestStatus } from "@/data/mockData"; // Import shared mock data
 
 const getStatusBadgeVariant = (status: RequestStatus) => {
   switch (status) {
@@ -75,9 +36,9 @@ const RequestDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  // In a real app, you would fetch request details by ID from an API
-  // For now, we'll use the mock data.
-  const request = mockRequestDetails; // Assuming 'id' matches mockRequestDetails.id for this example
+  // Find the request from the centralized mock data
+  const request = mockRequests.find(req => req.id === id);
+  const vendor = request ? mockVendors.find(v => v.id === request.vendorId) : undefined;
 
   if (!request) {
     return (
@@ -93,6 +54,11 @@ const RequestDetails: React.FC = () => {
     );
   }
 
+  const projectCodesDisplay = request.projectCodes?.map(projectId => {
+    const project = mockProjects.find(p => p.id === projectId);
+    return project ? project.code : projectId;
+  }).join(", ") || "N/A";
+
   return (
     <div className="container mx-auto py-8">
       <Button variant="outline" onClick={() => navigate("/dashboard")} className="mb-6">
@@ -102,7 +68,7 @@ const RequestDetails: React.FC = () => {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            <span>Request: {request.title}</span>
+            <span>Request from: {vendor?.name || "N/A"}</span> {/* Display vendor name */}
             <Badge variant={getStatusBadgeVariant(request.status)}>{request.status}</Badge>
           </CardTitle>
         </CardHeader>
@@ -113,8 +79,8 @@ const RequestDetails: React.FC = () => {
               <p className="font-medium">{request.requester}</p>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Project Code</p>
-              <p className="font-medium">{request.projectCode || "N/A"}</p>
+              <p className="text-sm text-muted-foreground">Project Codes</p>
+              <p className="font-medium">{projectCodesDisplay}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Date Submitted</p>
@@ -143,7 +109,7 @@ const RequestDetails: React.FC = () => {
                   <TableHead>Catalog #</TableHead>
                   <TableHead>Quantity</TableHead>
                   <TableHead>Unit Price</TableHead>
-                  <TableHead>Vendor</TableHead>
+                  <TableHead>Format</TableHead> {/* New column for Format */}
                   <TableHead>Link</TableHead>
                 </TableRow>
               </TableHeader>
@@ -154,7 +120,7 @@ const RequestDetails: React.FC = () => {
                     <TableCell>{item.catalogNumber || "N/A"}</TableCell>
                     <TableCell>{item.quantity}</TableCell>
                     <TableCell>{item.unitPrice ? `$${item.unitPrice.toFixed(2)}` : "N/A"}</TableCell>
-                    <TableCell>{item.vendor || "N/A"}</TableCell>
+                    <TableCell>{item.format || "N/A"}</TableCell> {/* Display format */}
                     <TableCell>
                       {item.link ? (
                         <a href={item.link} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
