@@ -22,7 +22,8 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { mockVendors, mockProjects, addRequest, mockUsers, mockAccountManagers, productDatabase } from "@/data/mockData";
+import { mockVendors, mockProjects, addRequest, mockUsers, mockAccountManagers } from "@/data/mockData";
+import { supabase } from "@/lib/supabase";
 import { showSuccess, showError, showLoading, dismissToast } from "@/utils/toast";
 
 const itemSchema = z.object({
@@ -93,14 +94,12 @@ const RequestForm: React.FC = () => {
         return;
       }
 
-      // Simulate network delay
-      await new Promise(resolve => setTimeout(resolve, 750));
+      const { data, error } = await supabase.functions.invoke('autofill-product-details', {
+        body: { catalogNumber },
+      });
 
-      const data = productDatabase[catalogNumber];
-
-      if (!data) {
-        throw new Error(`Product with catalog number '${catalogNumber}' not found.`);
-      }
+      if (error) throw new Error(error.message);
+      if (data.error) throw new Error(data.error);
 
       form.setValue(`items.${index}.productName`, data.productName || '');
       form.setValue(`items.${index}.brand`, data.brand || '');

@@ -57,32 +57,6 @@ export interface Project {
   code: string;
 }
 
-// --- Mock Data for Autofill Feature ---
-export const productDatabase: { [key: string]: any } = {
-  "18265017": {
-    productName: "E. coli DH5a Competent Cells",
-    unitPrice: 150.00,
-    format: "10x 50µl",
-    link: "https://www.thermofisher.com/order/catalog/product/18265017",
-    brand: "Invitrogen",
-  },
-  "11965092": {
-    productName: "DMEM, high glucose, GlutaMAX Supplement, pyruvate",
-    unitPrice: 35.50,
-    format: "500 mL",
-    link: "https://www.thermofisher.com/order/catalog/product/11965092",
-    brand: "Gibco",
-  },
-  "ab12345": {
-    productName: "Anti-GFP Antibody (Rabbit Polyclonal)",
-    unitPrice: 120.50,
-    format: "100 µl",
-    link: "https://www.abcam.com/anti-gfp-antibody-ab12345.html",
-    brand: "Abcam",
-  },
-};
-
-
 // --- Mock Data Storage ---
 export let mockUsers: User[] = [
   { id: "u1", name: "Dr. Alice Smith", email: "alice.s@lab.com", role: "Requester" },
