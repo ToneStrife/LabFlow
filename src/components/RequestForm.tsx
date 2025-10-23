@@ -22,7 +22,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { mockVendors, mockProjects, addRequest } from "@/data/mockData"; // Import shared mock data and addRequest function
+import { mockVendors, mockProjects, addRequest, mockUsers, mockAccountManagers } from "@/data/mockData"; // Import shared mock data and addRequest function
 
 const itemSchema = z.object({
   productName: z.string().min(1, { message: "Product name is required." }),
@@ -42,6 +42,8 @@ const itemSchema = z.object({
 
 const formSchema = z.object({
   vendorId: z.string().min(1, { message: "Vendor is required." }),
+  requesterId: z.string().min(1, { message: "Requester is required." }), // New field
+  accountManagerId: z.string().min(1, { message: "Account Manager is required." }), // New field
   items: z.array(itemSchema).min(1, { message: "At least one item is required." }),
   attachments: z.any().optional(),
   projectCodes: z.array(z.string()).optional(),
@@ -54,6 +56,8 @@ const RequestForm: React.FC = () => {
     resolver: zodResolver(formSchema),
     defaultValues: {
       vendorId: "",
+      requesterId: "", // Initialize new fields
+      accountManagerId: "", // Initialize new fields
       items: [{ productName: "", catalogNumber: "", quantity: 1, unitPrice: undefined, format: "", link: "", notes: "" }],
       projectCodes: [],
     },
@@ -67,15 +71,70 @@ const RequestForm: React.FC = () => {
   const onSubmit = (data: RequestFormValues) => {
     const newRequest = addRequest(data); // Add the new request to our mock data
     const selectedVendor = mockVendors.find(v => v.id === newRequest.vendorId)?.name;
+    const selectedRequester = mockUsers.find(u => u.id === newRequest.requesterId)?.name;
     toast.success("Request submitted successfully!", {
-      description: `Vendor: ${selectedVendor || 'N/A'}`,
+      description: `Vendor: ${selectedVendor || 'N/A'}, Requester: ${selectedRequester || 'N/A'}`,
     });
     form.reset();
   };
 
+  const requesters = mockUsers.filter(user => user.role === "Requester");
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        {/* Requester Selection */}
+        <FormField
+          control={form.control}
+          name="requesterId"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Requester</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a requester" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {requesters.map((user) => (
+                    <SelectItem key={user.id} value={user.id}>
+                      {user.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* Account Manager Selection */}
+        <FormField
+          control={form.control}
+          name="accountManagerId"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Account Manager</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select an account manager" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {mockAccountManagers.map((manager) => (
+                    <SelectItem key={manager.id} value={manager.id}>
+                      {manager.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
         {/* Vendor Selection */}
         <FormField
           control={form.control}
