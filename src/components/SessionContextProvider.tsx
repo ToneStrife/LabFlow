@@ -84,9 +84,9 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
   };
 
   useEffect(() => {
-    let isMounted = true; // Flag to prevent state updates on unmounted component
+    let isMounted = true;
 
-    const handleAuthStateChange = async (_event: string, currentSession: Session | null) => {
+    const handleSession = async (currentSession: Session | null) => {
       if (!isMounted) return;
 
       setSession(currentSession);
@@ -95,54 +95,42 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
       } else {
         setProfile(null);
       }
+      
+      // Only set loading to false after the very first session check is complete
+      if (loading) {
+        setLoading(false);
+      }
 
-      if (_event === 'SIGNED_IN') {
+      if (!currentSession && window.location.pathname !== '/login') {
+        navigate('/login');
+      } else if (currentSession && window.location.pathname === '/login') {
         navigate('/dashboard');
-      } else if (_event === 'SIGNED_OUT') {
+      }
+    };
+
+    // 1. Get initial session status
+    supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
+      handleSession(initialSession);
+    }).catch((err) => {
+      console.error("Error fetching initial session:", err);
+      if (isMounted) {
+        setLoading(false);
         navigate('/login');
       }
-    };
+    });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthStateChange);
-
-    const getInitialSession = async () => {
-      try {
-        const { data: { session: initialSession }, error } = await supabase.auth.getSession();
-        if (!isMounted) return;
-
-        if (error) {
-          console.error("Error getting initial session:", error);
-          // Optionally show a toast for initial session error
-          // toast.error("Failed to load session.", { description: error.message });
-        }
-
-        setSession(initialSession);
-        if (initialSession?.user) {
-          await fetchProfile(initialSession.user.id);
-        } else {
-          setProfile(null);
-        }
-
-        if (!initialSession) {
-          navigate('/login');
-        }
-      } catch (err) {
-        console.error("Unexpected error during initial session fetch:", err);
-        // toast.error("An unexpected error occurred.", { description: String(err) });
-      } finally {
-        if (isMounted) {
-          setLoading(false); // Ensure loading is set to false after initial session check
-        }
+    // 2. Set up listener for subsequent changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
+      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+        handleSession(currentSession);
       }
-    };
-
-    getInitialSession();
+    });
 
     return () => {
-      isMounted = false; // Cleanup flag
+      isMounted = false;
       subscription.unsubscribe();
     };
-  }, [navigate]);
+  }, [navigate, loading]); // Include loading in dependency array to ensure handleSession can check its value
 
   if (loading) {
     return (
