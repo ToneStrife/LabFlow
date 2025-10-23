@@ -11,54 +11,20 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Edit, Trash2 } from "lucide-react";
+import { VendorFormValues } from "./VendorForm"; // Import VendorFormValues
 
-// Mock data for vendors
-const mockVendors = [
-  {
-    id: "v1",
-    name: "Thermo Fisher Scientific",
-    contactPerson: "Jane Doe",
-    email: "jane.doe@thermofisher.com",
-    phone: "1-800-123-4567",
-    notes: "Primary vendor for reagents and consumables.",
-  },
-  {
-    id: "v2",
-    name: "Sigma-Aldrich",
-    contactPerson: "John Smith",
-    email: "john.smith@sigmaaldrich.com",
-    phone: "1-800-765-4321",
-    notes: "Specializes in chemicals and custom synthesis.",
-  },
-  {
-    id: "v3",
-    name: "Bio-Rad Laboratories",
-    contactPerson: "Emily White",
-    email: "emily.white@bio-rad.com",
-    phone: "1-800-987-6543",
-    notes: "Equipment and kits for molecular biology.",
-  },
-  {
-    id: "v4",
-    name: "Qiagen",
-    contactPerson: "David Green",
-    email: "david.green@qiagen.com",
-    phone: "1-800-234-5678",
-    notes: "DNA/RNA purification and assay technologies.",
-  },
-];
+// Define a type for a vendor (matching VendorFormValues plus an ID)
+interface Vendor extends VendorFormValues {
+  id: string;
+}
 
-const VendorTable: React.FC = () => {
-  const handleEdit = (vendorId: string) => {
-    console.log(`Edit vendor: ${vendorId}`);
-    // Implement edit logic here (e.g., open a dialog/form)
-  };
+interface VendorTableProps {
+  vendors: Vendor[];
+  onEdit: (vendorId: string, updatedData: VendorFormValues) => void;
+  onDelete: (vendorId: string) => void;
+}
 
-  const handleDelete = (vendorId: string) => {
-    console.log(`Delete vendor: ${vendorId}`);
-    // Implement delete logic here (e.g., show confirmation dialog)
-  };
-
+const VendorTable: React.FC<VendorTableProps> = ({ vendors, onEdit, onDelete }) => {
   return (
     <div className="rounded-md border">
       <Table>
@@ -72,31 +38,41 @@ const VendorTable: React.FC = () => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {mockVendors.map((vendor) => (
-            <TableRow key={vendor.id}>
-              <TableCell className="font-medium">{vendor.name}</TableCell>
-              <TableCell>{vendor.contactPerson}</TableCell>
-              <TableCell>{vendor.email}</TableCell>
-              <TableCell>{vendor.phone}</TableCell>
-              <TableCell className="text-right">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleEdit(vendor.id)}
-                  className="mr-2"
-                >
-                  <Edit className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="icon"
-                  onClick={() => handleDelete(vendor.id)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+          {vendors.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                No vendors found.
               </TableCell>
             </TableRow>
-          ))}
+          ) : (
+            vendors.map((vendor) => (
+              <TableRow key={vendor.id}>
+                <TableCell className="font-medium">{vendor.name}</TableCell>
+                <TableCell>{vendor.contactPerson || "N/A"}</TableCell>
+                <TableCell>{vendor.email || "N/A"}</TableCell>
+                <TableCell>{vendor.phone || "N/A"}</TableCell>
+                <TableCell className="text-right">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => onEdit(vendor.id, vendor)} // Pass current vendor data for editing
+                    className="mr-2"
+                    title="Edit Vendor"
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    onClick={() => onDelete(vendor.id)}
+                    title="Delete Vendor"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))
+          )}
         </TableBody>
       </Table>
     </div>
