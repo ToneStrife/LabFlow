@@ -7,8 +7,10 @@ import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
 import NewRequest from "./pages/NewRequest";
 import Vendors from "./pages/Vendors";
-import RequestDetails from "./pages/RequestDetails"; // Import the new RequestDetails component
+import RequestDetails from "./pages/RequestDetails";
 import NotFound from "./pages/NotFound";
+import Login from "./pages/Login"; // Import the new Login page
+import { SessionContextProvider } from "./components/SessionContextProvider"; // Import the new SessionContextProvider
 
 const queryClient = new QueryClient();
 
@@ -18,17 +20,18 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Layout>
+        <SessionContextProvider> {/* Wrap the entire app with SessionContextProvider */}
           <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/new-request" element={<NewRequest />} />
-            <Route path="/vendors" element={<Vendors />} />
-            <Route path="/requests/:id" element={<RequestDetails />} /> {/* New route for request details */}
+            <Route path="/login" element={<Login />} /> {/* New route for login */}
+            <Route path="/" element={<Layout><Dashboard /></Layout>} />
+            <Route path="/dashboard" element={<Layout><Dashboard /></Layout>} />
+            <Route path="/new-request" element={<Layout><NewRequest /></Layout>} />
+            <Route path="/vendors" element={<Layout><Vendors /></Layout>} />
+            <Route path="/requests/:id" element={<Layout><RequestDetails /></Layout>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
-        </Layout>
+        </SessionContextProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
