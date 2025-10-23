@@ -7,6 +7,7 @@ import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
 import NewRequest from "./pages/NewRequest";
 import Vendors from "./pages/Vendors";
+import RequestDetails from "./pages/RequestDetails"; // Import the new RequestDetails component
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -19,10 +20,11 @@ const App = () => (
       <BrowserRouter>
         <Layout>
           <Routes>
-            <Route path="/" element={<Dashboard />} /> {/* Render Dashboard at root */}
+            <Route path="/" element={<Dashboard />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/new-request" element={<NewRequest />} />
             <Route path="/vendors" element={<Vendors />} />
+            <Route path="/requests/:id" element={<RequestDetails />} /> {/* New route for request details */}
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

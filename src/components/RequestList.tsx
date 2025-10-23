@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useNavigate } from "react-router-dom"; // Import useNavigate
 import {
   Table,
   TableBody,
@@ -76,9 +77,10 @@ const getStatusBadgeVariant = (status: RequestStatus) => {
 };
 
 const RequestList: React.FC = () => {
+  const navigate = useNavigate(); // Initialize useNavigate
+
   const handleViewDetails = (requestId: string) => {
-    console.log(`View details for request: ${requestId}`);
-    // Implement navigation to a request details page
+    navigate(`/requests/${requestId}`); // Navigate to the new details page
   };
 
   const handleApprove = (requestId: string) => {
