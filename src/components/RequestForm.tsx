@@ -22,8 +22,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { mockVendors, mockProjects, addRequest, mockUsers, mockAccountManagers } from "@/data/mockData";
-import { supabase } from "@/lib/supabase";
+import { mockVendors, mockProjects, addRequest, mockUsers, mockAccountManagers, productDatabase } from "@/data/mockData";
 import { showSuccess, showError, showLoading, dismissToast } from "@/utils/toast";
 
 const itemSchema = z.object({
@@ -94,12 +93,14 @@ const RequestForm: React.FC = () => {
         return;
       }
 
-      const { data, error } = await supabase.functions.invoke('autofill-product-details', {
-        body: { catalogNumber },
-      });
+      // Simulate network delay
+      await new Promise(resolve => setTimeout(resolve, 750));
 
-      if (error) throw new Error(error.message);
-      if (data.error) throw new Error(data.error);
+      const data = productDatabase[catalogNumber];
+
+      if (!data) {
+        throw new Error(`Product with catalog number '${catalogNumber}' not found.`);
+      }
 
       form.setValue(`items.${index}.productName`, data.productName || '');
       form.setValue(`items.${index}.brand`, data.brand || '');
@@ -320,7 +321,7 @@ const RequestForm: React.FC = () => {
               <Popover>
                 <PopoverTrigger asChild>
                   <FormControl>
-                    <Button variant="outline" role="combobox" className={cn("w-full justify-between", !field.value || field.value.length === 0 && "text-muted-foreground")}>
+                    <Button variant="outline" role="combobox" className={cn("w-full justify-between", !field.value || field.value.length === <strong></strong>0 && "text-muted-foreground")}>
                       {field.value && field.value.length > 0 ? (
                         <div className="flex flex-wrap gap-1">
                           {field.value.map((projectId) => {
