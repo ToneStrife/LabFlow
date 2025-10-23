@@ -23,6 +23,7 @@ const vendorFormSchema = z.object({
   email: z.string().email({ message: "Must be a valid email address." }).optional().or(z.literal("")),
   phone: z.string().optional(),
   notes: z.string().optional(),
+  brands: z.string().optional(), // New field for comma-separated brands
 });
 
 export type VendorFormValues = z.infer<typeof vendorFormSchema>;
@@ -42,6 +43,7 @@ const VendorForm: React.FC<VendorFormProps> = ({ initialData, onSubmit, onCancel
       email: "",
       phone: "",
       notes: "",
+      brands: "", // Initialize brands as an empty string
     },
   });
 
@@ -100,6 +102,22 @@ const VendorForm: React.FC<VendorFormProps> = ({ initialData, onSubmit, onCancel
               <FormLabel>Phone (Optional)</FormLabel>
               <FormControl>
                 <Input placeholder="e.g., 1-800-123-4567" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="brands"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Brands (Optional)</FormLabel>
+              <FormControl>
+                <Textarea
+                  placeholder="e.g., Invitrogen, Applied Biosystems, Gibco (comma-separated)"
+                  {...field}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>

@@ -5,12 +5,18 @@ import VendorTable from "@/components/VendorTable";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import VendorForm, { VendorFormValues } from "@/components/VendorForm"; // Import the new VendorForm
+import VendorForm, { VendorFormValues } from "@/components/VendorForm";
 import { toast } from "sonner";
 
-// Define a type for a vendor
-interface Vendor extends VendorFormValues {
+// Define a type for a vendor, now including brands as an array of strings
+interface Vendor {
   id: string;
+  name: string;
+  contactPerson?: string;
+  email?: string;
+  phone?: string;
+  notes?: string;
+  brands: string[]; // Brands are now an array of strings
 }
 
 // Mock data for vendors
@@ -22,6 +28,7 @@ const initialMockVendors: Vendor[] = [
     email: "jane.doe@thermofisher.com",
     phone: "1-800-123-4567",
     notes: "Primary vendor for reagents and consumables.",
+    brands: ["Invitrogen", "Applied Biosystems", "Gibco"],
   },
   {
     id: "v2",
@@ -30,6 +37,7 @@ const initialMockVendors: Vendor[] = [
     email: "john.smith@sigmaaldrich.com",
     phone: "1-800-765-4321",
     notes: "Specializes in chemicals and custom synthesis.",
+    brands: ["Sigma", "Aldrich", "Supelco"],
   },
   {
     id: "v3",
@@ -38,6 +46,7 @@ const initialMockVendors: Vendor[] = [
     email: "emily.white@bio-rad.com",
     phone: "1-800-987-6543",
     notes: "Equipment and kits for molecular biology.",
+    brands: ["Bio-Rad"],
   },
   {
     id: "v4",
@@ -46,17 +55,27 @@ const initialMockVendors: Vendor[] = [
     email: "david.green@qiagen.com",
     phone: "1-800-234-5678",
     notes: "DNA/RNA purification and assay technologies.",
+    brands: ["Qiagen"],
   },
 ];
 
 const Vendors = () => {
   const [vendors, setVendors] = React.useState<Vendor[]>(initialMockVendors);
   const [isAddVendorDialogOpen, setIsAddVendorDialogOpen] = React.useState(false);
+  const [isEditVendorDialogOpen, setIsEditVendorDialogOpen] = React.useState(false);
+  const [editingVendor, setEditingVendor] = React.useState<Vendor | undefined>(undefined);
+
+  const parseBrandsString = (brandsString: string | undefined): string[] => {
+    return brandsString
+      ? brandsString.split(",").map((brand) => brand.trim()).filter(Boolean)
+      : [];
+  };
 
   const handleAddVendor = (newVendorData: VendorFormValues) => {
     const newVendor: Vendor = {
       id: `v${vendors.length + 1}`, // Simple ID generation for mock data
       ...newVendorData,
+      brands: parseBrandsString(newVendorData.brands), // Parse brands string to array
     };
     setVendors((prevVendors) => [...prevVendors, newVendor]);
     setIsAddVendorDialogOpen(false);
@@ -68,16 +87,24 @@ const Vendors = () => {
   const handleEditVendor = (vendorId: string, updatedData: VendorFormValues) => {
     setVendors((prevVendors) =>
       prevVendors.map((vendor) =>
-        vendor.id === vendorId ? { ...vendor, ...updatedData } : vendor
+        vendor.id === vendorId
+          ? { ...vendor, ...updatedData, brands: parseBrandsString(updatedData.brands) }
+          : vendor
       )
     );
+    setIsEditVendorDialogOpen(false);
+    setEditingVendor(undefined);
     toast.success("Vendor updated successfully!");
-    // Close edit dialog if implemented
   };
 
   const handleDeleteVendor = (vendorId: string) => {
     setVendors((prevVendors) => prevVendors.filter((vendor) => vendor.id !== vendorId));
     toast.success("Vendor deleted successfully!");
+  };
+
+  const openEditDialog = (vendor: Vendor) => {
+    setEditingVendor({ ...vendor, brands: vendor.brands.join(", ") }); // Convert brands array to string for form
+    setIsEditVendorDialogOpen(true);
   };
 
   return (
@@ -103,9 +130,25 @@ const Vendors = () => {
       </p>
       <VendorTable
         vendors={vendors}
-        onEdit={handleEditVendor}
+        onEdit={openEditDialog} // Pass openEditDialog for editing
         onDelete={handleDeleteVendor}
       />
+
+      {/* Edit Vendor Dialog */}
+      <Dialog open={isEditVendorDialogOpen} onOpenChange={setIsEditVendorDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Edit Vendor</DialogTitle>
+          </DialogHeader>
+          {editingVendor && (
+            <VendorForm
+              initialData={editingVendor}
+              onSubmit={(data) => handleEditVendor(editingVendor.id, data)}
+              onCancel={() => setIsEditVendorDialogOpen(false)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -11,16 +11,22 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Edit, Trash2 } from "lucide-react";
-import { VendorFormValues } from "./VendorForm"; // Import VendorFormValues
+import { VendorFormValues } from "./VendorForm";
 
-// Define a type for a vendor (matching VendorFormValues plus an ID)
-interface Vendor extends VendorFormValues {
+// Define a type for a vendor (matching VendorFormValues plus an ID and brands array)
+interface Vendor {
   id: string;
+  name: string;
+  contactPerson?: string;
+  email?: string;
+  phone?: string;
+  notes?: string;
+  brands: string[]; // Brands are now an array of strings
 }
 
 interface VendorTableProps {
   vendors: Vendor[];
-  onEdit: (vendorId: string, updatedData: VendorFormValues) => void;
+  onEdit: (vendor: Vendor) => void; // Changed to pass the full vendor object
   onDelete: (vendorId: string) => void;
 }
 
@@ -34,13 +40,14 @@ const VendorTable: React.FC<VendorTableProps> = ({ vendors, onEdit, onDelete }) 
             <TableHead>Contact Person</TableHead>
             <TableHead>Email</TableHead>
             <TableHead>Phone</TableHead>
+            <TableHead>Brands</TableHead> {/* New column for Brands */}
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {vendors.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+              <TableCell colSpan={6} className="h-24 text-center text-muted-foreground"> {/* Updated colspan */}
                 No vendors found.
               </TableCell>
             </TableRow>
@@ -51,11 +58,12 @@ const VendorTable: React.FC<VendorTableProps> = ({ vendors, onEdit, onDelete }) 
                 <TableCell>{vendor.contactPerson || "N/A"}</TableCell>
                 <TableCell>{vendor.email || "N/A"}</TableCell>
                 <TableCell>{vendor.phone || "N/A"}</TableCell>
+                <TableCell>{vendor.brands.length > 0 ? vendor.brands.join(", ") : "N/A"}</TableCell> {/* Display brands */}
                 <TableCell className="text-right">
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => onEdit(vendor.id, vendor)} // Pass current vendor data for editing
+                    onClick={() => onEdit(vendor)} // Pass the full vendor object for editing
                     className="mr-2"
                     title="Edit Vendor"
                   >
