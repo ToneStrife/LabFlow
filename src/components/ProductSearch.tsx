@@ -50,13 +50,13 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ onProductSelect }) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          // Note: We are not sending Authorization header here as the function is public for now.
         },
         body: JSON.stringify({ query: data.query }),
       });
 
       if (!response.ok) {
-        const errorBody = await response.json().catch(() => ({ error: 'Unknown error' }));
-        throw new Error(`Search failed: ${response.status} - ${errorBody.error || 'Server error'}`);
+        throw new Error(`Search failed with status: ${response.status}`);
       }
 
       const result = await response.json();
@@ -71,7 +71,7 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ onProductSelect }) => {
 
     } catch (error: any) {
       console.error("AI Search Error:", error);
-      showError(error.message || "Failed to perform AI search. Check console for details.");
+      showError(error.message || "Failed to perform AI search.");
     } finally {
       dismissToast(toastId);
       setIsSearching(false);
@@ -105,7 +105,7 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ onProductSelect }) => {
                   <FormControl>
                     <div className="flex gap-2">
                       <Input
-                        placeholder="Search product name, catalog number, or brand (min 3 chars)..."
+                        placeholder="Search product name, catalog number, or brand..."
                         {...field}
                         disabled={isSearching}
                       />
