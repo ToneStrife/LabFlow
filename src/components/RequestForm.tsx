@@ -104,7 +104,7 @@ const RequestForm: React.FC = () => {
         brand: "Gibco", // Added brand
       },
     ];
-    replace(autofillData); // Replace current items with autofilled data
+    append(autofillData); // Changed from replace to append
     toast.info("Items autofilled with example data!");
   };
 
