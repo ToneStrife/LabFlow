@@ -96,7 +96,7 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
         setProfile(null);
       }
       
-      // Only set loading to false after the very first session check is complete
+      // This check ensures we only set loading to false once.
       if (loading) {
         setLoading(false);
       }
@@ -120,17 +120,16 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
     });
 
     // 2. Set up listener for subsequent changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
-      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
-        handleSession(currentSession);
-      }
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, currentSession) => {
+      // This listener will handle all auth events like SIGNED_IN, SIGNED_OUT, TOKEN_REFRESHED
+      handleSession(currentSession);
     });
 
     return () => {
       isMounted = false;
       subscription.unsubscribe();
     };
-  }, [navigate, loading]); // Include loading in dependency array to ensure handleSession can check its value
+  }, [navigate]); // Corrected dependency array
 
   if (loading) {
     return (
