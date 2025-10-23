@@ -14,8 +14,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowLeft } from "lucide-react";
-import { mockRequests, mockVendors, mockProjects, mockAccountManagers, RequestStatus, getUserFullName } from "@/data/mockData"; // Import getUserFullName
+import { ArrowLeft, Loader2 } from "lucide-react";
+import { mockProjects, mockAccountManagers, RequestStatus, getUserFullName } from "@/data/mockData";
+import { useRequests, SupabaseRequest } from "@/hooks/use-requests";
+import { useVendors } from "@/hooks/use-vendors";
+import { format } from "date-fns";
 
 const getStatusBadgeVariant = (status: RequestStatus) => {
   switch (status) {
@@ -35,11 +38,18 @@ const getStatusBadgeVariant = (status: RequestStatus) => {
 const RequestDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { data: requests, isLoading: isLoadingRequests } = useRequests();
+  const { data: vendors, isLoading: isLoadingVendors } = useVendors();
 
-  // Find the request from the centralized mock data
-  const request = mockRequests.find(req => req.id === id);
-  const vendor = request ? mockVendors.find(v => v.id === request.vendorId) : undefined;
-  const accountManager = request ? mockAccountManagers.find(am => am.id === request.accountManagerId) : undefined;
+  const request = requests?.find(req => req.id === id);
+  
+  if (isLoadingRequests || isLoadingVendors) {
+    return (
+      <div className="container mx-auto py-8 flex justify-center items-center">
+        <Loader2 className="h-8 w-8 animate-spin mr-2" /> Loading Request Details...
+      </div>
+    );
+  }
 
   if (!request) {
     return (
@@ -55,12 +65,16 @@ const RequestDetails: React.FC = () => {
     );
   }
 
-  const projectCodesDisplay = request.projectCodes?.map(projectId => {
+  const vendor = vendors?.find(v => v.id === request.vendor_id);
+  const accountManager = mockAccountManagers.find(am => am.id === request.account_manager_id);
+
+  const projectCodesDisplay = request.project_codes?.map(projectId => {
     const project = mockProjects.find(p => p.id === projectId);
     return project ? project.code : projectId;
   }).join(", ") || "N/A";
 
-  const requesterName = getUserFullName(request.requesterId); // Use helper function
+  const requesterName = getUserFullName(request.requester_id); // Use helper function
+  const dateSubmitted = format(new Date(request.created_at), 'yyyy-MM-dd HH:mm');
 
   return (
     <div className="container mx-auto py-8">
@@ -91,7 +105,7 @@ const RequestDetails: React.FC = () => {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Date Submitted</p>
-              <p className="font-medium">{request.date}</p>
+              <p className="font-medium">{dateSubmitted}</p>
             </div>
           </div>
 
@@ -113,7 +127,7 @@ const RequestDetails: React.FC = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>Product Name</TableHead>
-                  <TableHead>Brand</TableHead> {/* New column for Brand */}
+                  <TableHead>Brand</TableHead>
                   <TableHead>Catalog #</TableHead>
                   <TableHead>Quantity</TableHead>
                   <TableHead>Unit Price</TableHead>
@@ -122,13 +136,13 @@ const RequestDetails: React.FC = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {request.items.map((item) => (
+                {request.items?.map((item) => (
                   <TableRow key={item.id}>
-                    <TableCell className="font-medium">{item.productName}</TableCell>
-                    <TableCell>{item.brand || "N/A"}</TableCell> {/* Display brand */}
-                    <TableCell>{item.catalogNumber || "N/A"}</TableCell>
+                    <TableCell className="font-medium">{item.product_name}</TableCell>
+                    <TableCell>{item.brand || "N/A"}</TableCell>
+                    <TableCell>{item.catalog_number || "N/A"}</TableCell>
                     <TableCell>{item.quantity}</TableCell>
-                    <TableCell>{item.unitPrice ? `$${item.unitPrice.toFixed(2)}` : "N/A"}</TableCell>
+                    <TableCell>{item.unit_price ? `$${Number(item.unit_price).toFixed(2)}` : "N/A"}</TableCell>
                     <TableCell>{item.format || "N/A"}</TableCell>
                     <TableCell>
                       {item.link ? (
@@ -145,23 +159,7 @@ const RequestDetails: React.FC = () => {
             </Table>
           </div>
 
-          {request.attachments && request.attachments.length > 0 && (
-            <>
-              <Separator />
-              <div>
-                <h2 className="text-xl font-semibold mb-4">Attachments</h2>
-                <ul className="list-disc pl-5 space-y-1">
-                  {request.attachments.map((attachment, index) => (
-                    <li key={index}>
-                      <a href={attachment.url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
-                        {attachment.name}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </>
-          )}
+          {/* Attachments section removed as it was mock data and not implemented in Supabase yet */}
         </CardContent>
       </Card>
     </div>

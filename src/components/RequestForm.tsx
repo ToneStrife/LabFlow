@@ -22,9 +22,11 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { mockVendors, mockProjects, addRequest, mockAccountManagers, productDatabase, ProductDetails } from "@/data/mockData";
+import { mockProjects, mockAccountManagers, productDatabase, ProductDetails } from "@/data/mockData";
 import { showError, showLoading, dismissToast, showSuccess } from "@/utils/toast";
 import { useSession } from "@/components/SessionContextProvider";
+import { useVendors } from "@/hooks/use-vendors";
+import { useAddRequest } from "@/hooks/use-requests";
 
 const itemSchema = z.object({
   productName: z.string().min(1, { message: "Product name is required." }),
@@ -56,6 +58,9 @@ type RequestFormValues = z.infer<typeof formSchema>;
 
 const RequestForm: React.FC = () => {
   const { session, profile } = useSession();
+  const { data: vendors, isLoading: isLoadingVendors } = useVendors();
+  const addRequestMutation = useAddRequest();
+
   const [autofillingIndex, setAutofillingIndex] = React.useState<number | null>(null);
   const [matchingProducts, setMatchingProducts] = React.useState<ProductDetails[]>([]);
   const [selectionIndex, setSelectionIndex] = React.useState<number | null>(null);
@@ -150,17 +155,24 @@ const RequestForm: React.FC = () => {
     }
   };
 
-  const onSubmit = (data: RequestFormValues) => {
+  const onSubmit = async (data: RequestFormValues) => {
     if (!session?.user?.id) {
       showError("You must be logged in to submit a request.");
       return;
     }
-    const newRequest = addRequest({ ...data, requesterId: session.user.id });
-    const selectedVendor = mockVendors.find(v => v.id === newRequest.vendorId)?.name;
-    const requesterName = profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 'N/A';
-    toast.success("Request submitted successfully!", {
-      description: `Vendor: ${selectedVendor || 'N/A'}, Requester: ${requesterName}`,
-    });
+
+    const requestData = {
+      vendorId: data.vendorId,
+      requesterId: session.user.id,
+      accountManagerId: data.accountManagerId,
+      notes: undefined, // Notes field is missing in formSchema/form, assuming it's not used here yet
+      projectCodes: data.projectCodes,
+      items: data.items,
+    };
+
+    await addRequestMutation.mutateAsync(requestData);
+    
+    // Reset form after successful submission
     form.reset({
       vendorId: "",
       requesterId: session.user.id,
@@ -175,8 +187,6 @@ const RequestForm: React.FC = () => {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        {/* Removed ProductSearch component */}
-
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormItem>
             <FormLabel>Requester</FormLabel>
@@ -191,12 +201,14 @@ const RequestForm: React.FC = () => {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Vendor</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoadingVendors}>
                   <FormControl>
-                    <SelectTrigger><SelectValue placeholder="Select a vendor" /></SelectTrigger>
+                    <SelectTrigger>
+                      <SelectValue placeholder={isLoadingVendors ? "Loading vendors..." : "Select a vendor"} />
+                    </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {mockVendors.map((vendor) => (
+                    {vendors?.map((vendor) => (
                       <SelectItem key={vendor.id} value={vendor.id}>{vendor.name}</SelectItem>
                     ))}
                   </SelectContent>
@@ -421,7 +433,9 @@ const RequestForm: React.FC = () => {
             </FormItem>
           )}
         />
-        <Button type="submit" className="w-full">Submit Request</Button>
+        <Button type="submit" className="w-full" disabled={addRequestMutation.isPending}>
+          {addRequestMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : "Submit Request"}
+        </Button>
       </form>
     </Form>
   );

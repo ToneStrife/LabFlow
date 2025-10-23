@@ -12,10 +12,13 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Eye, CheckCircle, Package, Receipt } from "lucide-react";
-import { mockVendors, updateRequestStatus, RequestStatus, LabRequest, subscribeToRequests, mockRequests, getUserFullName } from "@/data/mockData"; // Added getUserFullName
-import { Input } from "@/components/ui/input"; // Import Input for search
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"; // Import Select for status filter
+import { Eye, CheckCircle, Package, Receipt, Loader2 } from "lucide-react";
+import { RequestStatus, getUserFullName } from "@/data/mockData";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useRequests, useUpdateRequestStatus, SupabaseRequest } from "@/hooks/use-requests";
+import { useVendors } from "@/hooks/use-vendors";
+import { format } from "date-fns";
 
 const getStatusBadgeVariant = (status: RequestStatus) => {
   switch (status) {
@@ -34,41 +37,52 @@ const getStatusBadgeVariant = (status: RequestStatus) => {
 
 const RequestList: React.FC = () => {
   const navigate = useNavigate();
-  const [requests, setRequests] = React.useState<LabRequest[]>(mockRequests);
+  const { data: requests, isLoading: isLoadingRequests, error: requestsError } = useRequests();
+  const { data: vendors, isLoading: isLoadingVendors } = useVendors();
+  const updateStatusMutation = useUpdateRequestStatus();
+
   const [searchTerm, setSearchTerm] = React.useState<string>("");
   const [filterStatus, setFilterStatus] = React.useState<RequestStatus | "All">("All");
 
-  // Subscribe to changes in mockRequests
-  React.useEffect(() => {
-    const unsubscribe = subscribeToRequests(updatedRequests => {
-      setRequests(updatedRequests);
-    });
-    return () => unsubscribe(); // Clean up subscription on unmount
-  }, []);
+  const allRequests = requests || [];
 
   const handleViewDetails = (requestId: string) => {
     navigate(`/requests/${requestId}`);
   };
 
   const handleUpdateStatus = (requestId: string, newStatus: RequestStatus) => {
-    updateRequestStatus(requestId, newStatus);
-    // The setRequests in the useEffect will handle the re-render
+    updateStatusMutation.mutate({ id: requestId, status: newStatus });
   };
 
-  const filteredRequests = requests.filter(request => {
+  const filteredRequests = allRequests.filter(request => {
+    const vendorName = vendors?.find(v => v.id === request.vendor_id)?.name || "";
+    const requesterName = getUserFullName(request.requester_id); // Still using mock user data for names
+
     const matchesSearchTerm = searchTerm.toLowerCase() === "" ||
-      request.items.some(item =>
-        item.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.catalogNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      request.items?.some(item =>
+        item.product_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.catalog_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (item.brand && item.brand.toLowerCase().includes(searchTerm.toLowerCase()))
       ) ||
-      mockVendors.find(v => v.id === request.vendorId)?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      getUserFullName(request.requesterId).toLowerCase().includes(searchTerm.toLowerCase()); // Use getUserFullName for search
+      vendorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      requesterName.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesStatus = filterStatus === "All" || request.status === filterStatus;
 
     return matchesSearchTerm && matchesStatus;
   });
+
+  if (isLoadingRequests || isLoadingVendors) {
+    return (
+      <div className="flex justify-center items-center h-40">
+        <Loader2 className="h-6 w-6 animate-spin mr-2" /> Loading Requests...
+      </div>
+    );
+  }
+
+  if (requestsError) {
+    return <div className="text-red-500">Error loading requests: {requestsError.message}</div>;
+  }
 
   return (
     <div className="space-y-4">
@@ -112,8 +126,10 @@ const RequestList: React.FC = () => {
               </TableRow>
             ) : (
               filteredRequests.map((request) => {
-                const vendor = mockVendors.find(v => v.id === request.vendorId);
-                const requesterName = getUserFullName(request.requesterId); // Use helper function
+                const vendor = vendors?.find(v => v.id === request.vendor_id);
+                const requesterName = getUserFullName(request.requester_id);
+                const date = format(new Date(request.created_at), 'yyyy-MM-dd');
+
                 return (
                   <TableRow key={request.id}>
                     <TableCell className="font-medium">{vendor?.name || "N/A"}</TableCell>
@@ -123,7 +139,7 @@ const RequestList: React.FC = () => {
                         {request.status}
                       </Badge>
                     </TableCell>
-                    <TableCell>{request.date}</TableCell>
+                    <TableCell>{date}</TableCell>
                     <TableCell className="text-right flex justify-end space-x-2">
                       <Button
                         variant="ghost"
@@ -139,6 +155,7 @@ const RequestList: React.FC = () => {
                           size="icon"
                           onClick={() => handleUpdateStatus(request.id, "Approved")}
                           title="Approve Request"
+                          disabled={updateStatusMutation.isPending}
                         >
                           <CheckCircle className="h-4 w-4 text-green-600" />
                         </Button>
@@ -149,6 +166,7 @@ const RequestList: React.FC = () => {
                           size="icon"
                           onClick={() => handleUpdateStatus(request.id, "Ordered")}
                           title="Mark as Ordered"
+                          disabled={updateStatusMutation.isPending}
                         >
                           <Package className="h-4 w-4 text-blue-600" />
                         </Button>
@@ -159,6 +177,7 @@ const RequestList: React.FC = () => {
                           size="icon"
                           onClick={() => handleUpdateStatus(request.id, "Received")}
                           title="Mark as Received"
+                          disabled={updateStatusMutation.isPending}
                         >
                           <Receipt className="h-4 w-4 text-purple-600" />
                         </Button>

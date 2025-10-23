@@ -3,29 +3,39 @@
 import React from "react";
 import { useNavigate } from "react-router-dom"; // Import useNavigate
 import RequestList from "@/components/RequestList";
-import { mockRequests, subscribeToRequests } from "@/data/mockData";
 import { Button } from "@/components/ui/button"; // Import Button
-import { PlusCircle } from "lucide-react"; // Import PlusCircle icon
+import { PlusCircle, Loader2 } from "lucide-react"; // Import PlusCircle icon and Loader2
+import { useRequests } from "@/hooks/use-requests";
 
 const Dashboard = () => {
   const navigate = useNavigate(); // Initialize useNavigate
-  const [requests, setRequests] = React.useState(mockRequests);
+  const { data: requests, isLoading, error } = useRequests();
 
-  React.useEffect(() => {
-    const unsubscribe = subscribeToRequests(updatedRequests => {
-      setRequests(updatedRequests);
-    });
-    return () => unsubscribe();
-  }, []);
-
-  // Calculate dynamic counts based on local state 'requests'
-  const pendingRequestsCount = requests.filter(req => req.status === "Pending").length;
-  const orderedItemsCount = requests
+  // Calculate dynamic counts based on Supabase data 'requests'
+  const allRequests = requests || [];
+  const pendingRequestsCount = allRequests.filter(req => req.status === "Pending").length;
+  const orderedItemsCount = allRequests
     .filter(req => req.status === "Ordered")
-    .reduce((total, req) => total + req.items.length, 0);
-  const receivedItemsCount = requests
+    .reduce((total, req) => total + (req.items?.length || 0), 0);
+  const receivedItemsCount = allRequests
     .filter(req => req.status === "Received")
-    .reduce((total, req) => total + req.items.length, 0);
+    .reduce((total, req) => total + (req.items?.length || 0), 0);
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto py-8 flex justify-center items-center">
+        <Loader2 className="h-8 w-8 animate-spin mr-2" /> Loading Dashboard Data...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto py-8 text-red-600">
+        Error loading dashboard: {error.message}
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto py-8">

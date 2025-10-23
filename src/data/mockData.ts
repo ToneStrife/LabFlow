@@ -30,13 +30,14 @@ export interface AccountManager {
   phone?: string;
 }
 
+// NOTE: This type is now primarily used for form input/local mock data linking
 export interface LabRequest {
   id: string;
   vendorId: string;
-  requesterId: string; // Changed from 'requester: string' to link to User
-  accountManagerId: string; // New field to link to AccountManager
+  requesterId: string; 
+  accountManagerId: string; 
   status: RequestStatus;
-  date: string;
+  date: string; // Keeping date for mock data compatibility, but Supabase uses created_at
   notes?: string;
   items: RequestItem[];
   attachments?: { name: string; url: string }[];
@@ -104,7 +105,7 @@ export const productDatabase: ProductDetails[] = [
   {
     id: "pdt4",
     productName: "Anti-GFP Antibody (Mouse Monoclonal)",
-    catalogNumber: "ab12345", // Same catalog number, different brand/product
+    catalogNumber: "ab12345",
     unitPrice: 130.00,
     format: "50 µl",
     link: "https://www.bio-rad.com/anti-gfp-antibody-ab12345.html",
@@ -181,135 +182,8 @@ export const mockProjects: Project[] = [
   { id: "p4", name: "Project Delta", code: "PD-004" },
 ];
 
-export let mockRequests: LabRequest[] = [
-  {
-    id: "req1",
-    vendorId: "v1",
-    requesterId: "u1", // Linked to Dr. Alice Smith
-    accountManagerId: "am1", // Linked to Manager A
-    status: "Pending",
-    date: "2023-10-26",
-    notes: "Need these urgently for upcoming experiments. Please prioritize.",
-    items: [
-      {
-        id: "item1",
-        productName: "Anti-GFP Antibody (Rabbit Polyclonal)",
-        catalogNumber: "ab12345",
-        quantity: 2,
-        unitPrice: 120.50,
-        link: "https://www.abcam.com/anti-gfp-antibody-ab12345.html",
-        notes: "Lot specific, check expiry date.",
-        brand: "Abcam",
-      },
-      {
-        id: "item2",
-        productName: "Secondary Antibody (Goat Anti-Rabbit IgG)",
-        catalogNumber: "SA-2000",
-        quantity: 1,
-        unitPrice: 85.00,
-        link: "https://vectorlabs.com/goat-anti-rabbit-igg.html",
-        notes: "",
-        brand: "Vector Labs",
-      },
-    ],
-    attachments: [
-      { name: "Quote_Abcam_ab12345.pdf", url: "#" },
-      { name: "ProjectX_ReagentList.xlsx", url: "#" },
-    ],
-    projectCodes: ["p1"],
-  },
-  {
-    id: "req2",
-    vendorId: "v2",
-    requesterId: "u2", // Linked to Dr. Bob Johnson
-    accountManagerId: "am2", // Linked to Manager B
-    status: "Ordered",
-    date: "2023-10-25",
-    notes: "Standard PCR reagents.",
-    items: [
-      {
-        id: "item3",
-        productName: "Taq DNA Polymerase",
-        catalogNumber: "P2000",
-        quantity: 5,
-        unitPrice: 50.00,
-        format: "500 units",
-        link: "https://www.sigmaaldrich.com/P2000",
-        notes: "",
-        brand: "Sigma-Aldrich",
-      },
-    ],
-    projectCodes: ["p2"],
-  },
-  {
-    id: "req3",
-    vendorId: "v1",
-    requesterId: "u1", // Linked to Dr. Alice Smith
-    accountManagerId: "am1", // Linked to Manager A
-    status: "Approved",
-    date: "2023-10-24",
-    notes: "Custom peptide for new assay development.",
-    items: [
-      {
-        id: "item4",
-        productName: "Custom Peptide 'ABCDEFG'",
-        catalogNumber: "CP-789",
-        quantity: 1,
-        unitPrice: 500.00,
-        link: "",
-        notes: "HPLC purity >95%",
-        brand: "Thermo Fisher Scientific",
-      },
-    ],
-    projectCodes: ["p1", "p3"],
-  },
-  {
-    id: "req4",
-    vendorId: "v3",
-    requesterId: "u3", // Linked to Dr. Carol White
-    accountManagerId: "am2", // Linked to Manager B
-    status: "Received",
-    date: "2023-10-23",
-    notes: "Routine cell culture supplies.",
-    items: [
-      {
-        id: "item5",
-        productName: "Cell Culture Flasks T-75",
-        catalogNumber: "142001",
-        quantity: 10,
-        unitPrice: 5.50,
-        format: "100 pack",
-        link: "https://www.bio-rad.com/142001",
-        notes: "",
-        brand: "Bio-Rad",
-      },
-    ],
-    projectCodes: ["p4"],
-  },
-  {
-    id: "req5",
-    vendorId: "v1",
-    requesterId: "u2", // Linked to Dr. Bob Johnson
-    accountManagerId: "am1", // Linked to Manager A
-    status: "Pending",
-    date: "2023-10-22",
-    notes: "For microscopy imaging.",
-    items: [
-      {
-        id: "item6",
-        productName: "Microscope Slides",
-        catalogNumber: "10001",
-        quantity: 2,
-        unitPrice: 25.00,
-        format: "72 slides/box",
-        link: "https://www.thermofisher.com/10001",
-        notes: "",
-        brand: "Thermo Fisher Scientific",
-      },
-    ],
-    projectCodes: ["p2"],
-  },
-];
+// Empty mockRequests array as data will come from Supabase
+export let mockRequests: LabRequest[] = [];
 
 // Helper function to get user's full name
 export const getUserFullName = (userId: string): string => {
@@ -328,22 +202,10 @@ export const getUserFullName = (userId: string): string => {
 
 type Listener<T> = (data: T) => void;
 
-const requestListeners: Listener<LabRequest[]>[] = [];
-// const vendorListeners: Listener<Vendor[]>[] = []; // Removed vendor listener
 const userListeners: Listener<User[]>[] = [];
 const accountManagerListeners: Listener<AccountManager[]>[] = [];
 
-export const subscribeToRequests = (listener: Listener<LabRequest[]>) => {
-  requestListeners.push(listener);
-  return () => {
-    const index = requestListeners.indexOf(listener);
-    if (index > -1) {
-      requestListeners.splice(index, 1);
-    }
-  };
-};
-
-// Removed subscribeToVendors
+// Removed subscribeToRequests
 
 export const subscribeToUsers = (listener: Listener<User[]>) => {
   userListeners.push(listener);
@@ -365,11 +227,7 @@ export const subscribeToAccountManagers = (listener: Listener<AccountManager[]>)
   };
 };
 
-const notifyRequestListeners = () => {
-  requestListeners.forEach(listener => listener([...mockRequests])); // Pass a copy to prevent direct mutation
-};
-
-// Removed notifyVendorListeners
+// Removed notifyRequestListeners
 
 const notifyUserListeners = () => {
   userListeners.forEach(listener => listener([...mockUsers]));
@@ -380,37 +238,7 @@ const notifyAccountManagerListeners = () => {
 };
 
 // --- Functions to modify mock data (simulating API calls) ---
-export const addRequest = (newRequest: Omit<LabRequest, "id" | "status" | "date">) => {
-  const id = `req${mockRequests.length + 1}`;
-  const date = new Date().toISOString().slice(0, 10); // Current date
-  const status = "Pending"; // Default status for new requests
-
-  const requestToAdd: LabRequest = {
-    id,
-    date,
-    status,
-    ...newRequest,
-    items: newRequest.items.map((item, index) => ({
-      ...item,
-      id: `item${mockRequests.length + 1}-${index + 1}`,
-    })),
-  };
-  mockRequests.push(requestToAdd);
-  notifyRequestListeners(); // Notify listeners after adding
-  return requestToAdd;
-};
-
-export const updateRequestStatus = (requestId: string, newStatus: RequestStatus) => {
-  const requestIndex = mockRequests.findIndex(req => req.id === requestId);
-  if (requestIndex > -1) {
-    mockRequests[requestIndex].status = newStatus;
-    notifyRequestListeners(); // Notify listeners after updating
-    return mockRequests[requestIndex];
-  }
-  return null;
-};
-
-// Removed addVendor, updateVendor, deleteVendor
+// Removed addRequest and updateRequestStatus
 
 export const addUser = (newUser: Omit<User, "id">) => {
   const id = `u${mockUsers.length + 1}`;
