@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import RequestList from "@/components/RequestList"; // Import the new RequestList component
 
 const Dashboard = () => {
   return (
@@ -13,18 +14,22 @@ const Dashboard = () => {
         {/* Placeholder for order status cards */}
         <div className="bg-card p-6 rounded-lg shadow-sm border">
           <h2 className="text-xl font-semibold mb-2">Pending Requests</h2>
-          <p className="text-3xl font-bold">0</p>
+          <p className="text-3xl font-bold">2</p> {/* Updated count based on mock data */}
         </div>
         <div className="bg-card p-6 rounded-lg shadow-sm border">
           <h2 className="text-xl font-semibold mb-2">Ordered Items</h2>
-          <p className="text-3xl font-bold">0</p>
+          <p className="text-3xl font-bold">1</p> {/* Updated count based on mock data */}
         </div>
         <div className="bg-card p-6 rounded-lg shadow-sm border">
           <h2 className="text-xl font-semibold mb-2">Received Items</h2>
-          <p className="text-3xl font-bold">0</p>
+          <p className="text-3xl font-bold">1</p> {/* Updated count based on mock data */}
         </div>
       </div>
-      {/* More dashboard content will go here */}
+
+      <div className="mt-12">
+        <h2 className="text-2xl font-bold mb-4">Recent Requests</h2>
+        <RequestList />
+      </div>
     </div>
   );
 };
