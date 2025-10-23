@@ -13,16 +13,31 @@ export interface RequestItem {
   notes?: string;
 }
 
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: "Requester" | "Account Manager" | "Admin"; // Example roles
+}
+
+export interface AccountManager {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+}
+
 export interface LabRequest {
   id: string;
   vendorId: string;
-  requester: string; // For simplicity, we'll hardcode this for now
+  requesterId: string; // Changed from 'requester: string' to link to User
+  accountManagerId: string; // New field to link to AccountManager
   status: RequestStatus;
   date: string;
-  notes?: string; // Added notes to LabRequest interface
+  notes?: string;
   items: RequestItem[];
   attachments?: { name: string; url: string }[];
-  projectCodes?: string[]; // Array of project IDs
+  projectCodes?: string[];
 }
 
 export interface Vendor {
@@ -42,6 +57,18 @@ export interface Project {
 }
 
 // --- Mock Data Storage ---
+export let mockUsers: User[] = [
+  { id: "u1", name: "Dr. Alice Smith", email: "alice.s@lab.com", role: "Requester" },
+  { id: "u2", name: "Dr. Bob Johnson", email: "bob.j@lab.com", role: "Requester" },
+  { id: "u3", name: "Dr. Carol White", email: "carol.w@lab.com", role: "Requester" },
+  { id: "u4", name: "Admin User", email: "admin@lab.com", role: "Admin" },
+];
+
+export let mockAccountManagers: AccountManager[] = [
+  { id: "am1", name: "Manager A", email: "manager.a@lab.com", phone: "555-111-2222" },
+  { id: "am2", name: "Manager B", email: "manager.b@lab.com", phone: "555-333-4444" },
+];
+
 export let mockVendors: Vendor[] = [
   {
     id: "v1",
@@ -92,7 +119,8 @@ export let mockRequests: LabRequest[] = [
   {
     id: "req1",
     vendorId: "v1",
-    requester: "Dr. Alice Smith",
+    requesterId: "u1", // Linked to Dr. Alice Smith
+    accountManagerId: "am1", // Linked to Manager A
     status: "Pending",
     date: "2023-10-26",
     notes: "Need these urgently for upcoming experiments. Please prioritize.",
@@ -125,7 +153,8 @@ export let mockRequests: LabRequest[] = [
   {
     id: "req2",
     vendorId: "v2",
-    requester: "Dr. Bob Johnson",
+    requesterId: "u2", // Linked to Dr. Bob Johnson
+    accountManagerId: "am2", // Linked to Manager B
     status: "Ordered",
     date: "2023-10-25",
     notes: "Standard PCR reagents.",
@@ -146,7 +175,8 @@ export let mockRequests: LabRequest[] = [
   {
     id: "req3",
     vendorId: "v1",
-    requester: "Dr. Alice Smith",
+    requesterId: "u1", // Linked to Dr. Alice Smith
+    accountManagerId: "am1", // Linked to Manager A
     status: "Approved",
     date: "2023-10-24",
     notes: "Custom peptide for new assay development.",
@@ -166,7 +196,8 @@ export let mockRequests: LabRequest[] = [
   {
     id: "req4",
     vendorId: "v3",
-    requester: "Dr. Carol White",
+    requesterId: "u3", // Linked to Dr. Carol White
+    accountManagerId: "am2", // Linked to Manager B
     status: "Received",
     date: "2023-10-23",
     notes: "Routine cell culture supplies.",
@@ -187,7 +218,8 @@ export let mockRequests: LabRequest[] = [
   {
     id: "req5",
     vendorId: "v1",
-    requester: "Dr. Bob Johnson",
+    requesterId: "u2", // Linked to Dr. Bob Johnson
+    accountManagerId: "am1", // Linked to Manager A
     status: "Pending",
     date: "2023-10-22",
     notes: "For microscopy imaging.",
@@ -213,6 +245,8 @@ type Listener<T> = (data: T) => void;
 
 const requestListeners: Listener<LabRequest[]>[] = [];
 const vendorListeners: Listener<Vendor[]>[] = [];
+const userListeners: Listener<User[]>[] = []; // New listener for Users
+const accountManagerListeners: Listener<AccountManager[]>[] = []; // New listener for Account Managers
 
 export const subscribeToRequests = (listener: Listener<LabRequest[]>) => {
   requestListeners.push(listener);
@@ -234,6 +268,26 @@ export const subscribeToVendors = (listener: Listener<Vendor[]>) => {
   };
 };
 
+export const subscribeToUsers = (listener: Listener<User[]>) => {
+  userListeners.push(listener);
+  return () => {
+    const index = userListeners.indexOf(listener);
+    if (index > -1) {
+      userListeners.splice(index, 1);
+    }
+  };
+};
+
+export const subscribeToAccountManagers = (listener: Listener<AccountManager[]>) => {
+  accountManagerListeners.push(listener);
+  return () => {
+    const index = accountManagerListeners.indexOf(listener);
+    if (index > -1) {
+      accountManagerListeners.splice(index, 1);
+    }
+  };
+};
+
 const notifyRequestListeners = () => {
   requestListeners.forEach(listener => listener([...mockRequests])); // Pass a copy to prevent direct mutation
 };
@@ -242,17 +296,23 @@ const notifyVendorListeners = () => {
   vendorListeners.forEach(listener => listener([...mockVendors])); // Pass a copy
 };
 
+const notifyUserListeners = () => {
+  userListeners.forEach(listener => listener([...mockUsers]));
+};
+
+const notifyAccountManagerListeners = () => {
+  accountManagerListeners.forEach(listener => listener([...mockAccountManagers]));
+};
+
 // --- Functions to modify mock data (simulating API calls) ---
-export const addRequest = (newRequest: Omit<LabRequest, "id" | "status" | "date" | "requester">) => {
+export const addRequest = (newRequest: Omit<LabRequest, "id" | "status" | "date">) => {
   const id = `req${mockRequests.length + 1}`;
   const date = new Date().toISOString().slice(0, 10); // Current date
-  const requester = "Current User"; // Placeholder for logged-in user
   const status = "Pending"; // Default status for new requests
 
   const requestToAdd: LabRequest = {
     id,
     date,
-    requester,
     status,
     ...newRequest,
     items: newRequest.items.map((item, index) => ({
@@ -298,6 +358,62 @@ export const deleteVendor = (vendorId: string) => {
   mockVendors = mockVendors.filter(v => v.id !== vendorId);
   if (mockVendors.length < initialLength) {
     notifyVendorListeners(); // Notify listeners if a vendor was removed
+    return true;
+  }
+  return false;
+};
+
+export const addUser = (newUser: Omit<User, "id">) => {
+  const id = `u${mockUsers.length + 1}`;
+  const userToAdd: User = { id, ...newUser };
+  mockUsers.push(userToAdd);
+  notifyUserListeners();
+  return userToAdd;
+};
+
+export const updateUser = (userId: string, updatedData: Partial<User>) => {
+  const userIndex = mockUsers.findIndex(u => u.id === userId);
+  if (userIndex > -1) {
+    mockUsers[userIndex] = { ...mockUsers[userIndex], ...updatedData };
+    notifyUserListeners();
+    return mockUsers[userIndex];
+  }
+  return null;
+};
+
+export const deleteUser = (userId: string) => {
+  const initialLength = mockUsers.length;
+  mockUsers = mockUsers.filter(u => u.id !== userId);
+  if (mockUsers.length < initialLength) {
+    notifyUserListeners();
+    return true;
+  }
+  return false;
+};
+
+export const addAccountManager = (newManager: Omit<AccountManager, "id">) => {
+  const id = `am${mockAccountManagers.length + 1}`;
+  const managerToAdd: AccountManager = { id, ...newManager };
+  mockAccountManagers.push(managerToAdd);
+  notifyAccountManagerListeners();
+  return managerToAdd;
+};
+
+export const updateAccountManager = (managerId: string, updatedData: Partial<AccountManager>) => {
+  const managerIndex = mockAccountManagers.findIndex(am => am.id === managerId);
+  if (managerIndex > -1) {
+    mockAccountManagers[managerIndex] = { ...mockAccountManagers[managerIndex], ...updatedData };
+    notifyAccountManagerListeners();
+    return mockAccountManagers[managerIndex];
+  }
+  return null;
+};
+
+export const deleteAccountManager = (managerId: string) => {
+  const initialLength = mockAccountManagers.length;
+  mockAccountManagers = mockAccountManagers.filter(am => am.id !== managerId);
+  if (mockAccountManagers.length < initialLength) {
+    notifyAccountManagerListeners();
     return true;
   }
   return false;
