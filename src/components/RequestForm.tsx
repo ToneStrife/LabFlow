@@ -15,14 +15,16 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { PlusCircle, Trash2, Check, ChevronsUpDown, Sparkles } from "lucide-react"; // Added Sparkles icon
+import { PlusCircle, Trash2, Check, ChevronsUpDown, Sparkles, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { mockVendors, mockProjects, addRequest, mockUsers, mockAccountManagers } from "@/data/mockData"; // Import shared mock data and addRequest function
+import { mockVendors, mockProjects, addRequest, mockUsers, mockAccountManagers } from "@/data/mockData";
+import { supabase } from "@/lib/supabase";
+import { showSuccess, showError, showLoading, dismissToast } from "@/utils/toast";
 
 const itemSchema = z.object({
   productName: z.string().min(1, { message: "Product name is required." }),
@@ -38,7 +40,7 @@ const itemSchema = z.object({
   format: z.string().optional(),
   link: z.string().url({ message: "Must be a valid URL." }).optional().or(z.literal("")),
   notes: z.string().optional(),
-  brand: z.string().optional(), // New field for brand
+  brand: z.string().optional(),
 });
 
 const formSchema = z.object({
@@ -53,18 +55,20 @@ const formSchema = z.object({
 type RequestFormValues = z.infer<typeof formSchema>;
 
 const RequestForm: React.FC = () => {
+  const [autofillingIndex, setAutofillingIndex] = React.useState<number | null>(null);
+
   const form = useForm<RequestFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       vendorId: "",
       requesterId: "",
       accountManagerId: "",
-      items: [{ productName: "", catalogNumber: "", quantity: 1, unitPrice: undefined, format: "", link: "", notes: "", brand: "" }], // Initialize brand
+      items: [{ productName: "", catalogNumber: "", quantity: 1, unitPrice: undefined, format: "", link: "", notes: "", brand: "" }],
       projectCodes: [],
     },
   });
 
-  const { fields, append, remove, replace } = useFieldArray({
+  const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: "items",
   });
@@ -79,58 +83,46 @@ const RequestForm: React.FC = () => {
     form.reset();
   };
 
-  const requesters = mockUsers.filter(user => user.role === "Requester");
+  const handleFetchProductDetails = async (index: number) => {
+    setAutofillingIndex(index);
+    const toastId = showLoading("Fetching product details...");
 
-  const handleAutofillItems = () => {
-    const autofillData = [
-      {
-        productName: "E. coli DH5a Competent Cells",
-        catalogNumber: "18265017",
-        quantity: 1,
-        unitPrice: 150.00,
-        format: "10x 50µl",
-        link: "https://www.thermofisher.com/order/catalog/product/18265017",
-        notes: "For general cloning purposes.",
-        brand: "Invitrogen",
-      },
-      {
-        productName: "DMEM, high glucose",
-        catalogNumber: "11965092",
-        quantity: 2,
-        unitPrice: 35.50,
-        format: "500ml",
-        link: "https://www.thermofisher.com/order/catalog/product/11965092",
-        notes: "Cell culture media.",
-        brand: "Gibco",
-      },
-    ];
+    try {
+      const catalogNumber = form.getValues(`items.${index}.catalogNumber`);
+      if (!catalogNumber) {
+        showError("Please enter a catalog number first.");
+        return;
+      }
 
-    const currentItems = form.getValues("items");
-    const isFirstItemPristine =
-      currentItems.length === 1 &&
-      currentItems[0].productName === "" &&
-      currentItems[0].catalogNumber === "" &&
-      currentItems[0].brand === "" &&
-      currentItems[0].link === "" &&
-      currentItems[0].notes === "" &&
-      currentItems[0].format === "" &&
-      currentItems[0].quantity === 1 &&
-      currentItems[0].unitPrice === undefined;
+      const { data, error } = await supabase.functions.invoke('autofill-product-details', {
+        body: { catalogNumber },
+      });
 
-    if (isFirstItemPristine) {
-      replace(autofillData); // Replace the initial empty item
-    } else {
-      append(autofillData); // Append to existing items
+      if (error) throw new Error(error.message);
+      if (data.error) throw new Error(data.error);
+
+      form.setValue(`items.${index}.productName`, data.productName || '');
+      form.setValue(`items.${index}.brand`, data.brand || '');
+      form.setValue(`items.${index}.unitPrice`, data.unitPrice || undefined);
+      form.setValue(`items.${index}.format`, data.format || '');
+      form.setValue(`items.${index}.link`, data.link || '');
+
+      showSuccess("Product details autofilled!");
+    } catch (error: any) {
+      console.error("Error fetching product details:", error);
+      showError(error.message || "Could not fetch product details.");
+    } finally {
+      dismissToast(toastId);
+      setAutofillingIndex(null);
     }
-
-    toast.info("Items autofilled with example data!");
   };
+
+  const requesters = mockUsers.filter(user => user.role === "Requester");
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Requester Selection */}
           <FormField
             control={form.control}
             name="requesterId"
@@ -139,15 +131,11 @@ const RequestForm: React.FC = () => {
                 <FormLabel>Requester</FormLabel>
                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                   <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a requester" />
-                    </SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Select a requester" /></SelectTrigger>
                   </FormControl>
                   <SelectContent>
                     {requesters.map((user) => (
-                      <SelectItem key={user.id} value={user.id}>
-                        {user.name}
-                      </SelectItem>
+                      <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -155,8 +143,6 @@ const RequestForm: React.FC = () => {
               </FormItem>
             )}
           />
-
-          {/* Vendor Selection */}
           <FormField
             control={form.control}
             name="vendorId"
@@ -165,15 +151,11 @@ const RequestForm: React.FC = () => {
                 <FormLabel>Vendor</FormLabel>
                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                   <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a vendor" />
-                    </SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Select a vendor" /></SelectTrigger>
                   </FormControl>
                   <SelectContent>
                     {mockVendors.map((vendor) => (
-                      <SelectItem key={vendor.id} value={vendor.id}>
-                        {vendor.name}
-                      </SelectItem>
+                      <SelectItem key={vendor.id} value={vendor.id}>{vendor.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -182,8 +164,6 @@ const RequestForm: React.FC = () => {
             )}
           />
         </div>
-
-        {/* Account Manager Selection */}
         <FormField
           control={form.control}
           name="accountManagerId"
@@ -192,15 +172,11 @@ const RequestForm: React.FC = () => {
               <FormLabel>Account Manager</FormLabel>
               <Select onValueChange={field.onChange} defaultValue={field.value}>
                 <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select an account manager" />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="Select an account manager" /></SelectTrigger>
                 </FormControl>
                 <SelectContent>
                   {mockAccountManagers.map((manager) => (
-                    <SelectItem key={manager.id} value={manager.id}>
-                      {manager.name}
-                    </SelectItem>
+                    <SelectItem key={manager.id} value={manager.id}>{manager.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -208,25 +184,13 @@ const RequestForm: React.FC = () => {
             </FormItem>
           )}
         />
-
-        <div className="flex justify-between items-center mt-8 mb-4">
-          <h2 className="text-xl font-semibold">Items</h2>
-          <Button type="button" variant="outline" onClick={handleAutofillItems} className="text-purple-600 border-purple-600 hover:bg-purple-50">
-            <Sparkles className="mr-2 h-4 w-4" /> AI Autofill Items
-          </Button>
-        </div>
+        <h2 className="text-xl font-semibold">Items</h2>
         <div className="space-y-6">
           {fields.map((field, index) => (
             <div key={field.id} className="border p-4 rounded-md relative">
               <h3 className="text-lg font-medium mb-4">Item #{index + 1}</h3>
               {fields.length > 1 && (
-                <Button
-                  type="button"
-                  variant="destructive"
-                  size="icon"
-                  onClick={() => remove(index)}
-                  className="absolute top-4 right-4"
-                >
+                <Button type="button" variant="destructive" size="icon" onClick={() => remove(index)} className="absolute top-4 right-4">
                   <Trash2 className="h-4 w-4" />
                 </Button>
               )}
@@ -237,22 +201,18 @@ const RequestForm: React.FC = () => {
                   render={({ field: itemField }) => (
                     <FormItem>
                       <FormLabel>Product Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., Anti-GFP Antibody" {...itemField} />
-                      </FormControl>
+                      <FormControl><Input placeholder="e.g., Anti-GFP Antibody" {...itemField} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
                 <FormField
                   control={form.control}
-                  name={`items.${index}.brand`} // New Brand field
+                  name={`items.${index}.brand`}
                   render={({ field: itemField }) => (
                     <FormItem>
                       <FormLabel>Brand (Optional)</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., Invitrogen" {...itemField} />
-                      </FormControl>
+                      <FormControl><Input placeholder="e.g., Invitrogen" {...itemField} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -264,7 +224,12 @@ const RequestForm: React.FC = () => {
                     <FormItem>
                       <FormLabel>Catalog Number</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., ab12345" {...itemField} />
+                        <div className="flex items-center gap-2">
+                          <Input placeholder="e.g., 18265017" {...itemField} />
+                          <Button type="button" variant="outline" size="icon" onClick={() => handleFetchProductDetails(index)} disabled={autofillingIndex === index} title="Autofill product details">
+                            {autofillingIndex === index ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4 text-purple-600" />}
+                          </Button>
+                        </div>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -276,9 +241,7 @@ const RequestForm: React.FC = () => {
                   render={({ field: itemField }) => (
                     <FormItem>
                       <FormLabel>Quantity</FormLabel>
-                      <FormControl>
-                        <Input type="number" {...itemField} />
-                      </FormControl>
+                      <FormControl><Input type="number" {...itemField} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -289,9 +252,7 @@ const RequestForm: React.FC = () => {
                   render={({ field: itemField }) => (
                     <FormItem>
                       <FormLabel>Unit Price (Optional)</FormLabel>
-                      <FormControl>
-                        <Input type="number" step="0.01" placeholder="e.g., 120.50" {...itemField} />
-                      </FormControl>
+                      <FormControl><Input type="number" step="0.01" placeholder="e.g., 120.50" {...itemField} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -302,9 +263,7 @@ const RequestForm: React.FC = () => {
                   render={({ field: itemField }) => (
                     <FormItem>
                       <FormLabel>Format (Optional)</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., 200pack 8cs of 25" {...itemField} />
-                      </FormControl>
+                      <FormControl><Input placeholder="e.g., 200pack 8cs of 25" {...itemField} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -315,9 +274,7 @@ const RequestForm: React.FC = () => {
                   render={({ field: itemField }) => (
                     <FormItem>
                       <FormLabel>Product Link (Optional)</FormLabel>
-                      <FormControl>
-                        <Input type="url" placeholder="e.g., https://www.vendor.com/product" {...itemField} />
-                      </FormControl>
+                      <FormControl><Input type="url" placeholder="e.g., https://www.vendor.com/product" {...itemField} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -328,9 +285,7 @@ const RequestForm: React.FC = () => {
                   render={({ field: itemField }) => (
                     <FormItem className="md:col-span-2">
                       <FormLabel>Notes (Optional)</FormLabel>
-                      <FormControl>
-                        <Textarea placeholder="Any specific requirements or details..." {...itemField} />
-                      </FormControl>
+                      <FormControl><Textarea placeholder="Any specific requirements or details..." {...itemField} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -339,17 +294,9 @@ const RequestForm: React.FC = () => {
             </div>
           ))}
         </div>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() =>
-            append({ productName: "", catalogNumber: "", quantity: 1, unitPrice: undefined, format: "", link: "", notes: "", brand: "" })
-          }
-          className="w-full"
-        >
+        <Button type="button" variant="outline" onClick={() => append({ productName: "", catalogNumber: "", quantity: 1, unitPrice: undefined, format: "", link: "", notes: "", brand: "" })} className="w-full">
           <PlusCircle className="mr-2 h-4 w-4" /> Add Another Item
         </Button>
-
         <h2 className="text-xl font-semibold mt-8 mb-4">Attachments (Optional)</h2>
         <FormField
           control={form.control}
@@ -357,22 +304,12 @@ const RequestForm: React.FC = () => {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Upload Files (e.g., Quotes, PDFs)</FormLabel>
-              <FormControl>
-                <Input
-                  type="file"
-                  multiple
-                  onChange={(e) => field.onChange(e.target.files)}
-                />
-              </FormControl>
+              <FormControl><Input type="file" multiple onChange={(e) => field.onChange(e.target.files)} /></FormControl>
               <FormMessage />
-              <p className="text-sm text-muted-foreground">
-                Note: File uploads require a backend to store the files. This is a placeholder.
-              </p>
+              <p className="text-sm text-muted-foreground">Note: File uploads require a backend to store the files. This is a placeholder.</p>
             </FormItem>
           )}
         />
-
-        {/* Project Codes Multi-select */}
         <h2 className="text-xl font-semibold mt-8 mb-4">Project Codes (Optional)</h2>
         <FormField
           control={form.control}
@@ -383,24 +320,15 @@ const RequestForm: React.FC = () => {
               <Popover>
                 <PopoverTrigger asChild>
                   <FormControl>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      className={cn(
-                        "w-full justify-between",
-                        !field.value || field.value.length === 0 && "text-muted-foreground"
-                      )}
-                    >
-                      {field.value && field.value.length > 0
-                        ? (
-                            <div className="flex flex-wrap gap-1">
-                              {field.value.map((projectId) => {
-                                const project = mockProjects.find((p) => p.id === projectId);
-                                return project ? <Badge key={projectId} variant="secondary">{project.code}</Badge> : null;
-                              })}
-                            </div>
-                          )
-                        : "Select projects..."}
+                    <Button variant="outline" role="combobox" className={cn("w-full justify-between", !field.value || field.value.length === 0 && "text-muted-foreground")}>
+                      {field.value && field.value.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {field.value.map((projectId) => {
+                            const project = mockProjects.find((p) => p.id === projectId);
+                            return project ? <Badge key={projectId} variant="secondary">{project.code}</Badge> : null;
+                          })}
+                        </div>
+                      ) : "Select projects..."}
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </FormControl>
@@ -411,24 +339,15 @@ const RequestForm: React.FC = () => {
                     <CommandEmpty>No project found.</CommandEmpty>
                     <CommandGroup>
                       {mockProjects.map((project) => (
-                        <CommandItem
-                          value={project.name}
-                          key={project.id}
-                          onSelect={() => {
-                            const currentValues = field.value || [];
-                            if (currentValues.includes(project.id)) {
-                              field.onChange(currentValues.filter((id) => id !== project.id));
-                            } else {
-                              field.onChange([...currentValues, project.id]);
-                            }
-                          }}
-                        >
-                          <Check
-                            className={cn(
-                              "mr-2 h-4 w-4",
-                              field.value?.includes(project.id) ? "opacity-100" : "opacity-0"
-                            )}
-                          />
+                        <CommandItem value={project.name} key={project.id} onSelect={() => {
+                          const currentValues = field.value || [];
+                          if (currentValues.includes(project.id)) {
+                            field.onChange(currentValues.filter((id) => id !== project.id));
+                          } else {
+                            field.onChange([...currentValues, project.id]);
+                          }
+                        }}>
+                          <Check className={cn("mr-2 h-4 w-4", field.value?.includes(project.id) ? "opacity-100" : "opacity-0")} />
                           {project.name} ({project.code})
                         </CommandItem>
                       ))}
@@ -440,7 +359,6 @@ const RequestForm: React.FC = () => {
             </FormItem>
           )}
         />
-
         <Button type="submit" className="w-full">Submit Request</Button>
       </form>
     </Form>
