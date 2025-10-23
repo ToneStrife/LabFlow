@@ -3,7 +3,7 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { Package, ShoppingCart, Users } from "lucide-react";
+import { Package, ShoppingCart, Users, User } from "lucide-react"; // Import User icon
 import { Button } from "@/components/ui/button";
 
 interface SidebarNavProps extends React.HTMLAttributes<HTMLElement> {
@@ -26,6 +26,11 @@ const navItems = [
     title: "Vendors",
     href: "/vendors",
     icon: <Users className="mr-2 h-4 w-4" />,
+  },
+  {
+    title: "Profile", // New Profile link
+    href: "/profile",
+    icon: <User className="mr-2 h-4 w-4" />,
   },
 ];
 

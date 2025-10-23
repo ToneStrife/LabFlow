@@ -8,9 +8,10 @@ import Dashboard from "./pages/Dashboard";
 import NewRequest from "./pages/NewRequest";
 import Vendors from "./pages/Vendors";
 import RequestDetails from "./pages/RequestDetails";
+import Profile from "./pages/Profile"; // Import the new Profile page
 import NotFound from "./pages/NotFound";
-import Login from "./pages/Login"; // Import the new Login page
-import { SessionContextProvider, useSession } from "./components/SessionContextProvider"; // Import SessionContextProvider and useSession
+import Login from "./pages/Login";
+import { SessionContextProvider, useSession } from "./components/SessionContextProvider";
 
 const queryClient = new QueryClient();
 
@@ -18,9 +19,7 @@ const AuthenticatedRoutes = () => {
   const { session } = useSession();
 
   if (!session) {
-    // This case should ideally be handled by the SessionContextProvider redirect,
-    // but as a fallback, we can render nothing or a loading state.
-    return null; 
+    return null;
   }
 
   return (
@@ -31,6 +30,7 @@ const AuthenticatedRoutes = () => {
         <Route path="/new-request" element={<NewRequest />} />
         <Route path="/vendors" element={<Vendors />} />
         <Route path="/requests/:id" element={<RequestDetails />} />
+        <Route path="/profile" element={<Profile />} /> {/* New Profile route */}
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
       </Routes>
@@ -47,7 +47,7 @@ const App = () => (
         <SessionContextProvider>
           <Routes>
             <Route path="/login" element={<Login />} />
-            <Route path="/*" element={<AuthenticatedRoutes />} /> {/* Catch-all for authenticated routes */}
+            <Route path="/*" element={<AuthenticatedRoutes />} />
           </Routes>
         </SessionContextProvider>
       </BrowserRouter>
