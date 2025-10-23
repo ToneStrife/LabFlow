@@ -15,16 +15,17 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { PlusCircle, Trash2, Check, ChevronsUpDown, Sparkles, Loader2 } from "lucide-react";
+import { PlusCircle, Trash2, Check, ChevronsUpDown } from "lucide-react";
 import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { mockVendors, mockProjects, addRequest, mockAccountManagers, productDatabase, ProductDetails } from "@/data/mockData";
-import { showSuccess, showError, showLoading, dismissToast } from "@/utils/toast";
-import { useSession } from "@/components/SessionContextProvider"; // Import useSession
+import { mockVendors, mockProjects, addRequest, mockAccountManagers, ProductDetails } from "@/data/mockData";
+import { showError } from "@/utils/toast";
+import { useSession } from "@/components/SessionContextProvider";
+import ProductSearch from "./ProductSearch"; // Import the new component
 
 const itemSchema = z.object({
   productName: z.string().min(1, { message: "Product name is required." }),
@@ -45,7 +46,7 @@ const itemSchema = z.object({
 
 const formSchema = z.object({
   vendorId: z.string().min(1, { message: "Vendor is required." }),
-  requesterId: z.string().min(1, { message: "Requester is required." }), // Keep for internal validation, but will be auto-set
+  requesterId: z.string().min(1, { message: "Requester is required." }),
   accountManagerId: z.string().min(1, { message: "Account Manager is required." }),
   items: z.array(itemSchema).min(1, { message: "At least one item is required." }),
   attachments: z.any().optional(),
@@ -55,16 +56,13 @@ const formSchema = z.object({
 type RequestFormValues = z.infer<typeof formSchema>;
 
 const RequestForm: React.FC = () => {
-  const { session, profile } = useSession(); // Use session and profile
-  const [autofillingIndex, setAutofillingIndex] = React.useState<number | null>(null);
-  const [matchingProducts, setMatchingProducts] = React.useState<ProductDetails[]>([]);
-  const [selectionIndex, setSelectionIndex] = React.useState<number | null>(null);
-
+  const { session, profile } = useSession();
+  
   const form = useForm<RequestFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       vendorId: "",
-      requesterId: session?.user?.id || "", // Auto-set requesterId from session
+      requesterId: session?.user?.id || "",
       accountManagerId: "",
       items: [{ productName: "", catalogNumber: "", quantity: 1, unitPrice: undefined, format: "", link: "", notes: "", brand: "" }],
       projectCodes: [],
@@ -78,74 +76,31 @@ const RequestForm: React.FC = () => {
     }
   }, [session, form]);
 
-  const { fields, append, remove } = useFieldArray({
+  const { fields, append, remove, update } = useFieldArray({
     control: form.control,
     name: "items",
   });
 
-  const applyProductDetails = (index: number, data: ProductDetails) => {
-    form.setValue(`items.${index}.productName`, data.productName || '');
-    form.setValue(`items.${index}.brand`, data.brand || '');
-    form.setValue(`items.${index}.unitPrice`, data.unitPrice || undefined);
-    form.setValue(`items.${index}.format`, data.format || '');
-    form.setValue(`items.${index}.link`, data.link || '');
-  };
+  const handleProductSelect = (product: ProductDetails) => {
+    // Find the first empty item slot, or append a new one
+    const emptyIndex = fields.findIndex(item => !item.productName && !item.catalogNumber);
+    const targetIndex = emptyIndex !== -1 ? emptyIndex : fields.length;
 
-  const handleFetchProductDetails = async (index: number) => {
-    setAutofillingIndex(index);
-    setSelectionIndex(null); // Clear any previous selection state
-    setMatchingProducts([]);
-    const toastId = showLoading("Searching product database...");
+    const newProductData = {
+      productName: product.productName || '',
+      catalogNumber: product.catalogNumber || '',
+      brand: product.brand || '',
+      unitPrice: product.unitPrice || undefined,
+      format: product.format || '',
+      link: product.link || '',
+      notes: '',
+      quantity: 1, // Default quantity to 1
+    };
 
-    try {
-      const catalogNumber = form.getValues(`items.${index}.catalogNumber`).trim().toLowerCase();
-      const brand = form.getValues(`items.${index}.brand`)?.trim().toLowerCase();
-
-      if (!catalogNumber) {
-        showError("Please enter a catalog number first.");
-        return;
-      }
-
-      // Simulate network delay
-      await new Promise(resolve => setTimeout(resolve, 750));
-
-      const matches = productDatabase.filter(p => {
-        const catMatch = p.catalogNumber.toLowerCase() === catalogNumber;
-        const brandMatch = !brand || p.brand.toLowerCase().includes(brand);
-        return catMatch && brandMatch;
-      });
-
-      if (matches.length === 0) {
-        throw new Error(`Product with catalog number '${catalogNumber}' not found.`);
-      }
-
-      if (matches.length === 1) {
-        // Single match, autofill immediately
-        applyProductDetails(index, matches[0]);
-        showSuccess("Product details autofilled!");
-      } else {
-        // Multiple matches, prompt user for selection
-        setMatchingProducts(matches);
-        setSelectionIndex(index);
-        showSuccess(`${matches.length} matching products found. Please select one.`);
-      }
-
-    } catch (error: any) {
-      console.error("Error fetching product details:", error);
-      showError(error.message || "Could not fetch product details.");
-    } finally {
-      dismissToast(toastId);
-      setAutofillingIndex(null);
-    }
-  };
-
-  const handleProductSelection = (index: number, productId: string) => {
-    const selectedProduct = matchingProducts.find(p => p.id === productId);
-    if (selectedProduct) {
-      applyProductDetails(index, selectedProduct);
-      setSelectionIndex(null);
-      setMatchingProducts([]);
-      toast.success("Product selected and details applied.");
+    if (emptyIndex !== -1) {
+      update(targetIndex, { ...fields[targetIndex], ...newProductData });
+    } else {
+      append(newProductData);
     }
   };
 
@@ -154,7 +109,7 @@ const RequestForm: React.FC = () => {
       showError("You must be logged in to submit a request.");
       return;
     }
-    const newRequest = addRequest({ ...data, requesterId: session.user.id }); // Ensure requesterId is from session
+    const newRequest = addRequest({ ...data, requesterId: session.user.id });
     const selectedVendor = mockVendors.find(v => v.id === newRequest.vendorId)?.name;
     const requesterName = profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 'N/A';
     toast.success("Request submitted successfully!", {
@@ -162,7 +117,7 @@ const RequestForm: React.FC = () => {
     });
     form.reset({
       vendorId: "",
-      requesterId: session.user.id, // Reset requesterId to current user
+      requesterId: session.user.id,
       accountManagerId: "",
       items: [{ productName: "", catalogNumber: "", quantity: 1, unitPrice: undefined, format: "", link: "", notes: "", brand: "" }],
       projectCodes: [],
@@ -174,6 +129,8 @@ const RequestForm: React.FC = () => {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        <ProductSearch onProductSelect={handleProductSelect} />
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormItem>
             <FormLabel>Requester</FormLabel>
@@ -265,35 +222,12 @@ const RequestForm: React.FC = () => {
                       <FormControl>
                         <div className="flex items-center gap-2">
                           <Input placeholder="e.g., 18265017" {...itemField} />
-                          <Button type="button" variant="outline" size="icon" onClick={() => handleFetchProductDetails(index)} disabled={autofillingIndex === index} title="Autofill product details">
-                            {autofillingIndex === index ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4 text-purple-600" />}
-                          </Button>
                         </div>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                {selectionIndex === index && matchingProducts.length > 1 && (
-                  <FormItem className="md:col-span-2">
-                    <FormLabel>Select Matching Product</FormLabel>
-                    <Select onValueChange={(productId) => handleProductSelection(index, productId)}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder={`Select one of ${matchingProducts.length} matches...`} />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {matchingProducts.map((product) => (
-                          <SelectItem key={product.id} value={product.id}>
-                            {product.productName} ({product.brand}) - ${product.unitPrice?.toFixed(2) || 'N/A'}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
                 <FormField
                   control={form.control}
                   name={`items.${index}.quantity`}
