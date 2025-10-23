@@ -32,7 +32,7 @@ const itemSchema = z.object({
     z.number().min(1, { message: "Quantity must be at least 1." })
   ),
   unitPrice: z.preprocess(
-    (val) => Number(val),
+    (val) => (val === "" ? undefined : Number(val)),
     z.number().min(0, { message: "Unit price cannot be negative." }).optional()
   ),
   format: z.string().optional(),
@@ -91,7 +91,7 @@ const RequestForm: React.FC = () => {
         format: "10x 50µl",
         link: "https://www.thermofisher.com/order/catalog/product/18265017",
         notes: "For general cloning purposes.",
-        brand: "Invitrogen", // Added brand
+        brand: "Invitrogen",
       },
       {
         productName: "DMEM, high glucose",
@@ -101,10 +101,28 @@ const RequestForm: React.FC = () => {
         format: "500ml",
         link: "https://www.thermofisher.com/order/catalog/product/11965092",
         notes: "Cell culture media.",
-        brand: "Gibco", // Added brand
+        brand: "Gibco",
       },
     ];
-    append(autofillData); // Changed from replace to append
+
+    const currentItems = form.getValues("items");
+    const isFirstItemPristine =
+      currentItems.length === 1 &&
+      currentItems[0].productName === "" &&
+      currentItems[0].catalogNumber === "" &&
+      currentItems[0].brand === "" &&
+      currentItems[0].link === "" &&
+      currentItems[0].notes === "" &&
+      currentItems[0].format === "" &&
+      currentItems[0].quantity === 1 &&
+      currentItems[0].unitPrice === undefined;
+
+    if (isFirstItemPristine) {
+      replace(autofillData); // Replace the initial empty item
+    } else {
+      append(autofillData); // Append to existing items
+    }
+
     toast.info("Items autofilled with example data!");
   };
 
