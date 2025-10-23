@@ -41,8 +41,8 @@ export interface Project {
   code: string;
 }
 
-// Initial Mock Data
-export const mockVendors: Vendor[] = [
+// --- Mock Data Storage ---
+export let mockVendors: Vendor[] = [
   {
     id: "v1",
     name: "Thermo Fisher Scientific",
@@ -207,7 +207,42 @@ export let mockRequests: LabRequest[] = [
   },
 ];
 
-// Functions to modify mock data (simulating API calls)
+// --- Observer Pattern for Mock Data Changes ---
+
+type Listener<T> = (data: T) => void;
+
+const requestListeners: Listener<LabRequest[]>[] = [];
+const vendorListeners: Listener<Vendor[]>[] = [];
+
+export const subscribeToRequests = (listener: Listener<LabRequest[]>) => {
+  requestListeners.push(listener);
+  return () => {
+    const index = requestListeners.indexOf(listener);
+    if (index > -1) {
+      requestListeners.splice(index, 1);
+    }
+  };
+};
+
+export const subscribeToVendors = (listener: Listener<Vendor[]>) => {
+  vendorListeners.push(listener);
+  return () => {
+    const index = vendorListeners.indexOf(listener);
+    if (index > -1) {
+      vendorListeners.splice(index, 1);
+    }
+  };
+};
+
+const notifyRequestListeners = () => {
+  requestListeners.forEach(listener => listener([...mockRequests])); // Pass a copy to prevent direct mutation
+};
+
+const notifyVendorListeners = () => {
+  vendorListeners.forEach(listener => listener([...mockVendors])); // Pass a copy
+};
+
+// --- Functions to modify mock data (simulating API calls) ---
 export const addRequest = (newRequest: Omit<LabRequest, "id" | "status" | "date" | "requester">) => {
   const id = `req${mockRequests.length + 1}`;
   const date = new Date().toISOString().slice(0, 10); // Current date
@@ -226,6 +261,7 @@ export const addRequest = (newRequest: Omit<LabRequest, "id" | "status" | "date"
     })),
   };
   mockRequests.push(requestToAdd);
+  notifyRequestListeners(); // Notify listeners after adding
   return requestToAdd;
 };
 
@@ -233,6 +269,7 @@ export const updateRequestStatus = (requestId: string, newStatus: RequestStatus)
   const requestIndex = mockRequests.findIndex(req => req.id === requestId);
   if (requestIndex > -1) {
     mockRequests[requestIndex].status = newStatus;
+    notifyRequestListeners(); // Notify listeners after updating
     return mockRequests[requestIndex];
   }
   return null;
@@ -242,6 +279,7 @@ export const addVendor = (newVendor: Omit<Vendor, "id">) => {
   const id = `v${mockVendors.length + 1}`;
   const vendorToAdd: Vendor = { id, ...newVendor };
   mockVendors.push(vendorToAdd);
+  notifyVendorListeners(); // Notify listeners after adding
   return vendorToAdd;
 };
 
@@ -249,6 +287,7 @@ export const updateVendor = (vendorId: string, updatedData: Partial<Vendor>) => 
   const vendorIndex = mockVendors.findIndex(v => v.id === vendorId);
   if (vendorIndex > -1) {
     mockVendors[vendorIndex] = { ...mockVendors[vendorIndex], ...updatedData };
+    notifyVendorListeners(); // Notify listeners after updating
     return mockVendors[vendorIndex];
   }
   return null;
@@ -257,5 +296,9 @@ export const updateVendor = (vendorId: string, updatedData: Partial<Vendor>) => 
 export const deleteVendor = (vendorId: string) => {
   const initialLength = mockVendors.length;
   mockVendors = mockVendors.filter(v => v.id !== vendorId);
-  return mockVendors.length < initialLength; // True if a vendor was removed
+  if (mockVendors.length < initialLength) {
+    notifyVendorListeners(); // Notify listeners if a vendor was removed
+    return true;
+  }
+  return false;
 };

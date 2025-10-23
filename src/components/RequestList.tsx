@@ -13,7 +13,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Eye, CheckCircle, Package, Receipt } from "lucide-react";
-import { mockRequests, mockVendors, updateRequestStatus, RequestStatus, LabRequest } from "@/data/mockData"; // Import shared mock data and functions
+import { mockVendors, updateRequestStatus, RequestStatus, LabRequest, subscribeToRequests, mockRequests } from "@/data/mockData"; // Import subscribeToRequests
 
 const getStatusBadgeVariant = (status: RequestStatus) => {
   switch (status) {
@@ -32,23 +32,23 @@ const getStatusBadgeVariant = (status: RequestStatus) => {
 
 const RequestList: React.FC = () => {
   const navigate = useNavigate();
-  const [requests, setRequests] = React.useState<LabRequest[]>(mockRequests); // Use local state to trigger re-renders
+  const [requests, setRequests] = React.useState<LabRequest[]>(mockRequests); // Initialize with current mock data
 
-  // Effect to update local state when mockRequests might change (e.g., new request added)
+  // Subscribe to changes in mockRequests
   React.useEffect(() => {
-    setRequests([...mockRequests]); // Create a new array to ensure state update
-  }, [mockRequests]); // Depend on mockRequests array reference
+    const unsubscribe = subscribeToRequests(updatedRequests => {
+      setRequests(updatedRequests);
+    });
+    return () => unsubscribe(); // Clean up subscription on unmount
+  }, []);
 
   const handleViewDetails = (requestId: string) => {
     navigate(`/requests/${requestId}`);
   };
 
   const handleUpdateStatus = (requestId: string, newStatus: RequestStatus) => {
-    const updatedRequest = updateRequestStatus(requestId, newStatus);
-    if (updatedRequest) {
-      setRequests((prev) => prev.map(req => req.id === requestId ? updatedRequest : req));
-      // For a real app, you'd likely refetch or use a global state manager
-    }
+    updateRequestStatus(requestId, newStatus); // This function now notifies listeners
+    // The setRequests in the useEffect will handle the re-render
   };
 
   return (
@@ -56,7 +56,7 @@ const RequestList: React.FC = () => {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Vendor</TableHead> {/* Changed from Title to Vendor */}
+            <TableHead>Vendor</TableHead>
             <TableHead>Requester</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Date</TableHead>

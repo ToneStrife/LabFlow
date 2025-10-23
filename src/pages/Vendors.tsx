@@ -7,18 +7,21 @@ import { PlusCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import VendorForm, { VendorFormValues } from "@/components/VendorForm";
 import { toast } from "sonner";
-import { mockVendors, addVendor, updateVendor, deleteVendor, Vendor } from "@/data/mockData"; // Import shared mock data and functions
+import { mockVendors, addVendor, updateVendor, deleteVendor, Vendor, subscribeToVendors } from "@/data/mockData"; // Import subscribeToVendors
 
 const Vendors = () => {
-  const [vendors, setVendors] = React.useState<Vendor[]>(mockVendors); // Use local state to trigger re-renders
+  const [vendors, setVendors] = React.useState<Vendor[]>(mockVendors); // Initialize with current mock data
   const [isAddVendorDialogOpen, setIsAddVendorDialogOpen] = React.useState(false);
   const [isEditVendorDialogOpen, setIsEditVendorDialogOpen] = React.useState(false);
   const [editingVendor, setEditingVendor] = React.useState<Vendor | undefined>(undefined);
 
-  // Effect to update local state when mockVendors might change
+  // Subscribe to changes in mockVendors
   React.useEffect(() => {
-    setVendors([...mockVendors]); // Create a new array to ensure state update
-  }, [mockVendors]); // Depend on mockVendors array reference
+    const unsubscribe = subscribeToVendors(updatedVendors => {
+      setVendors(updatedVendors);
+    });
+    return () => unsubscribe(); // Clean up subscription on unmount
+  }, []);
 
   const parseBrandsString = (brandsString: string | undefined): string[] => {
     return brandsString
@@ -27,38 +30,32 @@ const Vendors = () => {
   };
 
   const handleAddVendor = (newVendorData: VendorFormValues) => {
-    const newVendor = addVendor({
+    addVendor({
       ...newVendorData,
       brands: parseBrandsString(newVendorData.brands),
     });
-    setVendors((prevVendors) => [...prevVendors, newVendor]); // Update local state
     setIsAddVendorDialogOpen(false);
     toast.success("Vendor added successfully!", {
-      description: `Vendor: ${newVendor.name}`,
+      description: `Vendor: ${newVendorData.name}`,
     });
+    // The setVendors in the useEffect will handle the re-render
   };
 
   const handleEditVendor = (vendorId: string, updatedData: VendorFormValues) => {
-    const updated = updateVendor(vendorId, {
+    updateVendor(vendorId, {
       ...updatedData,
       brands: parseBrandsString(updatedData.brands),
     });
-    if (updated) {
-      setVendors((prevVendors) =>
-        prevVendors.map((vendor) =>
-          vendor.id === vendorId ? updated : vendor
-        )
-      );
-    }
     setIsEditVendorDialogOpen(false);
     setEditingVendor(undefined);
     toast.success("Vendor updated successfully!");
+    // The setVendors in the useEffect will handle the re-render
   };
 
   const handleDeleteVendor = (vendorId: string) => {
     if (deleteVendor(vendorId)) {
-      setVendors((prevVendors) => prevVendors.filter((vendor) => vendor.id !== vendorId));
       toast.success("Vendor deleted successfully!");
+      // The setVendors in the useEffect will handle the re-render
     }
   };
 

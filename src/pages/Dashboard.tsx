@@ -1,16 +1,25 @@
 "use client";
 
 import React from "react";
-import RequestList from "@/components/RequestList"; // Import the new RequestList component
-import { mockRequests } from "@/data/mockData"; // Import mockRequests to calculate counts
+import RequestList from "@/components/RequestList";
+import { mockRequests, subscribeToRequests } from "@/data/mockData"; // Import subscribeToRequests
 
 const Dashboard = () => {
-  // Calculate dynamic counts
-  const pendingRequestsCount = mockRequests.filter(req => req.status === "Pending").length;
-  const orderedItemsCount = mockRequests
+  const [requests, setRequests] = React.useState(mockRequests);
+
+  React.useEffect(() => {
+    const unsubscribe = subscribeToRequests(updatedRequests => {
+      setRequests(updatedRequests);
+    });
+    return () => unsubscribe();
+  }, []); // Empty dependency array means this runs once on mount and cleans up on unmount
+
+  // Calculate dynamic counts based on local state 'requests'
+  const pendingRequestsCount = requests.filter(req => req.status === "Pending").length;
+  const orderedItemsCount = requests
     .filter(req => req.status === "Ordered")
     .reduce((total, req) => total + req.items.length, 0);
-  const receivedItemsCount = mockRequests
+  const receivedItemsCount = requests
     .filter(req => req.status === "Received")
     .reduce((total, req) => total + req.items.length, 0);
 
