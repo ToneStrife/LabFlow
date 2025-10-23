@@ -12,11 +12,17 @@ import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import { SessionContextProvider, useSession } from "./components/SessionContextProvider";
+import React from "react"; // Import React for useEffect
 
 const queryClient = new QueryClient();
 
 const AppRoutes = () => {
   const { session, loading } = useSession();
+
+  // Add console logs for debugging
+  React.useEffect(() => {
+    console.log("AppRoutes - loading:", loading, "session:", session);
+  }, [loading, session]);
 
   if (loading) {
     return (
