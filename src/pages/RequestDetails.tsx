@@ -15,7 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ArrowLeft } from "lucide-react";
-import { mockRequests, mockVendors, mockProjects, RequestStatus } from "@/data/mockData"; // Import shared mock data
+import { mockRequests, mockVendors, mockProjects, mockUsers, mockAccountManagers, RequestStatus } from "@/data/mockData"; // Import shared mock data and new mock data arrays
 
 const getStatusBadgeVariant = (status: RequestStatus) => {
   switch (status) {
@@ -39,6 +39,8 @@ const RequestDetails: React.FC = () => {
   // Find the request from the centralized mock data
   const request = mockRequests.find(req => req.id === id);
   const vendor = request ? mockVendors.find(v => v.id === request.vendorId) : undefined;
+  const requester = request ? mockUsers.find(u => u.id === request.requesterId) : undefined;
+  const accountManager = request ? mockAccountManagers.find(am => am.id === request.accountManagerId) : undefined;
 
   if (!request) {
     return (
@@ -76,7 +78,11 @@ const RequestDetails: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <p className="text-sm text-muted-foreground">Requester</p>
-              <p className="font-medium">{request.requester}</p>
+              <p className="font-medium">{requester?.name || "N/A"}</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Account Manager</p>
+              <p className="font-medium">{accountManager?.name || "N/A"}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Project Codes</p>
@@ -106,10 +112,11 @@ const RequestDetails: React.FC = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>Product Name</TableHead>
+                  <TableHead>Brand</TableHead> {/* New column for Brand */}
                   <TableHead>Catalog #</TableHead>
                   <TableHead>Quantity</TableHead>
                   <TableHead>Unit Price</TableHead>
-                  <TableHead>Format</TableHead> {/* New column for Format */}
+                  <TableHead>Format</TableHead>
                   <TableHead>Link</TableHead>
                 </TableRow>
               </TableHeader>
@@ -117,10 +124,11 @@ const RequestDetails: React.FC = () => {
                 {request.items.map((item) => (
                   <TableRow key={item.id}>
                     <TableCell className="font-medium">{item.productName}</TableCell>
+                    <TableCell>{item.brand || "N/A"}</TableCell> {/* Display brand */}
                     <TableCell>{item.catalogNumber || "N/A"}</TableCell>
                     <TableCell>{item.quantity}</TableCell>
                     <TableCell>{item.unitPrice ? `$${item.unitPrice.toFixed(2)}` : "N/A"}</TableCell>
-                    <TableCell>{item.format || "N/A"}</TableCell> {/* Display format */}
+                    <TableCell>{item.format || "N/A"}</TableCell>
                     <TableCell>
                       {item.link ? (
                         <a href={item.link} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">

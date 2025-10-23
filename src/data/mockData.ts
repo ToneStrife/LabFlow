@@ -11,6 +11,7 @@ export interface RequestItem {
   format?: string;
   link?: string;
   notes?: string;
+  brand?: string; // New field for brand
 }
 
 export interface User {
@@ -133,6 +134,7 @@ export let mockRequests: LabRequest[] = [
         unitPrice: 120.50,
         link: "https://www.abcam.com/anti-gfp-antibody-ab12345.html",
         notes: "Lot specific, check expiry date.",
+        brand: "Abcam",
       },
       {
         id: "item2",
@@ -142,6 +144,7 @@ export let mockRequests: LabRequest[] = [
         unitPrice: 85.00,
         link: "https://vectorlabs.com/goat-anti-rabbit-igg.html",
         notes: "",
+        brand: "Vector Labs",
       },
     ],
     attachments: [
@@ -168,6 +171,7 @@ export let mockRequests: LabRequest[] = [
         format: "500 units",
         link: "https://www.sigmaaldrich.com/P2000",
         notes: "",
+        brand: "Sigma-Aldrich",
       },
     ],
     projectCodes: ["p2"],
@@ -189,6 +193,7 @@ export let mockRequests: LabRequest[] = [
         unitPrice: 500.00,
         link: "",
         notes: "HPLC purity >95%",
+        brand: "Thermo Fisher Scientific",
       },
     ],
     projectCodes: ["p1", "p3"],
@@ -211,6 +216,7 @@ export let mockRequests: LabRequest[] = [
         format: "100 pack",
         link: "https://www.bio-rad.com/142001",
         notes: "",
+        brand: "Bio-Rad",
       },
     ],
     projectCodes: ["p4"],
@@ -233,6 +239,7 @@ export let mockRequests: LabRequest[] = [
         format: "72 slides/box",
         link: "https://www.thermofisher.com/10001",
         notes: "",
+        brand: "Thermo Fisher Scientific",
       },
     ],
     projectCodes: ["p2"],

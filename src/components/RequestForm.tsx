@@ -38,6 +38,7 @@ const itemSchema = z.object({
   format: z.string().optional(),
   link: z.string().url({ message: "Must be a valid URL." }).optional().or(z.literal("")),
   notes: z.string().optional(),
+  brand: z.string().optional(), // New field for brand
 });
 
 const formSchema = z.object({
@@ -58,12 +59,12 @@ const RequestForm: React.FC = () => {
       vendorId: "",
       requesterId: "",
       accountManagerId: "",
-      items: [{ productName: "", catalogNumber: "", quantity: 1, unitPrice: undefined, format: "", link: "", notes: "" }],
+      items: [{ productName: "", catalogNumber: "", quantity: 1, unitPrice: undefined, format: "", link: "", notes: "", brand: "" }], // Initialize brand
       projectCodes: [],
     },
   });
 
-  const { fields, append, remove, replace } = useFieldArray({ // Added replace for autofill
+  const { fields, append, remove, replace } = useFieldArray({
     control: form.control,
     name: "items",
   });
@@ -90,6 +91,7 @@ const RequestForm: React.FC = () => {
         format: "10x 50µl",
         link: "https://www.thermofisher.com/order/catalog/product/18265017",
         notes: "For general cloning purposes.",
+        brand: "Invitrogen", // Added brand
       },
       {
         productName: "DMEM, high glucose",
@@ -99,6 +101,7 @@ const RequestForm: React.FC = () => {
         format: "500ml",
         link: "https://www.thermofisher.com/order/catalog/product/11965092",
         notes: "Cell culture media.",
+        brand: "Gibco", // Added brand
       },
     ];
     replace(autofillData); // Replace current items with autofilled data
@@ -225,6 +228,19 @@ const RequestForm: React.FC = () => {
                 />
                 <FormField
                   control={form.control}
+                  name={`items.${index}.brand`} // New Brand field
+                  render={({ field: itemField }) => (
+                    <FormItem>
+                      <FormLabel>Brand (Optional)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., Invitrogen" {...itemField} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
                   name={`items.${index}.catalogNumber`}
                   render={({ field: itemField }) => (
                     <FormItem>
@@ -309,7 +325,7 @@ const RequestForm: React.FC = () => {
           type="button"
           variant="outline"
           onClick={() =>
-            append({ productName: "", catalogNumber: "", quantity: 1, unitPrice: undefined, format: "", link: "", notes: "" })
+            append({ productName: "", catalogNumber: "", quantity: 1, unitPrice: undefined, format: "", link: "", notes: "", brand: "" })
           }
           className="w-full"
         >
