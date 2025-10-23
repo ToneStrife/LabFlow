@@ -2,9 +2,10 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import Layout from "./components/Layout"; // Import the new Layout component
-import Dashboard from "./pages/Dashboard"; // Renamed from Index
+import { BrowserRouter, Routes, Route } from "react-router-dom"; // Removed Navigate
+import Layout from "./components/Layout";
+import Index from "./pages/Index"; // Import the new Index component
+import Dashboard from "./pages/Dashboard";
 import NewRequest from "./pages/NewRequest";
 import Vendors from "./pages/Vendors";
 import NotFound from "./pages/NotFound";
@@ -17,9 +18,9 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Layout> {/* Wrap routes with the Layout component */}
+        <Layout>
           <Routes>
-            <Route path="/" element={<Navigate to="/dashboard" replace />} /> {/* Redirect root to dashboard */}
+            <Route path="/" element={<Index />} /> {/* Render Index at root */}
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/new-request" element={<NewRequest />} />
             <Route path="/vendors" element={<Vendors />} />
