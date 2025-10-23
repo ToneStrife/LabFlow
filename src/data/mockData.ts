@@ -19,7 +19,7 @@ export interface LabRequest {
   requester: string; // For simplicity, we'll hardcode this for now
   status: RequestStatus;
   date: string;
-  notes?: string;
+  notes?: string; // Added notes to LabRequest interface
   items: RequestItem[];
   attachments?: { name: string; url: string }[];
   projectCodes?: string[]; // Array of project IDs
@@ -103,7 +103,6 @@ export let mockRequests: LabRequest[] = [
         catalogNumber: "ab12345",
         quantity: 2,
         unitPrice: 120.50,
-        vendor: "Abcam", // This will be removed as vendor is now per request
         link: "https://www.abcam.com/anti-gfp-antibody-ab12345.html",
         notes: "Lot specific, check expiry date.",
       },
@@ -113,7 +112,6 @@ export let mockRequests: LabRequest[] = [
         catalogNumber: "SA-2000",
         quantity: 1,
         unitPrice: 85.00,
-        vendor: "Vector Labs", // This will be removed as vendor is now per request
         link: "https://vectorlabs.com/goat-anti-rabbit-igg.html",
         notes: "",
       },
