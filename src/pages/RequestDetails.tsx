@@ -15,7 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ArrowLeft } from "lucide-react";
-import { mockRequests, mockVendors, mockProjects, mockUsers, mockAccountManagers, RequestStatus } from "@/data/mockData"; // Import shared mock data and new mock data arrays
+import { mockRequests, mockVendors, mockProjects, mockAccountManagers, RequestStatus, getUserFullName } from "@/data/mockData"; // Import getUserFullName
 
 const getStatusBadgeVariant = (status: RequestStatus) => {
   switch (status) {
@@ -39,7 +39,6 @@ const RequestDetails: React.FC = () => {
   // Find the request from the centralized mock data
   const request = mockRequests.find(req => req.id === id);
   const vendor = request ? mockVendors.find(v => v.id === request.vendorId) : undefined;
-  const requester = request ? mockUsers.find(u => u.id === request.requesterId) : undefined;
   const accountManager = request ? mockAccountManagers.find(am => am.id === request.accountManagerId) : undefined;
 
   if (!request) {
@@ -61,6 +60,8 @@ const RequestDetails: React.FC = () => {
     return project ? project.code : projectId;
   }).join(", ") || "N/A";
 
+  const requesterName = getUserFullName(request.requesterId); // Use helper function
+
   return (
     <div className="container mx-auto py-8">
       <Button variant="outline" onClick={() => navigate("/dashboard")} className="mb-6">
@@ -78,7 +79,7 @@ const RequestDetails: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <p className="text-sm text-muted-foreground">Requester</p>
-              <p className="font-medium">{requester?.name || "N/A"}</p>
+              <p className="font-medium">{requesterName}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Account Manager</p>

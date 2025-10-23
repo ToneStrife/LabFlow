@@ -16,7 +16,9 @@ export interface RequestItem {
 
 export interface User {
   id: string;
-  name: string;
+  name?: string; // Make name optional as we'll derive it from first/last
+  first_name?: string; // New field
+  last_name?: string; // New field
   email: string;
   role: "Requester" | "Account Manager" | "Admin"; // Example roles
 }
@@ -84,10 +86,10 @@ export const productDatabase: { [key: string]: any } = {
 
 // --- Mock Data Storage ---
 export let mockUsers: User[] = [
-  { id: "u1", name: "Dr. Alice Smith", email: "alice.s@lab.com", role: "Requester" },
-  { id: "u2", name: "Dr. Bob Johnson", email: "bob.j@lab.com", role: "Requester" },
-  { id: "u3", name: "Dr. Carol White", email: "carol.w@lab.com", role: "Requester" },
-  { id: "u4", name: "Admin User", email: "admin@lab.com", role: "Admin" },
+  { id: "u1", first_name: "Alice", last_name: "Smith", email: "alice.s@lab.com", role: "Requester" },
+  { id: "u2", first_name: "Bob", last_name: "Johnson", email: "bob.j@lab.com", role: "Requester" },
+  { id: "u3", first_name: "Carol", last_name: "White", email: "carol.w@lab.com", role: "Requester" },
+  { id: "u4", first_name: "Admin", last_name: "User", email: "admin@lab.com", role: "Admin" },
 ];
 
 export let mockAccountManagers: AccountManager[] = [
@@ -270,6 +272,19 @@ export let mockRequests: LabRequest[] = [
     projectCodes: ["p2"],
   },
 ];
+
+// Helper function to get user's full name
+export const getUserFullName = (userId: string): string => {
+  const user = mockUsers.find(u => u.id === userId);
+  if (user) {
+    if (user.first_name || user.last_name) {
+      return `${user.first_name || ''} ${user.last_name || ''}`.trim();
+    }
+    return user.name || "N/A"; // Fallback to 'name' if first/last not set
+  }
+  return "N/A";
+};
+
 
 // --- Observer Pattern for Mock Data Changes ---
 

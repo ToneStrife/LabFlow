@@ -13,7 +13,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Eye, CheckCircle, Package, Receipt } from "lucide-react";
-import { mockVendors, updateRequestStatus, RequestStatus, LabRequest, subscribeToRequests, mockRequests, mockUsers } from "@/data/mockData"; // Added mockUsers
+import { mockVendors, updateRequestStatus, RequestStatus, LabRequest, subscribeToRequests, mockRequests, getUserFullName } from "@/data/mockData"; // Added getUserFullName
 import { Input } from "@/components/ui/input"; // Import Input for search
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"; // Import Select for status filter
 
@@ -63,7 +63,7 @@ const RequestList: React.FC = () => {
         (item.brand && item.brand.toLowerCase().includes(searchTerm.toLowerCase()))
       ) ||
       mockVendors.find(v => v.id === request.vendorId)?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      mockUsers.find(u => u.id === request.requesterId)?.name.toLowerCase().includes(searchTerm.toLowerCase()); // Corrected access to requesterId
+      getUserFullName(request.requesterId).toLowerCase().includes(searchTerm.toLowerCase()); // Use getUserFullName for search
 
     const matchesStatus = filterStatus === "All" || request.status === filterStatus;
 
@@ -113,11 +113,11 @@ const RequestList: React.FC = () => {
             ) : (
               filteredRequests.map((request) => {
                 const vendor = mockVendors.find(v => v.id === request.vendorId);
-                const requester = mockUsers.find(u => u.id === request.requesterId);
+                const requesterName = getUserFullName(request.requesterId); // Use helper function
                 return (
                   <TableRow key={request.id}>
                     <TableCell className="font-medium">{vendor?.name || "N/A"}</TableCell>
-                    <TableCell>{requester?.name || "N/A"}</TableCell>
+                    <TableCell>{requesterName}</TableCell>
                     <TableCell>
                       <Badge variant={getStatusBadgeVariant(request.status)}>
                         {request.status}
