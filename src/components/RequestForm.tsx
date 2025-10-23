@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { PlusCircle, Trash2, Check, ChevronsUpDown } from "lucide-react";
+import { PlusCircle, Trash2, Check, ChevronsUpDown, Sparkles } from "lucide-react"; // Added Sparkles icon
 import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
@@ -42,8 +42,8 @@ const itemSchema = z.object({
 
 const formSchema = z.object({
   vendorId: z.string().min(1, { message: "Vendor is required." }),
-  requesterId: z.string().min(1, { message: "Requester is required." }), // New field
-  accountManagerId: z.string().min(1, { message: "Account Manager is required." }), // New field
+  requesterId: z.string().min(1, { message: "Requester is required." }),
+  accountManagerId: z.string().min(1, { message: "Account Manager is required." }),
   items: z.array(itemSchema).min(1, { message: "At least one item is required." }),
   attachments: z.any().optional(),
   projectCodes: z.array(z.string()).optional(),
@@ -56,20 +56,20 @@ const RequestForm: React.FC = () => {
     resolver: zodResolver(formSchema),
     defaultValues: {
       vendorId: "",
-      requesterId: "", // Initialize new fields
-      accountManagerId: "", // Initialize new fields
+      requesterId: "",
+      accountManagerId: "",
       items: [{ productName: "", catalogNumber: "", quantity: 1, unitPrice: undefined, format: "", link: "", notes: "" }],
       projectCodes: [],
     },
   });
 
-  const { fields, append, remove } = useFieldArray({
+  const { fields, append, remove, replace } = useFieldArray({ // Added replace for autofill
     control: form.control,
     name: "items",
   });
 
   const onSubmit = (data: RequestFormValues) => {
-    const newRequest = addRequest(data); // Add the new request to our mock data
+    const newRequest = addRequest(data);
     const selectedVendor = mockVendors.find(v => v.id === newRequest.vendorId)?.name;
     const selectedRequester = mockUsers.find(u => u.id === newRequest.requesterId)?.name;
     toast.success("Request submitted successfully!", {
@@ -80,34 +80,87 @@ const RequestForm: React.FC = () => {
 
   const requesters = mockUsers.filter(user => user.role === "Requester");
 
+  const handleAutofillItems = () => {
+    const autofillData = [
+      {
+        productName: "E. coli DH5a Competent Cells",
+        catalogNumber: "18265017",
+        quantity: 1,
+        unitPrice: 150.00,
+        format: "10x 50µl",
+        link: "https://www.thermofisher.com/order/catalog/product/18265017",
+        notes: "For general cloning purposes.",
+      },
+      {
+        productName: "DMEM, high glucose",
+        catalogNumber: "11965092",
+        quantity: 2,
+        unitPrice: 35.50,
+        format: "500ml",
+        link: "https://www.thermofisher.com/order/catalog/product/11965092",
+        notes: "Cell culture media.",
+      },
+    ];
+    replace(autofillData); // Replace current items with autofilled data
+    toast.info("Items autofilled with example data!");
+  };
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        {/* Requester Selection */}
-        <FormField
-          control={form.control}
-          name="requesterId"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Requester</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a requester" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {requesters.map((user) => (
-                    <SelectItem key={user.id} value={user.id}>
-                      {user.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Requester Selection */}
+          <FormField
+            control={form.control}
+            name="requesterId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Requester</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a requester" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {requesters.map((user) => (
+                      <SelectItem key={user.id} value={user.id}>
+                        {user.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {/* Vendor Selection */}
+          <FormField
+            control={form.control}
+            name="vendorId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Vendor</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a vendor" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {mockVendors.map((vendor) => (
+                      <SelectItem key={vendor.id} value={vendor.id}>
+                        {vendor.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
         {/* Account Manager Selection */}
         <FormField
@@ -135,33 +188,12 @@ const RequestForm: React.FC = () => {
           )}
         />
 
-        {/* Vendor Selection */}
-        <FormField
-          control={form.control}
-          name="vendorId"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Vendor</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a vendor" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {mockVendors.map((vendor) => (
-                    <SelectItem key={vendor.id} value={vendor.id}>
-                      {vendor.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <h2 className="text-xl font-semibold mt-8 mb-4">Items</h2>
+        <div className="flex justify-between items-center mt-8 mb-4">
+          <h2 className="text-xl font-semibold">Items</h2>
+          <Button type="button" variant="outline" onClick={handleAutofillItems} className="text-purple-600 border-purple-600 hover:bg-purple-50">
+            <Sparkles className="mr-2 h-4 w-4" /> AI Autofill Items
+          </Button>
+        </div>
         <div className="space-y-6">
           {fields.map((field, index) => (
             <div key={field.id} className="border p-4 rounded-md relative">
