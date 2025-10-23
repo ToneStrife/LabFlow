@@ -321,7 +321,7 @@ const RequestForm: React.FC = () => {
               <Popover>
                 <PopoverTrigger asChild>
                   <FormControl>
-                    <Button variant="outline" role="combobox" className={cn("w-full justify-between", !field.value || field.value.length === <strong></strong>0 && "text-muted-foreground")}>
+                    <Button variant="outline" role="combobox" className={cn("w-full justify-between", !field.value || field.value.length === 0 && "text-muted-foreground")}>
                       {field.value && field.value.length > 0 ? (
                         <div className="flex flex-wrap gap-1">
                           {field.value.map((projectId) => {
