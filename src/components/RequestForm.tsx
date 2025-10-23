@@ -23,6 +23,7 @@ import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { mockVendors, mockProjects, addRequest, mockUsers, mockAccountManagers } from "@/data/mockData";
+import { supabase } from "@/lib/supabase";
 import { showSuccess, showError, showLoading, dismissToast } from "@/utils/toast";
 
 const itemSchema = z.object({
@@ -52,31 +53,6 @@ const formSchema = z.object({
 });
 
 type RequestFormValues = z.infer<typeof formSchema>;
-
-// This would normally be in a backend function, but we'll simulate it here for now.
-const productDatabase: { [key: string]: any } = {
-  "18265017": {
-    productName: "E. coli DH5a Competent Cells",
-    unitPrice: 150.00,
-    format: "10x 50µl",
-    link: "https://www.thermofisher.com/order/catalog/product/18265017",
-    brand: "Invitrogen",
-  },
-  "11965092": {
-    productName: "DMEM, high glucose, GlutaMAX Supplement, pyruvate",
-    unitPrice: 35.50,
-    format: "500 mL",
-    link: "https://www.thermofisher.com/order/catalog/product/11965092",
-    brand: "Gibco",
-  },
-  "ab12345": {
-    productName: "Anti-GFP Antibody (Rabbit Polyclonal)",
-    unitPrice: 120.50,
-    format: "100 µl",
-    link: "https://www.abcam.com/anti-gfp-antibody-ab12345.html",
-    brand: "Abcam",
-  },
-};
 
 const RequestForm: React.FC = () => {
   const [autofillingIndex, setAutofillingIndex] = React.useState<number | null>(null);
@@ -118,14 +94,12 @@ const RequestForm: React.FC = () => {
         return;
       }
 
-      // Simulate network delay
-      await new Promise(resolve => setTimeout(resolve, 750));
+      const { data, error } = await supabase.functions.invoke('autofill-product-details', {
+        body: { catalogNumber },
+      });
 
-      const data = productDatabase[catalogNumber];
-
-      if (!data) {
-        throw new Error(`Product with catalog number '${catalogNumber}' not found.`);
-      }
+      if (error) throw new Error(error.message);
+      if (data.error) throw new Error(data.error);
 
       form.setValue(`items.${index}.productName`, data.productName || '');
       form.setValue(`items.${index}.brand`, data.brand || '');
