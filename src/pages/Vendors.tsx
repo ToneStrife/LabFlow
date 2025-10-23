@@ -3,66 +3,65 @@
 import React from "react";
 import VendorTable from "@/components/VendorTable";
 import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import VendorForm, { VendorFormValues } from "@/components/VendorForm";
-import { toast } from "sonner";
-import { mockVendors, addVendor, updateVendor, deleteVendor, Vendor, subscribeToVendors } from "@/data/mockData"; // Import subscribeToVendors
+import { useVendors, useAddVendor, useUpdateVendor, useDeleteVendor, Vendor } from "@/hooks/use-vendors"; // Import Supabase hooks
 
 const Vendors = () => {
-  const [vendors, setVendors] = React.useState<Vendor[]>(mockVendors); // Initialize with current mock data
+  const { data: vendors, isLoading, error } = useVendors();
+  const addVendorMutation = useAddVendor();
+  const updateVendorMutation = useUpdateVendor();
+  const deleteVendorMutation = useDeleteVendor();
+
   const [isAddVendorDialogOpen, setIsAddVendorDialogOpen] = React.useState(false);
   const [isEditVendorDialogOpen, setIsEditVendorDialogOpen] = React.useState(false);
-  const [editingVendor, setEditingVendor] = React.useState<Vendor | undefined>(undefined);
-
-  // Subscribe to changes in mockVendors
-  React.useEffect(() => {
-    const unsubscribe = subscribeToVendors(updatedVendors => {
-      setVendors(updatedVendors);
-    });
-    return () => unsubscribe(); // Clean up subscription on unmount
-  }, []);
-
-  const parseBrandsString = (brandsString: string | undefined): string[] => {
-    return brandsString
-      ? brandsString.split(",").map((brand) => brand.trim()).filter(Boolean)
-      : [];
-  };
+  const [editingVendor, setEditingVendor] = React.useState<VendorFormValues & { id: string } | undefined>(undefined);
 
   const handleAddVendor = (newVendorData: VendorFormValues) => {
-    addVendor({
-      ...newVendorData,
-      brands: parseBrandsString(newVendorData.brands),
-    });
+    addVendorMutation.mutate(newVendorData);
     setIsAddVendorDialogOpen(false);
-    toast.success("Vendor added successfully!", {
-      description: `Vendor: ${newVendorData.name}`,
-    });
-    // The setVendors in the useEffect will handle the re-render
   };
 
   const handleEditVendor = (vendorId: string, updatedData: VendorFormValues) => {
-    updateVendor(vendorId, {
-      ...updatedData,
-      brands: parseBrandsString(updatedData.brands),
-    });
+    updateVendorMutation.mutate({ id: vendorId, data: updatedData });
     setIsEditVendorDialogOpen(false);
     setEditingVendor(undefined);
-    toast.success("Vendor updated successfully!");
-    // The setVendors in the useEffect will handle the re-render
   };
 
   const handleDeleteVendor = (vendorId: string) => {
-    if (deleteVendor(vendorId)) {
-      toast.success("Vendor deleted successfully!");
-      // The setVendors in the useEffect will handle the re-render
-    }
+    deleteVendorMutation.mutate(vendorId);
   };
 
   const openEditDialog = (vendor: Vendor) => {
-    setEditingVendor({ ...vendor, brands: vendor.brands.join(", ") });
+    // Convert DB format (brands array) to Form format (brands string)
+    setEditingVendor({
+      id: vendor.id,
+      name: vendor.name,
+      contactPerson: vendor.contact_person || undefined,
+      email: vendor.email || undefined,
+      phone: vendor.phone || undefined,
+      notes: vendor.notes || undefined,
+      brands: vendor.brands ? vendor.brands.join(", ") : undefined,
+    });
     setIsEditVendorDialogOpen(true);
   };
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto py-8 flex justify-center items-center">
+        <Loader2 className="h-8 w-8 animate-spin mr-2" /> Loading Vendors...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto py-8 text-red-600">
+        Error loading vendors: {error.message}
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto py-8">
@@ -86,7 +85,7 @@ const Vendors = () => {
         This page allows account managers to view and manage vendor information.
       </p>
       <VendorTable
-        vendors={vendors}
+        vendors={vendors || []}
         onEdit={openEditDialog}
         onDelete={handleDeleteVendor}
       />

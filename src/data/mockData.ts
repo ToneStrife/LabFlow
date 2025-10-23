@@ -43,6 +43,8 @@ export interface LabRequest {
   projectCodes?: string[];
 }
 
+// NOTE: Vendor interface is now defined in src/hooks/use-vendors.ts
+// We keep mockVendors here only for linking in other mock data (like mockRequests)
 export interface Vendor {
   id: string;
   name: string;
@@ -127,11 +129,7 @@ export let mockUsers: User[] = [
   { id: "u4", first_name: "Admin", last_name: "User", email: "admin@lab.com", role: "Admin" },
 ];
 
-export let mockAccountManagers: AccountManager[] = [
-  { id: "am1", name: "Manager A", email: "manager.a@lab.com", phone: "555-111-2222" },
-  { id: "am2", name: "Manager B", email: "manager.b@lab.com", phone: "555-333-4444" },
-];
-
+// Keeping mockVendors for linking in mockRequests, but CRUD operations will use Supabase
 export let mockVendors: Vendor[] = [
   {
     id: "v1",
@@ -169,6 +167,11 @@ export let mockVendors: Vendor[] = [
     notes: "DNA/RNA purification and assay technologies.",
     brands: ["Qiagen"],
   },
+];
+
+export let mockAccountManagers: AccountManager[] = [
+  { id: "am1", name: "Manager A", email: "manager.a@lab.com", phone: "555-111-2222" },
+  { id: "am2", name: "Manager B", email: "manager.b@lab.com", phone: "555-333-4444" },
 ];
 
 export const mockProjects: Project[] = [
@@ -326,9 +329,9 @@ export const getUserFullName = (userId: string): string => {
 type Listener<T> = (data: T) => void;
 
 const requestListeners: Listener<LabRequest[]>[] = [];
-const vendorListeners: Listener<Vendor[]>[] = [];
-const userListeners: Listener<User[]>[] = []; // New listener for Users
-const accountManagerListeners: Listener<AccountManager[]>[] = []; // New listener for Account Managers
+// const vendorListeners: Listener<Vendor[]>[] = []; // Removed vendor listener
+const userListeners: Listener<User[]>[] = [];
+const accountManagerListeners: Listener<AccountManager[]>[] = [];
 
 export const subscribeToRequests = (listener: Listener<LabRequest[]>) => {
   requestListeners.push(listener);
@@ -340,15 +343,7 @@ export const subscribeToRequests = (listener: Listener<LabRequest[]>) => {
   };
 };
 
-export const subscribeToVendors = (listener: Listener<Vendor[]>) => {
-  vendorListeners.push(listener);
-  return () => {
-    const index = vendorListeners.indexOf(listener);
-    if (index > -1) {
-      vendorListeners.splice(index, 1);
-    }
-  };
-};
+// Removed subscribeToVendors
 
 export const subscribeToUsers = (listener: Listener<User[]>) => {
   userListeners.push(listener);
@@ -374,9 +369,7 @@ const notifyRequestListeners = () => {
   requestListeners.forEach(listener => listener([...mockRequests])); // Pass a copy to prevent direct mutation
 };
 
-const notifyVendorListeners = () => {
-  vendorListeners.forEach(listener => listener([...mockVendors])); // Pass a copy
-};
+// Removed notifyVendorListeners
 
 const notifyUserListeners = () => {
   userListeners.forEach(listener => listener([...mockUsers]));
@@ -417,33 +410,7 @@ export const updateRequestStatus = (requestId: string, newStatus: RequestStatus)
   return null;
 };
 
-export const addVendor = (newVendor: Omit<Vendor, "id">) => {
-  const id = `v${mockVendors.length + 1}`;
-  const vendorToAdd: Vendor = { id, ...newVendor };
-  mockVendors.push(vendorToAdd);
-  notifyVendorListeners(); // Notify listeners after adding
-  return vendorToAdd;
-};
-
-export const updateVendor = (vendorId: string, updatedData: Partial<Vendor>) => {
-  const vendorIndex = mockVendors.findIndex(v => v.id === vendorId);
-  if (vendorIndex > -1) {
-    mockVendors[vendorIndex] = { ...mockVendors[vendorIndex], ...updatedData };
-    notifyVendorListeners(); // Notify listeners after updating
-    return mockVendors[vendorIndex];
-  }
-  return null;
-};
-
-export const deleteVendor = (vendorId: string) => {
-  const initialLength = mockVendors.length;
-  mockVendors = mockVendors.filter(v => v.id !== vendorId);
-  if (mockVendors.length < initialLength) {
-    notifyVendorListeners(); // Notify listeners if a vendor was removed
-    return true;
-  }
-  return false;
-};
+// Removed addVendor, updateVendor, deleteVendor
 
 export const addUser = (newUser: Omit<User, "id">) => {
   const id = `u${mockUsers.length + 1}`;
