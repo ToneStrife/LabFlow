@@ -22,7 +22,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { mockVendors, mockProjects, addRequest, mockAccountManagers, productDatabase } from "@/data/mockData";
+import { mockVendors, mockProjects, addRequest, mockAccountManagers, productDatabase, ProductDetails } from "@/data/mockData";
 import { showSuccess, showError, showLoading, dismissToast } from "@/utils/toast";
 import { useSession } from "@/components/SessionContextProvider"; // Import useSession
 
@@ -57,6 +57,8 @@ type RequestFormValues = z.infer<typeof formSchema>;
 const RequestForm: React.FC = () => {
   const { session, profile } = useSession(); // Use session and profile
   const [autofillingIndex, setAutofillingIndex] = React.useState<number | null>(null);
+  const [matchingProducts, setMatchingProducts] = React.useState<ProductDetails[]>([]);
+  const [selectionIndex, setSelectionIndex] = React.useState<number | null>(null);
 
   const form = useForm<RequestFormValues>({
     resolver: zodResolver(formSchema),
@@ -81,6 +83,72 @@ const RequestForm: React.FC = () => {
     name: "items",
   });
 
+  const applyProductDetails = (index: number, data: ProductDetails) => {
+    form.setValue(`items.${index}.productName`, data.productName || '');
+    form.setValue(`items.${index}.brand`, data.brand || '');
+    form.setValue(`items.${index}.unitPrice`, data.unitPrice || undefined);
+    form.setValue(`items.${index}.format`, data.format || '');
+    form.setValue(`items.${index}.link`, data.link || '');
+  };
+
+  const handleFetchProductDetails = async (index: number) => {
+    setAutofillingIndex(index);
+    setSelectionIndex(null); // Clear any previous selection state
+    setMatchingProducts([]);
+    const toastId = showLoading("Searching product database...");
+
+    try {
+      const catalogNumber = form.getValues(`items.${index}.catalogNumber`).trim().toLowerCase();
+      const brand = form.getValues(`items.${index}.brand`)?.trim().toLowerCase();
+
+      if (!catalogNumber) {
+        showError("Please enter a catalog number first.");
+        return;
+      }
+
+      // Simulate network delay
+      await new Promise(resolve => setTimeout(resolve, 750));
+
+      const matches = productDatabase.filter(p => {
+        const catMatch = p.catalogNumber.toLowerCase() === catalogNumber;
+        const brandMatch = !brand || p.brand.toLowerCase().includes(brand);
+        return catMatch && brandMatch;
+      });
+
+      if (matches.length === 0) {
+        throw new Error(`Product with catalog number '${catalogNumber}' not found.`);
+      }
+
+      if (matches.length === 1) {
+        // Single match, autofill immediately
+        applyProductDetails(index, matches[0]);
+        showSuccess("Product details autofilled!");
+      } else {
+        // Multiple matches, prompt user for selection
+        setMatchingProducts(matches);
+        setSelectionIndex(index);
+        showSuccess(`${matches.length} matching products found. Please select one.`);
+      }
+
+    } catch (error: any) {
+      console.error("Error fetching product details:", error);
+      showError(error.message || "Could not fetch product details.");
+    } finally {
+      dismissToast(toastId);
+      setAutofillingIndex(null);
+    }
+  };
+
+  const handleProductSelection = (index: number, productId: string) => {
+    const selectedProduct = matchingProducts.find(p => p.id === productId);
+    if (selectedProduct) {
+      applyProductDetails(index, selectedProduct);
+      setSelectionIndex(null);
+      setMatchingProducts([]);
+      toast.success("Product selected and details applied.");
+    }
+  };
+
   const onSubmit = (data: RequestFormValues) => {
     if (!session?.user?.id) {
       showError("You must be logged in to submit a request.");
@@ -99,42 +167,6 @@ const RequestForm: React.FC = () => {
       items: [{ productName: "", catalogNumber: "", quantity: 1, unitPrice: undefined, format: "", link: "", notes: "", brand: "" }],
       projectCodes: [],
     });
-  };
-
-  const handleFetchProductDetails = async (index: number) => {
-    setAutofillingIndex(index);
-    const toastId = showLoading("Fetching product details...");
-
-    try {
-      const catalogNumber = form.getValues(`items.${index}.catalogNumber`);
-      if (!catalogNumber) {
-        showError("Please enter a catalog number first.");
-        return;
-      }
-
-      // Simulate network delay
-      await new Promise(resolve => setTimeout(resolve, 750));
-
-      const data = productDatabase[catalogNumber];
-
-      if (!data) {
-        throw new Error(`Product with catalog number '${catalogNumber}' not found.`);
-      }
-
-      form.setValue(`items.${index}.productName`, data.productName || '');
-      form.setValue(`items.${index}.brand`, data.brand || '');
-      form.setValue(`items.${index}.unitPrice`, data.unitPrice || undefined);
-      form.setValue(`items.${index}.format`, data.format || '');
-      form.setValue(`items.${index}.link`, data.link || '');
-
-      showSuccess("Product details autofilled!");
-    } catch (error: any) {
-      console.error("Error fetching product details:", error);
-      showError(error.message || "Could not fetch product details.");
-    } finally {
-      dismissToast(toastId);
-      setAutofillingIndex(null);
-    }
   };
 
   const requesterName = profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 'Loading...';
@@ -242,6 +274,26 @@ const RequestForm: React.FC = () => {
                     </FormItem>
                   )}
                 />
+                {selectionIndex === index && matchingProducts.length > 1 && (
+                  <FormItem className="md:col-span-2">
+                    <FormLabel>Select Matching Product</FormLabel>
+                    <Select onValueChange={(productId) => handleProductSelection(index, productId)}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder={`Select one of ${matchingProducts.length} matches...`} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {matchingProducts.map((product) => (
+                          <SelectItem key={product.id} value={product.id}>
+                            {product.productName} ({product.brand}) - ${product.unitPrice?.toFixed(2) || 'N/A'}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
                 <FormField
                   control={form.control}
                   name={`items.${index}.quantity`}

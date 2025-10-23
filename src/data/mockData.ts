@@ -60,29 +60,64 @@ export interface Project {
 }
 
 // --- Mock Data for Autofill Feature ---
-export const productDatabase: { [key: string]: any } = {
-  "18265017": {
+export interface ProductDetails {
+  id: string;
+  productName: string;
+  catalogNumber: string;
+  unitPrice?: number;
+  format?: string;
+  link?: string;
+  brand: string;
+}
+
+// Changed from object to array for easier searching by multiple fields
+export const productDatabase: ProductDetails[] = [
+  {
+    id: "pdt1",
     productName: "E. coli DH5a Competent Cells",
+    catalogNumber: "18265017",
     unitPrice: 150.00,
     format: "10x 50µl",
     link: "https://www.thermofisher.com/order/catalog/product/18265017",
     brand: "Invitrogen",
   },
-  "11965092": {
+  {
+    id: "pdt2",
     productName: "DMEM, high glucose, GlutaMAX Supplement, pyruvate",
+    catalogNumber: "11965092",
     unitPrice: 35.50,
     format: "500 mL",
     link: "https://www.thermofisher.com/order/catalog/product/11965092",
     brand: "Gibco",
   },
-  "ab12345": {
+  {
+    id: "pdt3",
     productName: "Anti-GFP Antibody (Rabbit Polyclonal)",
+    catalogNumber: "ab12345",
     unitPrice: 120.50,
     format: "100 µl",
     link: "https://www.abcam.com/anti-gfp-antibody-ab12345.html",
     brand: "Abcam",
   },
-};
+  {
+    id: "pdt4",
+    productName: "Anti-GFP Antibody (Mouse Monoclonal)",
+    catalogNumber: "ab12345", // Same catalog number, different brand/product
+    unitPrice: 130.00,
+    format: "50 µl",
+    link: "https://www.bio-rad.com/anti-gfp-antibody-ab12345.html",
+    brand: "Bio-Rad",
+  },
+  {
+    id: "pdt5",
+    productName: "Taq DNA Polymerase",
+    catalogNumber: "P2000",
+    unitPrice: 50.00,
+    format: "500 units",
+    link: "https://www.sigmaaldrich.com/P2000",
+    brand: "Sigma-Aldrich",
+  },
+];
 
 // --- Mock Data Storage ---
 export let mockUsers: User[] = [
