@@ -15,12 +15,32 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { PlusCircle, Trash2 } from "lucide-react";
+import { PlusCircle, Trash2, Check, ChevronsUpDown } from "lucide-react";
 import { toast } from "sonner";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
+import { cn } from "@/lib/utils";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+
+// Mock data for vendors and projects
+const mockVendors = [
+  { id: "v1", name: "Thermo Fisher Scientific" },
+  { id: "v2", name: "Sigma-Aldrich" },
+  { id: "v3", name: "Bio-Rad Laboratories" },
+  { id: "v4", name: "Qiagen" },
+];
+
+const mockProjects = [
+  { id: "p1", name: "Project Alpha", code: "PA-001" },
+  { id: "p2", name: "Project Beta", code: "PB-002" },
+  { id: "p3", name: "Project Gamma", code: "PG-003" },
+  { id: "p4", name: "Project Delta", code: "PD-004" },
+];
 
 const itemSchema = z.object({
   productName: z.string().min(1, { message: "Product name is required." }),
-  catalogNumber: z.string().optional(),
+  catalogNumber: z.string().min(1, { message: "Catalog number is required." }), // Now mandatory
   quantity: z.preprocess(
     (val) => Number(val),
     z.number().min(1, { message: "Quantity must be at least 1." })
@@ -29,16 +49,16 @@ const itemSchema = z.object({
     (val) => Number(val),
     z.number().min(0, { message: "Unit price cannot be negative." }).optional()
   ),
-  vendor: z.string().optional(),
+  format: z.string().optional(), // New field for format
   link: z.string().url({ message: "Must be a valid URL." }).optional().or(z.literal("")),
   notes: z.string().optional(),
 });
 
 const formSchema = z.object({
-  requestTitle: z.string().min(1, { message: "Request title is required." }),
-  projectCode: z.string().optional(),
+  vendorId: z.string().min(1, { message: "Vendor is required." }), // Single mandatory vendor
   items: z.array(itemSchema).min(1, { message: "At least one item is required." }),
   attachments: z.any().optional(), // For file uploads, handled separately
+  projectCodes: z.array(z.string()).optional(), // Multi-select project codes, moved to end
 });
 
 type RequestFormValues = z.infer<typeof formSchema>;
@@ -47,9 +67,9 @@ const RequestForm: React.FC = () => {
   const form = useForm<RequestFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      requestTitle: "",
-      projectCode: "",
-      items: [{ productName: "", catalogNumber: "", quantity: 1, unitPrice: undefined, vendor: "", link: "", notes: "" }],
+      vendorId: "",
+      items: [{ productName: "", catalogNumber: "", quantity: 1, unitPrice: undefined, format: "", link: "", notes: "" }],
+      projectCodes: [],
     },
   });
 
@@ -60,8 +80,9 @@ const RequestForm: React.FC = () => {
 
   const onSubmit = (data: RequestFormValues) => {
     console.log(data);
+    const selectedVendor = mockVendors.find(v => v.id === data.vendorId)?.name;
     toast.success("Request submitted successfully!", {
-      description: `Title: ${data.requestTitle}`,
+      description: `Vendor: ${selectedVendor || 'N/A'}`,
     });
     // In a real application, you would send this data to your backend.
     // For file uploads, you'd typically use FormData and a separate API endpoint.
@@ -71,29 +92,27 @@ const RequestForm: React.FC = () => {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        {/* Vendor Selection */}
         <FormField
           control={form.control}
-          name="requestTitle"
+          name="vendorId"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Request Title</FormLabel>
-              <FormControl>
-                <Input placeholder="e.g., Antibodies for Project X" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="projectCode"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Project Code (Optional)</FormLabel>
-              <FormControl>
-                <Input placeholder="e.g., P12345" {...field} />
-              </FormControl>
+              <FormLabel>Vendor</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a vendor" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {mockVendors.map((vendor) => (
+                    <SelectItem key={vendor.id} value={vendor.id}>
+                      {vendor.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}
@@ -134,7 +153,7 @@ const RequestForm: React.FC = () => {
                   name={`items.${index}.catalogNumber`}
                   render={({ field: itemField }) => (
                     <FormItem>
-                      <FormLabel>Catalog Number (Optional)</FormLabel>
+                      <FormLabel>Catalog Number</FormLabel>
                       <FormControl>
                         <Input placeholder="e.g., ab12345" {...itemField} />
                       </FormControl>
@@ -170,12 +189,12 @@ const RequestForm: React.FC = () => {
                 />
                 <FormField
                   control={form.control}
-                  name={`items.${index}.vendor`}
+                  name={`items.${index}.format`} // New format field
                   render={({ field: itemField }) => (
                     <FormItem>
-                      <FormLabel>Vendor (Optional)</FormLabel>
+                      <FormLabel>Format (Optional)</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., Thermo Fisher" {...itemField} />
+                        <Input placeholder="e.g., 200pack 8cs of 25" {...itemField} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -215,7 +234,7 @@ const RequestForm: React.FC = () => {
           type="button"
           variant="outline"
           onClick={() =>
-            append({ productName: "", catalogNumber: "", quantity: 1, unitPrice: undefined, vendor: "", link: "", notes: "" })
+            append({ productName: "", catalogNumber: "", quantity: 1, unitPrice: undefined, format: "", link: "", notes: "" })
           }
           className="w-full"
         >
@@ -240,6 +259,75 @@ const RequestForm: React.FC = () => {
               <p className="text-sm text-muted-foreground">
                 Note: File uploads require a backend to store the files. This is a placeholder.
               </p>
+            </FormItem>
+          )}
+        />
+
+        {/* Project Codes Multi-select */}
+        <h2 className="text-xl font-semibold mt-8 mb-4">Project Codes (Optional)</h2>
+        <FormField
+          control={form.control}
+          name="projectCodes"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Associate with Projects</FormLabel>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <FormControl>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      className={cn(
+                        "w-full justify-between",
+                        !field.value || field.value.length === 0 && "text-muted-foreground"
+                      )}
+                    >
+                      {field.value && field.value.length > 0
+                        ? (
+                            <div className="flex flex-wrap gap-1">
+                              {field.value.map((projectId) => {
+                                const project = mockProjects.find((p) => p.id === projectId);
+                                return project ? <Badge key={projectId} variant="secondary">{project.code}</Badge> : null;
+                              })}
+                            </div>
+                          )
+                        : "Select projects..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </FormControl>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                  <Command>
+                    <CommandInput placeholder="Search projects..." />
+                    <CommandEmpty>No project found.</CommandEmpty>
+                    <CommandGroup>
+                      {mockProjects.map((project) => (
+                        <CommandItem
+                          value={project.name}
+                          key={project.id}
+                          onSelect={() => {
+                            const currentValues = field.value || [];
+                            if (currentValues.includes(project.id)) {
+                              field.onChange(currentValues.filter((id) => id !== project.id));
+                            } else {
+                              field.onChange([...currentValues, project.id]);
+                            }
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              field.value?.includes(project.id) ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          {project.name} ({project.code})
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+              <FormMessage />
             </FormItem>
           )}
         />
