@@ -12,21 +12,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Edit, Trash2 } from "lucide-react";
 import { VendorFormValues } from "./VendorForm";
-
-// Define a type for a vendor (matching VendorFormValues plus an ID and brands array)
-interface Vendor {
-  id: string;
-  name: string;
-  contactPerson?: string;
-  email?: string;
-  phone?: string;
-  notes?: string;
-  brands: string[]; // Brands are now an array of strings
-}
+import { Vendor } from "@/data/mockData"; // Import the Vendor interface from mockData
 
 interface VendorTableProps {
-  vendors: Vendor[];
-  onEdit: (vendor: Vendor) => void; // Changed to pass the full vendor object
+  vendors: Vendor[]; // Use the Vendor interface from mockData
+  onEdit: (vendor: Vendor) => void;
   onDelete: (vendorId: string) => void;
 }
 
@@ -63,7 +53,7 @@ const VendorTable: React.FC<VendorTableProps> = ({ vendors, onEdit, onDelete }) 
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => onEdit(vendor)} // Pass the full vendor object for editing
+                    onClick={() => onEdit(vendor)}
                     className="mr-2"
                     title="Edit Vendor"
                   >
