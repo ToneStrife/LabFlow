@@ -1,10 +1,14 @@
 "use client";
 
 import React from "react";
+import { useNavigate } from "react-router-dom"; // Import useNavigate
 import RequestList from "@/components/RequestList";
-import { mockRequests, subscribeToRequests } from "@/data/mockData"; // Import subscribeToRequests
+import { mockRequests, subscribeToRequests } from "@/data/mockData";
+import { Button } from "@/components/ui/button"; // Import Button
+import { PlusCircle } from "lucide-react"; // Import PlusCircle icon
 
 const Dashboard = () => {
+  const navigate = useNavigate(); // Initialize useNavigate
   const [requests, setRequests] = React.useState(mockRequests);
 
   React.useEffect(() => {
@@ -12,7 +16,7 @@ const Dashboard = () => {
       setRequests(updatedRequests);
     });
     return () => unsubscribe();
-  }, []); // Empty dependency array means this runs once on mount and cleans up on unmount
+  }, []);
 
   // Calculate dynamic counts based on local state 'requests'
   const pendingRequestsCount = requests.filter(req => req.status === "Pending").length;
@@ -46,7 +50,12 @@ const Dashboard = () => {
       </div>
 
       <div className="mt-12">
-        <h2 className="text-2xl font-bold mb-4">Recent Requests</h2>
+        <div className="flex justify-between items-center mb-4"> {/* Flex container for heading and button */}
+          <h2 className="text-2xl font-bold">Recent Requests</h2>
+          <Button onClick={() => navigate("/new-request")}>
+            <PlusCircle className="mr-2 h-4 w-4" /> New Request
+          </Button>
+        </div>
         <RequestList />
       </div>
     </div>
