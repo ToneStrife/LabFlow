@@ -84,34 +84,64 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
   };
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, currentSession) => {
+    let isMounted = true; // Flag to prevent state updates on unmounted component
+
+    const handleAuthStateChange = async (_event: string, currentSession: Session | null) => {
+      if (!isMounted) return;
+
       setSession(currentSession);
       if (currentSession?.user) {
         await fetchProfile(currentSession.user.id);
       } else {
         setProfile(null);
       }
-      setLoading(false);
 
       if (_event === 'SIGNED_IN') {
         navigate('/dashboard');
       } else if (_event === 'SIGNED_OUT') {
         navigate('/login');
       }
-    });
+    };
 
-    supabase.auth.getSession().then(async ({ data: { session: initialSession } }) => {
-      setSession(initialSession);
-      if (initialSession?.user) {
-        await fetchProfile(initialSession.user.id);
-      }
-      setLoading(false);
-      if (!initialSession) {
-        navigate('/login');
-      }
-    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthStateChange);
 
-    return () => subscription.unsubscribe();
+    const getInitialSession = async () => {
+      try {
+        const { data: { session: initialSession }, error } = await supabase.auth.getSession();
+        if (!isMounted) return;
+
+        if (error) {
+          console.error("Error getting initial session:", error);
+          // Optionally show a toast for initial session error
+          // toast.error("Failed to load session.", { description: error.message });
+        }
+
+        setSession(initialSession);
+        if (initialSession?.user) {
+          await fetchProfile(initialSession.user.id);
+        } else {
+          setProfile(null);
+        }
+
+        if (!initialSession) {
+          navigate('/login');
+        }
+      } catch (err) {
+        console.error("Unexpected error during initial session fetch:", err);
+        // toast.error("An unexpected error occurred.", { description: String(err) });
+      } finally {
+        if (isMounted) {
+          setLoading(false); // Ensure loading is set to false after initial session check
+        }
+      }
+    };
+
+    getInitialSession();
+
+    return () => {
+      isMounted = false; // Cleanup flag
+      subscription.unsubscribe();
+    };
   }, [navigate]);
 
   if (loading) {
