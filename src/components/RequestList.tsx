@@ -13,11 +13,12 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Eye, CheckCircle, Package, Receipt, Loader2 } from "lucide-react";
-import { RequestStatus, getUserFullName } from "@/data/mockData";
+import { RequestStatus } from "@/data/mockData";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useRequests, useUpdateRequestStatus, SupabaseRequest } from "@/hooks/use-requests";
 import { useVendors } from "@/hooks/use-vendors";
+import { useAllProfiles, getFullName } from "@/hooks/use-profiles"; // Import profile hook and helper
 import { format } from "date-fns";
 
 const getStatusBadgeVariant = (status: RequestStatus) => {
@@ -39,6 +40,7 @@ const RequestList: React.FC = () => {
   const navigate = useNavigate();
   const { data: requests, isLoading: isLoadingRequests, error: requestsError } = useRequests();
   const { data: vendors, isLoading: isLoadingVendors } = useVendors();
+  const { data: profiles, isLoading: isLoadingProfiles } = useAllProfiles(); // Fetch all profiles
   const updateStatusMutation = useUpdateRequestStatus();
 
   const [searchTerm, setSearchTerm] = React.useState<string>("");
@@ -54,9 +56,14 @@ const RequestList: React.FC = () => {
     updateStatusMutation.mutate({ id: requestId, status: newStatus });
   };
 
+  const getRequesterName = (requesterId: string) => {
+    const profile = profiles?.find(p => p.id === requesterId);
+    return getFullName(profile);
+  };
+
   const filteredRequests = allRequests.filter(request => {
     const vendorName = vendors?.find(v => v.id === request.vendor_id)?.name || "";
-    const requesterName = getUserFullName(request.requester_id); // Still using mock user data for names
+    const requesterName = getRequesterName(request.requester_id);
 
     const matchesSearchTerm = searchTerm.toLowerCase() === "" ||
       request.items?.some(item =>
@@ -72,7 +79,7 @@ const RequestList: React.FC = () => {
     return matchesSearchTerm && matchesStatus;
   });
 
-  if (isLoadingRequests || isLoadingVendors) {
+  if (isLoadingRequests || isLoadingVendors || isLoadingProfiles) {
     return (
       <div className="flex justify-center items-center h-40">
         <Loader2 className="h-6 w-6 animate-spin mr-2" /> Loading Requests...
@@ -127,7 +134,7 @@ const RequestList: React.FC = () => {
             ) : (
               filteredRequests.map((request) => {
                 const vendor = vendors?.find(v => v.id === request.vendor_id);
-                const requesterName = getUserFullName(request.requester_id);
+                const requesterName = getRequesterName(request.requester_id);
                 const date = format(new Date(request.created_at), 'yyyy-MM-dd');
 
                 return (

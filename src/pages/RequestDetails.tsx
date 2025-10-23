@@ -15,9 +15,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ArrowLeft, Loader2 } from "lucide-react";
-import { mockProjects, mockAccountManagers, RequestStatus, getUserFullName } from "@/data/mockData";
+import { mockProjects, mockAccountManagers, RequestStatus } from "@/data/mockData";
 import { useRequests, SupabaseRequest } from "@/hooks/use-requests";
 import { useVendors } from "@/hooks/use-vendors";
+import { useAllProfiles, getFullName } from "@/hooks/use-profiles"; // Import profile hook and helper
 import { format } from "date-fns";
 
 const getStatusBadgeVariant = (status: RequestStatus) => {
@@ -40,10 +41,11 @@ const RequestDetails: React.FC = () => {
   const navigate = useNavigate();
   const { data: requests, isLoading: isLoadingRequests } = useRequests();
   const { data: vendors, isLoading: isLoadingVendors } = useVendors();
+  const { data: profiles, isLoading: isLoadingProfiles } = useAllProfiles(); // Fetch all profiles
 
   const request = requests?.find(req => req.id === id);
   
-  if (isLoadingRequests || isLoadingVendors) {
+  if (isLoadingRequests || isLoadingVendors || isLoadingProfiles) {
     return (
       <div className="container mx-auto py-8 flex justify-center items-center">
         <Loader2 className="h-8 w-8 animate-spin mr-2" /> Loading Request Details...
@@ -67,13 +69,14 @@ const RequestDetails: React.FC = () => {
 
   const vendor = vendors?.find(v => v.id === request.vendor_id);
   const accountManager = mockAccountManagers.find(am => am.id === request.account_manager_id);
+  const requesterProfile = profiles?.find(p => p.id === request.requester_id);
+  const requesterName = getFullName(requesterProfile); // Use helper function
 
   const projectCodesDisplay = request.project_codes?.map(projectId => {
     const project = mockProjects.find(p => p.id === projectId);
     return project ? project.code : projectId;
   }).join(", ") || "N/A";
 
-  const requesterName = getUserFullName(request.requester_id); // Use helper function
   const dateSubmitted = format(new Date(request.created_at), 'yyyy-MM-dd HH:mm');
 
   return (

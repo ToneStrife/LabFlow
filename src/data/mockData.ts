@@ -123,12 +123,7 @@ export const productDatabase: ProductDetails[] = [
 ];
 
 // --- Mock Data Storage ---
-export let mockUsers: User[] = [
-  { id: "u1", first_name: "Alice", last_name: "Smith", email: "alice.s@lab.com", role: "Requester" },
-  { id: "u2", first_name: "Bob", last_name: "Johnson", email: "bob.j@lab.com", role: "Requester" },
-  { id: "u3", first_name: "Carol", last_name: "White", email: "carol.w@lab.com", role: "Requester" },
-  { id: "u4", first_name: "Admin", last_name: "User", email: "admin@lab.com", role: "Admin" },
-];
+// Removed mockUsers
 
 // Keeping mockVendors for linking in mockRequests, but CRUD operations will use Supabase
 export let mockVendors: Vendor[] = [
@@ -185,16 +180,10 @@ export const mockProjects: Project[] = [
 // Empty mockRequests array as data will come from Supabase
 export let mockRequests: LabRequest[] = [];
 
-// Helper function to get user's full name
+// Helper function to get user's full name - REMOVED MOCK IMPLEMENTATION
 export const getUserFullName = (userId: string): string => {
-  const user = mockUsers.find(u => u.id === userId);
-  if (user) {
-    if (user.first_name || user.last_name) {
-      return `${user.first_name || ''} ${user.last_name || ''}`.trim();
-    }
-    return user.name || "N/A"; // Fallback to 'name' if first/last not set
-  }
-  return "N/A";
+  // This function is now a placeholder and should be replaced by useAllProfiles hook logic in components
+  return userId; 
 };
 
 
@@ -202,20 +191,9 @@ export const getUserFullName = (userId: string): string => {
 
 type Listener<T> = (data: T) => void;
 
-const userListeners: Listener<User[]>[] = [];
+// Removed userListeners and related functions
+
 const accountManagerListeners: Listener<AccountManager[]>[] = [];
-
-// Removed subscribeToRequests
-
-export const subscribeToUsers = (listener: Listener<User[]>) => {
-  userListeners.push(listener);
-  return () => {
-    const index = userListeners.indexOf(listener);
-    if (index > -1) {
-      userListeners.splice(index, 1);
-    }
-  };
-};
 
 export const subscribeToAccountManagers = (listener: Listener<AccountManager[]>) => {
   accountManagerListeners.push(listener);
@@ -227,46 +205,12 @@ export const subscribeToAccountManagers = (listener: Listener<AccountManager[]>)
   };
 };
 
-// Removed notifyRequestListeners
-
-const notifyUserListeners = () => {
-  userListeners.forEach(listener => listener([...mockUsers]));
-};
-
 const notifyAccountManagerListeners = () => {
   accountManagerListeners.forEach(listener => listener([...mockAccountManagers]));
 };
 
 // --- Functions to modify mock data (simulating API calls) ---
-// Removed addRequest and updateRequestStatus
-
-export const addUser = (newUser: Omit<User, "id">) => {
-  const id = `u${mockUsers.length + 1}`;
-  const userToAdd: User = { id, ...newUser };
-  mockUsers.push(userToAdd);
-  notifyUserListeners();
-  return userToAdd;
-};
-
-export const updateUser = (userId: string, updatedData: Partial<User>) => {
-  const userIndex = mockUsers.findIndex(u => u.id === userId);
-  if (userIndex > -1) {
-    mockUsers[userIndex] = { ...mockUsers[userIndex], ...updatedData };
-    notifyUserListeners();
-    return mockUsers[userIndex];
-  }
-  return null;
-};
-
-export const deleteUser = (userId: string) => {
-  const initialLength = mockUsers.length;
-  mockUsers = mockUsers.filter(u => u.id !== userId);
-  if (mockUsers.length < initialLength) {
-    notifyUserListeners();
-    return true;
-  }
-  return false;
-};
+// Removed addUser, updateUser, deleteUser
 
 export const addAccountManager = (newManager: Omit<AccountManager, "id">) => {
   const id = `am${mockAccountManagers.length + 1}`;
