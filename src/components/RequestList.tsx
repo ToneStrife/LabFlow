@@ -13,7 +13,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Eye, CheckCircle, Package, Receipt } from "lucide-react";
-import { mockVendors, updateRequestStatus, RequestStatus, LabRequest, subscribeToRequests, mockRequests } from "@/data/mockData";
+import { mockVendors, updateRequestStatus, RequestStatus, LabRequest, subscribeToRequests, mockRequests, mockUsers } from "@/data/mockData"; // Added mockUsers
 import { Input } from "@/components/ui/input"; // Import Input for search
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"; // Import Select for status filter
 
@@ -63,7 +63,7 @@ const RequestList: React.FC = () => {
         (item.brand && item.brand.toLowerCase().includes(searchTerm.toLowerCase()))
       ) ||
       mockVendors.find(v => v.id === request.vendorId)?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      mockRequests.find(r => r.id === request.id)?.requesterId && mockUsers.find(u => u.id === mockRequests.find(r => r.id === request.id)?.requesterId)?.name.toLowerCase().includes(searchTerm.toLowerCase());
+      mockUsers.find(u => u.id === request.requesterId)?.name.toLowerCase().includes(searchTerm.toLowerCase()); // Corrected access to requesterId
 
     const matchesStatus = filterStatus === "All" || request.status === filterStatus;
 
