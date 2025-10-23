@@ -3,7 +3,6 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import { Session, SupabaseClient } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
 interface Profile {
@@ -17,6 +16,7 @@ interface Profile {
 interface SessionContextType {
   session: Session | null;
   profile: Profile | null;
+  loading: boolean;
   supabase: SupabaseClient;
   updateProfile: (data: { first_name?: string | null; last_name?: string | null; avatar_url?: string | null }) => Promise<void>;
   signOut: () => Promise<void>;
@@ -28,7 +28,6 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
 
   const fetchProfile = async (userId: string) => {
     const { data, error } = await supabase
@@ -37,110 +36,80 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
       .eq('id', userId)
       .single();
 
-    if (error && error.code !== 'PGRST116') { // PGRST116 means no rows found
+    if (error && error.code !== 'PGRST116') {
       console.error('Error fetching profile:', error);
-      setProfile(null);
-    } else if (data) {
-      setProfile(data);
-    } else {
-      setProfile(null);
+      return null;
     }
+    return data;
   };
 
-  const updateProfile = async (data: { first_name?: string | null; last_name?: string | null; avatar_url?: string | null }) => {
-    if (!session?.user) {
-      throw new Error("No user session found to update profile.");
-    }
+  useEffect(() => {
+    const getSessionAndProfile = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setSession(session);
+      if (session?.user) {
+        const profileData = await fetchProfile(session.user.id);
+        setProfile(profileData);
+      }
+      setLoading(false);
+    };
 
+    getSessionAndProfile();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      setSession(session);
+      if (session?.user) {
+        const profileData = await fetchProfile(session.user.id);
+        setProfile(profileData);
+      } else {
+        setProfile(null);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  const updateProfile = async (data: { first_name?: string | null; last_name?: string | null; avatar_url?: string | null }) => {
+    if (!session?.user) throw new Error("No user session found to update profile.");
+    
     const { error } = await supabase
       .from('profiles')
       .upsert({
         id: session.user.id,
-        first_name: data.first_name || null,
-        last_name: data.last_name || null,
-        avatar_url: data.avatar_url || null,
+        ...data,
         updated_at: new Date().toISOString(),
       }, { onConflict: 'id' });
 
-    if (error) {
-      throw error;
-    }
+    if (error) throw error;
 
-    // Refresh profile data after update
-    await fetchProfile(session.user.id);
+    const updatedProfile = await fetchProfile(session.user.id);
+    setProfile(updatedProfile);
   };
 
   const signOut = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) {
-      console.error("Error signing out:", error);
-      toast.error("Failed to sign out.", {
-        description: error.message || "Please try again.",
-      });
+      toast.error("Failed to sign out.", { description: error.message });
     } else {
       toast.info("You have been signed out.");
-      navigate('/login');
+      setSession(null);
+      setProfile(null);
     }
   };
 
-  useEffect(() => {
-    let isMounted = true;
-
-    const handleSession = async (currentSession: Session | null) => {
-      if (!isMounted) return;
-
-      setSession(currentSession);
-      if (currentSession?.user) {
-        await fetchProfile(currentSession.user.id);
-      } else {
-        setProfile(null);
-      }
-      
-      // This check ensures we only set loading to false once.
-      if (loading) {
-        setLoading(false);
-      }
-
-      if (!currentSession && window.location.pathname !== '/login') {
-        navigate('/login');
-      } else if (currentSession && window.location.pathname === '/login') {
-        navigate('/dashboard');
-      }
-    };
-
-    // 1. Get initial session status
-    supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
-      handleSession(initialSession);
-    }).catch((err) => {
-      console.error("Error fetching initial session:", err);
-      if (isMounted) {
-        setLoading(false);
-        navigate('/login');
-      }
-    });
-
-    // 2. Set up listener for subsequent changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, currentSession) => {
-      // This listener will handle all auth events like SIGNED_IN, SIGNED_OUT, TOKEN_REFRESHED
-      handleSession(currentSession);
-    });
-
-    return () => {
-      isMounted = false;
-      subscription.unsubscribe();
-    };
-  }, [navigate]); // Corrected dependency array
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p className="text-lg">Loading application...</p>
-      </div>
-    );
-  }
+  const value = {
+    session,
+    profile,
+    loading,
+    supabase,
+    updateProfile,
+    signOut,
+  };
 
   return (
-    <SessionContext.Provider value={{ session, profile, supabase, updateProfile, signOut }}>
+    <SessionContext.Provider value={value}>
       {children}
     </SessionContext.Provider>
   );
