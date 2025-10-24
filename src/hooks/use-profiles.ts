@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Profile as MockProfile } from "@/data/mockData"; 
 import { toast } from "sonner";
-import { apiGetProfiles, apiUpdateProfile, apiDeleteProfile, apiCreateAccountManager } from "@/integrations/api"; // Importar apiCreateAccountManager
+import { apiGetProfiles, apiUpdateProfile, apiDeleteProfile, apiCreateAccountManager, apiInviteUser } from "@/integrations/api"; // Importar apiInviteUser
 
 export interface Profile extends MockProfile {}
 
@@ -61,6 +61,33 @@ export const useAddAccountManager = () => {
     },
     onError: (error) => {
       toast.error("Failed to add account manager.", {
+        description: error.message,
+      });
+    },
+  });
+};
+
+// Nuevo hook para invitar a un usuario
+interface InviteUserData {
+  email: string;
+  first_name?: string;
+  last_name?: string;
+}
+
+export const useInviteUser = () => {
+  const queryClient = useQueryClient();
+  return useMutation<any, Error, InviteUserData>({
+    mutationFn: async (data) => {
+      return apiInviteUser(data);
+    },
+    onSuccess: (invitedUser) => {
+      queryClient.invalidateQueries({ queryKey: ["allProfiles"] });
+      toast.success("Invitation sent successfully!", {
+        description: `Email: ${invitedUser.user.email}`,
+      });
+    },
+    onError: (error) => {
+      toast.error("Failed to send invitation.", {
         description: error.message,
       });
     },

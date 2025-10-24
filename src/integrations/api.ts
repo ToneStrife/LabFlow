@@ -2,7 +2,6 @@ import { supabase } from "./supabase/client"; // Importar cliente de Supabase
 import {
   Profile,
   Vendor,
-  // CustomerAccount, // ELIMINADO
   SupabaseRequest,
   RequestItem,
   RequestStatus,
@@ -42,8 +41,19 @@ export const apiUpdateProfile = async (id: string, data: Partial<Profile>): Prom
 };
 
 export const apiDeleteProfile = async (id: string): Promise<void> => {
-  const { error } = await supabase.from('profiles').delete().eq('id', id);
-  if (error) throw error;
+  // Para eliminar un perfil, primero debemos eliminar el usuario de auth.users
+  // Esto activará la eliminación en cascada en la tabla de perfiles si está configurada correctamente.
+  const { error: authError } = await supabase.auth.admin.deleteUser(id);
+  if (authError) {
+    console.error("Error deleting user from auth.users:", authError);
+    throw authError;
+  }
+  // Si la eliminación en cascada no está configurada o falla, también podemos intentar eliminar el perfil directamente.
+  const { error: profileError } = await supabase.from('profiles').delete().eq('id', id);
+  if (profileError) {
+    console.error("Error deleting profile from public.profiles:", profileError);
+    throw profileError;
+  }
 };
 
 // Nueva función para añadir un gestor de cuentas a través de la función Edge
@@ -65,6 +75,26 @@ export const apiCreateAccountManager = async (data: CreateAccountManagerData): P
     throw new Error(edgeFunctionData?.error || 'Failed to create account manager via Edge Function.');
   }
   return edgeFunctionData as Profile;
+};
+
+// Nueva función para invitar a un usuario a través de la función Edge
+interface InviteUserData {
+  email: string;
+  first_name?: string;
+  last_name?: string;
+}
+
+export const apiInviteUser = async (data: InviteUserData): Promise<any> => {
+  const { data: edgeFunctionData, error } = await supabase.functions.invoke('invite-user', {
+    body: JSON.stringify(data),
+    method: 'POST',
+  });
+
+  if (error) {
+    console.error("Error invoking invite-user edge function:", error);
+    throw new Error(edgeFunctionData?.error || 'Failed to invite user via Edge Function.');
+  }
+  return edgeFunctionData;
 };
 
 
@@ -91,30 +121,6 @@ export const apiDeleteVendor = async (id: string): Promise<void> => {
   const { error } = await supabase.from('vendors').delete().eq('id', id);
   if (error) throw error;
 };
-
-// --- API de Cuentas de Clientes --- ELIMINADO
-// export const apiGetCustomerAccounts = async (): Promise<CustomerAccount[]> => {
-//   const { data, error } = await supabase.from('customer_accounts').select('*');
-//   if (error) throw error;
-//   return data;
-// };
-
-// export const apiAddCustomerAccount = async (data: Omit<CustomerAccount, "id" | "created_at">): Promise<CustomerAccount> => {
-//   const { data: newAccount, error } = await supabase.from('customer_accounts').insert(data).select().single();
-//   if (error) throw error;
-//   return newAccount;
-// };
-
-// export const apiUpdateCustomerAccount = async (id: string, data: Partial<Omit<CustomerAccount, "id" | "created_at">>): Promise<CustomerAccount> => {
-//   const { data: updatedAccount, error } = await supabase.from('customer_accounts').update(data).eq('id', id).select().single();
-//   if (error) throw error;
-//   return updatedAccount;
-// };
-
-// export const apiDeleteCustomerAccount = async (id: string): Promise<void> => {
-//   const { error } = await supabase.from('customer_accounts').delete().eq('id', id);
-//   if (error) throw error;
-// };
 
 // --- API de Solicitudes ---
 export const apiGetRequests = async (): Promise<SupabaseRequest[]> => {
