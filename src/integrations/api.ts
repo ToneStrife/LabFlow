@@ -2,6 +2,8 @@ import { supabase } from "./supabase/client"; // Importar cliente de Supabase
 import {
   Profile,
   Vendor,
+  AccountManager, // Importar el nuevo tipo AccountManager
+  Project, // Importar el nuevo tipo Project
   SupabaseRequest,
   RequestItem,
   RequestStatus,
@@ -25,15 +27,12 @@ import {
 } from "@/data/crud";
 
 
-// --- API de Perfiles ---
+// --- API de Perfiles (Usuarios del sistema) ---
 export const apiGetProfiles = async (): Promise<Profile[]> => {
   const { data, error } = await supabase.from('profiles').select('*');
   if (error) throw error;
   return data;
 };
-
-// La función apiAddProfile se elimina temporalmente.
-// Los nuevos perfiles deben crearse a través del trigger de registro de auth.users.
 
 export const apiUpdateProfile = async (id: string, data: Partial<Profile>): Promise<void> => {
   const { error } = await supabase.from('profiles').update(data).eq('id', id);
@@ -41,14 +40,11 @@ export const apiUpdateProfile = async (id: string, data: Partial<Profile>): Prom
 };
 
 export const apiDeleteProfile = async (id: string): Promise<void> => {
-  // Para eliminar un perfil, primero debemos eliminar el usuario de auth.users
-  // Esto activará la eliminación en cascada en la tabla de perfiles si está configurada correctamente.
   const { error: authError } = await supabase.auth.admin.deleteUser(id);
   if (authError) {
     console.error("Error deleting user from auth.users:", authError);
     throw authError;
   }
-  // Si la eliminación en cascada no está configurada o falla, también podemos intentar eliminar el perfil directamente.
   const { error: profileError } = await supabase.from('profiles').delete().eq('id', id);
   if (profileError) {
     console.error("Error deleting profile from public.profiles:", profileError);
@@ -56,21 +52,18 @@ export const apiDeleteProfile = async (id: string): Promise<void> => {
   }
 };
 
-// apiCreateAccountManager se elimina y se reemplaza por apiInviteUser con un rol específico.
-
-// Nueva función para invitar a un usuario a través de la función Edge (actualizada para aceptar un rol)
 interface InviteUserData {
   email: string;
   first_name?: string;
   last_name?: string;
-  role?: Profile['role']; // Añadir campo de rol opcional
+  role?: Profile['role'];
 }
 
 export const apiInviteUser = async (data: InviteUserData): Promise<any> => {
   const { email, first_name, last_name, role } = data;
   
   const { data: edgeFunctionData, error } = await supabase.functions.invoke('invite-user', {
-    body: JSON.stringify({ email, first_name, last_name, role }), // Pasar el rol a la función Edge
+    body: JSON.stringify({ email, first_name, last_name, role }),
     method: 'POST',
   });
 
@@ -79,13 +72,11 @@ export const apiInviteUser = async (data: InviteUserData): Promise<any> => {
     
     let errorMessage = 'Failed to invite user via Edge Function.';
     
-    // Intenta extraer el mensaje de error del cuerpo de la respuesta de la función Edge
     if (edgeFunctionData && typeof edgeFunctionData === 'object' && 'error' in edgeFunctionData) {
         errorMessage = (edgeFunctionData as any).error;
     } else if (error.message) {
         errorMessage = error.message;
     } else if (typeof edgeFunctionData === 'string') {
-        // A veces, el cuerpo es una cadena de error simple
         errorMessage = edgeFunctionData;
     }
     
@@ -120,7 +111,56 @@ export const apiDeleteVendor = async (id: string): Promise<void> => {
   if (error) throw error;
 };
 
-// --- API de Solicitudes ---
+// --- API de Account Managers (Contactos, no usuarios del sistema) ---
+export const apiGetAccountManagers = async (): Promise<AccountManager[]> => {
+  const { data, error } = await supabase.from('account_managers').select('*');
+  if (error) throw error;
+  return data;
+};
+
+export const apiAddAccountManager = async (data: Omit<AccountManager, "id" | "created_at">): Promise<AccountManager> => {
+  const { data: newManager, error } = await supabase.from('account_managers').insert(data).select().single();
+  if (error) throw error;
+  return newManager;
+};
+
+export const apiUpdateAccountManager = async (id: string, data: Partial<OOmit<AccountManager, "id" | "created_at">>): Promise<AccountManager> => {
+  const { data: updatedManager, error } = await supabase.from('account_managers').update(data).eq('id', id).select().single();
+  if (error) throw error;
+  return updatedManager;
+};
+
+export const apiDeleteAccountManager = async (id: string): Promise<void> => {
+  const { error } = await supabase.from('account_managers').delete().eq('id', id);
+  if (error) throw error;
+};
+
+// --- API de Proyectos ---
+export const apiGetProjects = async (): Promise<Project[]> => {
+  const { data, error } = await supabase.from('projects').select('*');
+  if (error) throw error;
+  return data;
+};
+
+export const apiAddProject = async (data: Omit<Project, "id" | "created_at">): Promise<Project> => {
+  const { data: newProject, error } = await supabase.from('projects').insert(data).select().single();
+  if (error) throw error;
+  return newProject;
+};
+
+export const apiUpdateProject = async (id: string, data: Partial<Omit<Project, "id" | "created_at">>): Promise<Project> => {
+  const { data: updatedProject, error } = await supabase.from('projects').update(data).eq('id', id).select().single();
+  if (error) throw error;
+  return updatedProject;
+};
+
+export const apiDeleteProject = async (id: string): Promise<void> => {
+  const { error } = await supabase.from('projects').delete().eq('id', id);
+  if (error) throw error;
+};
+
+
+// --- API de Solicitudes (usando mock data por ahora) ---
 export const apiGetRequests = async (): Promise<SupabaseRequest[]> => {
   await new Promise(resolve => setTimeout(resolve, 300)); // Simular retraso
   return getMockRequests();
@@ -168,7 +208,7 @@ export const apiDeleteRequest = async (id: string): Promise<void> => {
   return deleteMockRequest(id);
 };
 
-// --- API de Inventario ---
+// --- API de Inventario (usando mock data por ahora) ---
 export const apiGetInventory = async (): Promise<InventoryItem[]> => {
   await new Promise(resolve => setTimeout(resolve, 300)); // Simular retraso
   return getMockInventory();
@@ -189,7 +229,7 @@ export const apiDeleteInventoryItem = async (id: string): Promise<void> => {
   return deleteMockInventoryItem(id);
 };
 
-// --- API de Envío de Correo Electrónico ---
+// --- API de Envío de Correo Electrónico (simulado) ---
 interface EmailData {
   to: string;
   subject: string;

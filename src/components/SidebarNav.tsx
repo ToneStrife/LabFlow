@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { Package, ShoppingCart, Users, User, Briefcase, UserCog, Warehouse, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSession } from "@/components/SessionContextProvider";
-import { Profile as UserProfileType } from "@/hooks/use-profiles"; // Importar el tipo Profile
+import { Profile as UserProfileType } from "@/hooks/use-profiles";
 
 interface SidebarNavProps extends React.HTMLAttributes<HTMLElement> {
   isMobile?: boolean;
@@ -17,7 +17,7 @@ interface NavItem {
   title: string;
   href: string;
   icon: JSX.Element;
-  roles: UserProfileType['role'][]; // Usar el tipo Profile['role']
+  roles: UserProfileType['role'][];
 }
 
 const navItems: NavItem[] = [
@@ -40,15 +40,15 @@ const navItems: NavItem[] = [
     roles: ["Account Manager", "Admin"],
   },
   {
-    title: "Account Managers",
-    href: "/account-managers",
-    icon: <UserCog className="mr-2 h-4 w-4" />,
+    title: "Accounts", // Título actualizado
+    href: "/accounts", // Ruta actualizada
+    icon: <Briefcase className="mr-2 h-4 w-4" />, // Icono actualizado
     roles: ["Admin"],
   },
   {
     title: "Users",
     href: "/users",
-    icon: <Users className="mr-2 h-4 w-4" />,
+    icon: <UserCog className="mr-2 h-4 w-4" />, // Icono actualizado
     roles: ["Admin"],
   },
   {

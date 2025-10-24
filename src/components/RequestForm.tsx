@@ -22,13 +22,15 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { mockProjects, productDatabase } from "@/data/storage"; // Importar desde storage
+import { productDatabase } from "@/data/storage"; // Importar desde storage
 import { ProductDetails, RequestItem } from "@/data/types"; // Importar tipos desde types
 import { showError, showLoading, dismissToast, showSuccess } from "@/utils/toast";
 import { useSession } from "@/components/SessionContextProvider";
 import { useVendors } from "@/hooks/use-vendors";
 import { useAddRequest } from "@/hooks/use-requests";
-import { useAccountManagerProfiles, getFullName } from "@/hooks/use-profiles";
+import { useAccountManagers } from "@/hooks/use-account-managers"; // Usar el nuevo hook
+import { useProjects } from "@/hooks/use-projects"; // Usar el nuevo hook
+import { getFullName } from "@/hooks/use-profiles"; // Todavía se usa para el nombre del requester
 
 const itemSchema = z.object({
   productName: z.string().min(1, { message: "Product name is required." }),
@@ -49,9 +51,7 @@ const itemSchema = z.object({
 
 const formSchema = z.object({
   vendorId: z.string().min(1, { message: "Vendor is required." }),
-  // Requester ID is now just a string, validated as required
   requesterId: z.string().min(1, { message: "Requester ID is required." }), 
-  // Account Manager ID can be an optional string (UUID or 'unassigned')
   accountManagerId: z.string().optional(), 
   items: z.array(itemSchema).min(1, { message: "At least one item is required." }),
   attachments: z.any().optional(),
@@ -63,7 +63,8 @@ type RequestFormValues = z.infer<typeof formSchema>;
 const RequestForm: React.FC = () => {
   const { session, profile } = useSession();
   const { data: vendors, isLoading: isLoadingVendors } = useVendors();
-  const { data: accountManagers, isLoading: isLoadingAccountManagers } = useAccountManagerProfiles();
+  const { data: accountManagers, isLoading: isLoadingAccountManagers } = useAccountManagers(); // Usar el nuevo hook
+  const { data: projects, isLoading: isLoadingProjects } = useProjects(); // Usar el nuevo hook
   const addRequestMutation = useAddRequest();
 
   const [autofillingIndex, setAutofillingIndex] = React.useState<number | null>(null);
@@ -74,14 +75,13 @@ const RequestForm: React.FC = () => {
     resolver: zodResolver(formSchema),
     defaultValues: {
       vendorId: "",
-      requesterId: session?.user?.id || "", // Use session.user.id for default
-      accountManagerId: "unassigned", // Default to 'unassigned' string
+      requesterId: session?.user?.id || "",
+      accountManagerId: "unassigned",
       items: [{ productName: "", catalogNumber: "", quantity: 1, unitPrice: undefined, format: "", link: "", notes: "", brand: "" }],
       projectCodes: [],
     },
   });
 
-  // Update requesterId if session changes after initial render
   React.useEffect(() => {
     if (session?.user?.id) {
       form.setValue("requesterId", session.user.id);
@@ -103,7 +103,7 @@ const RequestForm: React.FC = () => {
 
   const handleFetchProductDetails = async (index: number) => {
     setAutofillingIndex(index);
-    setSelectionIndex(null); // Clear any previous selection state
+    setSelectionIndex(null);
     setMatchingProducts([]);
     const toastId = showLoading("Searching product database...");
 
@@ -116,12 +116,10 @@ const RequestForm: React.FC = () => {
         return;
       }
 
-      // Simulate network delay
       await new Promise(resolve => setTimeout(resolve, 300));
 
       const matches = productDatabase.filter(p => {
         const catMatch = p.catalogNumber.toLowerCase() === catalogNumber;
-        // If brand is provided, it must be included in the product's brand name (case-insensitive partial match)
         const brandMatch = !brand || p.brand.toLowerCase().includes(brand);
         return catMatch && brandMatch;
       });
@@ -131,11 +129,9 @@ const RequestForm: React.FC = () => {
       }
 
       if (matches.length === 1) {
-        // Single match, autofill immediately
         applyProductDetails(index, matches[0]);
         showSuccess("Product details autofilled!");
       } else {
-        // Multiple matches, prompt user for selection
         setMatchingProducts(matches);
         setSelectionIndex(index);
         showSuccess(`${matches.length} matching products found. Please select one.`);
@@ -166,21 +162,19 @@ const RequestForm: React.FC = () => {
       return;
     }
 
-    // Convert 'unassigned' string to null for the database
     const managerId = data.accountManagerId === 'unassigned' || !data.accountManagerId ? null : data.accountManagerId;
 
     const requestData = {
       vendorId: data.vendorId,
       requesterId: session.user.id,
       accountManagerId: managerId,
-      notes: undefined, // Notes field is missing in formSchema/form, assuming it's not used here yet
+      notes: undefined,
       projectCodes: data.projectCodes,
       items: data.items,
     };
 
     await addRequestMutation.mutateAsync(requestData);
 
-    // Reset form after successful submission
     form.reset({
       vendorId: "",
       requesterId: session.user.id,
@@ -226,7 +220,6 @@ const RequestForm: React.FC = () => {
             )}
           />
         </div>
-        {/* New grid for Account Manager and Project Codes */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
             control={form.control}
@@ -241,7 +234,7 @@ const RequestForm: React.FC = () => {
                   <SelectContent>
                     <SelectItem value="unassigned">No Manager</SelectItem>
                     {accountManagers?.map((manager) => (
-                      <SelectItem key={manager.id} value={manager.id}>{getFullName(manager)}</SelectItem>
+                      <SelectItem key={manager.id} value={manager.id}>{`${manager.first_name} ${manager.last_name}`}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -258,11 +251,11 @@ const RequestForm: React.FC = () => {
                 <Popover>
                   <PopoverTrigger asChild>
                     <FormControl>
-                      <Button variant="outline" role="combobox" className={cn("w-full justify-between", !field.value || field.value.length === 0 && "text-muted-foreground")}>
+                      <Button variant="outline" role="combobox" className={cn("w-full justify-between", !field.value || field.value.length === 0 && "text-muted-foreground")} disabled={isLoadingProjects}>
                         {field.value && field.value.length > 0 ? (
                           <div className="flex flex-wrap gap-1">
                             {field.value.map((projectId) => {
-                              const project = mockProjects.find((p) => p.id === projectId);
+                              const project = projects?.find((p) => p.id === projectId);
                               return project ? <Badge key={projectId} variant="secondary">{project.code}</Badge> : null;
                             })}
                           </div>
@@ -276,7 +269,7 @@ const RequestForm: React.FC = () => {
                       <CommandInput placeholder="Search projects..." />
                       <CommandEmpty>No project found.</CommandEmpty>
                       <CommandGroup>
-                        {mockProjects.map((project) => (
+                        {projects?.map((project) => (
                           <CommandItem value={project.name} key={project.id} onSelect={() => {
                             const currentValues = field.value || [];
                             if (currentValues.includes(project.id)) {
@@ -444,7 +437,6 @@ const RequestForm: React.FC = () => {
             </FormItem>
           )}
         />
-        {/* Removed the old Project Codes section as it's now moved */}
         <Button type="submit" className="w-full" disabled={addRequestMutation.isPending}>
           {addRequestMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : "Submit Request"}
         </Button>

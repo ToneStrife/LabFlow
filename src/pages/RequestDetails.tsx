@@ -16,6 +16,7 @@ import {
 import { useRequests, SupabaseRequest, useUpdateRequestStatus, useSendEmail, useUpdateRequestFile, useUpdateRequestMetadata, FileType } from "@/hooks/use-requests";
 import { useVendors } from "@/hooks/use-vendors";
 import { useAllProfiles, getFullName } from "@/hooks/use-profiles";
+import { useAccountManagers } from "@/hooks/use-account-managers"; // Usar el nuevo hook
 import EmailDialog, { EmailFormValues } from "@/components/EmailDialog";
 
 // Import new modular components
@@ -33,6 +34,7 @@ const RequestDetails: React.FC = () => {
   const { data: requests, isLoading: isLoadingRequests } = useRequests();
   const { data: vendors, isLoading: isLoadingVendors } = useVendors();
   const { data: profiles, isLoading: isLoadingProfiles } = useAllProfiles();
+  const { data: accountManagers, isLoading: isLoadingAccountManagers } = useAccountManagers(); // Usar el nuevo hook
   const updateStatusMutation = useUpdateRequestStatus();
   const updateFileMutation = useUpdateRequestFile();
   const updateMetadataMutation = useUpdateRequestMetadata();
@@ -50,9 +52,18 @@ const RequestDetails: React.FC = () => {
   const [fileTypeToUpload, setFileTypeToUpload] = React.useState<FileType>("quote");
 
   const getVendorEmail = (vendorId: string) => vendors?.find(v => v.id === vendorId)?.email || "";
-  const getAccountManagerEmail = (managerId: string | null) => profiles?.find(p => p.id === managerId)?.email || "";
+  
+  const getAccountManagerEmail = (managerId: string | null) => {
+    return accountManagers?.find(am => am.id === managerId)?.email || "";
+  };
+
   const getRequesterName = (requesterId: string) => getFullName(profiles?.find(p => p.id === requesterId));
-  const getAccountManagerName = (managerId: string | null) => managerId ? getFullName(profiles?.find(p => p.id === managerId)) : "N/A";
+  
+  const getAccountManagerName = (managerId: string | null) => {
+    if (!managerId) return "N/A";
+    const manager = accountManagers?.find(am => am.id === managerId);
+    return manager ? `${manager.first_name} ${manager.last_name}` : "N/A";
+  };
 
   const handleSendEmail = async (emailData: EmailFormValues) => {
     await sendEmailMutation.mutateAsync(emailData);
@@ -110,19 +121,16 @@ const RequestDetails: React.FC = () => {
     setIsUploadDialogOpen(true);
   };
 
-  // Action for Quote Requested state: Upload Quote file
   const handleUploadQuote = () => {
     handleUploadClick("quote");
   };
 
-  // Action for PO Requested state: Upload PO file and mark as Ordered
   const handleUploadPOAndOrder = () => {
     handleUploadClick("po");
   };
 
   const handleFileUpload = async (file: File, poNumber?: string) => {
     if (request) {
-      // Simulate file upload by creating a mock URL
       const mockFileUrl = `/uploads/${file.name}`;
       
       const updatedRequest = await updateFileMutation.mutateAsync({
@@ -132,16 +140,13 @@ const RequestDetails: React.FC = () => {
         poNumber: poNumber,
       });
 
-      // If we just uploaded a PO, automatically change status to Ordered
       if (fileTypeToUpload === "po") {
         await updateStatusMutation.mutateAsync({ id: request.id, status: "Ordered" });
       }
       
-      // If we just uploaded a Quote, automatically change status to PO Requested
       if (fileTypeToUpload === "quote") {
         await updateStatusMutation.mutateAsync({ id: request.id, status: "PO Requested" });
         
-        // Automatically prepare the email to request PO from Manager
         if (updatedRequest.account_manager_id) {
           handleSendPORequest(updatedRequest);
         } else {
@@ -153,7 +158,6 @@ const RequestDetails: React.FC = () => {
     }
   };
 
-  // --- Logic for Mark as Ordered and Send Email ---
   const handleMarkAsOrderedAndSendEmail = (request: SupabaseRequest) => {
     if (!request.po_url) {
       toast.error("Cannot send order email.", { description: "PO file is missing. Please upload the PO file first." });
@@ -175,7 +179,6 @@ const RequestDetails: React.FC = () => {
     });
     setIsEmailDialogOpen(true);
   };
-  // --- End Logic for Mark as Ordered and Send Email ---
 
   const handleUpdateMetadata = async (data: { accountManagerId?: string | null; notes?: string | null; projectCodes?: string[] | null; }) => {
     if (!request) return;
@@ -191,7 +194,7 @@ const RequestDetails: React.FC = () => {
   };
 
 
-  if (isLoadingRequests || isLoadingVendors || isLoadingProfiles) {
+  if (isLoadingRequests || isLoadingVendors || isLoadingProfiles || isLoadingAccountManagers) {
     return <div className="container mx-auto py-8 flex justify-center items-center"><Loader2 className="h-8 w-8 animate-spin mr-2" /> Loading Request Details...</div>;
   }
 
@@ -220,7 +223,6 @@ const RequestDetails: React.FC = () => {
         </div>
       </div>
       
-      {/* Metadata Edit Form - Always visible for editing */}
       <div className="mt-6">
         <h2 className="text-2xl font-bold mb-4">Request Metadata</h2>
         <RequestMetadataForm
@@ -242,7 +244,6 @@ const RequestDetails: React.FC = () => {
         handleMarkAsOrderedAndSendEmail={handleMarkAsOrderedAndSendEmail}
       />
 
-      {/* Dialogs */}
       <Dialog open={isApproveRequestDialogOpen} onOpenChange={setIsApproveRequestDialogOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>Approve Request</DialogTitle></DialogHeader>

@@ -21,8 +21,9 @@ import { Badge } from "@/components/ui/badge";
 import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SupabaseRequest } from "@/hooks/use-requests";
-import { useAccountManagerProfiles, getFullName, Profile } from "@/hooks/use-profiles";
-import { mockProjects } from "@/data/storage";
+import { getFullName, Profile } from "@/hooks/use-profiles"; // Todavía se usa para el nombre del requester
+import { useAccountManagers } from "@/hooks/use-account-managers"; // Usar el nuevo hook
+import { useProjects } from "@/hooks/use-projects"; // Usar el nuevo hook
 
 const metadataSchema = z.object({
   accountManagerId: z.union([
@@ -37,13 +38,14 @@ type MetadataFormValues = z.infer<typeof metadataSchema>;
 
 interface RequestMetadataFormProps {
   request: SupabaseRequest;
-  profiles: Profile[];
+  profiles: Profile[]; // Se mantiene para el requester, pero no para Account Managers
   onSubmit: (data: MetadataFormValues) => Promise<void>;
   isSubmitting: boolean;
 }
 
 const RequestMetadataForm: React.FC<RequestMetadataFormProps> = ({ request, onSubmit, isSubmitting }) => {
-  const { data: accountManagers, isLoading: isLoadingManagers } = useAccountManagerProfiles();
+  const { data: accountManagers, isLoading: isLoadingManagers } = useAccountManagers(); // Usar el nuevo hook
+  const { data: projects, isLoading: isLoadingProjects } = useProjects(); // Usar el nuevo hook
 
   const defaultProjectCodes = request.project_codes || [];
 
@@ -79,7 +81,7 @@ const RequestMetadataForm: React.FC<RequestMetadataFormProps> = ({ request, onSu
                   <SelectItem value="unassigned">No Manager</SelectItem>
                   {accountManagers?.map((manager) => (
                     <SelectItem key={manager.id} value={manager.id}>
-                      {getFullName(manager)}
+                      {`${manager.first_name} ${manager.last_name}`}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -97,11 +99,11 @@ const RequestMetadataForm: React.FC<RequestMetadataFormProps> = ({ request, onSu
               <Popover>
                 <PopoverTrigger asChild>
                   <FormControl>
-                    <Button variant="outline" role="combobox" className={cn("w-full justify-between", !field.value || field.value.length === 0 && "text-muted-foreground")} disabled={isSubmitting}>
+                    <Button variant="outline" role="combobox" className={cn("w-full justify-between", !field.value || field.value.length === 0 && "text-muted-foreground")} disabled={isLoadingProjects || isSubmitting}>
                       {field.value && field.value.length > 0 ? (
                         <div className="flex flex-wrap gap-1">
                           {field.value.map((projectId) => {
-                            const project = mockProjects.find((p) => p.id === projectId);
+                            const project = projects?.find((p) => p.id === projectId);
                             return project ? <Badge key={projectId} variant="secondary">{project.code}</Badge> : null;
                           })}
                         </div>
@@ -115,7 +117,7 @@ const RequestMetadataForm: React.FC<RequestMetadataFormProps> = ({ request, onSu
                     <CommandInput placeholder="Search projects..." />
                     <CommandEmpty>No project found.</CommandEmpty>
                     <CommandGroup>
-                      {mockProjects.map((project) => (
+                      {projects?.map((project) => (
                         <CommandItem value={project.name} key={project.id} onSelect={() => {
                           const currentValues = field.value || [];
                           if (currentValues.includes(project.id)) {

@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Profile as MockProfile } from "@/data/mockData"; 
 import { toast } from "sonner";
-import { apiGetProfiles, apiUpdateProfile, apiDeleteProfile, apiInviteUser } from "@/integrations/api"; // apiCreateAccountManager se eliminará
+import { apiGetProfiles, apiUpdateProfile, apiDeleteProfile, apiInviteUser } from "@/integrations/api";
 
 export interface Profile extends MockProfile {}
 
@@ -17,15 +17,16 @@ export const useAllProfiles = () => {
   });
 };
 
-export const useAccountManagerProfiles = () => {
-  return useQuery<Profile[], Error>({
-    queryKey: ["accountManagers"],
-    queryFn: async () => {
-      const profiles = await apiGetProfiles(); // Usar la función de la API de Supabase
-      return profiles.filter(profile => profile.role === "Account Manager");
-    },
-  });
-};
+// useAccountManagerProfiles se ha eliminado y se reemplaza por useAccountManagers en src/hooks/use-account-managers.ts
+// export const useAccountManagerProfiles = () => {
+//   return useQuery<Profile[], Error>({
+//     queryKey: ["accountManagers"],
+//     queryFn: async () => {
+//       const profiles = await apiGetProfiles();
+//       return profiles.filter(profile => profile.role === "Account Manager");
+//     },
+//   });
+// };
 
 // --- Mutation Hooks for Profiles ---
 
@@ -36,15 +37,11 @@ interface ProfileUpdateFormData {
   role?: "Requester" | "Account Manager" | "Admin";
 }
 
-// useAddProfile se ha eliminado. Los nuevos perfiles se crean a través del trigger de registro de auth.users.
-// useAddAccountManager se elimina y se reemplaza por useInviteUser con un rol específico.
-
-// Nuevo hook para invitar a un usuario (actualizado para aceptar un rol)
 interface InviteUserData {
   email: string;
   first_name?: string;
   last_name?: string;
-  role?: Profile['role']; // Añadir campo de rol opcional
+  role?: Profile['role'];
 }
 
 export const useInviteUser = () => {
@@ -55,7 +52,7 @@ export const useInviteUser = () => {
     },
     onSuccess: (invitedUser) => {
       queryClient.invalidateQueries({ queryKey: ["allProfiles"] });
-      queryClient.invalidateQueries({ queryKey: ["accountManagers"] }); // Invalidar también los managers
+      queryClient.invalidateQueries({ queryKey: ["accountManagers"] });
       toast.success("Invitation sent successfully!", {
         description: `Email: ${invitedUser.user.email}`,
       });
@@ -69,19 +66,17 @@ export const useInviteUser = () => {
 };
 
 
-// Actualizar Perfil (usado para el perfil del usuario actual y potencialmente para managers)
 export const useUpdateProfile = () => {
   const queryClient = useQueryClient();
   return useMutation<void, Error, { id: string; data: Partial<ProfileUpdateFormData> }>({
     mutationFn: async ({ id, data }) => {
-      // Filtrar el email ya que no se actualiza directamente en la tabla de perfiles
       const { email, ...profileData } = data;
       return apiUpdateProfile(id, profileData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["allProfiles"] });
       queryClient.invalidateQueries({ queryKey: ["accountManagers"] });
-      queryClient.invalidateQueries({ queryKey: ["session"] }); // Invalidar la sesión para volver a obtener el perfil si es el usuario actual
+      queryClient.invalidateQueries({ queryKey: ["session"] });
       toast.success("Profile updated successfully!");
     },
     onError: (error) => {
@@ -92,7 +87,6 @@ export const useUpdateProfile = () => {
   });
 };
 
-// Eliminar Perfil
 export const useDeleteProfile = () => {
   const queryClient = useQueryClient();
   return useMutation<void, Error, string>({

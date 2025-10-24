@@ -7,6 +7,7 @@ import { RequestStatus } from "@/data/types";
 import { useRequests, useUpdateRequestStatus, SupabaseRequest, useSendEmail } from "@/hooks/use-requests";
 import { useVendors } from "@/hooks/use-vendors";
 import { useAllProfiles, getFullName } from "@/hooks/use-profiles";
+import { useAccountManagers } from "@/hooks/use-account-managers"; // Usar el nuevo hook
 import EmailDialog, { EmailFormValues } from "./EmailDialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -21,6 +22,7 @@ const RequestList: React.FC = () => {
   const { data: requests, isLoading: isLoadingRequests, error: requestsError } = useRequests();
   const { data: vendors, isLoading: isLoadingVendors } = useVendors();
   const { data: profiles, isLoading: isLoadingProfiles } = useAllProfiles();
+  const { data: accountManagers, isLoading: isLoadingAccountManagers } = useAccountManagers(); // Usar el nuevo hook
   const updateStatusMutation = useUpdateRequestStatus();
   const sendEmailMutation = useSendEmail();
 
@@ -33,9 +35,6 @@ const RequestList: React.FC = () => {
   const [isApproveRequestDialogOpen, setIsApproveRequestDialogOpen] = React.useState(false);
   const [requestToApprove, setRequestToApprove] = React.useState<SupabaseRequest | null>(null);
 
-  // Removed Quote/PO Details Dialog state
-  // Removed Order Confirmation Dialog state
-
   const getRequesterName = (requesterId: string) => {
     const profile = profiles?.find(p => p.id === requesterId);
     return getFullName(profile);
@@ -43,8 +42,8 @@ const RequestList: React.FC = () => {
 
   const getAccountManagerName = (managerId: string | null) => {
     if (!managerId) return "N/A";
-    const managerProfile = profiles?.find(p => p.id === managerId);
-    return getFullName(managerProfile);
+    const manager = accountManagers?.find(am => am.id === managerId);
+    return manager ? `${manager.first_name} ${manager.last_name}` : "N/A";
   };
 
   const getVendorEmail = (vendorId: string) => {
@@ -52,7 +51,7 @@ const RequestList: React.FC = () => {
   };
 
   const getAccountManagerEmail = (managerId: string | null) => {
-    return profiles?.find(p => p.id === managerId)?.email || "";
+    return accountManagers?.find(am => am.id === managerId)?.email || "";
   };
 
   const handleSendEmail = async (emailData: EmailFormValues) => {
@@ -110,7 +109,6 @@ const RequestList: React.FC = () => {
     }
   };
 
-  // Placeholder functions for RequestListTable actions that should redirect to details page
   const openQuoteAndPODetailsDialog = (request: SupabaseRequest) => {
     navigate(`/requests/${request.id}`);
   };
@@ -145,7 +143,7 @@ const RequestList: React.FC = () => {
     return matchesSearchTerm && matchesStatus;
   });
 
-  if (isLoadingRequests || isLoadingVendors || isLoadingProfiles) {
+  if (isLoadingRequests || isLoadingVendors || isLoadingProfiles || isLoadingAccountManagers) {
     return (
       <div className="flex justify-center items-center h-40">
         <Loader2 className="h-6 w-6 animate-spin mr-2" /> Loading Requests...
@@ -172,13 +170,12 @@ const RequestList: React.FC = () => {
         isUpdatingStatus={updateStatusMutation.isPending}
         onViewDetails={(id) => navigate(`/requests/${id}`)}
         onApprove={openApproveRequestDialog}
-        onEnterQuoteDetails={openQuoteAndPODetailsDialog} // Redirect to details page
+        onEnterQuoteDetails={openQuoteAndPODetailsDialog}
         onSendPORequest={handleSendPORequest}
-        onMarkAsOrdered={openOrderConfirmationDialog} // Redirect to details page
+        onMarkAsOrdered={openOrderConfirmationDialog}
         onMarkAsReceived={handleMarkAsReceived}
       />
 
-      {/* Dialogs remaining in RequestList: Approve and Email */}
       <Dialog open={isApproveRequestDialogOpen} onOpenChange={setIsApproveRequestDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
