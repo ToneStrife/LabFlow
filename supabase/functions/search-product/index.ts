@@ -35,9 +35,9 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Missing required field: catalogNumber' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    const deepseekApiKey = Deno.env.get('DEEPSEEK_API_KEY');
-    if (!deepseekApiKey) {
-      return new Response(JSON.stringify({ error: 'Server configuration error: DEEPSEEK_API_KEY is not set.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    const aiApiKey = Deno.env.get('AI_API_KEY'); // Usando la nueva AI_API_KEY
+    if (!aiApiKey) {
+      return new Response(JSON.stringify({ error: 'Server configuration error: AI_API_KEY is not set.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     const systemInstruction = `
@@ -64,11 +64,11 @@ serve(async (req) => {
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${deepseekApiKey}`,
+        "Authorization": `Bearer ${aiApiKey}`, // Usando la nueva AI_API_KEY
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        "model": "deepseek/deepseek-coder",
+        "model": "anthropic/claude-3.5-sonnet", // Usando Claude 3.5 Sonnet
         "response_format": { "type": "json_object" },
         "messages": [
           { "role": "system", "content": systemInstruction },
@@ -90,7 +90,7 @@ serve(async (req) => {
     try {
       aiResponse = JSON.parse(rawResponse);
     } catch (jsonError) {
-      console.error('Edge Function: Failed to parse DeepSeek JSON response:', jsonError, 'Raw Response:', rawResponse);
+      console.error('Edge Function: Failed to parse AI JSON response:', jsonError, 'Raw Response:', rawResponse);
       return new Response(JSON.stringify({ error: 'AI response could not be parsed.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
@@ -106,10 +106,10 @@ serve(async (req) => {
       notes: aiResponse.technical_notes,
       brand: brand,
       catalogNumber: catalogNumber,
-      source: "AI Search (DeepSeek Coder)"
+      source: "AI Search (Claude 3.5 Sonnet)" // Fuente actualizada
     };
 
-    console.log(`Edge Function: External search for catalog ${catalogNumber}, brand ${brand} found details via DeepSeek.`);
+    console.log(`Edge Function: External search for catalog ${catalogNumber}, brand ${brand} found details via Claude 3.5 Sonnet.`);
 
     return new Response(JSON.stringify({ products: productDetails }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
