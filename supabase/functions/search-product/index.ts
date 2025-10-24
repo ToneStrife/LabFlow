@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import { verify } from 'https://deno.land/x/djwt@v2.8/mod.ts';
-import OpenAI from 'https://esm.sh/openai@4.52.2'; // Importar el SDK de OpenAI
+import { GoogleGenerativeAI } from 'https://esm.sh/@google/generative-ai@0.15.0'; // Importar el SDK de Google Gemini
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -57,13 +57,14 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Missing required field: catalogNumber' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // --- INTEGRACIÓN REAL CON OPENAI GPT-4o ---
-    const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
-    if (!openaiApiKey) {
-      return new Response(JSON.stringify({ error: 'Server configuration error: OPENAI_API_KEY is not set.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    // --- INTEGRACIÓN REAL CON GOOGLE GEMINI ---
+    const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
+    if (!geminiApiKey) {
+      return new Response(JSON.stringify({ error: 'Server configuration error: GEMINI_API_KEY is not set.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    const openai = new OpenAI({ apiKey: openaiApiKey });
+    const genAI = new GoogleGenerativeAI(geminiApiKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }); // Puedes usar "gemini-1.5-pro" si necesitas un modelo más potente
 
     const prompt = `
       Search the internet for a lab/scientific product with Brand: '${brand}' and Catalog Number: '${catalogNumber}'.
@@ -90,14 +91,10 @@ serve(async (req) => {
       If no reliable information is found, return an empty JSON object {}.
     `;
 
-    const chatCompletion = await openai.chat.completions.create({
-      model: 'gpt-4o', // O 'gpt-4-turbo' si prefieres
-      messages: [{ role: 'user', content: prompt }],
-      response_format: { type: "json_object" },
-      temperature: 0.2, // Mantener la temperatura baja para respuestas más fácticas
-    });
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const rawResponse = response.text(); // Gemini devuelve el contenido como texto
 
-    const rawResponse = chatCompletion.choices[0].message.content;
     let productDetails: any = {};
 
     if (rawResponse) {
@@ -106,10 +103,9 @@ serve(async (req) => {
         // Asegurarse de que el catalogNumber y brand coincidan con la entrada
         productDetails.catalogNumber = catalogNumber;
         productDetails.brand = brand;
-        productDetails.source = "AI Search (OpenAI)";
+        productDetails.source = "AI Search (Gemini)";
       } catch (jsonError) {
-        console.error('Edge Function: Failed to parse OpenAI JSON response:', jsonError);
-        // Si falla el parseo, podemos intentar devolver un error o un objeto vacío
+        console.error('Edge Function: Failed to parse Gemini JSON response:', jsonError);
         return new Response(JSON.stringify({ error: 'AI response could not be parsed.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
     }
