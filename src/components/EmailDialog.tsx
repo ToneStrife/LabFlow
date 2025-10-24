@@ -23,6 +23,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Paperclip } from "lucide-react";
+import { Badge } from "@/components/ui/badge"; // Importación añadida
 
 const emailFormSchema = z.object({
   to: z.string().email({ message: "Must be a valid email address." }),
