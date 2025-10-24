@@ -91,7 +91,6 @@ interface InviteUserData {
 export const apiInviteUser = async (data: InviteUserData): Promise<any> => {
   const { email, first_name, last_name } = data;
   
-  // Ya no pasamos clientRedirectTo
   const { data: edgeFunctionData, error } = await supabase.functions.invoke('invite-user', {
     body: JSON.stringify({ email, first_name, last_name }),
     method: 'POST',
@@ -99,15 +98,20 @@ export const apiInviteUser = async (data: InviteUserData): Promise<any> => {
 
   if (error) {
     console.error("Error invoking invite-user edge function:", error);
-    console.error("Edge function response data (on error):", edgeFunctionData);
+    
     let errorMessage = 'Failed to invite user via Edge Function.';
-    if (error.message) {
-        errorMessage = error.message;
-    } else if (edgeFunctionData && typeof edgeFunctionData === 'object' && 'error' in edgeFunctionData) {
+    
+    // Intenta extraer el mensaje de error del cuerpo de la respuesta de la función Edge
+    if (edgeFunctionData && typeof edgeFunctionData === 'object' && 'error' in edgeFunctionData) {
         errorMessage = (edgeFunctionData as any).error;
+    } else if (error.message) {
+        errorMessage = error.message;
     } else if (typeof edgeFunctionData === 'string') {
+        // A veces, el cuerpo es una cadena de error simple
         errorMessage = edgeFunctionData;
     }
+    
+    console.error("Edge function response data (on error):", edgeFunctionData);
     throw new Error(errorMessage);
   }
   return edgeFunctionData;
