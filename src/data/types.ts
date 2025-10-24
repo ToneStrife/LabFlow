@@ -12,6 +12,13 @@ export interface RequestItem {
   link?: string;
   notes?: string;
   brand?: string; // New field for brand
+
+  // AI-enriched fields
+  ai_enriched_product_name?: string;
+  ai_enriched_pack_size?: string;
+  ai_enriched_estimated_price?: number;
+  ai_enriched_link?: string;
+  ai_enriched_notes?: string;
 }
 
 export interface Profile {
@@ -87,6 +94,7 @@ export interface ProductDetails {
   format?: string;
   link?: string;
   brand: string;
+  source?: string; // Added source field
 }
 
 export interface InventoryItem {

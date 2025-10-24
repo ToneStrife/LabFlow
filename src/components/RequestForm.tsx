@@ -15,15 +15,14 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { PlusCircle, Trash2, Check, ChevronsUpDown, Sparkles, Globe, Loader2 } from "lucide-react"; // Añadido Globe
+import { PlusCircle, Trash2, Check, ChevronsUpDown, Sparkles, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { productDatabase } from "@/data/storage"; // Importar desde storage
-import { ProductDetails, RequestItem } from "@/data/types"; // Importar tipos desde types
+import { ProductDetails, RequestItem } from "@/data/types";
 import { showError, showLoading, dismissToast, showSuccess } from "@/utils/toast";
 import { useSession } from "@/components/SessionContextProvider";
 import { useVendors } from "@/hooks/use-vendors";
@@ -31,7 +30,7 @@ import { useAddRequest } from "@/hooks/use-requests";
 import { useAccountManagers } from "@/hooks/use-account-managers";
 import { useProjects } from "@/hooks/use-projects";
 import { getFullName } from "@/hooks/use-profiles";
-import { apiSearchExternalProduct } from "@/integrations/api"; // Importar la nueva API de búsqueda externa
+import { apiSearchExternalProduct } from "@/integrations/api"; // Importar la API de búsqueda externa (ahora simula la IA)
 
 const itemSchema = z.object({
   productName: z.string().min(1, { message: "Product name is required." }),
@@ -48,6 +47,12 @@ const itemSchema = z.object({
   link: z.string().url({ message: "Must be a valid URL." }).optional().or(z.literal("")),
   notes: z.string().optional(),
   brand: z.string().optional(),
+  // AI-enriched fields
+  ai_enriched_product_name: z.string().optional(),
+  ai_enriched_pack_size: z.string().optional(),
+  ai_enriched_estimated_price: z.number().optional(),
+  ai_enriched_link: z.string().optional(),
+  ai_enriched_notes: z.string().optional(),
 });
 
 const formSchema = z.object({
@@ -68,9 +73,7 @@ const RequestForm: React.FC = () => {
   const { data: projects, isLoading: isLoadingProjects } = useProjects();
   const addRequestMutation = useAddRequest();
 
-  const [autofillingIndex, setAutofillingIndex] = React.useState<number | null>(null);
-  const [matchingProducts, setMatchingProducts] = React.useState<ProductDetails[]>([]);
-  const [selectionIndex, setSelectionIndex] = React.useState<number | null>(null);
+  const [enrichingIndex, setEnrichingIndex] = React.useState<number | null>(null);
 
   const form = useForm<RequestFormValues>({
     resolver: zodResolver(formSchema),
@@ -78,7 +81,21 @@ const RequestForm: React.FC = () => {
       vendorId: "",
       requesterId: session?.user?.id || "",
       accountManagerId: "unassigned",
-      items: [{ productName: "", catalogNumber: "", quantity: 1, unitPrice: undefined, format: "", link: "", notes: "", brand: "" }],
+      items: [{ 
+        productName: "", 
+        catalogNumber: "", 
+        quantity: 1, 
+        unitPrice: undefined, 
+        format: "", 
+        link: "", 
+        notes: "", 
+        brand: "",
+        ai_enriched_product_name: undefined,
+        ai_enriched_pack_size: undefined,
+        ai_enriched_estimated_price: undefined,
+        ai_enriched_link: undefined,
+        ai_enriched_notes: undefined,
+      }],
       projectCodes: [],
     },
   });
@@ -94,78 +111,43 @@ const RequestForm: React.FC = () => {
     name: "items",
   });
 
-  const applyProductDetails = (index: number, data: ProductDetails) => {
-    form.setValue(`items.${index}.productName`, data.productName || '');
-    form.setValue(`items.${index}.brand`, data.brand || '');
-    form.setValue(`items.${index}.unitPrice`, data.unitPrice || undefined);
-    form.setValue(`items.${index}.format`, data.format || '');
-    form.setValue(`items.${index}.link`, data.link || '');
-  };
-
-  const handleFetchProductDetails = async (index: number, searchSource: 'internal' | 'external') => {
-    setAutofillingIndex(index);
-    setSelectionIndex(null);
-    setMatchingProducts([]);
-    const toastId = showLoading(`Searching product database (${searchSource === 'internal' ? 'internal' : 'external'})...`);
+  const handleEnrichWithAI = async (index: number) => {
+    setEnrichingIndex(index);
+    const toastId = showLoading("AI is searching for product details...");
 
     try {
-      const catalogNumber = form.getValues(`items.${index}.catalogNumber`).trim();
+      const catalogNumber = form.getValues(`items.${index}.catalogNumber`)?.trim();
       const brand = form.getValues(`items.${index}.brand`)?.trim();
 
-      if (!catalogNumber) {
-        showError("Please enter a catalog number first.");
+      if (!catalogNumber || !brand) {
+        showError("Please enter both 'Brand' and 'Catalog Number' to enrich with AI.");
         return;
       }
 
-      let matches: ProductDetails[] = [];
+      const aiProductDetails: ProductDetails = await apiSearchExternalProduct(catalogNumber, brand);
 
-      if (searchSource === 'internal') {
-        // Search internal database
-        matches = productDatabase.filter(p => {
-          const catMatch = p.catalogNumber.toLowerCase() === catalogNumber.toLowerCase();
-          const brandMatch = !brand || p.brand.toLowerCase().includes(brand.toLowerCase());
-          return catMatch && brandMatch;
-        });
-        if (matches.length > 0) {
-          showSuccess("Product details autofilled from internal database!");
-        }
-      } else { // searchSource === 'external'
-        // Search external via Edge Function
-        const externalProducts = await apiSearchExternalProduct(catalogNumber, brand);
-        matches = externalProducts;
-        if (matches.length > 0) {
-          showSuccess("Product details autofilled from external search!");
-        }
-      }
+      // Auto-fill main form fields
+      form.setValue(`items.${index}.productName`, aiProductDetails.productName || '');
+      form.setValue(`items.${index}.format`, aiProductDetails.format || '');
+      form.setValue(`items.${index}.unitPrice`, aiProductDetails.unitPrice || undefined);
+      form.setValue(`items.${index}.link`, aiProductDetails.link || '');
+      form.setValue(`items.${index}.notes`, aiProductDetails.notes || '');
+      
+      // Store AI-enriched data separately
+      form.setValue(`items.${index}.ai_enriched_product_name`, aiProductDetails.productName || undefined);
+      form.setValue(`items.${index}.ai_enriched_pack_size`, aiProductDetails.format || undefined);
+      form.setValue(`items.${index}.ai_enriched_estimated_price`, aiProductDetails.unitPrice || undefined);
+      form.setValue(`items.${index}.ai_enriched_link`, aiProductDetails.link || undefined);
+      form.setValue(`items.${index}.ai_enriched_notes`, aiProductDetails.notes || undefined);
 
-      if (matches.length === 0) {
-        throw new Error(`Product with catalog number '${catalogNumber}' not found in ${searchSource === 'internal' ? 'internal database' : 'external sources'}.`);
-      }
-
-      if (matches.length === 1) {
-        applyProductDetails(index, matches[0]);
-      } else {
-        setMatchingProducts(matches);
-        setSelectionIndex(index);
-        showSuccess(`${matches.length} matching products found. Please select one.`);
-      }
+      showSuccess("Product details enriched by AI!");
 
     } catch (error: any) {
-      console.error("Error fetching product details:", error);
-      showError(error.message || `Could not fetch product details from ${searchSource === 'internal' ? 'internal database' : 'external sources'}.`);
+      console.error("Error enriching product details with AI:", error);
+      showError(error.message || "Failed to enrich product details with AI.");
     } finally {
       dismissToast(toastId);
-      setAutofillingIndex(null);
-    }
-  };
-
-  const handleProductSelection = (index: number, productId: string) => {
-    const selectedProduct = matchingProducts.find(p => p.id === productId);
-    if (selectedProduct) {
-      applyProductDetails(index, selectedProduct);
-      setSelectionIndex(null);
-      setMatchingProducts([]);
-      toast.success("Product selected and details applied.");
+      setEnrichingIndex(null);
     }
   };
 
@@ -181,7 +163,7 @@ const RequestForm: React.FC = () => {
       vendorId: data.vendorId,
       requesterId: session.user.id,
       accountManagerId: managerId,
-      notes: undefined,
+      notes: undefined, // Notes are now part of itemSchema, not top-level
       projectCodes: data.projectCodes,
       items: data.items,
     };
@@ -192,7 +174,21 @@ const RequestForm: React.FC = () => {
       vendorId: "",
       requesterId: session.user.id,
       accountManagerId: "unassigned",
-      items: [{ productName: "", catalogNumber: "", quantity: 1, unitPrice: undefined, format: "", link: "", notes: "", brand: "" }],
+      items: [{ 
+        productName: "", 
+        catalogNumber: "", 
+        quantity: 1, 
+        unitPrice: undefined, 
+        format: "", 
+        link: "", 
+        notes: "", 
+        brand: "",
+        ai_enriched_product_name: undefined,
+        ai_enriched_pack_size: undefined,
+        ai_enriched_estimated_price: undefined,
+        ai_enriched_link: undefined,
+        ai_enriched_notes: undefined,
+      }],
       projectCodes: [],
     });
   };
@@ -317,21 +313,10 @@ const RequestForm: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name={`items.${index}.productName`}
-                  render={({ field: itemField }) => (
-                    <FormItem>
-                      <FormLabel>Product Name</FormLabel>
-                      <FormControl><Input placeholder="e.g., Anti-GFP Antibody" {...itemField} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
                   name={`items.${index}.brand`}
                   render={({ field: itemField }) => (
                     <FormItem>
-                      <FormLabel>Brand (Optional)</FormLabel>
+                      <FormLabel>Brand</FormLabel>
                       <FormControl><Input placeholder="e.g., Invitrogen" {...itemField} /></FormControl>
                       <FormMessage />
                     </FormItem>
@@ -343,41 +328,47 @@ const RequestForm: React.FC = () => {
                   render={({ field: itemField }) => (
                     <FormItem>
                       <FormLabel>Catalog Number</FormLabel>
-                      <FormControl>
-                        <div className="flex items-center gap-2">
-                          <Input placeholder="e.g., 18265017" {...itemField} />
-                          <Button type="button" variant="outline" size="icon" onClick={() => handleFetchProductDetails(index, 'internal')} disabled={autofillingIndex === index} title="Autofill from internal database">
-                            {autofillingIndex === index ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4 text-purple-600" />}
-                          </Button>
-                          <Button type="button" variant="outline" size="icon" onClick={() => handleFetchProductDetails(index, 'external')} disabled={autofillingIndex === index} title="Search external sources">
-                            {autofillingIndex === index ? <Loader2 className="h-4 w-4 animate-spin" /> : <Globe className="h-4 w-4 text-blue-600" />}
-                          </Button>
-                        </div>
-                      </FormControl>
+                      <FormControl><Input placeholder="e.g., 18265017" {...itemField} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                {selectionIndex === index && matchingProducts.length > 1 && (
-                  <FormItem className="md:col-span-2">
-                    <FormLabel>Select Matching Product</FormLabel>
-                    <Select onValueChange={(productId) => handleProductSelection(index, productId)}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder={`Select one of ${matchingProducts.length} matches...`} />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {matchingProducts.map((product) => (
-                          <SelectItem key={product.id} value={product.id}>
-                            {product.productName} ({product.brand}) - ${product.unitPrice?.toFixed(2) || 'N/A'} {product.source && `(${product.source})`}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                <div className="md:col-span-2 flex justify-end">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => handleEnrichWithAI(index)}
+                    disabled={
+                      enrichingIndex === index ||
+                      !form.getValues(`items.${index}.brand`)?.trim() ||
+                      !form.getValues(`items.${index}.catalogNumber`)?.trim()
+                    }
+                  >
+                    {enrichingIndex === index ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Enriching...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="mr-2 h-4 w-4 text-purple-600" /> Enrich with AI
+                      </>
+                    )}
+                  </Button>
+                </div>
+                <FormField
+                  control={form.control}
+                  name={`items.${index}.productName`}
+                  render={({ field: itemField }) => (
+                    <FormItem>
+                      <FormLabel>Product Name</FormLabel>
+                      <FormControl><Input placeholder="e.g., E. coli DH5a Competent Cells" {...itemField} /></FormControl>
+                      <FormMessage />
+                      {form.watch(`items.${index}.ai_enriched_product_name`) && (
+                        <p className="text-xs text-muted-foreground">AI Suggestion: {form.watch(`items.${index}.ai_enriched_product_name`)}</p>
+                      )}
+                    </FormItem>
+                  )}
+                />
                 <FormField
                   control={form.control}
                   name={`items.${index}.quantity`}
@@ -397,6 +388,9 @@ const RequestForm: React.FC = () => {
                       <FormLabel>Unit Price (Optional)</FormLabel>
                       <FormControl><Input type="number" step="0.01" placeholder="e.g., 120.50" {...itemField} /></FormControl>
                       <FormMessage />
+                      {form.watch(`items.${index}.ai_enriched_estimated_price`) !== undefined && (
+                        <p className="text-xs text-muted-foreground">AI Suggestion: ${form.watch(`items.${index}.ai_enriched_estimated_price`)?.toFixed(2)}</p>
+                      )}
                     </FormItem>
                   )}
                 />
@@ -408,6 +402,9 @@ const RequestForm: React.FC = () => {
                       <FormLabel>Format (Optional)</FormLabel>
                       <FormControl><Input placeholder="e.g., 200pack 8cs of 25" {...itemField} /></FormControl>
                       <FormMessage />
+                      {form.watch(`items.${index}.ai_enriched_pack_size`) && (
+                        <p className="text-xs text-muted-foreground">AI Suggestion: {form.watch(`items.${index}.ai_enriched_pack_size`)}</p>
+                      )}
                     </FormItem>
                   )}
                 />
@@ -419,6 +416,9 @@ const RequestForm: React.FC = () => {
                       <FormLabel>Product Link (Optional)</FormLabel>
                       <FormControl><Input type="url" placeholder="e.g., https://www.vendor.com/product" {...itemField} /></FormControl>
                       <FormMessage />
+                      {form.watch(`items.${index}.ai_enriched_link`) && (
+                        <p className="text-xs text-muted-foreground">AI Suggestion: <a href={form.watch(`items.${index}.ai_enriched_link`)} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">View Link</a></p>
+                      )}
                     </FormItem>
                   )}
                 />
@@ -430,6 +430,9 @@ const RequestForm: React.FC = () => {
                       <FormLabel>Notes (Optional)</FormLabel>
                       <FormControl><Textarea placeholder="Any specific requirements or details..." {...itemField} /></FormControl>
                       <FormMessage />
+                      {form.watch(`items.${index}.ai_enriched_notes`) && (
+                        <p className="text-xs text-muted-foreground">AI Suggestion: {form.watch(`items.${index}.ai_enriched_notes`)}</p>
+                      )}
                     </FormItem>
                   )}
                 />
@@ -437,7 +440,21 @@ const RequestForm: React.FC = () => {
             </div>
           ))}
         </div>
-        <Button type="button" variant="outline" onClick={() => append({ productName: "", catalogNumber: "", quantity: 1, unitPrice: undefined, format: "", link: "", notes: "", brand: "" })} className="w-full">
+        <Button type="button" variant="outline" onClick={() => append({ 
+          productName: "", 
+          catalogNumber: "", 
+          quantity: 1, 
+          unitPrice: undefined, 
+          format: "", 
+          link: "", 
+          notes: "", 
+          brand: "",
+          ai_enriched_product_name: undefined,
+          ai_enriched_pack_size: undefined,
+          ai_enriched_estimated_price: undefined,
+          ai_enriched_link: undefined,
+          ai_enriched_notes: undefined,
+        })} className="w-full">
           <PlusCircle className="mr-2 h-4 w-4" /> Add Another Item
         </Button>
         <h2 className="text-xl font-semibold mt-8 mb-4">Attachments (Optional)</h2>
