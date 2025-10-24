@@ -8,11 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { useUpdateProfile, getFullName } from "@/hooks/use-profiles"; // Import useUpdateProfile
+import { useUpdateProfile, getFullName } from "@/hooks/use-profiles";
+import { useNavigate } from "react-router-dom"; // Importar useNavigate
 
 const Profile: React.FC = () => {
-  const { session, profile, loading, logout } = useSession();
-  const updateProfileMutation = useUpdateProfile(); // Usar el hook de mutación
+  const { session, profile, loading, logout, login } = useSession(); // Añadir login al hook
+  const updateProfileMutation = useUpdateProfile();
+  const navigate = useNavigate(); // Inicializar useNavigate
 
   const [firstName, setFirstName] = React.useState(profile?.first_name || "");
   const [lastName, setLastName] = React.useState(profile?.last_name || "");
@@ -32,15 +34,21 @@ const Profile: React.FC = () => {
       toast.error("User not logged in.");
       return;
     }
+    // Solo actualizar first_name, last_name y role en la tabla de perfiles
+    // El email es parte de auth.users y no se puede actualizar directamente desde este formulario de perfil.
     updateProfileMutation.mutate({
       id: session.user.id,
-      data: { first_name: firstName, last_name: lastName, email: session.user.email, role: profile?.role || "Requester" },
+      data: {
+        first_name: firstName,
+        last_name: lastName,
+        role: profile?.role || "Requester" // El rol no es editable por el usuario en este formulario, mantener el rol actual
+      },
     });
   };
 
   const handleLogout = async () => {
-    logout();
-    toast.info("You have been logged out.");
+    await logout();
+    navigate("/login"); // Redirigir a la página de login después de cerrar sesión
   };
 
   if (loading) {
@@ -56,7 +64,7 @@ const Profile: React.FC = () => {
       <div className="container mx-auto py-8 text-center">
         <h1 className="text-3xl font-bold mb-4">Not Logged In</h1>
         <p className="text-lg text-muted-foreground">Please log in to view your profile.</p>
-        <Button onClick={logout} className="mt-4">Simulate Login</Button>
+        <Button onClick={() => navigate("/login")} className="mt-4">Go to Login</Button>
       </div>
     );
   }

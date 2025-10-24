@@ -2,7 +2,9 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Profile } from "@/hooks/use-profiles"; // Assuming Profile interface exists
+import { Profile } from "@/hooks/use-profiles";
+import { supabase } from "@/integrations/supabase/client"; // Importar cliente de Supabase
+import { toast } from "sonner";
 
 interface SessionContextType {
   session: { user: { id: string; email: string } } | null;
@@ -20,44 +22,91 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
   const [loading, setLoading] = useState(true);
   const queryClient = useQueryClient();
 
-  // Simulate a logged-in user and profile
   useEffect(() => {
-    const mockUser = { id: "mock-user-id-123", email: "user@example.com" };
-    const mockProfile: Profile = {
-      id: "mock-user-id-123",
-      first_name: "Mock",
-      last_name: "User",
-      avatar_url: null,
-      updated_at: new Date().toISOString(),
-      role: "Requester",
+    const fetchSessionAndProfile = async () => {
+      setLoading(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      setSession(session);
+
+      if (session) {
+        const { data: profileData, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+
+        if (error && error.code !== 'PGRST116') { // PGRST116 significa "no se encontraron filas"
+          console.error("Error fetching profile:", error);
+          setProfile(null);
+          toast.error("Error fetching user profile.", { description: error.message });
+        } else if (profileData) {
+          setProfile(profileData);
+        } else {
+          // Si no se encuentra el perfil, crear uno básico.
+          // Esto debería ser manejado por el trigger `handle_new_user` en Supabase.
+          // Este es un fallback para desarrollo.
+          const { data: newProfile, error: insertError } = await supabase
+            .from('profiles')
+            .insert({
+              id: session.user.id,
+              first_name: session.user.user_metadata?.first_name || 'New',
+              last_name: session.user.user_metadata?.last_name || 'User',
+              role: 'Requester', // Rol por defecto
+            })
+            .select()
+            .single();
+          if (insertError) {
+            console.error("Error creating default profile:", insertError);
+            setProfile(null);
+            toast.error("Error creating default user profile.", { description: insertError.message });
+          } else {
+            setProfile(newProfile);
+            toast.success("Default profile created for new user.");
+          }
+        }
+      } else {
+        setProfile(null);
+      }
+      setLoading(false);
     };
 
-    setSession({ user: mockUser });
-    setProfile(mockProfile);
-    setLoading(false);
-  }, []);
+    fetchSessionAndProfile();
 
-  const login = () => {
-    // In a real app, this would handle actual login logic
-    const mockUser = { id: "mock-user-id-123", email: "user@example.com" };
-    const mockProfile: Profile = {
-      id: "mock-user-id-123",
-      first_name: "Mock",
-      last_name: "User",
-      avatar_url: null,
-      updated_at: new Date().toISOString(),
-      role: "Requester",
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (session) {
+        // Volver a obtener el perfil cuando el estado de autenticación cambie (ej. después de iniciar sesión/registrarse)
+        queryClient.invalidateQueries({ queryKey: ["session"] });
+        queryClient.invalidateQueries({ queryKey: ["allProfiles"] });
+        queryClient.invalidateQueries({ queryKey: ["accountManagers"] });
+      } else {
+        setProfile(null);
+      }
+    });
+
+    return () => {
+      authListener.subscription.unsubscribe();
     };
-    setSession({ user: mockUser });
-    setProfile(mockProfile);
-    queryClient.invalidateQueries();
+  }, [queryClient]);
+
+  const login = async () => {
+    // En una aplicación real, esto navegaría a una página de inicio de sesión.
+    // Por ahora, solo registraremos un mensaje.
+    console.log("Simulating login. In a real app, you'd go to a login page.");
+    // La redirección a la página de login se maneja en App.tsx
   };
 
-  const logout = () => {
-    // In a real app, this would handle actual logout logic
-    setSession(null);
-    setProfile(null);
-    queryClient.invalidateQueries();
+  const logout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error("Error logging out:", error);
+      toast.error("Failed to log out.", { description: error.message });
+    } else {
+      setSession(null);
+      setProfile(null);
+      queryClient.invalidateQueries();
+      toast.info("You have been logged out.");
+    }
   };
 
   return (

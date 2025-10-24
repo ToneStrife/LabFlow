@@ -11,38 +11,58 @@ import RequestDetails from "./pages/RequestDetails";
 import Profile from "./pages/Profile";
 import Accounts from "./pages/Accounts";
 import AccountManagers from "./pages/AccountManagers";
-import Inventory from "./pages/Inventory"; // Import the new Inventory page
+import Inventory from "./pages/Inventory"; 
 import NotFound from "./pages/NotFound";
 import { SessionContextProvider, useSession } from "./components/SessionContextProvider";
 import React from "react";
+import Login from "./pages/Login"; // Importar la nueva página de Login
+import { Loader2 } from "lucide-react"; // Importar Loader2
 
 const queryClient = new QueryClient();
 
-const AppRoutes = () => {
-  const { loading } = useSession(); // We assume a session always exists with mock data
+// Componente PrivateRoute para proteger rutas
+const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { session, loading } = useSession();
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <p className="text-lg">Loading application...</p>
+        <Loader2 className="h-8 w-8 animate-spin mr-2" /> Loading authentication...
       </div>
     );
   }
 
-  // With mock data, we always assume a user is "logged in"
+  if (!session) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <>{children}</>;
+};
+
+const AppRoutes = () => {
+  const { loading } = useSession();
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin mr-2" /> Loading application...
+      </div>
+    );
+  }
+
   return (
     <Layout>
       <Routes>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/new-request" element={<NewRequest />} />
-        <Route path="/vendors" element={<Vendors />} />
-        <Route path="/requests/:id" element={<RequestDetails />} />
-        <Route path="/profile" element={<Profile />} />
-        <Route path="/accounts" element={<Accounts />} />
-        <Route path="/account-managers" element={<AccountManagers />} />
-        <Route path="/inventory" element={<Inventory />} /> {/* New route */}
-        {/* No login route needed as we simulate logged in */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+        <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+        <Route path="/new-request" element={<PrivateRoute><NewRequest /></PrivateRoute>} />
+        <Route path="/vendors" element={<PrivateRoute><Vendors /></PrivateRoute>} />
+        <Route path="/requests/:id" element={<PrivateRoute><RequestDetails /></PrivateRoute>} />
+        <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
+        <Route path="/accounts" element={<PrivateRoute><Accounts /></PrivateRoute>} />
+        <Route path="/account-managers" element={<PrivateRoute><AccountManagers /></PrivateRoute>} />
+        <Route path="/inventory" element={<PrivateRoute><Inventory /></PrivateRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Layout>
