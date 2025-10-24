@@ -35,7 +35,7 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Missing required field: catalogNumber' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    const aiApiKey = Deno.env.get('AI_API_KEY'); // Usando la nueva AI_API_KEY
+    const aiApiKey = Deno.env.get('AI_API_KEY');
     if (!aiApiKey) {
       return new Response(JSON.stringify({ error: 'Server configuration error: AI_API_KEY is not set.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
@@ -61,14 +61,14 @@ serve(async (req) => {
       - NÚMERO DE CATÁLOGO: ${catalogNumber}
     `;
 
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    const response = await fetch("https://api.aimlapi.com/v1/chat/completions", { // Endpoint corregido
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${aiApiKey}`, // Usando la nueva AI_API_KEY
+        "Authorization": `Bearer ${aiApiKey}`,
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        "model": "anthropic/claude-3.5-sonnet", // Usando Claude 3.5 Sonnet
+        "model": "claude-3.5-sonnet", // Modelo compatible con AIMLAPI
         "response_format": { "type": "json_object" },
         "messages": [
           { "role": "system", "content": systemInstruction },
@@ -79,8 +79,8 @@ serve(async (req) => {
 
     if (!response.ok) {
       const errorBody = await response.text();
-      console.error('Edge Function: OpenRouter API error:', errorBody);
-      return new Response(JSON.stringify({ error: `OpenRouter API error: ${response.statusText}` }), { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      console.error('Edge Function: AIMLAPI API error:', errorBody);
+      return new Response(JSON.stringify({ error: `AIMLAPI API error: ${response.statusText}` }), { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     const data = await response.json();
@@ -106,10 +106,10 @@ serve(async (req) => {
       notes: aiResponse.technical_notes,
       brand: brand,
       catalogNumber: catalogNumber,
-      source: "AI Search (Claude 3.5 Sonnet)" // Fuente actualizada
+      source: "AI Search (AIMLAPI - Claude 3.5)" // Fuente actualizada
     };
 
-    console.log(`Edge Function: External search for catalog ${catalogNumber}, brand ${brand} found details via Claude 3.5 Sonnet.`);
+    console.log(`Edge Function: External search for catalog ${catalogNumber}, brand ${brand} found details via AIMLAPI.`);
 
     return new Response(JSON.stringify({ products: productDetails }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
