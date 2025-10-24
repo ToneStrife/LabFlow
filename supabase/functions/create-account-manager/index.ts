@@ -30,7 +30,29 @@ serve(async (req) => {
       return new Response('Unauthorized: Missing Authorization header', { status: 401, headers: corsHeaders });
     }
     const token = authHeader.replace('Bearer ', '');
-    const { payload } = await verify(token, Deno.env.get('SUPABASE_JWT_SECRET') ?? '', 'HS256');
+    let payload;
+    try {
+      const jwtSecret = Deno.env.get('JWT_SECRET'); // Usar JWT_SECRET
+      if (!jwtSecret) {
+        console.error('Edge Function: JWT_SECRET is not set.');
+        return new Response(JSON.stringify({ error: 'Server configuration error: JWT secret not found.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+
+      // Importar la clave secreta como CryptoKey
+      const encoder = new TextEncoder();
+      const cryptoKey = await crypto.subtle.importKey(
+        "raw",
+        encoder.encode(jwtSecret),
+        { name: "HMAC", hash: "SHA-256" },
+        false,
+        ["verify"]
+      );
+
+      payload = await verify(token, cryptoKey, 'HS256');
+    } catch (jwtError: any) {
+      console.error('Edge Function: JWT verification failed:', jwtError.message);
+      return new Response(JSON.stringify({ error: `Unauthorized: Invalid token - ${jwtError.message}` }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
 
     // Opcional: Verificar si el usuario que llama es un Admin (requiere una consulta a la tabla de perfiles)
     const { data: callerProfile, error: profileError } = await supabaseClient

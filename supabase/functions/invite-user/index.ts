@@ -33,13 +33,23 @@ serve(async (req) => {
     const token = authHeader.replace('Bearer ', '');
     let payload;
     try {
-      // Usar Deno.env.get('JWT_SECRET') para obtener la clave secreta
-      const jwtSecret = Deno.env.get('JWT_SECRET'); // CAMBIO AQUÍ
+      const jwtSecret = Deno.env.get('JWT_SECRET');
       if (!jwtSecret) {
         console.error('Edge Function: JWT_SECRET is not set.');
         return new Response(JSON.stringify({ error: 'Server configuration error: JWT secret not found.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
-      payload = await verify(token, jwtSecret, 'HS256');
+
+      // Importar la clave secreta como CryptoKey
+      const encoder = new TextEncoder();
+      const cryptoKey = await crypto.subtle.importKey(
+        "raw",
+        encoder.encode(jwtSecret),
+        { name: "HMAC", hash: "SHA-256" },
+        false,
+        ["verify"]
+      );
+
+      payload = await verify(token, cryptoKey, 'HS256');
     } catch (jwtError: any) {
       console.error('Edge Function: JWT verification failed:', jwtError.message);
       return new Response(JSON.stringify({ error: `Unauthorized: Invalid token - ${jwtError.message}` }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
