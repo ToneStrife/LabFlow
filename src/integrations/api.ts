@@ -12,10 +12,6 @@ import {
 
 // Mantener las importaciones de mock data para otras tablas hasta que se conviertan
 import {
-  getMockVendors,
-  addMockVendor,
-  updateMockVendor,
-  deleteMockVendor,
   getMockCustomerAccounts,
   addMockCustomerAccount,
   updateMockCustomerAccount,
@@ -56,23 +52,26 @@ export const apiDeleteProfile = async (id: string): Promise<void> => {
 
 // --- API de Vendedores ---
 export const apiGetVendors = async (): Promise<Vendor[]> => {
-  await new Promise(resolve => setTimeout(resolve, 300)); // Simular retraso
-  return getMockVendors();
+  const { data, error } = await supabase.from('vendors').select('*');
+  if (error) throw error;
+  return data;
 };
 
 export const apiAddVendor = async (data: Omit<Vendor, "id" | "created_at">): Promise<Vendor> => {
-  await new Promise(resolve => setTimeout(resolve, 300)); // Simular retraso
-  return addMockVendor(data);
+  const { data: newVendor, error } = await supabase.from('vendors').insert(data).select().single();
+  if (error) throw error;
+  return newVendor;
 };
 
-export const apiUpdateVendor = async (id: string, data: Partial<Omit<Vendor, "id" | "created_at">>): Promise<Vendor> => {
-  await new Promise(resolve => setTimeout(resolve, 300)); // Simular retraso
-  return updateMockVendor(id, data);
+export const apiUpdateVendor = async (id: string, data: Partial<OOmit<Vendor, "id" | "created_at">>): Promise<Vendor> => {
+  const { data: updatedVendor, error } = await supabase.from('vendors').update(data).eq('id', id).select().single();
+  if (error) throw error;
+  return updatedVendor;
 };
 
 export const apiDeleteVendor = async (id: string): Promise<void> => {
-  await new Promise(resolve => setTimeout(resolve, 300)); // Simular retraso
-  return deleteMockVendor(id);
+  const { error } = await supabase.from('vendors').delete().eq('id', id);
+  if (error) throw error;
 };
 
 // --- API de Cuentas de Clientes ---

@@ -54,7 +54,10 @@ export const deleteMockProfile = async (id: string): Promise<void> => {
   mockProfiles = mockProfiles.filter(p => p.id !== id);
 };
 
-// --- CRUD Functions for Vendors ---
+-- -- CRUD Functions for Vendors -- --
+-- Estas funciones han sido migradas a src/integrations/api.ts para usar Supabase directamente.
+-- Se mantienen aquí como referencia si se necesitaran datos simulados para otras partes.
+/*
 export const getMockVendors = async (): Promise<Vendor[]> => {
   await simulateNetworkDelay();
   return mockVendors;
@@ -83,6 +86,7 @@ export const deleteMockVendor = async (id: string): Promise<void> => {
   await simulateNetworkDelay();
   mockVendors = mockVendors.filter(v => v.id !== id);
 };
+*/
 
 // --- CRUD Functions for Customer Accounts ---
 export const getMockCustomerAccounts = async (): Promise<CustomerAccount[]> => {
@@ -224,7 +228,7 @@ export const updateMockRequestFile = async (
     case "quote":
       mockRequests[index].quote_url = fileUrl;
       if (mockRequests[index].status === "Quote Requested") {
-        // If quote is uploaded, move to PO Requested state
+        -- If quote is uploaded, move to PO Requested state
         mockRequests[index].status = "PO Requested";
       }
       break;
@@ -251,7 +255,7 @@ export const deleteMockRequest = async (id: string): Promise<void> => {
   mockRequestItems = mockRequestItems.filter(item => item.request_id !== id);
 };
 
-// --- CRUD Functions for Inventory ---
+-- --- CRUD Functions for Inventory -- --
 export const getMockInventory = async (): Promise<InventoryItem[]> => {
   await simulateNetworkDelay();
   return mockInventory;
@@ -265,18 +269,18 @@ export const addMockInventoryItem = async (data: Omit<InventoryItem, "id" | "add
     last_updated: new Date().toISOString(),
     ...data,
   };
-  // Check if item already exists in inventory by catalog_number and brand
+  -- Check if item already exists in inventory by catalog_number and brand
   const existingItemIndex = mockInventory.findIndex(
     (item) => item.catalog_number === newInventoryItem.catalog_number && item.brand === newInventoryItem.brand
   );
 
   if (existingItemIndex !== -1) {
-    // If it exists, update quantity
+    -- If it exists, update quantity
     mockInventory[existingItemIndex].quantity += newInventoryItem.quantity;
     mockInventory[existingItemIndex].last_updated = new Date().toISOString();
     return mockInventory[existingItemIndex];
   } else {
-    // Otherwise, add new item
+    -- Otherwise, add new item
     mockInventory.push(newInventoryItem);
     return newInventoryItem;
   }
@@ -295,7 +299,7 @@ export const deleteMockInventoryItem = async (id: string): Promise<void> => {
   mockInventory = mockInventory.filter(item => item.id !== id);
 };
 
-// --- Mock Email Sending Function ---
+-- --- Mock Email Sending Function -- --
 export const sendMockEmail = async (email: MockEmail): Promise<void> => {
   await simulateNetworkDelay();
   console.log("--- SIMULATED EMAIL SENT ---");
