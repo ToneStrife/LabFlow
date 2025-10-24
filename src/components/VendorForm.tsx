@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { toast } from "sonner";
+import { Loader2 } from "lucide-react"; // Import Loader2
 
 const vendorFormSchema = z.object({
   name: z.string().min(1, { message: "Vendor name is required." }),
@@ -32,9 +32,10 @@ interface VendorFormProps {
   initialData?: VendorFormValues;
   onSubmit: (data: VendorFormValues) => void;
   onCancel?: () => void;
+  isSubmitting: boolean; // Add isSubmitting prop
 }
 
-const VendorForm: React.FC<VendorFormProps> = ({ initialData, onSubmit, onCancel }) => {
+const VendorForm: React.FC<VendorFormProps> = ({ initialData, onSubmit, onCancel, isSubmitting }) => {
   const form = useForm<VendorFormValues>({
     resolver: zodResolver(vendorFormSchema),
     defaultValues: initialData || {
@@ -49,7 +50,7 @@ const VendorForm: React.FC<VendorFormProps> = ({ initialData, onSubmit, onCancel
 
   const handleSubmit = (data: VendorFormValues) => {
     onSubmit(data);
-    form.reset();
+    // form.reset(); // Do not reset here, let parent component handle it after mutation success
   };
 
   return (
@@ -62,7 +63,7 @@ const VendorForm: React.FC<VendorFormProps> = ({ initialData, onSubmit, onCancel
             <FormItem>
               <FormLabel>Vendor Name</FormLabel>
               <FormControl>
-                <Input placeholder="e.g., Thermo Fisher Scientific" {...field} />
+                <Input placeholder="e.g., Thermo Fisher Scientific" {...field} disabled={isSubmitting} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -75,7 +76,7 @@ const VendorForm: React.FC<VendorFormProps> = ({ initialData, onSubmit, onCancel
             <FormItem>
               <FormLabel>Contact Person (Optional)</FormLabel>
               <FormControl>
-                <Input placeholder="e.g., Jane Doe" {...field} />
+                <Input placeholder="e.g., Jane Doe" {...field} disabled={isSubmitting} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -88,7 +89,7 @@ const VendorForm: React.FC<VendorFormProps> = ({ initialData, onSubmit, onCancel
             <FormItem>
               <FormLabel>Email (Optional)</FormLabel>
               <FormControl>
-                <Input type="email" placeholder="e.g., jane.doe@example.com" {...field} />
+                <Input type="email" placeholder="e.g., jane.doe@example.com" {...field} disabled={isSubmitting} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -101,7 +102,7 @@ const VendorForm: React.FC<VendorFormProps> = ({ initialData, onSubmit, onCancel
             <FormItem>
               <FormLabel>Phone (Optional)</FormLabel>
               <FormControl>
-                <Input placeholder="e.g., 1-800-123-4567" {...field} />
+                <Input placeholder="e.g., 1-800-123-4567" {...field} disabled={isSubmitting} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -117,6 +118,7 @@ const VendorForm: React.FC<VendorFormProps> = ({ initialData, onSubmit, onCancel
                 <Textarea
                   placeholder="e.g., Invitrogen, Applied Biosystems, Gibco (comma-separated)"
                   {...field}
+                  disabled={isSubmitting}
                 />
               </FormControl>
               <FormMessage />
@@ -130,7 +132,7 @@ const VendorForm: React.FC<VendorFormProps> = ({ initialData, onSubmit, onCancel
             <FormItem>
               <FormLabel>Notes (Optional)</FormLabel>
               <FormControl>
-                <Textarea placeholder="Any specific details about this vendor..." {...field} />
+                <Textarea placeholder="Any specific details about this vendor..." {...field} disabled={isSubmitting} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -138,12 +140,18 @@ const VendorForm: React.FC<VendorFormProps> = ({ initialData, onSubmit, onCancel
         />
         <div className="flex justify-end space-x-2 pt-4">
           {onCancel && (
-            <Button type="button" variant="outline" onClick={onCancel}>
+            <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
               Cancel
             </Button>
           )}
-          <Button type="submit">
-            {initialData ? "Save Changes" : "Add Vendor"}
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...
+              </>
+            ) : (
+              initialData ? "Save Changes" : "Add Vendor"
+            )}
           </Button>
         </div>
       </form>

@@ -28,7 +28,6 @@ const customerAccountFormSchema = z.object({
   assignedManagerId: z.union([
     z.string().uuid({ message: "Invalid manager ID." }),
     z.literal("unassigned"),
-    z.literal(""), // Allow empty string for initial state
   ]).optional(),
 });
 

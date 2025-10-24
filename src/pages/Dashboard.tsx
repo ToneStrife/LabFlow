@@ -1,31 +1,42 @@
 "use client";
 
 import React from "react";
-import { useNavigate } from "react-router-dom"; // Import useNavigate
+import { useNavigate } from "react-router-dom";
 import RequestList from "@/components/RequestList";
-import { mockRequests, subscribeToRequests } from "@/data/mockData";
-import { Button } from "@/components/ui/button"; // Import Button
-import { PlusCircle } from "lucide-react"; // Import PlusCircle icon
+import { Button } from "@/components/ui/button";
+import { PlusCircle, Loader2 } from "lucide-react";
+import { useRequests } from "@/hooks/use-requests";
 
 const Dashboard = () => {
-  const navigate = useNavigate(); // Initialize useNavigate
-  const [requests, setRequests] = React.useState(mockRequests);
+  const navigate = useNavigate();
+  const { data: requests, isLoading, error } = useRequests();
 
-  React.useEffect(() => {
-    const unsubscribe = subscribeToRequests(updatedRequests => {
-      setRequests(updatedRequests);
-    });
-    return () => unsubscribe();
-  }, []);
+  const allRequests = requests || [];
 
-  // Calculate dynamic counts based on local state 'requests'
-  const pendingRequestsCount = requests.filter(req => req.status === "Pending").length;
-  const orderedItemsCount = requests
+  // Calculate dynamic counts based on fetched requests
+  const pendingRequestsCount = allRequests.filter(req => req.status === "Pending").length;
+  const orderedItemsCount = allRequests
     .filter(req => req.status === "Ordered")
-    .reduce((total, req) => total + req.items.length, 0);
-  const receivedItemsCount = requests
+    .reduce((total, req) => total + (req.items?.length || 0), 0);
+  const receivedItemsCount = allRequests
     .filter(req => req.status === "Received")
-    .reduce((total, req) => total + req.items.length, 0);
+    .reduce((total, req) => total + (req.items?.length || 0), 0);
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto py-8 flex justify-center items-center">
+        <Loader2 className="h-8 w-8 animate-spin mr-2" /> Loading Dashboard...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto py-8 text-red-600">
+        Error loading dashboard data: {error.message}
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto py-8">
@@ -50,7 +61,7 @@ const Dashboard = () => {
       </div>
 
       <div className="mt-12">
-        <div className="flex justify-between items-center mb-4"> {/* Flex container for heading and button */}
+        <div className="flex justify-between items-center mb-4">
           <h2 className="text-2xl font-bold">Recent Requests</h2>
           <Button onClick={() => navigate("/new-request")}>
             <PlusCircle className="mr-2 h-4 w-4" /> New Request

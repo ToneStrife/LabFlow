@@ -14,8 +14,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowLeft } from "lucide-react";
-import { mockRequests, mockVendors, mockProjects, mockUsers, mockAccountManagers, RequestStatus } from "@/data/mockData"; // Import shared mock data and new mock data arrays
+import { ArrowLeft, Loader2 } from "lucide-react";
+import { mockProjects, RequestStatus } from "@/data/mockData";
+import { useRequests, SupabaseRequest } from "@/hooks/use-requests";
+import { useVendors } from "@/hooks/use-vendors";
+import { useAllProfiles, getFullName } from "@/hooks/use-profiles";
+import { format } from "date-fns";
 
 const getStatusBadgeVariant = (status: RequestStatus) => {
   switch (status) {
@@ -35,12 +39,19 @@ const getStatusBadgeVariant = (status: RequestStatus) => {
 const RequestDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { data: requests, isLoading: isLoadingRequests } = useRequests();
+  const { data: vendors, isLoading: isLoadingVendors } = useVendors();
+  const { data: profiles, isLoading: isLoadingProfiles } = useAllProfiles();
 
-  // Find the request from the centralized mock data
-  const request = mockRequests.find(req => req.id === id);
-  const vendor = request ? mockVendors.find(v => v.id === request.vendorId) : undefined;
-  const requester = request ? mockUsers.find(u => u.id === request.requesterId) : undefined;
-  const accountManager = request ? mockAccountManagers.find(am => am.id === request.accountManagerId) : undefined;
+  const request = requests?.find(req => req.id === id);
+
+  if (isLoadingRequests || isLoadingVendors || isLoadingProfiles) {
+    return (
+      <div className="container mx-auto py-8 flex justify-center items-center">
+        <Loader2 className="h-8 w-8 animate-spin mr-2" /> Loading Request Details...
+      </div>
+    );
+  }
 
   if (!request) {
     return (
@@ -56,10 +67,18 @@ const RequestDetails: React.FC = () => {
     );
   }
 
-  const projectCodesDisplay = request.projectCodes?.map(projectId => {
+  const vendor = vendors?.find(v => v.id === request.vendor_id);
+  const accountManagerProfile = profiles?.find(p => p.id === request.account_manager_id);
+  const accountManagerName = getFullName(accountManagerProfile);
+  const requesterProfile = profiles?.find(p => p.id === request.requester_id);
+  const requesterName = getFullName(requesterProfile);
+
+  const projectCodesDisplay = request.project_codes?.map(projectId => {
     const project = mockProjects.find(p => p.id === projectId);
     return project ? project.code : projectId;
   }).join(", ") || "N/A";
+
+  const dateSubmitted = format(new Date(request.created_at), 'yyyy-MM-dd HH:mm');
 
   return (
     <div className="container mx-auto py-8">
@@ -70,7 +89,7 @@ const RequestDetails: React.FC = () => {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            <span>Request from: {vendor?.name || "N/A"}</span> {/* Display vendor name */}
+            <span>Request from: {vendor?.name || "N/A"}</span>
             <Badge variant={getStatusBadgeVariant(request.status)}>{request.status}</Badge>
           </CardTitle>
         </CardHeader>
@@ -78,11 +97,11 @@ const RequestDetails: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <p className="text-sm text-muted-foreground">Requester</p>
-              <p className="font-medium">{requester?.name || "N/A"}</p>
+              <p className="font-medium">{requesterName}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Account Manager</p>
-              <p className="font-medium">{accountManager?.name || "N/A"}</p>
+              <p className="font-medium">{accountManagerName}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Project Codes</p>
@@ -90,7 +109,7 @@ const RequestDetails: React.FC = () => {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Date Submitted</p>
-              <p className="font-medium">{request.date}</p>
+              <p className="font-medium">{dateSubmitted}</p>
             </div>
           </div>
 
@@ -112,7 +131,7 @@ const RequestDetails: React.FC = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>Product Name</TableHead>
-                  <TableHead>Brand</TableHead> {/* New column for Brand */}
+                  <TableHead>Brand</TableHead>
                   <TableHead>Catalog #</TableHead>
                   <TableHead>Quantity</TableHead>
                   <TableHead>Unit Price</TableHead>
@@ -121,13 +140,13 @@ const RequestDetails: React.FC = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {request.items.map((item) => (
+                {request.items?.map((item) => (
                   <TableRow key={item.id}>
-                    <TableCell className="font-medium">{item.productName}</TableCell>
-                    <TableCell>{item.brand || "N/A"}</TableCell> {/* Display brand */}
-                    <TableCell>{item.catalogNumber || "N/A"}</TableCell>
+                    <TableCell className="font-medium">{item.product_name}</TableCell>
+                    <TableCell>{item.brand || "N/A"}</TableCell>
+                    <TableCell>{item.catalog_number || "N/A"}</TableCell>
                     <TableCell>{item.quantity}</TableCell>
-                    <TableCell>{item.unitPrice ? `$${item.unitPrice.toFixed(2)}` : "N/A"}</TableCell>
+                    <TableCell>{item.unit_price ? `$${Number(item.unit_price).toFixed(2)}` : "N/A"}</TableCell>
                     <TableCell>{item.format || "N/A"}</TableCell>
                     <TableCell>
                       {item.link ? (
@@ -143,24 +162,6 @@ const RequestDetails: React.FC = () => {
               </TableBody>
             </Table>
           </div>
-
-          {request.attachments && request.attachments.length > 0 && (
-            <>
-              <Separator />
-              <div>
-                <h2 className="text-xl font-semibold mb-4">Attachments</h2>
-                <ul className="list-disc pl-5 space-y-1">
-                  {request.attachments.map((attachment, index) => (
-                    <li key={index}>
-                      <a href={attachment.url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
-                        {attachment.name}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </>
-          )}
         </CardContent>
       </Card>
     </div>
