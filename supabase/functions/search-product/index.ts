@@ -67,9 +67,9 @@ serve(async (req) => {
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
     
     const prompt = `
-      STRICTLY search the internet for the EXACT lab/scientific product matching the combination of Brand: '${brand}' AND Catalog Number: '${catalogNumber}'.
+      CRITICAL: You MUST find the EXACT lab/scientific product matching the combination of Brand: '${brand}' AND Catalog Number: '${catalogNumber}'. Do NOT guess or substitute similar products.
       
-      If the exact product cannot be confidently identified, return an empty JSON object {}.
+      If the EXACT product cannot be confidently identified, you MUST return an empty JSON object {}.
       
       If found, extract the following details:
       - Full product name
@@ -123,7 +123,7 @@ serve(async (req) => {
     }
 
     if (!productDetails || Object.keys(productDetails).length === 0 || !productDetails.productName) {
-      return new Response(JSON.stringify({ error: `AI could not find detailed information for product with Catalog Number: '${catalogNumber}' and Brand: '${brand || "N/A"}'.` }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      return new Response(JSON.stringify({ error: `AI could not find detailed information for product with Catalog Number: '${catalogNumber}' and Brand: '${brand || "N/A"}'. Please verify the exact catalog number and brand.` }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     console.log(`Edge Function: External search for catalog ${catalogNumber}, brand ${brand} found details.`);
