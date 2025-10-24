@@ -117,14 +117,18 @@ const CustomerAccountForm: React.FC<CustomerAccountFormProps> = ({ initialData, 
           render={({ field }) => (
             <FormItem>
               <FormLabel>Assigned Account Manager (Optional)</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value || ""} disabled={isLoadingManagers}>
+              <Select
+                onValueChange={(selectedValue) => field.onChange(selectedValue === "unassigned" ? "" : selectedValue)}
+                value={field.value || ""}
+                disabled={isLoadingManagers}
+              >
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder={isLoadingManagers ? "Loading managers..." : "Select an account manager"} />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="">No Manager</SelectItem>
+                  <SelectItem value="unassigned">No Manager</SelectItem> {/* Changed value */}
                   {accountManagers?.map((manager) => (
                     <SelectItem key={manager.id} value={manager.id}>
                       {manager.first_name} {manager.last_name} ({manager.email})

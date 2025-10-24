@@ -22,12 +22,12 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { mockProjects, productDatabase, ProductDetails } from "@/data/mockData"; // Removed mockAccountManagers
+import { mockProjects, productDatabase, ProductDetails } from "@/data/mockData";
 import { showError, showLoading, dismissToast, showSuccess } from "@/utils/toast";
 import { useSession } from "@/components/SessionContextProvider";
 import { useVendors } from "@/hooks/use-vendors";
 import { useAddRequest } from "@/hooks/use-requests";
-import { useAccountManagerProfiles, getFullName } from "@/hooks/use-profiles"; // Import useAccountManagerProfiles
+import { useAccountManagerProfiles, getFullName } from "@/hooks/use-profiles";
 
 const itemSchema = z.object({
   productName: z.string().min(1, { message: "Product name is required." }),
@@ -49,7 +49,7 @@ const itemSchema = z.object({
 const formSchema = z.object({
   vendorId: z.string().min(1, { message: "Vendor is required." }),
   requesterId: z.string().min(1, { message: "Requester is required." }),
-  accountManagerId: z.string().uuid({ message: "Account Manager is required." }), // Changed to UUID
+  accountManagerId: z.string().uuid({ message: "Invalid manager ID." }).optional().or(z.literal("")), // Made optional
   items: z.array(itemSchema).min(1, { message: "At least one item is required." }),
   attachments: z.any().optional(),
   projectCodes: z.array(z.string()).optional(),
@@ -60,7 +60,7 @@ type RequestFormValues = z.infer<typeof formSchema>;
 const RequestForm: React.FC = () => {
   const { session, profile } = useSession();
   const { data: vendors, isLoading: isLoadingVendors } = useVendors();
-  const { data: accountManagers, isLoading: isLoadingAccountManagers } = useAccountManagerProfiles(); // Use new hook
+  const { data: accountManagers, isLoading: isLoadingAccountManagers } = useAccountManagerProfiles();
   const addRequestMutation = useAddRequest();
 
   const [autofillingIndex, setAutofillingIndex] = React.useState<number | null>(null);
@@ -166,7 +166,7 @@ const RequestForm: React.FC = () => {
     const requestData = {
       vendorId: data.vendorId,
       requesterId: session.user.id,
-      accountManagerId: data.accountManagerId,
+      accountManagerId: data.accountManagerId || null, // Pass null if empty string
       notes: undefined, // Notes field is missing in formSchema/form, assuming it's not used here yet
       projectCodes: data.projectCodes,
       items: data.items,
@@ -225,12 +225,17 @@ const RequestForm: React.FC = () => {
           name="accountManagerId"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Account Manager</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoadingAccountManagers}>
+              <FormLabel>Account Manager (Optional)</FormLabel> {/* Label updated */}
+              <Select
+                onValueChange={(selectedValue) => field.onChange(selectedValue === "unassigned" ? "" : selectedValue)}
+                value={field.value || ""}
+                disabled={isLoadingAccountManagers}
+              >
                 <FormControl>
                   <SelectTrigger><SelectValue placeholder={isLoadingAccountManagers ? "Loading managers..." : "Select an account manager"} /></SelectTrigger>
                 </FormControl>
                 <SelectContent>
+                  <SelectItem value="unassigned">No Manager</SelectItem> {/* Added "No Manager" option */}
                   {accountManagers?.map((manager) => (
                     <SelectItem key={manager.id} value={manager.id}>{getFullName(manager)}</SelectItem>
                   ))}
