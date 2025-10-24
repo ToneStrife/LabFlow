@@ -61,6 +61,8 @@ serve(async (req) => {
       - NÚMERO DE CATÁLOGO: ${catalogNumber}
     `;
 
+    const combinedPrompt = `${systemInstruction}\n\n${userPrompt}`;
+
     const response = await fetch("https://api.aimlapi.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -68,11 +70,10 @@ serve(async (req) => {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        "model": "anthropic/claude-3.5-sonnet", // Corregido el nombre del modelo
+        "model": "anthropic/claude-3.5-sonnet",
         "response_format": { "type": "json_object" },
         "messages": [
-          { "role": "system", "content": systemInstruction },
-          { "role": "user", "content": userPrompt }
+          { "role": "user", "content": combinedPrompt } // Mensajes combinados con el rol "user"
         ]
       })
     });
