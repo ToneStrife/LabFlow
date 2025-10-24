@@ -123,7 +123,7 @@ const RequestDetails: React.FC = () => {
       // Simulate file upload by creating a mock URL
       const mockFileUrl = `/uploads/${file.name}`;
       
-      await updateFileMutation.mutateAsync({
+      const updatedRequest = await updateFileMutation.mutateAsync({
         id: request.id,
         fileType: fileTypeToUpload,
         fileUrl: mockFileUrl,
@@ -133,16 +133,48 @@ const RequestDetails: React.FC = () => {
       // If we just uploaded a PO, automatically change status to Ordered
       if (fileTypeToUpload === "po") {
         await updateStatusMutation.mutateAsync({ id: request.id, status: "Ordered" });
+        // No email needed here, the email is sent via the separate action button
       }
       
       // If we just uploaded a Quote, automatically change status to PO Requested
       if (fileTypeToUpload === "quote") {
         await updateStatusMutation.mutateAsync({ id: request.id, status: "PO Requested" });
+        
+        // Automatically prepare the email to request PO from Manager
+        if (updatedRequest.account_manager_id) {
+          handleSendPORequest(updatedRequest);
+        } else {
+          toast.info("Quote uploaded. Please assign an Account Manager to request a PO.");
+        }
       }
 
       setIsUploadDialogOpen(false);
     }
   };
+
+  // --- Logic for Mark as Ordered and Send Email ---
+  const handleMarkAsOrderedAndSendEmail = (request: SupabaseRequest) => {
+    if (!request.po_url) {
+      toast.error("Cannot send order email.", { description: "PO file is missing. Please upload the PO file first." });
+      return;
+    }
+
+    const vendor = vendors?.find(v => v.id === request.vendor_id);
+    const requesterName = getRequesterName(request.requester_id);
+    const attachments = [];
+    if (request.quote_url) attachments.push({ name: `Quote_Request_${request.id}.pdf`, url: request.quote_url });
+    if (request.po_url) attachments.push({ name: `PO_${request.po_number || request.id}.pdf`, url: request.po_url });
+
+    setEmailInitialData({
+      to: getVendorEmail(request.vendor_id),
+      subject: `Official Order - PO: ${request.po_number || "N/A"}`,
+      body: `Dear ${vendor?.contact_person || "Vendor"},\n\nThis email confirms the official order for lab request #${request.id}.\nPlease find the attached Purchase Order.\n\nThank you,\n${requesterName}`,
+      attachments,
+    });
+    setIsEmailDialogOpen(true);
+  };
+  // --- End Logic for Mark as Ordered and Send Email ---
+
 
   if (isLoadingRequests || isLoadingVendors || isLoadingProfiles) {
     return <div className="container mx-auto py-8 flex justify-center items-center"><Loader2 className="h-8 w-8 animate-spin mr-2" /> Loading Request Details...</div>;
@@ -178,9 +210,10 @@ const RequestDetails: React.FC = () => {
         isUpdatingStatus={updateStatusMutation.isPending || updateFileMutation.isPending}
         openApproveRequestDialog={openApproveRequestDialog}
         handleSendPORequest={handleSendPORequest}
-        handleUploadQuote={handleUploadQuote} // New prop for Quote upload
+        handleUploadQuote={handleUploadQuote}
         handleUploadPOAndOrder={handleUploadPOAndOrder}
         handleMarkAsReceived={handleMarkAsReceived}
+        handleMarkAsOrderedAndSendEmail={handleMarkAsOrderedAndSendEmail} // New prop
       />
 
       {/* Dialogs */}
