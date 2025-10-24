@@ -63,7 +63,7 @@ export const apiAddVendor = async (data: Omit<Vendor, "id" | "created_at">): Pro
   return newVendor;
 };
 
-export const apiUpdateVendor = async (id: string, data: Partial<OOmit<Vendor, "id" | "created_at">>): Promise<Vendor> => {
+export const apiUpdateVendor = async (id: string, data: Partial<Omit<Vendor, "id" | "created_at">>): Promise<Vendor> => {
   const { data: updatedVendor, error } = await supabase.from('vendors').update(data).eq('id', id).select().single();
   if (error) throw error;
   return updatedVendor;
