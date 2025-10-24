@@ -100,6 +100,8 @@ serve(async (req) => {
 
     const data = await response.json();
     const rawResponse = data.choices[0].message.content;
+    
+    console.log('Edge Function: Raw AI Response:', rawResponse); // Registro añadido para depuración
 
     let aiResponse: any;
     try {
