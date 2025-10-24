@@ -18,6 +18,7 @@ export interface Profile {
   id: string;
   first_name: string | null;
   last_name: string | null;
+  email: string | null; // Added email to profile
   avatar_url: string | null;
   updated_at: string | null;
   role: "Requester" | "Account Manager" | "Admin";
@@ -143,6 +144,7 @@ export let mockProfiles: Profile[] = [
     id: "mock-user-id-123",
     first_name: "Mock",
     last_name: "User",
+    email: "user@example.com",
     avatar_url: null,
     updated_at: new Date().toISOString(),
     role: "Requester",
@@ -151,6 +153,7 @@ export let mockProfiles: Profile[] = [
     id: "manager-id-456",
     first_name: "Alice",
     last_name: "Manager",
+    email: "alice.manager@example.com",
     avatar_url: null,
     updated_at: new Date().toISOString(),
     role: "Account Manager",
@@ -159,6 +162,7 @@ export let mockProfiles: Profile[] = [
     id: "manager-id-789",
     first_name: "Bob",
     last_name: "Supervisor",
+    email: "bob.supervisor@example.com",
     avatar_url: null,
     updated_at: new Date().toISOString(),
     role: "Account Manager",
@@ -309,11 +313,28 @@ export const getMockProfiles = async (): Promise<Profile[]> => {
   return mockProfiles;
 };
 
+export const addMockProfile = async (data: Omit<Profile, "id" | "updated_at">): Promise<Profile> => {
+  await new Promise(resolve => setTimeout(resolve, 300));
+  const newProfile: Profile = {
+    id: generateId(),
+    updated_at: new Date().toISOString(),
+    avatar_url: null, // Default to null
+    ...data,
+  };
+  mockProfiles.push(newProfile);
+  return newProfile;
+};
+
 export const updateMockProfile = (id: string, data: Partial<Profile>): void => {
   const index = mockProfiles.findIndex(p => p.id === id);
   if (index !== -1) {
     mockProfiles[index] = { ...mockProfiles[index], ...data, updated_at: new Date().toISOString() };
   }
+};
+
+export const deleteMockProfile = async (id: string): Promise<void> => {
+  await new Promise(resolve => setTimeout(resolve, 300));
+  mockProfiles = mockProfiles.filter(p => p.id !== id);
 };
 
 // Vendors

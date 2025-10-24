@@ -7,7 +7,9 @@ import {
   RequestStatus,
   // Importar las funciones CRUD de mockData
   getMockProfiles,
+  addMockProfile, // Importar la nueva función
   updateMockProfile as updateMockProfileData,
+  deleteMockProfile, // Importar la nueva función
   getMockVendors,
   addMockVendor,
   updateMockVendor,
@@ -31,9 +33,19 @@ export const apiGetProfiles = async (): Promise<Profile[]> => {
   return getMockProfiles();
 };
 
+export const apiAddProfile = async (data: Omit<Profile, "id" | "updated_at">): Promise<Profile> => {
+  await simulateNetworkDelay();
+  return addMockProfile(data);
+};
+
 export const apiUpdateProfile = async (id: string, data: Partial<Profile>): Promise<void> => {
   await simulateNetworkDelay();
   updateMockProfileData(id, data);
+};
+
+export const apiDeleteProfile = async (id: string): Promise<void> => {
+  await simulateNetworkDelay();
+  return deleteMockProfile(id);
 };
 
 // --- API de Vendedores ---
