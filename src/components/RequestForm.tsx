@@ -49,11 +49,10 @@ const itemSchema = z.object({
 
 const formSchema = z.object({
   vendorId: z.string().min(1, { message: "Vendor is required." }),
-  requesterId: z.string().min(1, { message: "Requester is required." }),
-  accountManagerId: z.union([
-    z.string().uuid({ message: "Invalid manager ID." }),
-    z.literal("unassigned"),
-  ]).optional(),
+  // Requester ID is now just a string, validated as required
+  requesterId: z.string().min(1, { message: "Requester ID is required." }), 
+  // Account Manager ID can be an optional string (UUID or 'unassigned')
+  accountManagerId: z.string().optional(), 
   items: z.array(itemSchema).min(1, { message: "At least one item is required." }),
   attachments: z.any().optional(),
   projectCodes: z.array(z.string()).optional(),
@@ -76,7 +75,7 @@ const RequestForm: React.FC = () => {
     defaultValues: {
       vendorId: "",
       requesterId: session?.user?.id || "", // Use session.user.id for default
-      accountManagerId: "unassigned",
+      accountManagerId: "unassigned", // Default to 'unassigned' string
       items: [{ productName: "", catalogNumber: "", quantity: 1, unitPrice: undefined, format: "", link: "", notes: "", brand: "" }],
       projectCodes: [],
     },
@@ -167,10 +166,13 @@ const RequestForm: React.FC = () => {
       return;
     }
 
+    // Convert 'unassigned' string to null for the database
+    const managerId = data.accountManagerId === 'unassigned' || !data.accountManagerId ? null : data.accountManagerId;
+
     const requestData = {
       vendorId: data.vendorId,
       requesterId: session.user.id,
-      accountManagerId: data.accountManagerId === 'unassigned' ? null : data.accountManagerId,
+      accountManagerId: managerId,
       notes: undefined, // Notes field is missing in formSchema/form, assuming it's not used here yet
       projectCodes: data.projectCodes,
       items: data.items,
@@ -229,7 +231,7 @@ const RequestForm: React.FC = () => {
           name="accountManagerId"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Account Manager</FormLabel>
+              <FormLabel>Account Manager (Optional)</FormLabel>
               <Select onValueChange={field.onChange} value={field.value || "unassigned"} disabled={isLoadingAccountManagers}>
                 <FormControl>
                   <SelectTrigger><SelectValue placeholder={isLoadingAccountManagers ? "Loading managers..." : "Select an account manager"} /></SelectTrigger>
