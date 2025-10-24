@@ -64,57 +64,37 @@ serve(async (req) => {
     }
 
     const genAI = new GoogleGenerativeAI(geminiApiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" }); // Usar el modelo más potente
     
     const prompt = `
-      You are an automated agent for a laboratory supply management system. Your task is to find specific product information online and return it in a structured JSON format.
+      You are a data extraction robot. Your only job is to find a specific lab product online and return its details in JSON format. You must be extremely precise.
 
-      **INPUTS:**
+      **Product to Find:**
       - Brand: "${brand}"
       - Catalog Number: "${catalogNumber}"
 
-      **INSTRUCTIONS (Follow these steps exactly):**
+      **Your Task (Follow these steps exactly):**
 
-      **Step 1: Search**
-      - Perform a web search for a product with the EXACT Brand AND Catalog Number provided above.
-      - Example search query: "${brand} ${catalogNumber} official site"
+      1.  **Find the Official Page:** Search for the product's official page from the manufacturer or a major distributor (e.g., Thermo Fisher, Sigma-Aldrich, VWR).
+      2.  **Verify Exact Match:** On that page, confirm that the brand and catalog number are an EXACT match to the inputs.
+      3.  **Extract Data:** If you confirm an exact match, extract the following fields. If you cannot find a specific piece of information on the page, you MUST use \`null\` for that field. Do not invent data.
+          -   \`productName\`: The full, official product name.
+          -   \`format\`: The package size (e.g., "500 mL", "100 reactions").
+          -   \`unitPrice\`: The price in EUROS. Use \`null\` if not found or not in EUROS.
+          -   \`link\`: The direct URL to the product page.
+          -   \`notes\`: A brief technical detail (e.g., "Storage: -20°C").
+      4.  **Format Output:** Your entire response MUST be ONLY the JSON object, wrapped in a markdown code block.
 
-      **Step 2: Verify Source**
-      - From the search results, find a link to the OFFICIAL manufacturer's product page or a page from a MAJOR, reputable distributor (like Thermo Fisher, Sigma-Aldrich, VWR, Millipore, Bio-Rad, Abcam).
-      - DO NOT use data from non-official resellers, forums, or research papers.
-
-      **Step 3: Confirm Match**
-      - On the verified page, confirm that BOTH the Brand and the Catalog Number EXACTLY match the inputs.
-      - If there is any ambiguity or if it's a similar but not identical product, consider it a failure.
-
-      **Step 4: Extract Data (ONLY if Step 3 is successful)**
-      - If an exact match is confirmed, extract the following fields from the page:
-        - \`productName\`: The full, official product name.
-        - \`format\`: The package size or format (e.g., "500 mL", "100 reactions").
-        - \`unitPrice\`: The price in EUROS. If not available or not in EUROS, use \`null\`.
-        - \`link\`: The direct URL to the product page you used for verification.
-        - \`notes\`: A brief, one-sentence technical detail (e.g., "Storage: -20°C").
-        - \`source\`: "AI Search (Gemini)"
-
-      **Step 5: Format Output**
-      - Construct a JSON object with the extracted data.
-      - The \`brand\` and \`catalogNumber\` fields in the JSON MUST be the same as the input values.
-      - **CRITICAL:** Your entire response MUST be ONLY the JSON object, enclosed in a markdown code block. Example: \`\`\`json\n{"key": "value"}\n\`\`\`
-      - Do not add any text, explanation, or apologies before or after the JSON block.
-
-      **FAILURE PROTOCOL:**
-      - If you cannot complete Step 2 (no reliable source) or Step 3 (no exact match), you MUST immediately STOP and return an empty JSON object.
-      - Failure output format: \`\`\`json\n{}\n\`\`\`
+      **Failure Condition:** If you cannot find an official page with an exact match for BOTH brand and catalog number, you MUST return an empty JSON object: \`\`\`json\n{}\n\`\`\`
     `;
 
     const result = await model.generateContent(prompt);
     const response = await result.response;
-    let rawResponse = response.text(); // Gemini devuelve el contenido como texto
+    let rawResponse = response.text();
 
     let productDetails: any = {};
 
     if (rawResponse) {
-      // 1. Extraer la cadena JSON de los bloques de código Markdown
       const jsonMatch = rawResponse.match(/```json\n([\s\S]*?)\n```/);
       if (jsonMatch && jsonMatch[1]) {
         rawResponse = jsonMatch[1];
@@ -122,24 +102,21 @@ serve(async (req) => {
         console.warn('Edge Function: Gemini response did not contain ```json block. Attempting direct parse.');
       }
 
-      // 2. Limpiar la cadena JSON: reemplazar 'undefined' por 'null'
       const cleanedResponse = rawResponse.replace(/: undefined/g, ': null');
 
       try {
         productDetails = JSON.parse(cleanedResponse);
-        // Asegurarse de que el catalogNumber y brand coincidan con la entrada
         productDetails.catalogNumber = catalogNumber;
         productDetails.brand = brand;
-        productDetails.source = "AI Search (Gemini)";
+        productDetails.source = "AI Search (Gemini 1.5 Pro)";
       } catch (jsonError) {
         console.error('Edge Function: Failed to parse Gemini JSON response:', jsonError);
-        return new Response(JSON.stringify({ error: 'AI response could not be parsed. It might not be valid JSON or the format is unexpected.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        return new Response(JSON.stringify({ error: 'AI response could not be parsed.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
     }
 
-    // Si el objeto JSON está vacío o no tiene un nombre de producto, significa que no se encontró una coincidencia exacta.
     if (!productDetails || Object.keys(productDetails).length === 0 || !productDetails.productName) {
-      return new Response(JSON.stringify({ error: `AI could not find detailed information for product with Catalog Number: '${catalogNumber}' and Brand: '${brand || "N/A"}'. Please verify the exact catalog number and brand.` }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      return new Response(JSON.stringify({ error: `AI could not find reliable information for Catalog #: '${catalogNumber}' and Brand: '${brand || "N/A"}'.` }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     console.log(`Edge Function: External search for catalog ${catalogNumber}, brand ${brand} found details.`);
@@ -151,7 +128,7 @@ serve(async (req) => {
 
   } catch (error: any) {
     console.error('Edge Function: Unhandled error in search-product:', error);
-    return new Response(JSON.stringify({ error: error.message || 'An unexpected error occurred in the Edge Function.' }), {
+    return new Response(JSON.stringify({ error: error.message || 'An unexpected error occurred.' }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
     });
