@@ -64,25 +64,28 @@ serve(async (req) => {
     }
 
     const genAI = new GoogleGenerativeAI(geminiApiKey);
-    // CAMBIADO: Usando gemini-2.5-flash
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     
     const prompt = `
-      CRITICAL INSTRUCTION: You are a scientific product verification agent. Your sole task is to find the EXACT lab product details based on the provided Brand and Catalog Number.
+      CRITICAL INSTRUCTION: You are a highly precise scientific product verification agent. Your ONLY task is to find and extract EXACT lab product details based on the provided Brand and Catalog Number.
 
-      1. Search the internet for the product matching Brand: '${brand}' AND Catalog Number: '${catalogNumber}'.
-      2. You MUST verify the product name and specifications from an official manufacturer or major laboratory distributor website (e.g., Thermo Fisher, Corning, Sigma-Aldrich).
-      3. If, and only if, the EXACT product is confirmed from a reliable source, proceed to extraction.
-      4. If no official, exact product page is found, or if the search results are ambiguous, you MUST return the empty JSON object {} and must not guess, substitute, or invent any information or product name.
+      STRICT RULES FOR SEARCH AND EXTRACTION:
+      1.  **SEARCH:** Perform a thorough internet search for the product using BOTH the provided 'Brand' and 'Catalog Number'.
+      2.  **VERIFICATION (CRITICAL):** You MUST verify the product name and specifications from an **OFFICIAL MANUFACTURER WEBSITE** or a **MAJOR LABORATORY DISTRIBUTOR WEBSITE** (e.g., Thermo Fisher Scientific, Sigma-Aldrich, Bio-Rad, Abcam, Corning, VWR, Avantor). Prioritize the manufacturer's website.
+      3.  **EXACT MATCH ONLY:** Only if an **EXACT, UNDISPUTED MATCH** for the product (matching both brand and catalog number) is found on a reliable source, proceed to extract the details.
+      4.  **NO GUESSING/INVENTION:** If no official, exact product page is found, or if the search results are ambiguous, speculative, or from unreliable sources (e.g., forums, blogs, non-official resellers), you MUST **STOP IMMEDIATELY** and return an **EMPTY JSON OBJECT {}**. Do NOT guess, substitute, invent, or infer any information or product name.
 
-      If found, extract the following details:
-      - Full product name
-      - Package size/format (e.g., "100 tubes", "500ml", "50 reactions")
-      - Estimated price in EUROS (only if clearly stated and reliable)
-      - URL of the reliable product page
-      - Brief technical notes (key specifications, storage conditions, applications).
+      If an EXACT match is reliably found, extract the following details:
+      -   **Full product name:** The complete official name of the product.
+      -   **Package size/format:** The specific packaging or format (e.g., "100 tubes", "500 mL", "50 reactions", "200pack 8cs of 25").
+      -   **Estimated price in EUROS:** Only if clearly stated and reliable on the product page. If not found, use 'null'.
+      -   **URL of the reliable product page:** The direct link to the official product page.
+      -   **Brief technical notes:** Key specifications, storage conditions, or primary applications. Keep it concise. If not found, use 'null'.
 
-      Return the information in a JSON object matching the following schema. Use 'null' for any missing optional fields:
+      Return the information in a JSON object matching the following schema. Use 'null' for any missing optional fields.
+      **Ensure the 'catalogNumber' and 'brand' in the output JSON EXACTLY match the input values provided in this prompt.**
+
+      JSON SCHEMA:
       {
         "productName": "string",
         "catalogNumber": "string",
@@ -93,7 +96,6 @@ serve(async (req) => {
         "notes": "string | null",
         "source": "string"
       }
-      Ensure the 'catalogNumber' and 'brand' in the output match the input.
     `;
 
     const result = await model.generateContent(prompt);
@@ -126,6 +128,7 @@ serve(async (req) => {
       }
     }
 
+    // Si el objeto JSON está vacío o no tiene un nombre de producto, significa que no se encontró una coincidencia exacta.
     if (!productDetails || Object.keys(productDetails).length === 0 || !productDetails.productName) {
       return new Response(JSON.stringify({ error: `AI could not find detailed information for product with Catalog Number: '${catalogNumber}' and Brand: '${brand || "N/A"}'. Please verify the exact catalog number and brand.` }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
