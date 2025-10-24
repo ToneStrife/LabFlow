@@ -84,7 +84,7 @@ serve(async (req) => {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        "model": "anthropic/claude-3.5-sonnet",
+        "model": "google/gemini-1.5-flash",
         "response_format": { "type": "json_object" },
         "messages": [
           { "role": "user", "content": combinedPrompt }
@@ -122,7 +122,7 @@ serve(async (req) => {
       notes: aiResponse.technical_notes,
       brand: brand,
       catalogNumber: catalogNumber,
-      source: `AI Search (AIMLAPI - Claude 3.5) | Confidence: ${aiResponse.confidence_score}`
+      source: `AI Search (AIMLAPI - Gemini 1.5 Flash)`
     };
 
     console.log(`Edge Function: External search for catalog ${catalogNumber}, brand ${brand} found details via AIMLAPI.`);
