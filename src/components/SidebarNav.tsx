@@ -38,6 +38,12 @@ const navItems = [
     roles: ["Admin"],
   },
   {
+    title: "Users", // Nuevo elemento de navegación
+    href: "/users",
+    icon: <Users className="mr-2 h-4 w-4" />,
+    roles: ["Admin"],
+  },
+  {
     title: "Inventory",
     href: "/inventory",
     icon: <Warehouse className="mr-2 h-4 w-4" />,
