@@ -6,14 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { getFullName } from "@/hooks/use-profiles";
+import { getFullName, updateMockProfile } from "@/hooks/use-profiles"; // Import updateMockProfile
 
 const Profile: React.FC = () => {
-  const { session, profile, loading } = useSession();
+  const { session, profile, loading, logout } = useSession();
   const queryClient = useQueryClient();
 
   const [firstName, setFirstName] = React.useState(profile?.first_name || "");
@@ -33,18 +32,14 @@ const Profile: React.FC = () => {
       if (!session?.user?.id) {
         throw new Error("User not logged in.");
       }
-      const { error } = await supabase
-        .from('profiles')
-        .update({ first_name: firstName, last_name: lastName, updated_at: new Date().toISOString() })
-        .eq('id', session.user.id);
-
-      if (error) {
-        throw error;
-      }
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+      updateMockProfile(session.user.id, { first_name: firstName, last_name: lastName });
     },
     onSuccess: () => {
       toast.success("Profile updated successfully!");
       queryClient.invalidateQueries({ queryKey: ["session"] }); // Invalidate session to refetch profile
+      queryClient.invalidateQueries({ queryKey: ["allProfiles"] }); // Invalidate allProfiles to update names in other components
     },
     onError: (error) => {
       toast.error("Failed to update profile.", {
@@ -59,14 +54,8 @@ const Profile: React.FC = () => {
   };
 
   const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      toast.error("Failed to log out.", {
-        description: error.message,
-      });
-    } else {
-      toast.info("You have been logged out.");
-    }
+    logout();
+    toast.info("You have been logged out.");
   };
 
   if (loading) {
@@ -82,6 +71,7 @@ const Profile: React.FC = () => {
       <div className="container mx-auto py-8 text-center">
         <h1 className="text-3xl font-bold mb-4">Not Logged In</h1>
         <p className="text-lg text-muted-foreground">Please log in to view your profile.</p>
+        <Button onClick={logout} className="mt-4">Simulate Login</Button>
       </div>
     );
   }

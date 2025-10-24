@@ -70,16 +70,11 @@ const RequestForm: React.FC = () => {
   const [matchingProducts, setMatchingProducts] = React.useState<ProductDetails[]>([]);
   const [selectionIndex, setSelectionIndex] = React.useState<number | null>(null);
 
-  const { fields, append, remove } = useFieldArray({
-    control: form.control,
-    name: "items",
-  });
-
   const form = useForm<RequestFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       vendorId: "",
-      requesterId: session?.user?.id || "",
+      requesterId: session?.user?.id || "", // Use session.user.id for default
       accountManagerId: "unassigned",
       items: [{ productName: "", catalogNumber: "", quantity: 1, unitPrice: undefined, format: "", link: "", notes: "", brand: "" }],
       projectCodes: [],
@@ -92,6 +87,11 @@ const RequestForm: React.FC = () => {
       form.setValue("requesterId", session.user.id);
     }
   }, [session, form]);
+
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "items",
+  });
 
   const applyProductDetails = (index: number, data: ProductDetails) => {
     form.setValue(`items.${index}.productName`, data.productName || '');

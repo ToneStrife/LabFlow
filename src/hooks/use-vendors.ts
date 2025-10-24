@@ -1,29 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { getMockVendors, addMockVendor, updateMockVendor, deleteMockVendor, Vendor as MockVendor } from "@/data/mockData";
 import { toast } from "sonner";
 
-export interface Vendor {
-  id: string;
-  created_at: string;
-  name: string;
-  contact_person: string | null;
-  email: string | null;
-  phone: string | null;
-  notes: string | null;
-  brands: string[] | null;
-}
+export interface Vendor extends MockVendor {}
 
 // --- Fetch Hook ---
 const fetchVendors = async (): Promise<Vendor[]> => {
-  const { data, error } = await supabase
-    .from("vendors")
-    .select("*")
-    .order("name", { ascending: true });
-
-  if (error) {
-    throw new Error(error.message);
-  }
-  return data as Vendor[];
+  return getMockVendors();
 };
 
 export const useVendors = () => {
@@ -49,23 +32,14 @@ export const useAddVendor = () => {
   const queryClient = useQueryClient();
   return useMutation<Vendor, Error, VendorFormData>({
     mutationFn: async (data) => {
-      const { data: newVendor, error } = await supabase
-        .from("vendors")
-        .insert({
-          name: data.name,
-          contact_person: data.contactPerson || null,
-          email: data.email || null,
-          phone: data.phone || null,
-          notes: data.notes || null,
-          brands: data.brands || null,
-        })
-        .select()
-        .single();
-
-      if (error) {
-        throw new Error(error.message);
-      }
-      return newVendor as Vendor;
+      return addMockVendor({
+        name: data.name,
+        contact_person: data.contactPerson || null,
+        email: data.email || null,
+        phone: data.phone || null,
+        notes: data.notes || null,
+        brands: data.brands || null,
+      });
     },
     onSuccess: (newVendor) => {
       queryClient.invalidateQueries({ queryKey: ["vendors"] });
@@ -86,24 +60,14 @@ export const useUpdateVendor = () => {
   const queryClient = useQueryClient();
   return useMutation<Vendor, Error, { id: string; data: VendorFormData }>({
     mutationFn: async ({ id, data }) => {
-      const { data: updatedVendor, error } = await supabase
-        .from("vendors")
-        .update({
-          name: data.name,
-          contact_person: data.contactPerson || null,
-          email: data.email || null,
-          phone: data.phone || null,
-          notes: data.notes || null,
-          brands: data.brands || null,
-        })
-        .eq("id", id)
-        .select()
-        .single();
-
-      if (error) {
-        throw new Error(error.message);
-      }
-      return updatedVendor as Vendor;
+      return updateMockVendor(id, {
+        name: data.name,
+        contact_person: data.contactPerson || null,
+        email: data.email || null,
+        phone: data.phone || null,
+        notes: data.notes || null,
+        brands: data.brands || null,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["vendors"] });
@@ -122,14 +86,7 @@ export const useDeleteVendor = () => {
   const queryClient = useQueryClient();
   return useMutation<void, Error, string>({
     mutationFn: async (id) => {
-      const { error } = await supabase
-        .from("vendors")
-        .delete()
-        .eq("id", id);
-
-      if (error) {
-        throw new Error(error.message);
-      }
+      return deleteMockVendor(id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["vendors"] });

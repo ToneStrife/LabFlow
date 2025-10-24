@@ -14,50 +14,61 @@ export interface RequestItem {
   brand?: string; // New field for brand
 }
 
-// User interface is now primarily handled by Profile in use-profiles.ts
-// Keeping a minimal User interface for backward compatibility if needed in mock contexts
-export interface User {
+export interface Profile {
   id: string;
-  name?: string; // Make name optional as we'll derive it from first/last
-  first_name?: string; // New field
-  last_name?: string; // New field
-  email: string;
-  role: "Requester" | "Account Manager" | "Admin"; // Example roles
+  first_name: string | null;
+  last_name: string | null;
+  avatar_url: string | null;
+  updated_at: string | null;
+  role: "Requester" | "Account Manager" | "Admin";
 }
 
-// NOTE: AccountManager interface is no longer needed as profiles will be used
-
-// NOTE: LabRequest interface is now primarily handled by SupabaseRequest in use-requests.ts
-// Keeping a minimal LabRequest interface for backward compatibility if needed in mock contexts
-export interface LabRequest {
-  id: string;
-  vendorId: string;
-  requesterId: string;
-  accountManagerId: string;
-  status: RequestStatus;
-  date: string; // Keeping date for mock data compatibility, but Supabase uses created_at
-  notes?: string;
-  items: RequestItem[];
-  attachments?: { name: string; url: string }[];
-  projectCodes?: string[];
-}
-
-// NOTE: Vendor interface is now defined in src/hooks/use-vendors.ts
-// We keep mockVendors here only for linking in other mock data (like mockRequests)
 export interface Vendor {
   id: string;
+  created_at: string;
   name: string;
-  contactPerson?: string;
-  email?: string;
-  phone?: string;
-  notes?: string;
-  brands: string[];
+  contact_person: string | null;
+  email: string | null;
+  phone: string | null;
+  notes: string | null;
+  brands: string[] | null;
 }
 
-export interface Project {
+export interface CustomerAccount {
   id: string;
+  created_at: string;
   name: string;
-  code: string;
+  contact_person: string | null;
+  email: string | null;
+  phone: string | null;
+  notes: string | null;
+  owner_id: string;
+  assigned_manager_id: string | null;
+}
+
+export interface SupabaseRequestItem {
+  id: string;
+  request_id: string;
+  product_name: string;
+  catalog_number: string;
+  quantity: number;
+  unit_price: number | null;
+  format: string | null;
+  link: string | null;
+  notes: string | null;
+  brand: string | null;
+}
+
+export interface SupabaseRequest {
+  id: string;
+  created_at: string;
+  vendor_id: string;
+  requester_id: string;
+  account_manager_id: string | null;
+  status: RequestStatus;
+  notes: string | null;
+  project_codes: string[] | null;
+  items: SupabaseRequestItem[] | null;
 }
 
 // --- Mock Data for Autofill Feature ---
@@ -71,7 +82,6 @@ export interface ProductDetails {
   brand: string;
 }
 
-// Changed from object to array for easier searching by multiple fields
 export const productDatabase: ProductDetails[] = [
   {
     id: "pdt1",
@@ -120,15 +130,47 @@ export const productDatabase: ProductDetails[] = [
   },
 ];
 
-// --- Mock Data Storage ---
-// Removed mockUsers
+export const mockProjects: { id: string; name: string; code: string }[] = [
+  { id: "p1", name: "Project Alpha", code: "PA-001" },
+  { id: "p2", name: "Project Beta", code: "PB-002" },
+  { id: "p3", name: "Project Gamma", code: "PG-003" },
+  { id: "p4", name: "Project Delta", code: "PD-004" },
+];
 
-// Keeping mockVendors for linking in mockRequests, but CRUD operations will use Supabase
+// --- Mock Data Storage ---
+export let mockProfiles: Profile[] = [
+  {
+    id: "mock-user-id-123",
+    first_name: "Mock",
+    last_name: "User",
+    avatar_url: null,
+    updated_at: new Date().toISOString(),
+    role: "Requester",
+  },
+  {
+    id: "manager-id-456",
+    first_name: "Alice",
+    last_name: "Manager",
+    avatar_url: null,
+    updated_at: new Date().toISOString(),
+    role: "Account Manager",
+  },
+  {
+    id: "manager-id-789",
+    first_name: "Bob",
+    last_name: "Supervisor",
+    avatar_url: null,
+    updated_at: new Date().toISOString(),
+    role: "Account Manager",
+  },
+];
+
 export let mockVendors: Vendor[] = [
   {
     id: "v1",
+    created_at: new Date().toISOString(),
     name: "Thermo Fisher Scientific",
-    contactPerson: "Jane Doe",
+    contact_person: "Jane Doe",
     email: "jane.doe@thermofisher.com",
     phone: "1-800-123-4567",
     notes: "Primary vendor for reagents and consumables.",
@@ -136,8 +178,9 @@ export let mockVendors: Vendor[] = [
   },
   {
     id: "v2",
+    created_at: new Date().toISOString(),
     name: "Sigma-Aldrich",
-    contactPerson: "John Smith",
+    contact_person: "John Smith",
     email: "john.smith@sigmaaldrich.com",
     phone: "1-800-765-4321",
     notes: "Specializes in chemicals and custom synthesis.",
@@ -145,88 +188,246 @@ export let mockVendors: Vendor[] = [
   },
   {
     id: "v3",
+    created_at: new Date().toISOString(),
     name: "Bio-Rad Laboratories",
-    contactPerson: "Emily White",
+    contact_person: "Emily White",
     email: "emily.white@bio-rad.com",
     phone: "1-800-987-6543",
     notes: "Equipment and kits for molecular biology.",
     brands: ["Bio-Rad"],
   },
+];
+
+export let mockCustomerAccounts: CustomerAccount[] = [
   {
-    id: "v4",
-    name: "Qiagen",
-    contactPerson: "David Green",
-    email: "david.green@qiagen.com",
-    phone: "1-800-234-5678",
-    notes: "DNA/RNA purification and assay technologies.",
-    brands: ["Qiagen"],
+    id: "ca1",
+    created_at: new Date().toISOString(),
+    name: "Biology Department",
+    contact_person: "Dr. Alice Smith",
+    email: "alice.smith@bio.edu",
+    phone: "555-111-2222",
+    notes: "Main research department.",
+    owner_id: "mock-user-id-123",
+    assigned_manager_id: "manager-id-456",
+  },
+  {
+    id: "ca2",
+    created_at: new Date().toISOString(),
+    name: "Chemistry Department",
+    contact_person: "Dr. Bob Johnson",
+    email: "bob.johnson@chem.edu",
+    phone: "555-333-4444",
+    notes: "Organic synthesis lab.",
+    owner_id: "mock-user-id-123",
+    assigned_manager_id: null,
   },
 ];
 
-// Removed mockAccountManagers
-
-export const mockProjects: Project[] = [
-  { id: "p1", name: "Project Alpha", code: "PA-001" },
-  { id: "p2", name: "Project Beta", code: "PB-002" },
-  { id: "p3", name: "Project Gamma", code: "PG-003" },
-  { id: "p4", name: "Project Delta", code: "PD-004" },
+export let mockRequestItems: SupabaseRequestItem[] = [
+  {
+    id: "ri1",
+    request_id: "req1",
+    product_name: "E. coli DH5a Competent Cells",
+    catalog_number: "18265017",
+    quantity: 2,
+    unit_price: 150.00,
+    format: "10x 50µl",
+    link: "https://www.thermofisher.com/order/catalog/product/18265017",
+    notes: null,
+    brand: "Invitrogen",
+  },
+  {
+    id: "ri2",
+    request_id: "req1",
+    product_name: "DMEM, high glucose",
+    catalog_number: "11965092",
+    quantity: 5,
+    unit_price: 35.50,
+    format: "500 mL",
+    link: "https://www.thermofisher.com/order/catalog/product/11965092",
+    notes: "Need quickly",
+    brand: "Gibco",
+  },
+  {
+    id: "ri3",
+    request_id: "req2",
+    product_name: "Anti-GFP Antibody",
+    catalog_number: "ab12345",
+    quantity: 1,
+    unit_price: 120.50,
+    format: "100 µl",
+    link: "https://www.abcam.com/anti-gfp-antibody-ab12345.html",
+    notes: null,
+    brand: "Abcam",
+  },
 ];
 
-// Empty mockRequests array as data will come from Supabase
-export let mockRequests: LabRequest[] = [];
+export let mockRequests: SupabaseRequest[] = [
+  {
+    id: "req1",
+    created_at: new Date(Date.now() - 86400000 * 2).toISOString(), // 2 days ago
+    vendor_id: "v1",
+    requester_id: "mock-user-id-123",
+    account_manager_id: "manager-id-456",
+    status: "Pending",
+    notes: "Urgent request for cell culture supplies.",
+    project_codes: ["p1"],
+    items: [], // Items will be joined later
+  },
+  {
+    id: "req2",
+    created_at: new Date(Date.now() - 86400000 * 5).toISOString(), // 5 days ago
+    vendor_id: "v3",
+    requester_id: "mock-user-id-123",
+    account_manager_id: null,
+    status: "Approved",
+    notes: "Antibody for western blot.",
+    project_codes: ["p2"],
+    items: [], // Items will be joined later
+  },
+  {
+    id: "req3",
+    created_at: new Date(Date.now() - 86400000 * 10).toISOString(), // 10 days ago
+    vendor_id: "v2",
+    requester_id: "mock-user-id-123",
+    account_manager_id: "manager-id-789",
+    status: "Ordered",
+    notes: "Chemicals for new experiment.",
+    project_codes: ["p3"],
+    items: [], // Items will be joined later
+  },
+];
 
-// Helper function to get user's full name - REMOVED MOCK IMPLEMENTATION
-export const getUserFullName = (userId: string): string => {
-  // This function is now a placeholder and should be replaced by useAllProfiles hook logic in components
-  return userId;
+// Helper to generate unique IDs
+const generateId = () => Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+
+// --- CRUD Functions for Mock Data ---
+
+// Profiles
+export const getMockProfiles = async (): Promise<Profile[]> => {
+  await new Promise(resolve => setTimeout(resolve, 100)); // Simulate API delay
+  return mockProfiles;
 };
 
-
-// --- Observer Pattern for Mock Data Changes ---
-
-type Listener<T> = (data: T) => void;
-
-// Removed userListeners and related functions
-
-// Removed accountManagerListeners and related functions
-
-// --- Functions to modify mock data (simulating API calls) ---
-// Removed addUser, updateUser, deleteUser
-// Removed addAccountManager, updateAccountManager, deleteAccountManager
-
-// Removed mock data modification functions as they are replaced by Supabase hooks
-export const addRequest = (newRequest: Omit<LabRequest, "id" | "status" | "date">) => {
-  console.warn("addRequest from mockData is deprecated. Use useAddRequest hook instead.");
-  return null;
+export const updateMockProfile = (id: string, data: Partial<Profile>): void => {
+  const index = mockProfiles.findIndex(p => p.id === id);
+  if (index !== -1) {
+    mockProfiles[index] = { ...mockProfiles[index], ...data, updated_at: new Date().toISOString() };
+  }
 };
 
-export const updateRequestStatus = (requestId: string, newStatus: RequestStatus) => {
-  console.warn("updateRequestStatus from mockData is deprecated. Use useUpdateRequestStatus hook instead.");
-  return null;
+// Vendors
+export const getMockVendors = async (): Promise<Vendor[]> => {
+  await new Promise(resolve => setTimeout(resolve, 100));
+  return mockVendors;
 };
 
-export const addVendor = (newVendor: Omit<Vendor, "id">) => {
-  console.warn("addVendor from mockData is deprecated. Use useAddVendor hook instead.");
-  return null;
+export const addMockVendor = async (data: Omit<Vendor, "id" | "created_at">): Promise<Vendor> => {
+  await new Promise(resolve => setTimeout(resolve, 300));
+  const newVendor: Vendor = {
+    id: generateId(),
+    created_at: new Date().toISOString(),
+    ...data,
+  };
+  mockVendors.push(newVendor);
+  return newVendor;
 };
 
-export const updateVendor = (vendorId: string, updatedData: Partial<Vendor>) => {
-  console.warn("updateVendor from mockData is deprecated. Use useUpdateVendor hook instead.");
-  return null;
+export const updateMockVendor = async (id: string, data: Partial<Omit<Vendor, "id" | "created_at">>): Promise<Vendor> => {
+  await new Promise(resolve => setTimeout(resolve, 300));
+  const index = mockVendors.findIndex(v => v.id === id);
+  if (index === -1) throw new Error("Vendor not found");
+  mockVendors[index] = { ...mockVendors[index], ...data };
+  return mockVendors[index];
 };
 
-export const deleteVendor = (vendorId: string) => {
-  console.warn("deleteVendor from mockData is deprecated. Use useDeleteVendor hook instead.");
-  return false;
+export const deleteMockVendor = async (id: string): Promise<void> => {
+  await new Promise(resolve => setTimeout(resolve, 300));
+  mockVendors = mockVendors.filter(v => v.id !== id);
 };
 
-// Request and Vendor listeners are also deprecated as data comes from Supabase hooks
-export const subscribeToRequests = (listener: Listener<LabRequest[]>) => {
-  console.warn("subscribeToRequests from mockData is deprecated. Use useRequests hook instead.");
-  return () => {};
+// Customer Accounts
+export const getMockCustomerAccounts = async (): Promise<CustomerAccount[]> => {
+  await new Promise(resolve => setTimeout(resolve, 100));
+  return mockCustomerAccounts;
 };
 
-export const subscribeToVendors = (listener: Listener<Vendor[]>) => {
-  console.warn("subscribeToVendors from mockData is deprecated. Use useVendors hook instead.");
-  return () => {};
+export const addMockCustomerAccount = async (data: Omit<CustomerAccount, "id" | "created_at">): Promise<CustomerAccount> => {
+  await new Promise(resolve => setTimeout(resolve, 300));
+  const newAccount: CustomerAccount = {
+    id: generateId(),
+    created_at: new Date().toISOString(),
+    ...data,
+  };
+  mockCustomerAccounts.push(newAccount);
+  return newAccount;
+};
+
+export const updateMockCustomerAccount = async (id: string, data: Partial<Omit<CustomerAccount, "id" | "created_at">>): Promise<CustomerAccount> => {
+  await new Promise(resolve => setTimeout(resolve, 300));
+  const index = mockCustomerAccounts.findIndex(a => a.id === id);
+  if (index === -1) throw new Error("Customer account not found");
+  mockCustomerAccounts[index] = { ...mockCustomerAccounts[index], ...data };
+  return mockCustomerAccounts[index];
+};
+
+export const deleteMockCustomerAccount = async (id: string): Promise<void> => {
+  await new Promise(resolve => setTimeout(resolve, 300));
+  mockCustomerAccounts = mockCustomerAccounts.filter(a => a.id !== id);
+};
+
+// Requests
+export const getMockRequests = async (): Promise<SupabaseRequest[]> => {
+  await new Promise(resolve => setTimeout(resolve, 100));
+  // Join requests with their items
+  return mockRequests.map(req => ({
+    ...req,
+    items: mockRequestItems.filter(item => item.request_id === req.id),
+  }));
+};
+
+export const addMockRequest = async (data: Omit<SupabaseRequest, "id" | "created_at" | "status" | "items"> & { items: RequestItem[] }): Promise<SupabaseRequest> => {
+  await new Promise(resolve => setTimeout(resolve, 500));
+  const newRequestId = generateId();
+  const newRequest: SupabaseRequest = {
+    id: newRequestId,
+    created_at: new Date().toISOString(),
+    status: "Pending",
+    ...data,
+    items: [], // Will be populated after item insertion
+  };
+  mockRequests.push(newRequest);
+
+  const newItems: SupabaseRequestItem[] = data.items.map(item => ({
+    id: generateId(),
+    request_id: newRequestId,
+    product_name: item.productName,
+    catalog_number: item.catalogNumber,
+    quantity: item.quantity,
+    unit_price: item.unitPrice || null,
+    format: item.format || null,
+    link: item.link || null,
+    notes: item.notes || null,
+    brand: item.brand || null,
+  }));
+  mockRequestItems.push(...newItems);
+
+  return { ...newRequest, items: newItems };
+};
+
+export const updateMockRequestStatus = async (id: string, status: RequestStatus): Promise<SupabaseRequest> => {
+  await new Promise(resolve => setTimeout(resolve, 300));
+  const index = mockRequests.findIndex(req => req.id === id);
+  if (index === -1) throw new Error("Request not found");
+  mockRequests[index].status = status;
+  return {
+    ...mockRequests[index],
+    items: mockRequestItems.filter(item => item.request_id === id),
+  };
+};
+
+export const deleteMockRequest = async (id: string): Promise<void> => {
+  await new Promise(resolve => setTimeout(resolve, 300));
+  mockRequests = mockRequests.filter(req => req.id !== id);
+  mockRequestItems = mockRequestItems.filter(item => item.request_id !== id);
 };

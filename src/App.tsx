@@ -9,21 +9,15 @@ import NewRequest from "./pages/NewRequest";
 import Vendors from "./pages/Vendors";
 import RequestDetails from "./pages/RequestDetails";
 import Profile from "./pages/Profile";
-import Accounts from "./pages/Accounts"; // Import the new Accounts page
+import Accounts from "./pages/Accounts";
 import NotFound from "./pages/NotFound";
-import Login from "./pages/Login";
 import { SessionContextProvider, useSession } from "./components/SessionContextProvider";
-import React from "react"; // Import React for useEffect
+import React from "react";
 
 const queryClient = new QueryClient();
 
 const AppRoutes = () => {
-  const { session, loading } = useSession();
-
-  // Add console logs for debugging
-  React.useEffect(() => {
-    console.log("AppRoutes - loading:", loading, "session:", session);
-  }, [loading, session]);
+  const { loading } = useSession(); // We assume a session always exists with mock data
 
   if (loading) {
     return (
@@ -33,15 +27,7 @@ const AppRoutes = () => {
     );
   }
 
-  if (!session) {
-    return (
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="*" element={<Navigate to="/login" replace />} />
-      </Routes>
-    );
-  }
-
+  // With mock data, we always assume a user is "logged in"
   return (
     <Layout>
       <Routes>
@@ -51,8 +37,8 @@ const AppRoutes = () => {
         <Route path="/vendors" element={<Vendors />} />
         <Route path="/requests/:id" element={<RequestDetails />} />
         <Route path="/profile" element={<Profile />} />
-        <Route path="/accounts" element={<Accounts />} /> {/* New Accounts route */}
-        <Route path="/login" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/accounts" element={<Accounts />} />
+        {/* No login route needed as we simulate logged in */}
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Layout>
