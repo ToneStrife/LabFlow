@@ -67,16 +67,18 @@ serve(async (req) => {
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
     
     const prompt = `
-      Search the internet for a lab/scientific product with Brand: '${brand}' and Catalog Number: '${catalogNumber}'.
-      Extract the following details:
+      STRICTLY search the internet for the EXACT lab/scientific product matching the combination of Brand: '${brand}' AND Catalog Number: '${catalogNumber}'.
+      
+      If the exact product cannot be confidently identified, return an empty JSON object {}.
+      
+      If found, extract the following details:
       - Full product name
       - Package size/format (e.g., "100 tubes", "500ml", "50 reactions")
       - Estimated price in EUROS (only if clearly stated and reliable)
       - URL of a reliable product page (e.g., manufacturer, major distributor)
       - Brief technical notes (key specifications, storage conditions, applications).
 
-      Be precise and only return information you are confident about. If you cannot find a specific piece de information, omit it or use the value 'null'.
-      Return the information in a JSON object matching the following schema:
+      Return the information in a JSON object matching the following schema. Use 'null' for any missing optional fields:
       {
         "productName": "string",
         "catalogNumber": "string",
@@ -88,7 +90,6 @@ serve(async (req) => {
         "source": "string"
       }
       Ensure the 'catalogNumber' and 'brand' in the output match the input.
-      If no reliable information is found, return an empty JSON object {}.
     `;
 
     const result = await model.generateContent(prompt);
@@ -107,7 +108,6 @@ serve(async (req) => {
       }
 
       // 2. Limpiar la cadena JSON: reemplazar 'undefined' por 'null'
-      // Esto es crucial porque LLMs a menudo usan 'undefined' para campos opcionales, lo cual no es JSON válido.
       const cleanedResponse = rawResponse.replace(/: undefined/g, ': null');
 
       try {
