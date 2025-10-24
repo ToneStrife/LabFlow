@@ -14,13 +14,13 @@ import { Edit, Trash2 } from "lucide-react";
 import { CustomerAccount } from "@/hooks/use-customer-accounts";
 import { useAllProfiles, getFullName } from "@/hooks/use-profiles";
 
-interface CustomerAccountTableProps {
+interface UserAccountTableProps { // Renamed interface
   accounts: CustomerAccount[];
   onEdit: (account: CustomerAccount) => void;
   onDelete: (accountId: string) => void;
 }
 
-const CustomerAccountTable: React.FC<CustomerAccountTableProps> = ({ accounts, onEdit, onDelete }) => {
+const UserAccountTable: React.FC<UserAccountTableProps> = ({ accounts, onEdit, onDelete }) => { // Renamed component
   const { data: profiles, isLoading: isLoadingProfiles } = useAllProfiles();
 
   const getManagerName = (managerId: string | null) => {
@@ -38,7 +38,7 @@ const CustomerAccountTable: React.FC<CustomerAccountTableProps> = ({ accounts, o
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Account Name</TableHead>
+            <TableHead>Account Name</TableHead> {/* Kept as Account Name as it refers to the 'name' column */}
             <TableHead>Contact Person</TableHead>
             <TableHead>Email</TableHead>
             <TableHead>Phone</TableHead>
@@ -50,7 +50,7 @@ const CustomerAccountTable: React.FC<CustomerAccountTableProps> = ({ accounts, o
           {accounts.length === 0 ? (
             <TableRow>
               <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
-                No customer accounts found.
+                No user accounts found.
               </TableCell>
             </TableRow>
           ) : (
@@ -89,4 +89,4 @@ const CustomerAccountTable: React.FC<CustomerAccountTableProps> = ({ accounts, o
   );
 };
 
-export default CustomerAccountTable;
+export default UserAccountTable; // Renamed export

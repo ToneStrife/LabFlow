@@ -9,7 +9,7 @@ import NewRequest from "./pages/NewRequest";
 import Vendors from "./pages/Vendors";
 import RequestDetails from "./pages/RequestDetails";
 import Profile from "./pages/Profile";
-import Accounts from "./pages/Accounts";
+import Users from "./pages/Users"; // Importar la página de Users
 import AccountManagers from "./pages/AccountManagers";
 import Inventory from "./pages/Inventory"; 
 import NotFound from "./pages/NotFound";
@@ -60,7 +60,7 @@ const AppRoutes = () => {
         <Route path="/vendors" element={<PrivateRoute><Vendors /></PrivateRoute>} />
         <Route path="/requests/:id" element={<PrivateRoute><RequestDetails /></PrivateRoute>} />
         <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
-        <Route path="/accounts" element={<PrivateRoute><Accounts /></PrivateRoute>} />
+        <Route path="/users" element={<PrivateRoute><Users /></PrivateRoute>} /> {/* Ruta para Users */}
         <Route path="/account-managers" element={<PrivateRoute><AccountManagers /></PrivateRoute>} />
         <Route path="/inventory" element={<PrivateRoute><Inventory /></PrivateRoute>} />
         <Route path="*" element={<NotFound />} />

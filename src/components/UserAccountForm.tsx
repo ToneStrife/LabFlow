@@ -33,14 +33,14 @@ const customerAccountFormSchema = z.object({
 
 export type CustomerAccountFormValues = z.infer<typeof customerAccountFormSchema>;
 
-interface CustomerAccountFormProps {
+interface UserAccountFormProps { // Renamed interface
   initialData?: CustomerAccountFormValues;
   onSubmit: (data: CustomerAccountFormValues) => void;
   onCancel?: () => void;
   isSubmitting: boolean;
 }
 
-const CustomerAccountForm: React.FC<CustomerAccountFormProps> = ({ initialData, onSubmit, onCancel, isSubmitting }) => {
+const UserAccountForm: React.FC<UserAccountFormProps> = ({ initialData, onSubmit, onCancel, isSubmitting }) => { // Renamed component
   const { data: accountManagers, isLoading: isLoadingManagers } = useAccountManagerProfiles();
 
   const form = useForm<CustomerAccountFormValues>({
@@ -67,7 +67,7 @@ const CustomerAccountForm: React.FC<CustomerAccountFormProps> = ({ initialData, 
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Account Name</FormLabel>
+              <FormLabel>User Account Name</FormLabel> {/* Changed label */}
               <FormControl>
                 <Input placeholder="e.g., Biology Department" {...field} />
               </FormControl>
@@ -164,7 +164,7 @@ const CustomerAccountForm: React.FC<CustomerAccountFormProps> = ({ initialData, 
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...
               </>
             ) : (
-              initialData ? "Save Changes" : "Add Account"
+              initialData ? "Save Changes" : "Add User Account" // Changed button text
             )}
           </Button>
         </div>
@@ -173,4 +173,4 @@ const CustomerAccountForm: React.FC<CustomerAccountFormProps> = ({ initialData, 
   );
 };
 
-export default CustomerAccountForm;
+export default UserAccountForm; // Renamed export

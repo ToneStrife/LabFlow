@@ -10,9 +10,9 @@ const fetchCustomerAccounts = async (): Promise<CustomerAccount[]> => {
   return apiGetCustomerAccounts(); // Usar la función de la API simulada
 };
 
-export const useCustomerAccounts = () => {
+export const useUserAccounts = () => { // Renamed hook
   return useQuery<CustomerAccount[], Error>({
-    queryKey: ["customerAccounts"],
+    queryKey: ["userAccounts"], // Changed query key
     queryFn: fetchCustomerAccounts,
   });
 };
@@ -29,7 +29,7 @@ interface CustomerAccountFormData {
 }
 
 // Add Customer Account
-export const useAddCustomerAccount = () => {
+export const useAddUserAccount = () => { // Renamed hook
   const queryClient = useQueryClient();
   return useMutation<CustomerAccount, Error, { data: CustomerAccountFormData; ownerId: string }>({
     mutationFn: async ({ data, ownerId }) => {
@@ -44,13 +44,13 @@ export const useAddCustomerAccount = () => {
       });
     },
     onSuccess: (newAccount) => {
-      queryClient.invalidateQueries({ queryKey: ["customerAccounts"] });
-      toast.success("Account added successfully!", {
+      queryClient.invalidateQueries({ queryKey: ["userAccounts"] }); // Changed query key
+      toast.success("User account added successfully!", { // Changed toast message
         description: `Account: ${newAccount.name}`,
       });
     },
     onError: (error) => {
-      toast.error("Failed to add account.", {
+      toast.error("Failed to add user account.", { // Changed toast message
         description: error.message,
       });
     },
@@ -58,7 +58,7 @@ export const useAddCustomerAccount = () => {
 };
 
 // Update Customer Account
-export const useUpdateCustomerAccount = () => {
+export const useUpdateUserAccount = () => { // Renamed hook
   const queryClient = useQueryClient();
   return useMutation<CustomerAccount, Error, { id: string; data: CustomerAccountFormData }>({
     mutationFn: async ({ id, data }) => {
@@ -72,11 +72,11 @@ export const useUpdateCustomerAccount = () => {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["customerAccounts"] });
-      toast.success("Account updated successfully!");
+      queryClient.invalidateQueries({ queryKey: ["userAccounts"] }); // Changed query key
+      toast.success("User account updated successfully!"); // Changed toast message
     },
     onError: (error) => {
-      toast.error("Failed to update account.", {
+      toast.error("Failed to update user account.", { // Changed toast message
         description: error.message,
       });
     },
@@ -84,18 +84,18 @@ export const useUpdateCustomerAccount = () => {
 };
 
 // Delete Customer Account
-export const useDeleteCustomerAccount = () => {
+export const useDeleteUserAccount = () => { // Renamed hook
   const queryClient = useQueryClient();
   return useMutation<void, Error, string>({
     mutationFn: async (id) => {
       return apiDeleteCustomerAccount(id); // Usar la función de la API simulada
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["customerAccounts"] });
-      toast.success("Account deleted successfully!");
+      queryClient.invalidateQueries({ queryKey: ["userAccounts"] }); // Changed query key
+      toast.success("User account deleted successfully!"); // Changed toast message
     },
     onError: (error) => {
-      toast.error("Failed to delete account.", {
+      toast.error("Failed to delete user account.", { // Changed toast message
         description: error.message,
       });
     },

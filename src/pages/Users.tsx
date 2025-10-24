@@ -1,17 +1,20 @@
 "use client";
 
 import React from "react";
-import CustomerAccountTable from "@/components/CustomerAccountTable";
+import UserAccountTable from "@/components/UserAccountTable"; // Import the renamed component
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Loader2 } from "lucide-react";
+import { PlusCircle, Loader2, ShieldOff } from "lucide-react"; // Import ShieldOff icon
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import CustomerAccountForm, { CustomerAccountFormValues } from "@/components/CustomerAccountForm";
+import UserAccountForm, { CustomerAccountFormValues } from "@/components/UserAccountForm"; // Import the renamed component
 import { useCustomerAccounts, useAddCustomerAccount, useUpdateCustomerAccount, useDeleteCustomerAccount, CustomerAccount } from "@/hooks/use-customer-accounts";
 import { useSession } from "@/components/SessionContextProvider";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom"; // Import useNavigate
 
-const Accounts = () => {
-  const { session } = useSession();
+const Users = () => {
+  const { session, profile, loading: sessionLoading } = useSession();
+  const navigate = useNavigate();
+
   const { data: customerAccounts, isLoading, error } = useCustomerAccounts();
   const addCustomerAccountMutation = useAddCustomerAccount();
   const updateCustomerAccountMutation = useUpdateCustomerAccount();
@@ -20,6 +23,21 @@ const Accounts = () => {
   const [isAddAccountDialogOpen, setIsAddAccountDialogOpen] = React.useState(false);
   const [isEditAccountDialogOpen, setIsEditAccountDialogOpen] = React.useState(false);
   const [editingAccount, setEditingAccount] = React.useState<CustomerAccount | undefined>(undefined);
+
+  // Redirect if not an Admin
+  if (sessionLoading) {
+    return (
+      <div className="container mx-auto py-8 flex justify-center items-center">
+        <Loader2 className="h-8 w-8 animate-spin mr-2" /> Loading User Permissions...
+      </div>
+    );
+  }
+
+  if (!profile || profile.role !== "Admin") {
+    toast.error("Unauthorized access.", { description: "You do not have permission to view this page." });
+    navigate("/dashboard"); // Redirect to dashboard or another appropriate page
+    return null; // Render nothing while redirecting
+  }
 
   const handleAddAccount = async (newAccountData: CustomerAccountFormValues) => {
     if (!session?.user?.id) {
@@ -56,7 +74,7 @@ const Accounts = () => {
   if (isLoading) {
     return (
       <div className="container mx-auto py-8 flex justify-center items-center">
-        <Loader2 className="h-8 w-8 animate-spin mr-2" /> Loading Accounts...
+        <Loader2 className="h-8 w-8 animate-spin mr-2" /> Loading User Accounts...
       </div>
     );
   }
@@ -64,7 +82,7 @@ const Accounts = () => {
   if (error) {
     return (
       <div className="container mx-auto py-8 text-red-600">
-        Error loading accounts: {error.message}
+        Error loading user accounts: {error.message}
       </div>
     );
   }
@@ -72,18 +90,18 @@ const Accounts = () => {
   return (
     <div className="container mx-auto py-8">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Customer Accounts</h1>
+        <h1 className="text-3xl font-bold">User Accounts</h1> {/* Changed title */}
         <Dialog open={isAddAccountDialogOpen} onOpenChange={setIsAddAccountDialogOpen}>
           <DialogTrigger asChild>
             <Button>
-              <PlusCircle className="mr-2 h-4 w-4" /> Add New Account
+              <PlusCircle className="mr-2 h-4 w-4" /> Add New User Account {/* Changed button text */}
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
-              <DialogTitle>Add New Customer Account</DialogTitle>
+              <DialogTitle>Add New User Account</DialogTitle> {/* Changed dialog title */}
             </DialogHeader>
-            <CustomerAccountForm
+            <UserAccountForm // Renamed component
               onSubmit={handleAddAccount}
               onCancel={() => setIsAddAccountDialogOpen(false)}
               isSubmitting={addCustomerAccountMutation.isPending}
@@ -92,22 +110,22 @@ const Accounts = () => {
         </Dialog>
       </div>
       <p className="text-lg text-muted-foreground mb-8">
-        Manage your customer accounts and assign account managers.
+        Manage external user accounts (e.g., departments, research groups). These are not application users.
       </p>
-      <CustomerAccountTable
+      <UserAccountTable // Renamed component
         accounts={customerAccounts || []}
         onEdit={openEditDialog}
         onDelete={handleDeleteAccount}
       />
 
-      {/* Edit Account Dialog */}
+      {/* Edit User Account Dialog */}
       <Dialog open={isEditAccountDialogOpen} onOpenChange={setIsEditAccountDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Edit Customer Account</DialogTitle>
+            <DialogTitle>Edit User Account</DialogTitle> {/* Changed dialog title */}
           </DialogHeader>
           {editingAccount && (
-            <CustomerAccountForm
+            <UserAccountForm // Renamed component
               initialData={{
                 name: editingAccount.name,
                 contactPerson: editingAccount.contact_person || undefined,
@@ -127,4 +145,4 @@ const Accounts = () => {
   );
 };
 
-export default Accounts;
+export default Users;
