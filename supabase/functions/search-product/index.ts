@@ -64,28 +64,50 @@ serve(async (req) => {
     }
 
     const genAI = new GoogleGenerativeAI(geminiApiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" }); // Usar el modelo más potente
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
     
     const prompt = `
-      You are a data extraction robot. Your only job is to find a specific lab product online and return its details in JSON format. You must be extremely precise.
+      You are a meticulous data verification specialist for a lab supply company. Your sole task is to find a specific product online and return its details in a precise JSON format. Accuracy is paramount.
 
-      **Product to Find:**
+      **Product to Verify:**
       - Brand: "${brand}"
       - Catalog Number: "${catalogNumber}"
 
-      **Your Task (Follow these steps exactly):**
+      **Your Internal Thought Process (Follow this before generating the output):**
+      1.  **Search:** I will search for the official manufacturer's page or a major distributor's page for "${brand} ${catalogNumber}".
+      2.  **Verify Source:** Is the webpage I found from the official brand website or a top-tier distributor (like Thermo Fisher, Sigma-Aldrich, VWR)? If not, I must fail.
+      3.  **Confirm Exact Match:** Does the page explicitly list the Brand as "${brand}" and the Catalog Number as "${catalogNumber}"? It must be an exact match. If not, I must fail.
+      4.  **Extract Data:** Now that I've confirmed the source and the match, I will extract the required fields.
+          -   \`productName\`: What is the full product name?
+          -   \`format\`: What is the size/quantity (e.g., "500 mL")?
+          -   \`unitPrice\`: Is there a price listed? Is it in EUROS? If it's in another currency, I will convert it to EUR and make a note. If no price is found, I will use \`null\`.
+          -   \`link\`: What is the direct URL of this page?
+          -   \`notes\`: I will add a key technical detail, like storage temperature. If I converted the price, I will note the original currency here (e.g., "Storage: -20°C. Price converted from USD.").
+      5.  **Final Check:** Does my JSON output strictly follow the format rules? Is there any text outside the markdown block?
 
-      1.  **Find the Official Page:** Search for the product's official page from the manufacturer or a major distributor (e.g., Thermo Fisher, Sigma-Aldrich, VWR).
-      2.  **Verify Exact Match:** On that page, confirm that the brand and catalog number are an EXACT match to the inputs.
-      3.  **Extract Data:** If you confirm an exact match, extract the following fields. If you cannot find a specific piece of information on the page, you MUST use \`null\` for that field. Do not invent data.
-          -   \`productName\`: The full, official product name.
-          -   \`format\`: The package size (e.g., "500 mL", "100 reactions").
-          -   \`unitPrice\`: The price in EUROS. Use \`null\` if not found or not in EUROS.
-          -   \`link\`: The direct URL to the product page.
-          -   \`notes\`: A brief technical detail (e.g., "Storage: -20°C").
-      4.  **Format Output:** Your entire response MUST be ONLY the JSON object, wrapped in a markdown code block.
+      **Output Instructions:**
+      - Your entire response MUST be ONLY a single JSON object inside a markdown code block.
+      - If you successfully extract the data, provide the full JSON object.
+      - If you fail at any step (cannot find a reliable source or confirm an exact match), you MUST return an empty JSON object.
 
-      **Failure Condition:** If you cannot find an official page with an exact match for BOTH brand and catalog number, you MUST return an empty JSON object: \`\`\`json\n{}\n\`\`\`
+      **Successful Output Example:**
+      \`\`\`json
+      {
+        "productName": "E. coli DH5a Competent Cells",
+        "format": "10x 50µl",
+        "unitPrice": 145.50,
+        "link": "https://www.thermofisher.com/order/catalog/product/18265017",
+        "notes": "Storage: -80°C. Price converted from USD.",
+        "brand": "${brand}",
+        "catalogNumber": "${catalogNumber}",
+        "source": "AI Search (Gemini 1.5 Pro)"
+      }
+      \`\`\`
+
+      **Failure Output:**
+      \`\`\`json
+      {}
+      \`\`\`
     `;
 
     const result = await model.generateContent(prompt);
