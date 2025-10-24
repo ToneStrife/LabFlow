@@ -42,7 +42,7 @@ serve(async (req) => {
       const cryptoKey = await crypto.subtle.importKey(
         "raw",
         encoder.encode(jwtSecret),
-        { name: "HMAC", hash: "SHA-256" },
+        { name: "HMAC", hash: "SHA-2.56" },
         false,
         ["verify"]
       );
@@ -64,7 +64,7 @@ serve(async (req) => {
     }
 
     const genAI = new GoogleGenerativeAI(geminiApiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
     
     const prompt = `
       You are a meticulous data verification specialist for a lab supply company. Your sole task is to find a specific product online and return its details in a precise JSON format. Accuracy is paramount.
@@ -100,7 +100,7 @@ serve(async (req) => {
         "notes": "Storage: -80°C. Price converted from USD.",
         "brand": "${brand}",
         "catalogNumber": "${catalogNumber}",
-        "source": "AI Search (Gemini 1.5 Pro)"
+        "source": "AI Search (Gemini 2.5 Pro)"
       }
       \`\`\`
 
@@ -130,7 +130,7 @@ serve(async (req) => {
         productDetails = JSON.parse(cleanedResponse);
         productDetails.catalogNumber = catalogNumber;
         productDetails.brand = brand;
-        productDetails.source = "AI Search (Gemini 1.5 Pro)";
+        productDetails.source = "AI Search (Gemini 2.5 Pro)";
       } catch (jsonError) {
         console.error('Edge Function: Failed to parse Gemini JSON response:', jsonError);
         return new Response(JSON.stringify({ error: 'AI response could not be parsed.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
