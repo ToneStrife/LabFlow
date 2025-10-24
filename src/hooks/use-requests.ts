@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { SupabaseRequest as MockSupabaseRequest, SupabaseRequestItem as MockSupabaseRequestItem, RequestItem, RequestStatus } from "@/data/mockData";
 import { toast } from "sonner";
-import { apiGetRequests, apiAddRequest, apiUpdateRequestStatus, apiDeleteRequest, apiAddInventoryItem, apiSendEmail, apiUpdateRequestFile } from "@/integrations/api"; // Importar apiSendEmail y apiUpdateRequestFile
+import { apiGetRequests, apiAddRequest, apiUpdateRequestStatus, apiDeleteRequest, apiAddInventoryItem, apiSendEmail, apiUpdateRequestFile, apiUpdateRequestMetadata } from "@/integrations/api"; // Importar apiUpdateRequestMetadata
 
 export interface SupabaseRequestItem extends MockSupabaseRequestItem {}
 export interface SupabaseRequest extends MockSupabaseRequest {}
@@ -101,6 +101,35 @@ export const useUpdateRequestStatus = () => {
     },
   });
 };
+
+// Update Request Metadata
+interface UpdateRequestMetadataData {
+  id: string;
+  data: {
+    accountManagerId?: string | null;
+    notes?: string | null;
+    projectCodes?: string[] | null;
+  };
+}
+
+export const useUpdateRequestMetadata = () => {
+  const queryClient = useQueryClient();
+  return useMutation<SupabaseRequest, Error, UpdateRequestMetadataData>({
+    mutationFn: async ({ id, data }) => {
+      return apiUpdateRequestMetadata(id, data);
+    },
+    onSuccess: (updatedRequest) => {
+      queryClient.invalidateQueries({ queryKey: ["requests"] });
+      toast.success(`Request metadata updated successfully!`);
+    },
+    onError: (error) => {
+      toast.error("Failed to update request metadata.", {
+        description: error.message,
+      });
+    },
+  });
+};
+
 
 // Update Request File
 export type FileType = "quote" | "po" | "slip";

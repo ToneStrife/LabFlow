@@ -13,7 +13,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 
-import { useRequests, SupabaseRequest, useUpdateRequestStatus, useSendEmail, useUpdateRequestFile, FileType } from "@/hooks/use-requests";
+import { useRequests, SupabaseRequest, useUpdateRequestStatus, useSendEmail, useUpdateRequestFile, useUpdateRequestMetadata, FileType } from "@/hooks/use-requests";
 import { useVendors } from "@/hooks/use-vendors";
 import { useAllProfiles, getFullName } from "@/hooks/use-profiles";
 import EmailDialog, { EmailFormValues } from "@/components/EmailDialog";
@@ -24,6 +24,7 @@ import RequestItemsTable from "@/components/request-details/RequestItemsTable";
 import RequestActions from "@/components/request-details/RequestActions";
 import RequestFilesCard from "@/components/request-details/RequestFilesCard";
 import FileUploadDialog from "@/components/request-details/FileUploadDialog";
+import RequestMetadataForm from "@/components/request-details/RequestMetadataForm";
 import { toast } from "sonner";
 
 const RequestDetails: React.FC = () => {
@@ -34,6 +35,7 @@ const RequestDetails: React.FC = () => {
   const { data: profiles, isLoading: isLoadingProfiles } = useAllProfiles();
   const updateStatusMutation = useUpdateRequestStatus();
   const updateFileMutation = useUpdateRequestFile();
+  const updateMetadataMutation = useUpdateRequestMetadata();
   const sendEmailMutation = useSendEmail();
 
   const request = requests?.find(req => req.id === id);
@@ -133,7 +135,6 @@ const RequestDetails: React.FC = () => {
       // If we just uploaded a PO, automatically change status to Ordered
       if (fileTypeToUpload === "po") {
         await updateStatusMutation.mutateAsync({ id: request.id, status: "Ordered" });
-        // No email needed here, the email is sent via the separate action button
       }
       
       // If we just uploaded a Quote, automatically change status to PO Requested
@@ -161,6 +162,7 @@ const RequestDetails: React.FC = () => {
 
     const vendor = vendors?.find(v => v.id === request.vendor_id);
     const requesterName = getRequesterName(request.requester_id);
+    
     const attachments = [];
     if (request.quote_url) attachments.push({ name: `Quote_Request_${request.id}.pdf`, url: request.quote_url });
     if (request.po_url) attachments.push({ name: `PO_${request.po_number || request.id}.pdf`, url: request.po_url });
@@ -168,12 +170,25 @@ const RequestDetails: React.FC = () => {
     setEmailInitialData({
       to: getVendorEmail(request.vendor_id),
       subject: `Official Order - PO: ${request.po_number || "N/A"}`,
-      body: `Dear ${vendor?.contact_person || "Vendor"},\n\nThis email confirms the official order for lab request #${request.id}.\nPlease find the attached Purchase Order.\n\nThank you,\n${requesterName}`,
+      body: `Dear ${vendor?.contact_person || "Vendor"},\n\nThis email confirms the official order for lab request #${request.id}.\nPlease find the attached Purchase Order and Quote.\n\nThank you,\n${requesterName}`,
       attachments,
     });
     setIsEmailDialogOpen(true);
   };
   // --- End Logic for Mark as Ordered and Send Email ---
+
+  const handleUpdateMetadata = async (data: { accountManagerId?: string | null; notes?: string | null; projectCodes?: string[] | null; }) => {
+    if (!request) return;
+    
+    await updateMetadataMutation.mutateAsync({
+      id: request.id,
+      data: {
+        accountManagerId: data.accountManagerId === 'unassigned' ? null : data.accountManagerId,
+        notes: data.notes,
+        projectCodes: data.projectCodes,
+      }
+    });
+  };
 
 
   if (isLoadingRequests || isLoadingVendors || isLoadingProfiles) {
@@ -204,6 +219,17 @@ const RequestDetails: React.FC = () => {
           <RequestFilesCard request={request} onUploadClick={handleUploadClick} />
         </div>
       </div>
+      
+      {/* Metadata Edit Form - Always visible for editing */}
+      <div className="mt-6">
+        <h2 className="text-2xl font-bold mb-4">Request Metadata</h2>
+        <RequestMetadataForm
+          request={request}
+          profiles={profiles || []}
+          onSubmit={handleUpdateMetadata}
+          isSubmitting={updateMetadataMutation.isPending}
+        />
+      </div>
 
       <RequestActions
         request={request}
@@ -213,7 +239,7 @@ const RequestDetails: React.FC = () => {
         handleUploadQuote={handleUploadQuote}
         handleUploadPOAndOrder={handleUploadPOAndOrder}
         handleMarkAsReceived={handleMarkAsReceived}
-        handleMarkAsOrderedAndSendEmail={handleMarkAsOrderedAndSendEmail} // New prop
+        handleMarkAsOrderedAndSendEmail={handleMarkAsOrderedAndSendEmail}
       />
 
       {/* Dialogs */}
@@ -227,7 +253,13 @@ const RequestDetails: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      <EmailDialog isOpen={isEmailDialogOpen} onOpenChange={setIsEmailDialogOpen} initialData={emailInitialData} onSend={handleSendEmail} isSending={sendEmailMutation.isPending} />
+      <EmailDialog 
+        isOpen={isEmailDialogOpen} 
+        onOpenChange={setIsEmailDialogOpen} 
+        initialData={emailInitialData} 
+        onSend={handleSendEmail} 
+        isSending={sendEmailMutation.isPending} 
+      />
 
       <FileUploadDialog
         isOpen={isUploadDialogOpen}

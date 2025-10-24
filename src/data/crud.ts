@@ -181,6 +181,35 @@ export const updateMockRequestStatus = async (
   };
 };
 
+export const updateMockRequestMetadata = async (
+  id: string,
+  data: {
+    accountManagerId?: string | null;
+    notes?: string | null;
+    projectCodes?: string[] | null;
+  }
+): Promise<SupabaseRequest> => {
+  await simulateNetworkDelay();
+  const index = mockRequests.findIndex(req => req.id === id);
+  if (index === -1) throw new Error("Request not found");
+
+  if (data.accountManagerId !== undefined) {
+    mockRequests[index].account_manager_id = data.accountManagerId === 'unassigned' ? null : data.accountManagerId;
+  }
+  if (data.notes !== undefined) {
+    mockRequests[index].notes = data.notes || null;
+  }
+  if (data.projectCodes !== undefined) {
+    mockRequests[index].project_codes = data.projectCodes || null;
+  }
+
+  return {
+    ...mockRequests[index],
+    items: mockRequestItems.filter(item => item.request_id === id),
+  };
+};
+
+
 export const updateMockRequestFile = async (
   id: string,
   fileType: "quote" | "po" | "slip",

@@ -26,6 +26,7 @@ import {
   addMockRequest,
   updateMockRequestStatus,
   updateMockRequestFile,
+  updateMockRequestMetadata, // Importar la nueva función
   deleteMockRequest,
   getMockInventory,
   addMockInventoryItem,
@@ -119,6 +120,18 @@ export const apiUpdateRequestStatus = async (
 ): Promise<SupabaseRequest> => {
   await simulateNetworkDelay();
   return updateMockRequestStatus(id, status, quoteUrl, poNumber);
+};
+
+export const apiUpdateRequestMetadata = async (
+  id: string,
+  data: {
+    accountManagerId?: string | null;
+    notes?: string | null;
+    projectCodes?: string[] | null;
+  }
+): Promise<SupabaseRequest> => {
+  await simulateNetworkDelay();
+  return updateMockRequestMetadata(id, data);
 };
 
 export const apiUpdateRequestFile = async (
