@@ -64,7 +64,7 @@ serve(async (req) => {
     }
 
     const genAI = new GoogleGenerativeAI(geminiApiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" }); // CAMBIADO a gemini-pro
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" }); // CAMBIADO a gemini-2.5-flash
     
     const prompt = `
       Search the internet for a lab/scientific product with Brand: '${brand}' and Catalog Number: '${catalogNumber}'.
