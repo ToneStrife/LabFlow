@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { SupabaseRequest as MockSupabaseRequest, SupabaseRequestItem as MockSupabaseRequestItem, RequestItem, RequestStatus } from "@/data/mockData";
 import { toast } from "sonner";
-import { apiGetRequests, apiAddRequest, apiUpdateRequestStatus, apiDeleteRequest, apiAddInventoryItem } from "@/integrations/api"; // Importar apiAddInventoryItem
+import { apiGetRequests, apiAddRequest, apiUpdateRequestStatus, apiDeleteRequest, apiAddInventoryItem, apiSendEmail } from "@/integrations/api"; // Importar apiSendEmail
 
 export interface SupabaseRequestItem extends MockSupabaseRequestItem {}
 export interface SupabaseRequest extends MockSupabaseRequest {}
@@ -60,11 +60,18 @@ export const useAddRequest = () => {
 };
 
 // Update Request Status
+interface UpdateRequestStatusData {
+  id: string;
+  status: RequestStatus;
+  quoteDetails?: string | null;
+  poNumber?: string | null;
+}
+
 export const useUpdateRequestStatus = () => {
   const queryClient = useQueryClient();
-  return useMutation<SupabaseRequest, Error, { id: string; status: RequestStatus }>({
-    mutationFn: async ({ id, status }) => {
-      const updatedRequest = await apiUpdateRequestStatus(id, status);
+  return useMutation<SupabaseRequest, Error, UpdateRequestStatusData>({
+    mutationFn: async ({ id, status, quoteDetails = null, poNumber = null }) => {
+      const updatedRequest = await apiUpdateRequestStatus(id, status, quoteDetails, poNumber);
 
       // If status changes to "Ordered", add items to inventory
       if (status === "Ordered" && updatedRequest.items) {
@@ -107,7 +114,31 @@ export const useDeleteRequest = () => {
       toast.success("Request deleted successfully!");
     },
     onError: (error) => {
-      toast.error("Failed to delete request.", {
+      toast.error("Failed to delete request.",
+        { description: error.message,
+      });
+    },
+  });
+};
+
+// Hook for sending emails
+interface SendEmailData {
+  to: string;
+  subject: string;
+  body: string;
+  attachments?: { name: string; url: string }[];
+}
+
+export const useSendEmail = () => {
+  return useMutation<void, Error, SendEmailData>({
+    mutationFn: async (emailData) => {
+      await apiSendEmail(emailData);
+    },
+    onSuccess: () => {
+      toast.success("Simulated email sent successfully!");
+    },
+    onError: (error) => {
+      toast.error("Failed to send simulated email.", {
         description: error.message,
       });
     },

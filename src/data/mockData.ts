@@ -1,6 +1,6 @@
 // src/data/mockData.ts
 
-export type RequestStatus = "Pending" | "Approved" | "Ordered" | "Received";
+export type RequestStatus = "Pending" | "Approved" | "Quote Requested" | "PO Requested" | "Ordered" | "Received";
 
 export interface RequestItem {
   id?: string; // ID is optional for new items before insertion
@@ -70,6 +70,8 @@ export interface SupabaseRequest {
   notes: string | null;
   project_codes: string[] | null;
   items: SupabaseRequestItem[] | null;
+  quote_details: string | null; // New field for quote details (e.g., a link to a PDF or text)
+  po_number: string | null; // New field for Purchase Order number
 }
 
 // --- Mock Data for Autofill Feature ---
@@ -277,6 +279,8 @@ export let mockRequests: SupabaseRequest[] = [
     notes: "Urgent request for cell culture supplies.",
     project_codes: ["p1"],
     items: [], // Items will be joined later
+    quote_details: null,
+    po_number: null,
   },
   {
     id: "req2",
@@ -288,6 +292,8 @@ export let mockRequests: SupabaseRequest[] = [
     notes: "Antibody for western blot.",
     project_codes: ["p2"],
     items: [], // Items will be joined later
+    quote_details: null,
+    po_number: null,
   },
   {
     id: "req3",
@@ -299,6 +305,8 @@ export let mockRequests: SupabaseRequest[] = [
     notes: "Chemicals for new experiment.",
     project_codes: ["p3"],
     items: [], // Items will be joined later
+    quote_details: "https://example.com/quote-req3.pdf",
+    po_number: "PO-CHEM-001",
   },
 ];
 
@@ -435,13 +443,15 @@ export const getMockRequests = async (): Promise<SupabaseRequest[]> => {
   }));
 };
 
-export const addMockRequest = async (data: Omit<SupabaseRequest, "id" | "created_at" | "status" | "items"> & { items: RequestItem[] }): Promise<SupabaseRequest> => {
+export const addMockRequest = async (data: Omit<SupabaseRequest, "id" | "created_at" | "status" | "items" | "quote_details" | "po_number"> & { items: RequestItem[] }): Promise<SupabaseRequest> => {
   await new Promise(resolve => setTimeout(resolve, 500));
   const newRequestId = generateId();
   const newRequest: SupabaseRequest = {
     id: newRequestId,
     created_at: new Date().toISOString(),
     status: "Pending",
+    quote_details: null,
+    po_number: null,
     ...data,
     items: [], // Will be populated after item insertion
   };
@@ -464,11 +474,14 @@ export const addMockRequest = async (data: Omit<SupabaseRequest, "id" | "created
   return { ...newRequest, items: newItems };
 };
 
-export const updateMockRequestStatus = async (id: string, status: RequestStatus): Promise<SupabaseRequest> => {
+export const updateMockRequestStatus = async (id: string, status: RequestStatus, quote_details: string | null = null, po_number: string | null = null): Promise<SupabaseRequest> => {
   await new Promise(resolve => setTimeout(resolve, 300));
   const index = mockRequests.findIndex(req => req.id === id);
   if (index === -1) throw new Error("Request not found");
   mockRequests[index].status = status;
+  if (quote_details !== null) mockRequests[index].quote_details = quote_details;
+  if (po_number !== null) mockRequests[index].po_number = po_number;
+
   return {
     ...mockRequests[index],
     items: mockRequestItems.filter(item => item.request_id === id),
@@ -482,6 +495,32 @@ export const deleteMockRequest = async (id: string): Promise<void> => {
 };
 
 // --- CRUD Functions for Inventory ---
+export interface InventoryItem {
+  id: string;
+  product_name: string;
+  catalog_number: string;
+  brand: string | null;
+  quantity: number;
+  unit_price: number | null;
+  format: string | null;
+  added_at: string; // When it was added to inventory
+  last_updated: string;
+}
+
+export let mockInventory: InventoryItem[] = [
+  {
+    id: "inv1",
+    product_name: "Taq DNA Polymerase",
+    catalog_number: "P2000",
+    brand: "Sigma-Aldrich",
+    quantity: 3,
+    unit_price: 50.00,
+    format: "500 units",
+    added_at: new Date(Date.now() - 86400000 * 15).toISOString(),
+    last_updated: new Date(Date.now() - 86400000 * 15).toISOString(),
+  },
+];
+
 export const getMockInventory = async (): Promise<InventoryItem[]> => {
   await new Promise(resolve => setTimeout(resolve, 100));
   return mockInventory;
@@ -523,4 +562,24 @@ export const updateMockInventoryItem = async (id: string, data: Partial<Omit<Inv
 export const deleteMockInventoryItem = async (id: string): Promise<void> => {
   await new Promise(resolve => setTimeout(resolve, 300));
   mockInventory = mockInventory.filter(item => item.id !== id);
+};
+
+// --- Mock Email Sending Function ---
+interface MockEmail {
+  to: string;
+  subject: string;
+  body: string;
+  attachments?: { name: string; url: string }[];
+}
+
+export const sendMockEmail = async (email: MockEmail): Promise<void> => {
+  await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
+  console.log("--- SIMULATED EMAIL SENT ---");
+  console.log("To:", email.to);
+  console.log("Subject:", email.subject);
+  console.log("Body:", email.body);
+  if (email.attachments && email.attachments.length > 0) {
+    console.log("Attachments:", email.attachments.map(a => a.name).join(", "));
+  }
+  console.log("----------------------------");
 };

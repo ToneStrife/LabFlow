@@ -5,7 +5,7 @@ import {
   SupabaseRequest,
   RequestItem,
   RequestStatus,
-  InventoryItem, // Importar la nueva interfaz
+  InventoryItem,
   // Importar las funciones CRUD de mockData
   getMockProfiles,
   addMockProfile,
@@ -21,12 +21,13 @@ import {
   deleteMockCustomerAccount,
   getMockRequests,
   addMockRequest,
-  updateMockRequestStatus,
+  updateMockRequestStatus, // Importar la función actualizada
   deleteMockRequest,
-  getMockInventory, // Importar las nuevas funciones
+  getMockInventory,
   addMockInventoryItem,
   updateMockInventoryItem,
   deleteMockInventoryItem,
+  sendMockEmail, // Importar la nueva función de email
 } from "@/data/mockData";
 
 // Función para simular un retraso de red
@@ -101,14 +102,20 @@ export const apiGetRequests = async (): Promise<SupabaseRequest[]> => {
   return getMockRequests();
 };
 
-export const apiAddRequest = async (data: Omit<SupabaseRequest, "id" | "created_at" | "status" | "items"> & { items: RequestItem[] }): Promise<SupabaseRequest> => {
+export const apiAddRequest = async (data: Omit<SupabaseRequest, "id" | "created_at" | "status" | "items" | "quote_details" | "po_number"> & { items: RequestItem[] }): Promise<SupabaseRequest> => {
   await simulateNetworkDelay();
   return addMockRequest(data);
 };
 
-export const apiUpdateRequestStatus = async (id: string, status: RequestStatus): Promise<SupabaseRequest> => {
+// Modificar para aceptar quote_details y po_number
+export const apiUpdateRequestStatus = async (
+  id: string,
+  status: RequestStatus,
+  quote_details: string | null = null,
+  po_number: string | null = null
+): Promise<SupabaseRequest> => {
   await simulateNetworkDelay();
-  return updateMockRequestStatus(id, status);
+  return updateMockRequestStatus(id, status, quote_details, po_number);
 };
 
 export const apiDeleteRequest = async (id: string): Promise<void> => {
@@ -135,4 +142,17 @@ export const apiUpdateInventoryItem = async (id: string, data: Partial<Omit<Inve
 export const apiDeleteInventoryItem = async (id: string): Promise<void> => {
   await simulateNetworkDelay();
   return deleteMockInventoryItem(id);
+};
+
+// --- API de Envío de Correo Electrónico ---
+interface EmailData {
+  to: string;
+  subject: string;
+  body: string;
+  attachments?: { name: string; url: string }[];
+}
+
+export const apiSendEmail = async (email: EmailData): Promise<void> => {
+  await simulateNetworkDelay();
+  return sendMockEmail(email);
 };

@@ -14,12 +14,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowLeft, Loader2 } from "lucide-react";
-import { mockProjects, RequestStatus } from "@/data/mockData";
-import { useRequests, SupabaseRequest } from "@/hooks/use-requests";
+import { ArrowLeft, Loader2, CheckCircle, FileText, Mail, Package, Receipt } from "lucide-react";
+import { RequestStatus } from "@/data/mockData";
+import { useRequests, SupabaseRequest, useUpdateRequestStatus, useSendEmail } from "@/hooks/use-requests";
 import { useVendors } from "@/hooks/use-vendors";
 import { useAllProfiles, getFullName } from "@/hooks/use-profiles";
 import { format } from "date-fns";
+import EmailDialog, { EmailFormValues } from "@/components/EmailDialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 
 const getStatusBadgeVariant = (status: RequestStatus) => {
   switch (status) {
@@ -27,10 +31,14 @@ const getStatusBadgeVariant = (status: RequestStatus) => {
       return "secondary";
     case "Approved":
       return "default";
-    case "Ordered":
+    case "Quote Requested":
       return "outline";
-    case "Received":
+    case "PO Requested":
+      return "destructive";
+    case "Ordered":
       return "default";
+    case "Received":
+      return "success"; // Assuming 'success' variant exists or can be styled
     default:
       return "secondary";
   }
@@ -42,8 +50,160 @@ const RequestDetails: React.FC = () => {
   const { data: requests, isLoading: isLoadingRequests } = useRequests();
   const { data: vendors, isLoading: isLoadingVendors } = useVendors();
   const { data: profiles, isLoading: isLoadingProfiles } = useAllProfiles();
+  const updateStatusMutation = useUpdateRequestStatus();
+  const sendEmailMutation = useSendEmail();
 
   const request = requests?.find(req => req.id === id);
+
+  const [isEmailDialogOpen, setIsEmailDialogOpen] = React.useState(false);
+  const [emailInitialData, setEmailInitialData] = React.useState<Partial<EmailFormValues>>({});
+  const [currentRequestForEmail, setCurrentRequestForEmail] = React.useState<SupabaseRequest | null>(null);
+
+  const [isQuoteDetailsDialogOpen, setIsQuoteDetailsDialogOpen] = React.useState(false);
+  const [quoteDetailsInput, setQuoteDetailsInput] = React.useState(request?.quote_details || "");
+  const [poNumberInput, setPoNumberInput] = React.useState(request?.po_number || "");
+  const [currentRequestForQuote, setCurrentRequestForQuote] = React.useState<SupabaseRequest | null>(null);
+
+  React.useEffect(() => {
+    if (request) {
+      setQuoteDetailsInput(request.quote_details || "");
+      setPoNumberInput(request.po_number || "");
+    }
+  }, [request]);
+
+  const getRequesterName = (requesterId: string) => {
+    const profile = profiles?.find(p => p.id === requesterId);
+    return getFullName(profile);
+  };
+
+  const getAccountManagerName = (managerId: string | null) => {
+    if (!managerId) return "N/A";
+    const managerProfile = profiles?.find(p => p.id === managerId);
+    return getFullName(managerProfile);
+  };
+
+  const getVendorEmail = (vendorId: string) => {
+    return vendors?.find(v => v.id === vendorId)?.email || "";
+  };
+
+  const getAccountManagerEmail = (managerId: string | null) => {
+    return profiles?.find(p => p.id === managerId)?.email || "";
+  };
+
+  const handleSendEmail = async (emailData: EmailFormValues) => {
+    await sendEmailMutation.mutateAsync(emailData);
+    setIsEmailDialogOpen(false);
+  };
+
+  const handleApproveRequest = (request: SupabaseRequest) => {
+    setCurrentRequestForEmail(request);
+    setEmailInitialData({
+      to: getVendorEmail(request.vendor_id),
+      subject: `Quote Request for Lab Order #${request.id}`,
+      body: `Dear ${vendors?.find(v => v.id === request.vendor_id)?.contact_person || "Vendor"},
+
+We would like to request a quote for the following items from our lab order request #${request.id}:
+
+${request.items?.map(item => `- ${item.quantity}x ${item.product_name} (Catalog #: ${item.catalog_number})`).join("\n")}
+
+Please provide your best pricing and estimated delivery times.
+
+Thank you,
+${getRequesterName(request.requester_id)}`,
+    });
+    setIsEmailDialogOpen(true);
+  };
+
+  const handleConfirmQuoteRequest = async () => {
+    if (currentRequestForEmail) {
+      await updateStatusMutation.mutateAsync({ id: currentRequestForEmail.id, status: "Quote Requested" });
+      setCurrentRequestForEmail(null);
+    }
+  };
+
+  const handleOpenQuoteDetailsDialog = (request: SupabaseRequest) => {
+    setCurrentRequestForQuote(request);
+    setQuoteDetailsInput(request.quote_details || "");
+    setPoNumberInput(request.po_number || "");
+    setIsQuoteDetailsDialogOpen(true);
+  };
+
+  const handleSaveQuoteDetails = async () => {
+    if (currentRequestForQuote) {
+      await updateStatusMutation.mutateAsync({
+        id: currentRequestForQuote.id,
+        status: "PO Requested",
+        quoteDetails: quoteDetailsInput,
+        poNumber: poNumberInput || null,
+      });
+      setIsQuoteDetailsDialogOpen(false);
+      setCurrentRequestForQuote(null);
+      setQuoteDetailsInput("");
+      setPoNumberInput("");
+    }
+  };
+
+  const handleSendPORequest = (request: SupabaseRequest) => {
+    setCurrentRequestForEmail(request);
+    setEmailInitialData({
+      to: getAccountManagerEmail(request.account_manager_id),
+      subject: `PO Request for Lab Order #${request.id}`,
+      body: `Dear ${getAccountManagerName(request.account_manager_id)},
+
+We have received a quote for lab order request #${request.id}.
+Quote Details: ${request.quote_details || "N/A"}
+
+Please generate a Purchase Order (PO) for this request.
+
+Thank you,
+${getRequesterName(request.requester_id)}`,
+      attachments: request.quote_details ? [{ name: `Quote_Request_${request.id}.pdf`, url: request.quote_details }] : [],
+    });
+    setIsEmailDialogOpen(true);
+  };
+
+  const handleConfirmPORequest = async () => {
+    if (currentRequestForEmail) {
+      // Status is already PO Requested, no need to update status here, just confirm email sent
+      setCurrentRequestForEmail(null);
+    }
+  };
+
+  const handleMarkAsOrdered = (request: SupabaseRequest) => {
+    setCurrentRequestForEmail(request);
+    setEmailInitialData({
+      to: getVendorEmail(request.vendor_id),
+      subject: `Official Order for Lab Order #${request.id} (PO: ${request.po_number || "N/A"})`,
+      body: `Dear ${vendors?.find(v => v.id === request.vendor_id)?.contact_person || "Vendor"},
+
+This email confirms the official order for lab request #${request.id}.
+Please find the attached quote and Purchase Order for your reference.
+
+Quote Details: ${request.quote_details || "N/A"}
+PO Number: ${request.po_number || "N/A"}
+
+Please proceed with the order.
+
+Thank you,
+${getRequesterName(request.requester_id)}`,
+      attachments: [
+        ...(request.quote_details ? [{ name: `Quote_Request_${request.id}.pdf`, url: request.quote_details }] : []),
+        ...(request.po_number ? [{ name: `PO_${request.po_number}.pdf`, url: `https://example.com/po/${request.po_number}.pdf` }] : []), // Mock PO attachment
+      ],
+    });
+    setIsEmailDialogOpen(true);
+  };
+
+  const handleConfirmOrderEmail = async () => {
+    if (currentRequestForEmail) {
+      await updateStatusMutation.mutateAsync({ id: currentRequestForEmail.id, status: "Ordered" });
+      setCurrentRequestForEmail(null);
+    }
+  };
+
+  const handleMarkAsReceived = async (request: SupabaseRequest) => {
+    await updateStatusMutation.mutateAsync({ id: request.id, status: "Received" });
+  };
 
   if (isLoadingRequests || isLoadingVendors || isLoadingProfiles) {
     return (
@@ -74,8 +234,8 @@ const RequestDetails: React.FC = () => {
   const requesterName = getFullName(requesterProfile);
 
   const projectCodesDisplay = request.project_codes?.map(projectId => {
-    const project = mockProjects.find(p => p.id === projectId);
-    return project ? project.code : projectId;
+    // const project = mockProjects.find(p => p.id === projectId); // mockProjects is not imported
+    return projectId; // Using projectId directly for now
   }).join(", ") || "N/A";
 
   const dateSubmitted = format(new Date(request.created_at), 'yyyy-MM-dd HH:mm');
@@ -110,6 +270,20 @@ const RequestDetails: React.FC = () => {
             <div>
               <p className="text-sm text-muted-foreground">Date Submitted</p>
               <p className="font-medium">{dateSubmitted}</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Quote Details</p>
+              <p className="font-medium">
+                {request.quote_details ? (
+                  <a href={request.quote_details} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
+                    View Quote
+                  </a>
+                ) : "N/A"}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">PO Number</p>
+              <p className="font-medium">{request.po_number || "N/A"}</p>
             </div>
           </div>
 
@@ -162,8 +336,119 @@ const RequestDetails: React.FC = () => {
               </TableBody>
             </Table>
           </div>
+
+          <div className="flex justify-end space-x-2 mt-6">
+            {request.status === "Pending" && (
+              <Button
+                onClick={() => handleApproveRequest(request)}
+                disabled={updateStatusMutation.isPending}
+              >
+                <CheckCircle className="mr-2 h-4 w-4" /> Approve Request & Request Quote
+              </Button>
+            )}
+
+            {request.status === "Quote Requested" && (
+              <Button
+                onClick={() => handleOpenQuoteDetailsDialog(request)}
+                disabled={updateStatusMutation.isPending}
+              >
+                <FileText className="mr-2 h-4 w-4" /> Enter Quote Details
+              </Button>
+            )}
+
+            {request.status === "PO Requested" && (
+              <Button
+                onClick={() => handleSendPORequest(request)}
+                disabled={updateStatusMutation.isPending}
+              >
+                <Mail className="mr-2 h-4 w-4" /> Send PO Request to Account Manager
+              </Button>
+            )}
+
+            {(request.status === "PO Requested" && request.po_number) && (
+              <Button
+                onClick={() => handleMarkAsOrdered(request)}
+                disabled={updateStatusMutation.isPending}
+              >
+                <Package className="mr-2 h-4 w-4" /> Mark as Ordered & Send Order Email
+              </Button>
+            )}
+
+            {request.status === "Ordered" && (
+              <Button
+                onClick={() => handleMarkAsReceived(request)}
+                disabled={updateStatusMutation.isPending}
+              >
+                <Receipt className="mr-2 h-4 w-4" /> Mark as Received
+              </Button>
+            )}
+          </div>
         </CardContent>
       </Card>
+
+      <EmailDialog
+        isOpen={isEmailDialogOpen}
+        onOpenChange={(open) => {
+          setIsEmailDialogOpen(open);
+          if (!open && currentRequestForEmail) {
+            if (currentRequestForEmail.status === "Pending") {
+              handleConfirmQuoteRequest();
+            } else if (currentRequestForEmail.status === "PO Requested") {
+              handleConfirmPORequest();
+            } else if (currentRequestForEmail.status === "Approved") {
+              handleConfirmQuoteRequest();
+            } else if (currentRequestForEmail.status === "PO Requested" && currentRequestForEmail.po_number) {
+              handleConfirmOrderEmail();
+            }
+          }
+        }}
+        initialData={emailInitialData}
+        onSend={handleSendEmail}
+        isSending={sendEmailMutation.isPending}
+      />
+
+      <Dialog open={isQuoteDetailsDialogOpen} onOpenChange={setIsQuoteDetailsDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Enter Quote Details</DialogTitle>
+            <DialogDescription>
+              Please provide the quote details (e.g., a link to the quote PDF or relevant text) and PO Number.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="quoteDetails" className="text-right">
+                Quote
+              </Label>
+              <Input
+                id="quoteDetails"
+                value={quoteDetailsInput}
+                onChange={(e) => setQuoteDetailsInput(e.target.value)}
+                className="col-span-3"
+                placeholder="e.g., https://vendor.com/quote-123.pdf or Quote #XYZ"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="poNumber" className="text-right">
+                PO Number (Optional)
+              </Label>
+              <Input
+                id="poNumber"
+                value={poNumberInput}
+                onChange={(e) => setPoNumberInput(e.target.value)}
+                className="col-span-3"
+                placeholder="e.g., PO-12345"
+              />
+            </div>
+          </div>
+          <div className="flex justify-end space-x-2">
+            <Button variant="outline" onClick={() => setIsQuoteDetailsDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSaveQuoteDetails} disabled={updateStatusMutation.isPending}>
+              {updateStatusMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Save & Request PO"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
