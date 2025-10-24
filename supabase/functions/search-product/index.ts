@@ -82,8 +82,7 @@ serve(async (req) => {
       -   **URL of the reliable product page:** The direct link to the official product page.
       -   **Brief technical notes:** Key specifications, storage conditions, or primary applications. Keep it concise. If not found, use 'null'.
 
-      Return the information in a JSON object matching the following schema. Use 'null' for any missing optional fields.
-      **Ensure the 'catalogNumber' and 'brand' in the output JSON EXACTLY match the input values provided in this prompt.**
+      Return ONLY the JSON object, wrapped in a markdown code block like this: \`\`\`json\n{...}\n\`\`\`. Do NOT include any other text or explanation outside of this JSON block.
 
       JSON SCHEMA:
       {
