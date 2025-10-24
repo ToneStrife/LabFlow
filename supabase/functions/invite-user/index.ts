@@ -33,10 +33,10 @@ serve(async (req) => {
     const token = authHeader.replace('Bearer ', '');
     let payload;
     try {
-      // Usar Deno.env.get('SUPABASE_JWT_SECRET') para obtener la clave secreta
-      const jwtSecret = Deno.env.get('SUPABASE_JWT_SECRET');
+      // Usar Deno.env.get('JWT_SECRET') para obtener la clave secreta
+      const jwtSecret = Deno.env.get('JWT_SECRET'); // CAMBIO AQUÍ
       if (!jwtSecret) {
-        console.error('Edge Function: SUPABASE_JWT_SECRET is not set.');
+        console.error('Edge Function: JWT_SECRET is not set.');
         return new Response(JSON.stringify({ error: 'Server configuration error: JWT secret not found.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
       payload = await verify(token, jwtSecret, 'HS256');
