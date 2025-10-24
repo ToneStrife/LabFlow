@@ -67,6 +67,9 @@ const RequestDetails: React.FC = () => {
   const [poNumberInput, setPoNumberInput] = React.useState(request?.po_number || "");
   const [currentRequestForQuoteAndPO, setCurrentRequestForQuoteAndPO] = React.useState<SupabaseRequest | null>(null);
 
+  const [isOrderConfirmationDialogOpen, setIsOrderConfirmationDialogOpen] = React.useState(false);
+  const [requestToOrder, setRequestToOrder] = React.useState<SupabaseRequest | null>(null);
+
   React.useEffect(() => {
     if (request) {
       setQuoteDetailsInput(request.quote_details || "");
@@ -98,7 +101,7 @@ const RequestDetails: React.FC = () => {
     setIsEmailDialogOpen(false);
   };
 
-  // --- New Approval Flow ---
+  // --- Approval Flow ---
   const openApproveRequestDialog = (request: SupabaseRequest) => {
     setRequestToApprove(request);
     setIsApproveRequestDialogOpen(true);
@@ -127,7 +130,7 @@ ${requestToApprove.items?.map(item => `- ${item.quantity}x ${item.product_name} 
 Please provide your best pricing and estimated delivery times.
 
 Thank you,
-${getRequesterName(requestToApprove.requester_id)}`,
+${getRequesterName(requestToApp_requester_id)}`,
       });
       setIsApproveRequestDialogOpen(false); // Close approval dialog
       setIsEmailDialogOpen(true); // Open email dialog
@@ -140,7 +143,7 @@ ${getRequesterName(requestToApprove.requester_id)}`,
       setCurrentRequestForEmail(null);
     }
   };
-  // --- End New Approval Flow ---
+  // --- End Approval Flow ---
 
   // --- Quote and PO Details Dialog ---
   const handleOpenQuoteAndPODetailsDialog = (request: SupabaseRequest) => {
@@ -150,7 +153,7 @@ ${getRequesterName(requestToApprove.requester_id)}`,
     setIsQuoteAndPODetailsDialogOpen(true);
   };
 
-  const handleSaveQuoteAndPODetails = async () => {
+  const handleSaveDetailsOnly = async () => {
     if (currentRequestForQuoteAndPO) {
       await updateStatusMutation.mutateAsync({
         id: currentRequestForQuoteAndPO.id,
@@ -164,75 +167,100 @@ ${getRequesterName(requestToApprove.requester_id)}`,
       setPoNumberInput("");
     }
   };
-  // --- End Quote and PO Details Dialog ---
 
-  const handleSendPORequest = (request: SupabaseRequest) => {
-    setCurrentRequestForEmail(request);
-    const vendor = vendors?.find(v => v.id === request.vendor_id);
-    const managerName = getAccountManagerName(request.account_manager_id);
-    const requesterName = getRequesterName(request.requester_id);
+  const handleSaveAndRequestPOEmail = () => {
+    if (currentRequestForQuoteAndPO) {
+      setCurrentRequestForEmail(currentRequestForQuoteAndPO);
+      const vendor = vendors?.find(v => v.id === currentRequestForQuoteAndPO.vendor_id);
+      const managerName = getAccountManagerName(currentRequestForQuoteAndPO.account_manager_id);
+      const requesterName = getRequesterName(currentRequestForQuoteAndPO.requester_id);
 
-    const attachments = [];
-    if (request.quote_details) {
-      // Simulate attachment if quote_details is a URL or a file name
-      attachments.push({ name: `Quote_Request_${request.id}.pdf`, url: request.quote_details });
-    }
+      const attachments = [];
+      if (quoteDetailsInput) {
+        attachments.push({ name: `Quote_Request_${currentRequestForQuoteAndPO.id}.pdf`, url: quoteDetailsInput });
+      }
 
-    setEmailInitialData({
-      to: getAccountManagerEmail(request.account_manager_id),
-      subject: `PO Request for Lab Order #${request.id}`,
-      body: `Dear ${managerName},
+      setEmailInitialData({
+        to: getAccountManagerEmail(currentRequestForQuoteAndPO.account_manager_id),
+        subject: `PO Request for Lab Order #${currentRequestForQuoteAndPO.id}`,
+        body: `Dear ${managerName},
 
-We have received a quote for lab order request #${request.id}.
-Quote Details: ${request.quote_details || "N/A"}
+We have received a quote for lab order request #${currentRequestForQuoteAndPO.id}.
+Quote Details: ${quoteDetailsInput || "N/A"}
 
 Please generate a Purchase Order (PO) for this request.
 
 Thank you,
 ${requesterName}`,
-      attachments: attachments,
-    });
-    setIsEmailDialogOpen(true);
+        attachments: attachments,
+      });
+      setIsQuoteAndPODetailsDialogOpen(false); // Close quote/PO dialog
+      setIsEmailDialogOpen(true); // Open email dialog
+    }
   };
 
   const handleConfirmPORequest = async () => {
     if (currentRequestForEmail) {
-      // Status is already PO Requested, no need to update status here, just confirm email sent
+      // Status is already PO Requested, just confirm email sent
+      await updateStatusMutation.mutateAsync({
+        id: currentRequestForEmail.id,
+        status: "PO Requested", // Ensure status is set if not already
+        quoteDetails: currentRequestForEmail.quote_details,
+        poNumber: currentRequestForEmail.po_number,
+      });
       setCurrentRequestForEmail(null);
     }
   };
+  // --- End Quote and PO Details Dialog ---
 
-  const handleMarkAsOrdered = (request: SupabaseRequest) => {
-    setCurrentRequestForEmail(request);
-    const vendor = vendors?.find(v => v.id === request.vendor_id);
-    const requesterName = getRequesterName(request.requester_id);
+  // --- Order Confirmation Dialog ---
+  const openOrderConfirmationDialog = (request: SupabaseRequest) => {
+    setRequestToOrder(request);
+    setIsOrderConfirmationDialogOpen(true);
+  };
 
-    const attachments = [];
-    if (request.quote_details) {
-      attachments.push({ name: `Quote_Request_${request.id}.pdf`, url: request.quote_details });
+  const handleMarkAsOrderedOnly = async () => {
+    if (requestToOrder) {
+      await updateStatusMutation.mutateAsync({ id: requestToOrder.id, status: "Ordered" });
+      setIsOrderConfirmationDialogOpen(false);
+      setRequestToOrder(null);
     }
-    if (request.po_number) {
-      attachments.push({ name: `PO_${request.po_number}.pdf`, url: `https://example.com/po/${request.po_number}.pdf` }); // Mock PO attachment
-    }
+  };
 
-    setEmailInitialData({
-      to: getVendorEmail(request.vendor_id),
-      subject: `Official Order for Lab Order #${request.id} (PO: ${request.po_number || "N/A"})`,
-      body: `Dear ${vendor?.contact_person || "Vendor"},
+  const handleMarkAsOrderedAndSendEmail = () => {
+    if (requestToOrder) {
+      setCurrentRequestForEmail(requestToOrder);
+      const vendor = vendors?.find(v => v.id === requestToOrder.vendor_id);
+      const requesterName = getRequesterName(requestToOrder.requester_id);
 
-This email confirms the official order for lab request #${request.id}.
+      const attachments = [];
+      if (requestToOrder.quote_details) {
+        attachments.push({ name: `Quote_Request_${requestToOrder.id}.pdf`, url: requestToOrder.quote_details });
+      }
+      if (requestToOrder.po_number) {
+        attachments.push({ name: `PO_${requestToOrder.po_number}.pdf`, url: `https://example.com/po/${requestToOrder.po_number}.pdf` }); // Mock PO attachment
+      }
+
+      setEmailInitialData({
+        to: getVendorEmail(requestToOrder.vendor_id),
+        subject: `Official Order for Lab Order #${requestToOrder.id} (PO: ${requestToOrder.po_number || "N/A"})`,
+        body: `Dear ${vendor?.contact_person || "Vendor"},
+
+This email confirms the official order for lab request #${requestToOrder.id}.
 Please find the attached quote and Purchase Order for your reference.
 
-Quote Details: ${request.quote_details || "N/A"}
-PO Number: ${request.po_number || "N/A"}
+Quote Details: ${requestToOrder.quote_details || "N/A"}
+PO Number: ${requestToOrder.po_number || "N/A"}
 
 Please proceed with the order.
 
 Thank you,
 ${requesterName}`,
-      attachments: attachments,
-    });
-    setIsEmailDialogOpen(true);
+        attachments: attachments,
+      });
+      setIsOrderConfirmationDialogOpen(false); // Close order confirmation dialog
+      setIsEmailDialogOpen(true); // Open email dialog
+    }
   };
 
   const handleConfirmOrderEmail = async () => {
@@ -241,6 +269,7 @@ ${requesterName}`,
       setCurrentRequestForEmail(null);
     }
   };
+  // --- End Order Confirmation Dialog ---
 
   const handleMarkAsReceived = async (request: SupabaseRequest) => {
     await updateStatusMutation.mutateAsync({ id: request.id, status: "Received" });
@@ -408,10 +437,10 @@ ${requesterName}`,
 
             {(request.status === "PO Requested" && request.po_number) && (
               <Button
-                onClick={() => handleMarkAsOrdered(request)}
+                onClick={() => openOrderConfirmationDialog(request)}
                 disabled={updateStatusMutation.isPending}
               >
-                <Package className="mr-2 h-4 w-4" /> Mark as Ordered & Send Order Email
+                <Package className="mr-2 h-4 w-4" /> Mark as Ordered
               </Button>
             )}
 
@@ -519,10 +548,38 @@ ${requesterName}`,
               />
             </div>
           </div >
-          <DialogFooter>
+          <DialogFooter className="flex flex-col sm:flex-row sm:justify-end sm:space-x-2">
             <Button variant="outline" onClick={() => setIsQuoteAndPODetailsDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSaveQuoteAndPODetails} disabled={updateStatusMutation.isPending}>
-              {updateStatusMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Save & Request PO"}
+            <Button variant="outline" onClick={handleSaveDetailsOnly} disabled={updateStatusMutation.isPending}>
+              Save Details Only
+            </Button>
+            <Button onClick={handleSaveAndRequestPOEmail} disabled={updateStatusMutation.isPending}>
+              {updateStatusMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Save & Request PO (Email)"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Order Confirmation Dialog */}
+      <Dialog open={isOrderConfirmationDialogOpen} onOpenChange={setIsOrderConfirmationDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Confirm Order</DialogTitle>
+            <DialogDescription>
+              Choose how to proceed with marking this request as ordered.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <p>Request ID: {requestToOrder?.id}</p>
+            <p>Vendor: {vendors?.find(v => v.id === requestToOrder?.vendor_id)?.name || "N/A"}</p>
+            <p>PO Number: {requestToOrder?.po_number || "N/A"}</p>
+          </div>
+          <DialogFooter className="flex flex-col sm:flex-row sm:justify-end sm:space-x-2">
+            <Button variant="outline" onClick={handleMarkAsOrderedOnly} disabled={updateStatusMutation.isPending}>
+              Mark as Ordered Only
+            </Button>
+            <Button onClick={handleMarkAsOrderedAndSendEmail} disabled={updateStatusMutation.isPending}>
+              Mark as Ordered & Send Email
             </Button>
           </DialogFooter>
         </DialogContent>
