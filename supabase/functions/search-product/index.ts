@@ -1,7 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
-import { verify } from 'https://deno.land/x/djwt@v2.8/mod.ts';
-import { GoogleGenerativeAI } from 'https://esm.sh/@google/generative-ai@0.15.0'; // Importar el SDK de Google Gemini
+import { GoogleGenerativeAI } from 'https://esm.sh/@google/generative-ai@0.15.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -15,42 +14,25 @@ serve(async (req) => {
   }
 
   try {
+    // Crear un cliente de Supabase con el contexto de autenticación del usuario
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
+        global: {
+          headers: { Authorization: req.headers.get('Authorization')! },
         },
       }
     );
 
-    // Verificar el JWT del usuario que llama (asegura que solo usuarios autenticados puedan usar esta función)
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Unauthorized: Missing Authorization header' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-    }
-    const token = authHeader.replace('Bearer ', '');
-    let payload;
-    try {
-      const jwtSecret = Deno.env.get('JWT_SECRET');
-      if (!jwtSecret) {
-        return new Response(JSON.stringify({ error: 'Server configuration error: JWT secret not found.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-      }
-      const encoder = new TextEncoder();
-      const cryptoKey = await crypto.subtle.importKey(
-        "raw",
-        encoder.encode(jwtSecret),
-        { name: "HMAC", hash: "SHA-2.56" },
-        false,
-        ["verify"]
-      );
-      payload = await verify(token, cryptoKey, 'HS256');
-    } catch (jwtError: any) {
-      return new Response(JSON.stringify({ error: `Unauthorized: Invalid token - ${jwtError.message}` }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    // Verificar la sesión del usuario
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+    if (authError || !user) {
+      console.error('Edge Function: Authentication error', authError);
+      return new Response(JSON.stringify({ error: 'Unauthorized: Invalid session' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
+    // El usuario está autenticado, continuar con la lógica de la función
     const { catalogNumber, brand } = await req.json();
 
     if (!catalogNumber) {
