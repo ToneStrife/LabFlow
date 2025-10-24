@@ -209,7 +209,7 @@ export let mockRequests: SupabaseRequest[] = [
     vendor_id: "v3",
     requester_id: "mock-user-id-123",
     account_manager_id: null,
-    status: "Approved",
+    status: "Quote Requested", // Changed from "Approved"
     notes: "Antibody for western blot.",
     project_codes: ["p2"],
     items: [], // Items will be joined later

@@ -28,8 +28,6 @@ const getStatusBadgeVariant = (status: RequestStatus) => {
   switch (status) {
     case "Pending":
       return "secondary";
-    case "Approved":
-      return "default";
     case "Quote Requested":
       return "outline";
     case "PO Requested":
@@ -141,8 +139,12 @@ ${requesterName}`,
     }
   };
 
-  const handleApproveAndRequestQuoteEmail = () => {
+  const handleApproveAndRequestQuoteEmail = async () => {
     if (requestToApprove) {
+      // First, update the status
+      await updateStatusMutation.mutateAsync({ id: requestToApprove.id, status: "Quote Requested" });
+      
+      // Then, prepare and open the email dialog
       setCurrentRequestForEmail(requestToApprove);
       setEmailInitialData({
         to: getVendorEmail(requestToApprove.vendor_id),
@@ -160,13 +162,6 @@ ${getRequesterName(requestToApprove.requester_id)}`,
       });
       setIsApproveRequestDialogOpen(false); // Close approval dialog
       setIsEmailDialogOpen(true); // Open email dialog
-    }
-  };
-
-  const handleConfirmQuoteRequest = async () => {
-    if (currentRequestForEmail) {
-      await updateStatusMutation.mutateAsync({ id: currentRequestForEmail.id, status: "Quote Requested" });
-      setCurrentRequestForEmail(null);
     }
   };
   // --- End Approval Flow ---
@@ -194,10 +189,18 @@ ${getRequesterName(requestToApprove.requester_id)}`,
     }
   };
 
-  const handleSaveAndRequestPOEmail = () => {
+  const handleSaveAndRequestPOEmail = async () => {
     if (currentRequestForQuoteAndPO) {
+      // First, save the details and update status
+      await updateStatusMutation.mutateAsync({
+        id: currentRequestForQuoteAndPO.id,
+        status: "PO Requested",
+        quoteDetails: quoteDetailsInput,
+        poNumber: poNumberInput || null,
+      });
+
+      // Then, prepare and open the email dialog
       setCurrentRequestForEmail(currentRequestForQuoteAndPO);
-      const vendor = vendors?.find(v => v.id === currentRequestForQuoteAndPO.vendor_id);
       const managerName = getAccountManagerName(currentRequestForQuoteAndPO.account_manager_id);
       const requesterName = getRequesterName(currentRequestForQuoteAndPO.requester_id);
 
@@ -224,19 +227,6 @@ ${requesterName}`,
       setIsEmailDialogOpen(true); // Open email dialog
     }
   };
-
-  const handleConfirmPORequest = async () => {
-    if (currentRequestForEmail) {
-      // Status is already PO Requested, just confirm email sent
-      await updateStatusMutation.mutateAsync({
-        id: currentRequestForEmail.id,
-        status: "PO Requested", // Ensure status is set if not already
-        quoteDetails: currentRequestForEmail.quote_details,
-        poNumber: currentRequestForEmail.po_number,
-      });
-      setCurrentRequestForEmail(null);
-    }
-  };
   // --- End Quote and PO Details Dialog ---
 
   // --- Order Confirmation Dialog ---
@@ -253,8 +243,12 @@ ${requesterName}`,
     }
   };
 
-  const handleMarkAsOrderedAndSendEmail = () => {
+  const handleMarkAsOrderedAndSendEmail = async () => {
     if (requestToOrder) {
+      // First, update the status
+      await updateStatusMutation.mutateAsync({ id: requestToOrder.id, status: "Ordered" });
+
+      // Then, prepare and open the email dialog
       setCurrentRequestForEmail(requestToOrder);
       const vendor = vendors?.find(v => v.id === requestToOrder.vendor_id);
       const requesterName = getRequesterName(requestToOrder.requester_id);
@@ -286,13 +280,6 @@ ${requesterName}`,
       });
       setIsOrderConfirmationDialogOpen(false); // Close order confirmation dialog
       setIsEmailDialogOpen(true); // Open email dialog
-    }
-  };
-
-  const handleConfirmOrderEmail = async () => {
-    if (currentRequestForEmail) {
-      await updateStatusMutation.mutateAsync({ id: currentRequestForEmail.id, status: "Ordered" });
-      setCurrentRequestForEmail(null);
     }
   };
   // --- End Order Confirmation Dialog ---
@@ -351,7 +338,6 @@ ${requesterName}`,
           <SelectContent>
             <SelectItem value="All">All Statuses</SelectItem>
             <SelectItem value="Pending">Pending</SelectItem>
-            <SelectItem value="Approved">Approved</SelectItem>
             <SelectItem value="Quote Requested">Quote Requested</SelectItem>
             <SelectItem value="PO Requested">PO Requested</SelectItem>
             <SelectItem value="Ordered">Ordered</SelectItem>
@@ -431,27 +417,26 @@ ${requesterName}`,
                       )}
 
                       {request.status === "PO Requested" && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleSendPORequest(request)}
-                          title="Send PO Request to Account Manager"
-                          disabled={updateStatusMutation.isPending}
-                        >
-                          <Mail className="h-4 w-4 text-orange-600" />
-                        </Button>
-                      )}
-
-                      {(request.status === "PO Requested" && request.po_number) && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => openOrderConfirmationDialog(request)}
-                          title="Mark as Ordered"
-                          disabled={updateStatusMutation.isPending}
-                        >
-                          <Package className="h-4 w-4 text-blue-600" />
-                        </Button>
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleSendPORequest(request)}
+                            title="Send PO Request to Account Manager"
+                            disabled={updateStatusMutation.isPending}
+                          >
+                            <Mail className="h-4 w-4 text-orange-600" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openOrderConfirmationDialog(request)}
+                            title={!request.po_number ? "A PO number is required to mark as ordered" : "Mark as Ordered"}
+                            disabled={updateStatusMutation.isPending || !request.po_number}
+                          >
+                            <Package className="h-4 w-4 text-blue-600" />
+                          </Button>
+                        </>
                       )}
 
                       {request.status === "Ordered" && (
@@ -501,19 +486,7 @@ ${requesterName}`,
       {/* Email Dialog */}
       <EmailDialog
         isOpen={isEmailDialogOpen}
-        onOpenChange={(open) => {
-          setIsEmailDialogOpen(open);
-          if (!open && currentRequestForEmail) {
-            // If email dialog is closed and there's a pending email action, confirm it
-            if (currentRequestForEmail.status === "Pending") {
-              handleConfirmQuoteRequest();
-            } else if (currentRequestForEmail.status === "PO Requested") {
-              handleConfirmPORequest();
-            } else if (currentRequestForEmail.status === "Ordered") {
-              handleConfirmOrderEmail();
-            }
-          }
-        }}
+        onOpenChange={setIsEmailDialogOpen}
         initialData={emailInitialData}
         onSend={handleSendEmail}
         isSending={sendEmailMutation.isPending}

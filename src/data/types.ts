@@ -1,6 +1,6 @@
 // src/data/types.ts
 
-export type RequestStatus = "Pending" | "Approved" | "Quote Requested" | "PO Requested" | "Ordered" | "Received";
+export type RequestStatus = "Pending" | "Quote Requested" | "PO Requested" | "Ordered" | "Received";
 
 export interface RequestItem {
   id?: string; // ID is optional for new items before insertion

@@ -20,8 +20,6 @@ const getStatusBadgeVariant = (status: RequestStatus) => {
   switch (status) {
     case "Pending":
       return "secondary";
-    case "Approved":
-      return "default";
     case "Quote Requested":
       return "outline";
     case "PO Requested":

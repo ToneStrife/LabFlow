@@ -46,21 +46,22 @@ const RequestActions: React.FC<RequestActionsProps> = ({
       )}
 
       {request.status === "PO Requested" && (
-        <Button
-          onClick={() => handleSendPORequest(request)}
-          disabled={isUpdatingStatus}
-        >
-          <Mail className="mr-2 h-4 w-4" /> Send PO Request to Account Manager
-        </Button>
-      )}
-
-      {(request.status === "PO Requested" && request.po_number) && (
-        <Button
-          onClick={() => openOrderConfirmationDialog(request)}
-          disabled={isUpdatingStatus}
-        >
-          <Package className="mr-2 h-4 w-4" /> Mark as Ordered
-        </Button>
+        <>
+          <Button
+            variant="outline"
+            onClick={() => handleSendPORequest(request)}
+            disabled={isUpdatingStatus}
+          >
+            <Mail className="mr-2 h-4 w-4" /> Send PO Request
+          </Button>
+          <Button
+            onClick={() => openOrderConfirmationDialog(request)}
+            disabled={isUpdatingStatus || !request.po_number}
+            title={!request.po_number ? "A PO number is required to mark as ordered" : "Mark as Ordered"}
+          >
+            <Package className="mr-2 h-4 w-4" /> Mark as Ordered
+          </Button>
+        </>
       )}
 
       {request.status === "Ordered" && (
