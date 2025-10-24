@@ -46,6 +46,28 @@ export const apiDeleteProfile = async (id: string): Promise<void> => {
   if (error) throw error;
 };
 
+// Nueva función para añadir un gestor de cuentas a través de la función Edge
+interface CreateAccountManagerData {
+  email: string;
+  password?: string; // La contraseña es opcional si la función Edge la genera o usa un valor por defecto
+  first_name: string;
+  last_name: string;
+}
+
+export const apiCreateAccountManager = async (data: CreateAccountManagerData): Promise<Profile> => {
+  const { data: edgeFunctionData, error } = await supabase.functions.invoke('create-account-manager', {
+    body: JSON.stringify(data),
+    method: 'POST',
+  });
+
+  if (error) {
+    console.error("Error invoking create-account-manager edge function:", error);
+    throw new Error(edgeFunctionData?.error || 'Failed to create account manager via Edge Function.');
+  }
+  return edgeFunctionData as Profile;
+};
+
+
 // --- API de Vendedores ---
 export const apiGetVendors = async (): Promise<Vendor[]> => {
   const { data, error } = await supabase.from('vendors').select('*');

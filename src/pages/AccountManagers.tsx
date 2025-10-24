@@ -6,16 +6,33 @@ import { Button } from "@/components/ui/button";
 import { PlusCircle, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import AccountManagerForm, { AccountManagerFormValues } from "@/components/AccountManagerForm";
-import { useAccountManagerProfiles, useUpdateProfile, useDeleteProfile, Profile } from "@/hooks/use-profiles"; 
+import { useAccountManagerProfiles, useUpdateProfile, useDeleteProfile, useAddAccountManager, Profile } from "@/hooks/use-profiles"; 
 import { toast } from "sonner";
 
 const AccountManagers = () => {
   const { data: accountManagers, isLoading, error } = useAccountManagerProfiles();
+  const addAccountManagerMutation = useAddAccountManager(); // Nuevo hook de mutación
   const updateProfileMutation = useUpdateProfile();
   const deleteProfileMutation = useDeleteProfile();
 
+  const [isAddManagerDialogOpen, setIsAddManagerDialogOpen] = React.useState(false); // Estado para el diálogo de añadir
   const [isEditManagerDialogOpen, setIsEditManagerDialogOpen] = React.useState(false);
   const [editingManager, setEditingManager] = React.useState<Profile | undefined>(undefined);
+
+  const handleAddManager = async (newManagerData: AccountManagerFormValues) => {
+    // Asegurarse de que la contraseña esté presente para la creación
+    if (!newManagerData.password) {
+      toast.error("Password is required for new account managers.");
+      return;
+    }
+    await addAccountManagerMutation.mutateAsync({
+      email: newManagerData.email,
+      password: newManagerData.password,
+      first_name: newManagerData.first_name,
+      last_name: newManagerData.last_name,
+    });
+    setIsAddManagerDialogOpen(false);
+  };
 
   const handleEditManager = async (managerId: string, updatedData: AccountManagerFormValues) => {
     await updateProfileMutation.mutateAsync({ id: managerId, data: updatedData });
@@ -52,11 +69,7 @@ const AccountManagers = () => {
     <div className="container mx-auto py-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Account Managers</h1>
-        {/* El botón para añadir un nuevo manager se ha eliminado temporalmente.
-            En una aplicación real con Supabase, los nuevos managers deberían registrarse
-            o ser invitados a través del sistema de autenticación de Supabase,
-            y luego su rol podría ser actualizado aquí. */}
-        {/* <Dialog open={isAddManagerDialogOpen} onOpenChange={setIsAddManagerDialogOpen}>
+        <Dialog open={isAddManagerDialogOpen} onOpenChange={setIsAddManagerDialogOpen}>
           <DialogTrigger asChild>
             <Button>
               <PlusCircle className="mr-2 h-4 w-4" /> Add New Manager
@@ -67,15 +80,16 @@ const AccountManagers = () => {
               <DialogTitle>Add New Account Manager</DialogTitle>
             </DialogHeader>
             <AccountManagerForm
+              isNew={true} // Indicar que es un formulario de creación
               onSubmit={handleAddManager}
               onCancel={() => setIsAddManagerDialogOpen(false)}
-              isSubmitting={addProfileMutation.isPending}
+              isSubmitting={addAccountManagerMutation.isPending}
             />
           </DialogContent>
-        </Dialog> */}
+        </Dialog>
       </div>
       <p className="text-lg text-muted-foreground mb-8">
-        Gestiona los perfiles de tus gestores de cuentas. Para añadir un nuevo gestor de cuentas, primero debe registrarse o ser invitado a través de la autenticación de Supabase, y luego su rol puede ser actualizado aquí.
+        Gestiona los perfiles de tus gestores de cuentas. Los administradores pueden añadir nuevos gestores de cuentas directamente desde aquí.
       </p>
       <AccountManagerTable
         managers={accountManagers || []}
@@ -95,6 +109,7 @@ const AccountManagers = () => {
               onSubmit={(data) => handleEditManager(editingManager.id, data)}
               onCancel={() => setIsEditManagerDialogOpen(false)}
               isSubmitting={updateProfileMutation.isPending}
+              isNew={false} // Indicar que es un formulario de edición
             />
           )}
         </DialogContent>
