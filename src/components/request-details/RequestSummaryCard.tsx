@@ -84,8 +84,8 @@ const RequestSummaryCard: React.FC<RequestSummaryCardProps> = ({ request, vendor
           <div>
             <p className="text-sm text-muted-foreground">Quote Details</p>
             <p className="font-medium">
-              {request.quote_details ? (
-                <a href={request.quote_details} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
+              {request.quote_url ? (
+                <a href={request.quote_url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
                   View Quote
                 </a>
               ) : "N/A"}

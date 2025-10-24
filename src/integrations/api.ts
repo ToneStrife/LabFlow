@@ -6,8 +6,8 @@ import {
   RequestItem,
   RequestStatus,
   InventoryItem,
-  MockEmail, // Importar la nueva interfaz MockEmail
-} from "@/data/types"; // Importar tipos desde el nuevo archivo de tipos
+  MockEmail,
+} from "@/data/types";
 
 import {
   getMockProfiles,
@@ -25,13 +25,14 @@ import {
   getMockRequests,
   addMockRequest,
   updateMockRequestStatus,
+  updateMockRequestFile,
   deleteMockRequest,
   getMockInventory,
   addMockInventoryItem,
   updateMockInventoryItem,
   deleteMockInventoryItem,
   sendMockEmail,
-} from "@/data/crud"; // Importar todas las funciones CRUD desde el nuevo archivo crud.ts
+} from "@/data/crud";
 
 // Función para simular un retraso de red
 const simulateNetworkDelay = (ms = 300) => new Promise(resolve => setTimeout(resolve, ms));
@@ -105,20 +106,27 @@ export const apiGetRequests = async (): Promise<SupabaseRequest[]> => {
   return getMockRequests();
 };
 
-export const apiAddRequest = async (data: Omit<SupabaseRequest, "id" | "created_at" | "status" | "items" | "quote_details" | "po_number"> & { items: RequestItem[] }): Promise<SupabaseRequest> => {
+export const apiAddRequest = async (data: Omit<SupabaseRequest, "id" | "created_at" | "status" | "items" | "po_number" | "quote_url" | "po_url" | "slip_url"> & { items: RequestItem[] }): Promise<SupabaseRequest> => {
   await simulateNetworkDelay();
   return addMockRequest(data);
 };
 
-// Modificar para aceptar quote_details y po_number
 export const apiUpdateRequestStatus = async (
   id: string,
-  status: RequestStatus,
-  quote_details: string | null = null,
-  po_number: string | null = null
+  status: RequestStatus
 ): Promise<SupabaseRequest> => {
   await simulateNetworkDelay();
-  return updateMockRequestStatus(id, status, quote_details, po_number);
+  return updateMockRequestStatus(id, status);
+};
+
+export const apiUpdateRequestFile = async (
+  id: string,
+  fileType: "quote" | "po" | "slip",
+  fileUrl: string,
+  poNumber: string | null = null
+): Promise<SupabaseRequest> => {
+  await simulateNetworkDelay();
+  return updateMockRequestFile(id, fileType, fileUrl, poNumber);
 };
 
 export const apiDeleteRequest = async (id: string): Promise<void> => {

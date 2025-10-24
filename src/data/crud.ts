@@ -9,6 +9,7 @@ import {
   RequestStatus,
   InventoryItem,
   MockEmail,
+  SupabaseRequestItem,
 } from "./types";
 import {
   generateId,
@@ -123,15 +124,17 @@ export const getMockRequests = async (): Promise<SupabaseRequest[]> => {
   }));
 };
 
-export const addMockRequest = async (data: Omit<SupabaseRequest, "id" | "created_at" | "status" | "items" | "quote_details" | "po_number"> & { items: RequestItem[] }): Promise<SupabaseRequest> => {
+export const addMockRequest = async (data: Omit<SupabaseRequest, "id" | "created_at" | "status" | "items" | "po_number" | "quote_url" | "po_url" | "slip_url"> & { items: RequestItem[] }): Promise<SupabaseRequest> => {
   await simulateNetworkDelay();
   const newRequestId = generateId();
   const newRequest: SupabaseRequest = {
     id: newRequestId,
     created_at: new Date().toISOString(),
     status: "Pending",
-    quote_details: null,
+    quote_url: null,
     po_number: null,
+    po_url: null,
+    slip_url: null,
     ...data,
     items: [], // Will be populated after item insertion
   };
@@ -154,13 +157,45 @@ export const addMockRequest = async (data: Omit<SupabaseRequest, "id" | "created
   return { ...newRequest, items: newItems };
 };
 
-export const updateMockRequestStatus = async (id: string, status: RequestStatus, quote_details: string | null = null, po_number: string | null = null): Promise<SupabaseRequest> => {
+export const updateMockRequestStatus = async (id: string, status: RequestStatus): Promise<SupabaseRequest> => {
   await simulateNetworkDelay();
   const index = mockRequests.findIndex(req => req.id === id);
   if (index === -1) throw new Error("Request not found");
   mockRequests[index].status = status;
-  if (quote_details !== null) mockRequests[index].quote_details = quote_details;
-  if (po_number !== null) mockRequests[index].po_number = po_number;
+
+  return {
+    ...mockRequests[index],
+    items: mockRequestItems.filter(item => item.request_id === id),
+  };
+};
+
+export const updateMockRequestFile = async (
+  id: string,
+  fileType: "quote" | "po" | "slip",
+  fileUrl: string,
+  poNumber: string | null = null
+): Promise<SupabaseRequest> => {
+  await simulateNetworkDelay();
+  const index = mockRequests.findIndex(req => req.id === id);
+  if (index === -1) throw new Error("Request not found");
+
+  switch (fileType) {
+    case "quote":
+      mockRequests[index].quote_url = fileUrl;
+      if (mockRequests[index].status === "Quote Requested") {
+        mockRequests[index].status = "PO Requested";
+      }
+      break;
+    case "po":
+      mockRequests[index].po_url = fileUrl;
+      if (poNumber) {
+        mockRequests[index].po_number = poNumber;
+      }
+      break;
+    case "slip":
+      mockRequests[index].slip_url = fileUrl;
+      break;
+  }
 
   return {
     ...mockRequests[index],

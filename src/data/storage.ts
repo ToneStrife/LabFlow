@@ -200,8 +200,10 @@ export let mockRequests: SupabaseRequest[] = [
     notes: "Urgent request for cell culture supplies.",
     project_codes: ["p1"],
     items: [], // Items will be joined later
-    quote_details: null,
+    quote_url: null,
     po_number: null,
+    po_url: null,
+    slip_url: null,
   },
   {
     id: "req2",
@@ -209,12 +211,14 @@ export let mockRequests: SupabaseRequest[] = [
     vendor_id: "v3",
     requester_id: "mock-user-id-123",
     account_manager_id: null,
-    status: "Quote Requested", // Changed from "Approved"
+    status: "Quote Requested",
     notes: "Antibody for western blot.",
     project_codes: ["p2"],
     items: [], // Items will be joined later
-    quote_details: null,
+    quote_url: null,
     po_number: null,
+    po_url: null,
+    slip_url: null,
   },
   {
     id: "req3",
@@ -226,8 +230,10 @@ export let mockRequests: SupabaseRequest[] = [
     notes: "Chemicals for new experiment.",
     project_codes: ["p3"],
     items: [], // Items will be joined later
-    quote_details: "https://example.com/quote-req3.pdf",
+    quote_url: "https://example.com/quote-req3.pdf",
     po_number: "PO-CHEM-001",
+    po_url: "https://example.com/po/PO-CHEM-001.pdf",
+    slip_url: null,
   },
 ];
 
