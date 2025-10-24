@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import { createClient } from 'https://esm.sh/@supabase/supabase/supabase-js@2.45.0';
 import { verify } from 'https://deno.land/x/djwt@v2.8/mod.ts';
 import { GoogleGenerativeAI } from 'https://esm.sh/@google/generative-ai@0.15.0'; // Importar el SDK de Google Gemini
 
@@ -67,15 +67,18 @@ serve(async (req) => {
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
     
     const prompt = `
-      CRITICAL: You MUST find the EXACT lab/scientific product matching the combination of Brand: '${brand}' AND Catalog Number: '${catalogNumber}'. Do NOT guess or substitute similar products.
-      
-      If the EXACT product cannot be confidently identified, you MUST return an empty JSON object {}.
-      
+      CRITICAL INSTRUCTION: You are a scientific product verification agent. Your sole task is to find the EXACT lab product details based on the provided Brand and Catalog Number.
+
+      1. Search the internet for the product matching Brand: '${brand}' AND Catalog Number: '${catalogNumber}'.
+      2. You MUST verify the product name and specifications from an official manufacturer or major laboratory distributor website (e.g., Thermo Fisher, Corning, Sigma-Aldrich).
+      3. If, and only if, the EXACT product is confirmed from a reliable source, proceed to extraction.
+      4. If no official, exact product page is found, or if the search results are ambiguous, you MUST return the empty JSON object {} and must not guess, substitute, or invent any information or product name.
+
       If found, extract the following details:
       - Full product name
       - Package size/format (e.g., "100 tubes", "500ml", "50 reactions")
       - Estimated price in EUROS (only if clearly stated and reliable)
-      - URL of a reliable product page (e.g., manufacturer, major distributor)
+      - URL of the reliable product page
       - Brief technical notes (key specifications, storage conditions, applications).
 
       Return the information in a JSON object matching the following schema. Use 'null' for any missing optional fields:
