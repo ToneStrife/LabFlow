@@ -12,27 +12,15 @@ import {
 import { Button } from "@/components/ui/button";
 import { Edit, Trash2 } from "lucide-react";
 import { VendorFormValues } from "./VendorForm";
-import { Vendor } from "@/hooks/use-vendors"; // Import the Vendor interface from the new hook
+import { Vendor } from "@/data/mockData"; // Import the Vendor interface from mockData
 
 interface VendorTableProps {
-  vendors: Vendor[]; // Use the Vendor interface from use-vendors
+  vendors: Vendor[]; // Use the Vendor interface from mockData
   onEdit: (vendor: Vendor) => void;
   onDelete: (vendorId: string) => void;
 }
 
 const VendorTable: React.FC<VendorTableProps> = ({ vendors, onEdit, onDelete }) => {
-  
-  // Helper to format vendor data for display/editing
-  const formatVendorForEdit = (vendor: Vendor) => ({
-    id: vendor.id,
-    name: vendor.name,
-    contactPerson: vendor.contact_person || undefined,
-    email: vendor.email || undefined,
-    phone: vendor.phone || undefined,
-    notes: vendor.notes || undefined,
-    brands: vendor.brands ? vendor.brands.join(", ") : undefined,
-  });
-
   return (
     <div className="rounded-md border">
       <Table>
@@ -42,14 +30,14 @@ const VendorTable: React.FC<VendorTableProps> = ({ vendors, onEdit, onDelete }) 
             <TableHead>Contact Person</TableHead>
             <TableHead>Email</TableHead>
             <TableHead>Phone</TableHead>
-            <TableHead>Brands</TableHead>
+            <TableHead>Brands</TableHead> {/* New column for Brands */}
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {vendors.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+              <TableCell colSpan={6} className="h-24 text-center text-muted-foreground"> {/* Updated colspan */}
                 No vendors found.
               </TableCell>
             </TableRow>
@@ -57,15 +45,15 @@ const VendorTable: React.FC<VendorTableProps> = ({ vendors, onEdit, onDelete }) 
             vendors.map((vendor) => (
               <TableRow key={vendor.id}>
                 <TableCell className="font-medium">{vendor.name}</TableCell>
-                <TableCell>{vendor.contact_person || "N/A"}</TableCell>
+                <TableCell>{vendor.contactPerson || "N/A"}</TableCell>
                 <TableCell>{vendor.email || "N/A"}</TableCell>
                 <TableCell>{vendor.phone || "N/A"}</TableCell>
-                <TableCell>{vendor.brands && vendor.brands.length > 0 ? vendor.brands.join(", ") : "N/A"}</TableCell>
+                <TableCell>{vendor.brands.length > 0 ? vendor.brands.join(", ") : "N/A"}</TableCell> {/* Display brands */}
                 <TableCell className="text-right">
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => onEdit(formatVendorForEdit(vendor))} // Pass formatted data for editing
+                    onClick={() => onEdit(vendor)}
                     className="mr-2"
                     title="Edit Vendor"
                   >
