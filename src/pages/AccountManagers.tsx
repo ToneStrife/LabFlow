@@ -6,30 +6,25 @@ import { Button } from "@/components/ui/button";
 import { PlusCircle, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import AccountManagerForm, { AccountManagerFormValues } from "@/components/AccountManagerForm";
-import { useAccountManagerProfiles, useUpdateProfile, useDeleteProfile, useAddAccountManager, Profile } from "@/hooks/use-profiles"; 
+import { useAccountManagerProfiles, useUpdateProfile, useDeleteProfile, useInviteUser, Profile } from "@/hooks/use-profiles"; 
 import { toast } from "sonner";
 
 const AccountManagers = () => {
   const { data: accountManagers, isLoading, error } = useAccountManagerProfiles();
-  const addAccountManagerMutation = useAddAccountManager(); // Nuevo hook de mutación
+  const inviteUserMutation = useInviteUser(); // Usar el hook de invitación
   const updateProfileMutation = useUpdateProfile();
   const deleteProfileMutation = useDeleteProfile();
 
-  const [isAddManagerDialogOpen, setIsAddManagerDialogOpen] = React.useState(false); // Estado para el diálogo de añadir
+  const [isAddManagerDialogOpen, setIsAddManagerDialogOpen] = React.useState(false);
   const [isEditManagerDialogOpen, setIsEditManagerDialogOpen] = React.useState(false);
   const [editingManager, setEditingManager] = React.useState<Profile | undefined>(undefined);
 
   const handleAddManager = async (newManagerData: AccountManagerFormValues) => {
-    // Asegurarse de que la contraseña esté presente para la creación
-    if (!newManagerData.password) {
-      toast.error("Password is required for new account managers.");
-      return;
-    }
-    await addAccountManagerMutation.mutateAsync({
+    await inviteUserMutation.mutateAsync({
       email: newManagerData.email,
-      password: newManagerData.password,
       first_name: newManagerData.first_name,
       last_name: newManagerData.last_name,
+      role: "Account Manager", // Especificar el rol al invitar
     });
     setIsAddManagerDialogOpen(false);
   };
@@ -72,24 +67,23 @@ const AccountManagers = () => {
         <Dialog open={isAddManagerDialogOpen} onOpenChange={setIsAddManagerDialogOpen}>
           <DialogTrigger asChild>
             <Button>
-              <PlusCircle className="mr-2 h-4 w-4" /> Add New Manager
+              <PlusCircle className="mr-2 h-4 w-4" /> Invite New Manager
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
-              <DialogTitle>Add New Account Manager</DialogTitle>
+              <DialogTitle>Invite New Account Manager</DialogTitle>
             </DialogHeader>
             <AccountManagerForm
-              isNew={true} // Indicar que es un formulario de creación
               onSubmit={handleAddManager}
               onCancel={() => setIsAddManagerDialogOpen(false)}
-              isSubmitting={addAccountManagerMutation.isPending}
+              isSubmitting={inviteUserMutation.isPending}
             />
           </DialogContent>
         </Dialog>
       </div>
       <p className="text-lg text-muted-foreground mb-8">
-        Gestiona los perfiles de tus gestores de cuentas. Los administradores pueden añadir nuevos gestores de cuentas directamente desde aquí.
+        Gestiona los perfiles de tus gestores de cuentas. Los administradores pueden invitar nuevos gestores de cuentas directamente desde aquí.
       </p>
       <AccountManagerTable
         managers={accountManagers || []}
@@ -109,7 +103,6 @@ const AccountManagers = () => {
               onSubmit={(data) => handleEditManager(editingManager.id, data)}
               onCancel={() => setIsEditManagerDialogOpen(false)}
               isSubmitting={updateProfileMutation.isPending}
-              isNew={false} // Indicar que es un formulario de edición
             />
           )}
         </DialogContent>

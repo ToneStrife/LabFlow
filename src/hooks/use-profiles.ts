@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Profile as MockProfile } from "@/data/mockData"; 
 import { toast } from "sonner";
-import { apiGetProfiles, apiUpdateProfile, apiDeleteProfile, apiCreateAccountManager, apiInviteUser } from "@/integrations/api"; // Importar apiInviteUser
+import { apiGetProfiles, apiUpdateProfile, apiDeleteProfile, apiInviteUser } from "@/integrations/api"; // apiCreateAccountManager se eliminará
 
 export interface Profile extends MockProfile {}
 
@@ -37,41 +37,14 @@ interface ProfileUpdateFormData {
 }
 
 // useAddProfile se ha eliminado. Los nuevos perfiles se crean a través del trigger de registro de auth.users.
+// useAddAccountManager se elimina y se reemplaza por useInviteUser con un rol específico.
 
-// Nuevo hook para añadir un gestor de cuentas
-interface AddAccountManagerData {
-  email: string;
-  password?: string;
-  first_name: string;
-  last_name: string;
-}
-
-export const useAddAccountManager = () => {
-  const queryClient = useQueryClient();
-  return useMutation<Profile, Error, AddAccountManagerData>({
-    mutationFn: async (data) => {
-      return apiCreateAccountManager(data);
-    },
-    onSuccess: (newManager) => {
-      queryClient.invalidateQueries({ queryKey: ["allProfiles"] });
-      queryClient.invalidateQueries({ queryKey: ["accountManagers"] });
-      toast.success("Account Manager added successfully!", {
-        description: `Manager: ${getFullName(newManager)}`,
-      });
-    },
-    onError: (error) => {
-      toast.error("Failed to add account manager.", {
-        description: error.message,
-      });
-    },
-  });
-};
-
-// Nuevo hook para invitar a un usuario
+// Nuevo hook para invitar a un usuario (actualizado para aceptar un rol)
 interface InviteUserData {
   email: string;
   first_name?: string;
   last_name?: string;
+  role?: Profile['role']; // Añadir campo de rol opcional
 }
 
 export const useInviteUser = () => {
@@ -82,6 +55,7 @@ export const useInviteUser = () => {
     },
     onSuccess: (invitedUser) => {
       queryClient.invalidateQueries({ queryKey: ["allProfiles"] });
+      queryClient.invalidateQueries({ queryKey: ["accountManagers"] }); // Invalidar también los managers
       toast.success("Invitation sent successfully!", {
         description: `Email: ${invitedUser.user.email}`,
       });

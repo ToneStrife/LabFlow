@@ -56,43 +56,21 @@ export const apiDeleteProfile = async (id: string): Promise<void> => {
   }
 };
 
-// Nueva función para añadir un gestor de cuentas a través de la función Edge
-interface CreateAccountManagerData {
-  email: string;
-  password?: string; // La contraseña es opcional si la función Edge la genera o usa un valor por defecto
-  first_name: string;
-  last_name: string;
-}
+// apiCreateAccountManager se elimina y se reemplaza por apiInviteUser con un rol específico.
 
-export const apiCreateAccountManager = async (data: CreateAccountManagerData): Promise<Profile> => {
-  const { data: edgeFunctionData, error } = await supabase.functions.invoke('create-account-manager', {
-    body: JSON.stringify(data),
-    method: 'POST',
-  });
-
-  if (error) {
-    console.error("Error invoking create-account-manager edge function:", error);
-    console.error("Edge function response data (on error):", edgeFunctionData);
-    const errorMessage = error.message || 
-                         (edgeFunctionData && typeof edgeFunctionData === 'object' && 'error' in edgeFunctionData ? (edgeFunctionData as any).error : null) || 
-                         'Failed to create account manager via Edge Function.';
-    throw new Error(errorMessage);
-  }
-  return edgeFunctionData as Profile;
-};
-
-// Nueva función para invitar a un usuario a través de la función Edge
+// Nueva función para invitar a un usuario a través de la función Edge (actualizada para aceptar un rol)
 interface InviteUserData {
   email: string;
   first_name?: string;
   last_name?: string;
+  role?: Profile['role']; // Añadir campo de rol opcional
 }
 
 export const apiInviteUser = async (data: InviteUserData): Promise<any> => {
-  const { email, first_name, last_name } = data;
+  const { email, first_name, last_name, role } = data;
   
   const { data: edgeFunctionData, error } = await supabase.functions.invoke('invite-user', {
-    body: JSON.stringify({ email, first_name, last_name }),
+    body: JSON.stringify({ email, first_name, last_name, role }), // Pasar el rol a la función Edge
     method: 'POST',
   });
 

@@ -67,7 +67,7 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Forbidden: Only Admins can invite new users' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    const { email, first_name, last_name } = await req.json(); 
+    const { email, first_name, last_name, role } = await req.json(); // Obtener el rol del cuerpo de la solicitud
 
     if (!email) {
       console.error('Edge Function: Bad Request - Missing required field: email');
@@ -85,6 +85,19 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400,
       });
+    }
+
+    // 3. Si se especificó un rol, actualizar el perfil del usuario invitado
+    if (invitedUser.user?.id && role) {
+      const { error: updateProfileError } = await supabaseClient
+        .from('profiles')
+        .update({ role: role })
+        .eq('id', invitedUser.user.id);
+
+      if (updateProfileError) {
+        console.error("Edge Function: Error updating invited user's profile role:", updateProfileError);
+        // No fallar la invitación si la actualización del rol falla, pero registrar el error
+      }
     }
 
     console.log('Edge Function: User invited successfully:', invitedUser.user?.email);
