@@ -55,6 +55,12 @@ export function SidebarNav({ className, isMobile, onLinkClick, ...props }: Sideb
   const { profile, loading: sessionLoading } = useSession();
   const userRole = profile?.role;
 
+  // TEMPORARY LOGS FOR DEBUGGING
+  console.log("SidebarNav Debug - sessionLoading:", sessionLoading);
+  console.log("SidebarNav Debug - profile:", profile);
+  console.log("SidebarNav Debug - userRole:", userRole);
+  // END TEMPORARY LOGS
+
   const visibleNavItems = navItems.filter(item => userRole && item.roles.includes(userRole));
 
   return (
