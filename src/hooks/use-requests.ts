@@ -1,13 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getMockRequests, addMockRequest, updateMockRequestStatus, deleteMockRequest, SupabaseRequest as MockSupabaseRequest, SupabaseRequestItem as MockSupabaseRequestItem, RequestItem, RequestStatus } from "@/data/mockData";
+import { SupabaseRequest as MockSupabaseRequest, SupabaseRequestItem as MockSupabaseRequestItem, RequestItem, RequestStatus } from "@/data/mockData";
 import { toast } from "sonner";
+import { apiGetRequests, apiAddRequest, apiUpdateRequestStatus, apiDeleteRequest } from "@/integrations/api"; // Importar desde la nueva API simulada
 
 export interface SupabaseRequestItem extends MockSupabaseRequestItem {}
 export interface SupabaseRequest extends MockSupabaseRequest {}
 
 // --- Fetch Hook ---
 const fetchRequests = async (): Promise<SupabaseRequest[]> => {
-  return getMockRequests();
+  return apiGetRequests(); // Usar la función de la API simulada
 };
 
 export const useRequests = () => {
@@ -35,7 +36,7 @@ export const useAddRequest = () => {
     mutationFn: async (data) => {
       const { vendorId, requesterId, accountManagerId, notes, projectCodes, items } = data;
 
-      return addMockRequest({
+      return apiAddRequest({ // Usar la función de la API simulada
         vendor_id: vendorId,
         requester_id: requesterId,
         account_manager_id: accountManagerId,
@@ -63,7 +64,7 @@ export const useUpdateRequestStatus = () => {
   const queryClient = useQueryClient();
   return useMutation<SupabaseRequest, Error, { id: string; status: RequestStatus }>({
     mutationFn: async ({ id, status }) => {
-      return updateMockRequestStatus(id, status);
+      return apiUpdateRequestStatus(id, status); // Usar la función de la API simulada
     },
     onSuccess: (updatedRequest) => {
       queryClient.invalidateQueries({ queryKey: ["requests"] });
@@ -82,7 +83,7 @@ export const useDeleteRequest = () => {
   const queryClient = useQueryClient();
   return useMutation<void, Error, string>({
     mutationFn: async (id) => {
-      return deleteMockRequest(id);
+      return apiDeleteRequest(id); // Usar la función de la API simulada
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["requests"] });

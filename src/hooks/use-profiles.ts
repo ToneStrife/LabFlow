@@ -1,13 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getMockProfiles, updateMockProfile as updateMockProfileData, Profile as MockProfile } from "@/data/mockData";
+import { Profile as MockProfile } from "@/data/mockData";
 import { toast } from "sonner";
+import { apiGetProfiles, apiUpdateProfile } from "@/integrations/api"; // Importar desde la nueva API simulada
 
 export interface Profile extends MockProfile {}
 
 // --- Fetch Hook ---
 const fetchAllProfiles = async (): Promise<Profile[]> => {
-  // Fetch from mock data directly
-  return getMockProfiles();
+  return apiGetProfiles(); // Usar la función de la API simulada
 };
 
 export const useAllProfiles = () => {
@@ -21,15 +21,15 @@ export const useAccountManagerProfiles = () => {
   return useQuery<Profile[], Error>({
     queryKey: ["accountManagers"],
     queryFn: async () => {
-      const profiles = await getMockProfiles();
+      const profiles = await apiGetProfiles(); // Usar la función de la API simulada
       return profiles.filter(profile => profile.role === "Account Manager");
     },
   });
 };
 
-// Export the mock update function for use in Profile page
+// La función de actualización ahora también usará la API simulada
 export const updateMockProfile = (id: string, data: Partial<Profile>) => {
-  updateMockProfileData(id, data);
+  apiUpdateProfile(id, data);
 };
 
 export const getFullName = (profile: Profile | undefined): string => {

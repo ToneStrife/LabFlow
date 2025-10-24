@@ -1,12 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getMockVendors, addMockVendor, updateMockVendor, deleteMockVendor, Vendor as MockVendor } from "@/data/mockData";
+import { Vendor as MockVendor } from "@/data/mockData";
 import { toast } from "sonner";
+import { apiGetVendors, apiAddVendor, apiUpdateVendor, apiDeleteVendor } from "@/integrations/api"; // Importar desde la nueva API simulada
 
 export interface Vendor extends MockVendor {}
 
 // --- Fetch Hook ---
 const fetchVendors = async (): Promise<Vendor[]> => {
-  return getMockVendors();
+  return apiGetVendors(); // Usar la función de la API simulada
 };
 
 export const useVendors = () => {
@@ -32,7 +33,7 @@ export const useAddVendor = () => {
   const queryClient = useQueryClient();
   return useMutation<Vendor, Error, VendorFormData>({
     mutationFn: async (data) => {
-      return addMockVendor({
+      return apiAddVendor({ // Usar la función de la API simulada
         name: data.name,
         contact_person: data.contactPerson || null,
         email: data.email || null,
@@ -60,7 +61,7 @@ export const useUpdateVendor = () => {
   const queryClient = useQueryClient();
   return useMutation<Vendor, Error, { id: string; data: VendorFormData }>({
     mutationFn: async ({ id, data }) => {
-      return updateMockVendor(id, {
+      return apiUpdateVendor(id, { // Usar la función de la API simulada
         name: data.name,
         contact_person: data.contactPerson || null,
         email: data.email || null,
@@ -86,7 +87,7 @@ export const useDeleteVendor = () => {
   const queryClient = useQueryClient();
   return useMutation<void, Error, string>({
     mutationFn: async (id) => {
-      return deleteMockVendor(id);
+      return apiDeleteVendor(id); // Usar la función de la API simulada
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["vendors"] });

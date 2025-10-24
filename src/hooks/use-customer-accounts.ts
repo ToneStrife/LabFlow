@@ -1,12 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getMockCustomerAccounts, addMockCustomerAccount, updateMockCustomerAccount, deleteMockCustomerAccount, CustomerAccount as MockCustomerAccount } from "@/data/mockData";
+import { CustomerAccount as MockCustomerAccount } from "@/data/mockData";
 import { toast } from "sonner";
+import { apiGetCustomerAccounts, apiAddCustomerAccount, apiUpdateCustomerAccount, apiDeleteCustomerAccount } from "@/integrations/api"; // Importar desde la nueva API simulada
 
 export interface CustomerAccount extends MockCustomerAccount {}
 
 // --- Fetch Hook ---
 const fetchCustomerAccounts = async (): Promise<CustomerAccount[]> => {
-  return getMockCustomerAccounts();
+  return apiGetCustomerAccounts(); // Usar la función de la API simulada
 };
 
 export const useCustomerAccounts = () => {
@@ -32,7 +33,7 @@ export const useAddCustomerAccount = () => {
   const queryClient = useQueryClient();
   return useMutation<CustomerAccount, Error, { data: CustomerAccountFormData; ownerId: string }>({
     mutationFn: async ({ data, ownerId }) => {
-      return addMockCustomerAccount({
+      return apiAddCustomerAccount({ // Usar la función de la API simulada
         name: data.name,
         contact_person: data.contactPerson || null,
         email: data.email || null,
@@ -61,7 +62,7 @@ export const useUpdateCustomerAccount = () => {
   const queryClient = useQueryClient();
   return useMutation<CustomerAccount, Error, { id: string; data: CustomerAccountFormData }>({
     mutationFn: async ({ id, data }) => {
-      return updateMockCustomerAccount(id, {
+      return apiUpdateCustomerAccount(id, { // Usar la función de la API simulada
         name: data.name,
         contact_person: data.contactPerson || null,
         email: data.email || null,
@@ -87,7 +88,7 @@ export const useDeleteCustomerAccount = () => {
   const queryClient = useQueryClient();
   return useMutation<void, Error, string>({
     mutationFn: async (id) => {
-      return deleteMockCustomerAccount(id);
+      return apiDeleteCustomerAccount(id); // Usar la función de la API simulada
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["customerAccounts"] });

@@ -1,0 +1,100 @@
+import {
+  Profile,
+  Vendor,
+  CustomerAccount,
+  SupabaseRequest,
+  RequestItem,
+  RequestStatus,
+  // Importar las funciones CRUD de mockData
+  getMockProfiles,
+  updateMockProfile as updateMockProfileData,
+  getMockVendors,
+  addMockVendor,
+  updateMockVendor,
+  deleteMockVendor,
+  getMockCustomerAccounts,
+  addMockCustomerAccount,
+  updateMockCustomerAccount,
+  deleteMockCustomerAccount,
+  getMockRequests,
+  addMockRequest,
+  updateMockRequestStatus,
+  deleteMockRequest,
+} from "@/data/mockData";
+
+// Función para simular un retraso de red
+const simulateNetworkDelay = (ms = 300) => new Promise(resolve => setTimeout(resolve, ms));
+
+// --- API de Perfiles ---
+export const apiGetProfiles = async (): Promise<Profile[]> => {
+  await simulateNetworkDelay();
+  return getMockProfiles();
+};
+
+export const apiUpdateProfile = async (id: string, data: Partial<Profile>): Promise<void> => {
+  await simulateNetworkDelay();
+  updateMockProfileData(id, data);
+};
+
+// --- API de Vendedores ---
+export const apiGetVendors = async (): Promise<Vendor[]> => {
+  await simulateNetworkDelay();
+  return getMockVendors();
+};
+
+export const apiAddVendor = async (data: Omit<Vendor, "id" | "created_at">): Promise<Vendor> => {
+  await simulateNetworkDelay();
+  return addMockVendor(data);
+};
+
+export const apiUpdateVendor = async (id: string, data: Partial<Omit<Vendor, "id" | "created_at">>): Promise<Vendor> => {
+  await simulateNetworkDelay();
+  return updateMockVendor(id, data);
+};
+
+export const apiDeleteVendor = async (id: string): Promise<void> => {
+  await simulateNetworkDelay();
+  return deleteMockVendor(id);
+};
+
+// --- API de Cuentas de Clientes ---
+export const apiGetCustomerAccounts = async (): Promise<CustomerAccount[]> => {
+  await simulateNetworkDelay();
+  return getMockCustomerAccounts();
+};
+
+export const apiAddCustomerAccount = async (data: Omit<CustomerAccount, "id" | "created_at">): Promise<CustomerAccount> => {
+  await simulateNetworkDelay();
+  return addMockCustomerAccount(data);
+};
+
+export const apiUpdateCustomerAccount = async (id: string, data: Partial<Omit<CustomerAccount, "id" | "created_at">>): Promise<CustomerAccount> => {
+  await simulateNetworkDelay();
+  return updateMockCustomerAccount(id, data);
+};
+
+export const apiDeleteCustomerAccount = async (id: string): Promise<void> => {
+  await simulateNetworkDelay();
+  return deleteMockCustomerAccount(id);
+};
+
+// --- API de Solicitudes ---
+export const apiGetRequests = async (): Promise<SupabaseRequest[]> => {
+  await simulateNetworkDelay();
+  return getMockRequests();
+};
+
+export const apiAddRequest = async (data: Omit<SupabaseRequest, "id" | "created_at" | "status" | "items"> & { items: RequestItem[] }): Promise<SupabaseRequest> => {
+  await simulateNetworkDelay();
+  return addMockRequest(data);
+};
+
+export const apiUpdateRequestStatus = async (id: string, status: RequestStatus): Promise<SupabaseRequest> => {
+  await simulateNetworkDelay();
+  return updateMockRequestStatus(id, status);
+};
+
+export const apiDeleteRequest = async (id: string): Promise<void> => {
+  await simulateNetworkDelay();
+  return deleteMockRequest(id);
+};
