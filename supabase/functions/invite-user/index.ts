@@ -56,6 +56,7 @@ serve(async (req) => {
     });
 
     if (inviteError) {
+      console.error("Supabase inviteUserByEmail error:", inviteError); // Añadido log de error
       return new Response(JSON.stringify({ error: inviteError.message }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400,

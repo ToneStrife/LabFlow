@@ -72,7 +72,11 @@ export const apiCreateAccountManager = async (data: CreateAccountManagerData): P
 
   if (error) {
     console.error("Error invoking create-account-manager edge function:", error);
-    throw new Error(edgeFunctionData?.error || 'Failed to create account manager via Edge Function.');
+    console.error("Edge function response data (on error):", edgeFunctionData);
+    const errorMessage = error.message || 
+                         (edgeFunctionData && typeof edgeFunctionData === 'object' && 'error' in edgeFunctionData ? (edgeFunctionData as any).error : null) || 
+                         'Failed to create account manager via Edge Function.';
+    throw new Error(errorMessage);
   }
   return edgeFunctionData as Profile;
 };
@@ -92,7 +96,11 @@ export const apiInviteUser = async (data: InviteUserData): Promise<any> => {
 
   if (error) {
     console.error("Error invoking invite-user edge function:", error);
-    throw new Error(edgeFunctionData?.error || 'Failed to invite user via Edge Function.');
+    console.error("Edge function response data (on error):", edgeFunctionData);
+    const errorMessage = error.message || 
+                         (edgeFunctionData && typeof edgeFunctionData === 'object' && 'error' in edgeFunctionData ? (edgeFunctionData as any).error : null) || 
+                         'Failed to invite user via Edge Function.';
+    throw new Error(errorMessage);
   }
   return edgeFunctionData;
 };
