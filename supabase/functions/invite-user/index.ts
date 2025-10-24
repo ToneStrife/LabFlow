@@ -27,10 +27,17 @@ serve(async (req) => {
     // 1. Verificar el JWT del usuario que llama (debe ser un Admin)
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Unauthorized: Missing Authorization header' }), { status: 401, headers: corsHeaders, 'Content-Type': 'application/json' });
+      console.error('Edge Function: Unauthorized - Missing Authorization header');
+      return new Response(JSON.stringify({ error: 'Unauthorized: Missing Authorization header' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
     const token = authHeader.replace('Bearer ', '');
-    const { payload } = await verify(token, Deno.env.get('SUPABASE_JWT_SECRET') ?? '', 'HS256');
+    let payload;
+    try {
+      payload = await verify(token, Deno.env.get('SUPABASE_JWT_SECRET') ?? '', 'HS256');
+    } catch (jwtError: any) {
+      console.error('Edge Function: JWT verification failed:', jwtError.message);
+      return new Response(JSON.stringify({ error: `Unauthorized: Invalid token - ${jwtError.message}` }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
 
     // Opcional: Verificar si el usuario que llama es un Admin (requiere una consulta a la tabla de perfiles)
     const { data: callerProfile, error: profileError } = await supabaseClient
@@ -40,38 +47,38 @@ serve(async (req) => {
       .single();
 
     if (profileError || callerProfile?.role !== 'Admin') {
-      return new Response(JSON.stringify({ error: 'Forbidden: Only Admins can invite new users' }), { status: 403, headers: corsHeaders, 'Content-Type': 'application/json' });
+      console.error('Edge Function: Forbidden - Caller is not an Admin. Profile error:', profileError?.message, 'Caller role:', callerProfile?.role);
+      return new Response(JSON.stringify({ error: 'Forbidden: Only Admins can invite new users' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // Ya no destructuramos clientRedirectTo
     const { email, first_name, last_name } = await req.json(); 
 
     if (!email) {
-      return new Response(JSON.stringify({ error: 'Missing required field: email' }), { status: 400, headers: corsHeaders, 'Content-Type': 'application/json' });
+      console.error('Edge Function: Bad Request - Missing required field: email');
+      return new Response(JSON.stringify({ error: 'Missing required field: email' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     // 2. Invitar al usuario
-    // Al no pasar 'redirectTo', Supabase usará la URL de redirección por defecto del proyecto.
     const { data: invitedUser, error: inviteError } = await supabaseClient.auth.admin.inviteUserByEmail(email, {
       data: { first_name, last_name }, // Pasar metadatos para el perfil
-      // redirectTo: finalRedirectTo, // Eliminado para evitar el error de URL no autorizada
     });
 
     if (inviteError) {
-      console.error("Supabase inviteUserByEmail error:", inviteError);
+      console.error("Edge Function: Supabase inviteUserByEmail error:", inviteError);
       return new Response(JSON.stringify({ error: inviteError.message }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400,
       });
     }
 
+    console.log('Edge Function: User invited successfully:', invitedUser.user?.email);
     return new Response(JSON.stringify(invitedUser), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     });
-  } catch (error) {
-    console.error('Edge Function error:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+  } catch (error: any) {
+    console.error('Edge Function: Unhandled error:', error);
+    return new Response(JSON.stringify({ error: error.message || 'An unexpected error occurred in the Edge Function.' }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
     });
