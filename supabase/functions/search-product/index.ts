@@ -61,14 +61,14 @@ serve(async (req) => {
       - NÚMERO DE CATÁLOGO: ${catalogNumber}
     `;
 
-    const response = await fetch("https://api.aimlapi.com/v1/chat/completions", { // Endpoint corregido
+    const response = await fetch("https://api.aimlapi.com/v1/chat/completions", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${aiApiKey}`,
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        "model": "claude-3.5-sonnet", // Modelo compatible con AIMLAPI
+        "model": "anthropic/claude-3.5-sonnet", // Corregido el nombre del modelo
         "response_format": { "type": "json_object" },
         "messages": [
           { "role": "system", "content": systemInstruction },
@@ -106,7 +106,7 @@ serve(async (req) => {
       notes: aiResponse.technical_notes,
       brand: brand,
       catalogNumber: catalogNumber,
-      source: "AI Search (AIMLAPI - Claude 3.5)" // Fuente actualizada
+      source: "AI Search (AIMLAPI - Claude 3.5)"
     };
 
     console.log(`Edge Function: External search for catalog ${catalogNumber}, brand ${brand} found details via AIMLAPI.`);
