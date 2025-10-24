@@ -3,7 +3,7 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { Package, ShoppingCart, Users, User, Briefcase, UserCog, Warehouse } from "lucide-react";
+import { Package, ShoppingCart, Users, User, Briefcase, UserCog, Warehouse, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSession } from "@/components/SessionContextProvider";
 
@@ -31,12 +31,6 @@ const navItems = [
     icon: <Users className="mr-2 h-4 w-4" />,
     roles: ["Account Manager", "Admin"],
   },
-  // {
-  //   title: "Customer Accounts", // Renamed to Customer Accounts for clarity, will be 'Users' in UI
-  //   href: "/users", // Changed to /users
-  //   icon: <Briefcase className="mr-2 h-4 w-4" />,
-  //   roles: ["Admin"], // Only Admins can see/manage customer accounts
-  // }, // ELIMINADO
   {
     title: "Account Managers",
     href: "/account-managers",
@@ -58,8 +52,10 @@ const navItems = [
 ];
 
 export function SidebarNav({ className, isMobile, onLinkClick, ...props }: SidebarNavProps) {
-  const { profile } = useSession();
+  const { profile, loading: sessionLoading } = useSession();
   const userRole = profile?.role;
+
+  const visibleNavItems = navItems.filter(item => userRole && item.roles.includes(userRole));
 
   return (
     <nav
@@ -69,30 +65,34 @@ export function SidebarNav({ className, isMobile, onLinkClick, ...props }: Sideb
       )}
       {...props}
     >
-      {navItems.map((item) => {
-        // Only render if userRole is defined and included in item.roles
-        if (userRole && item.roles.includes(userRole)) {
-          return (
-            <NavLink
-              key={item.href}
-              to={item.href}
-              className={({ isActive }) =>
-                cn(
-                  "flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                  isActive
-                    ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                    : "text-sidebar-foreground"
-                )
-              }
-              onClick={onLinkClick}
-            >
-              {item.icon}
-              {item.title === "Customer Accounts" ? "Users" : item.title}
-            </NavLink>
-          );
-        }
-        return null;
-      })}
+      {sessionLoading ? (
+        <div className="flex items-center px-3 py-2 text-sm text-muted-foreground">
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading navigation...
+        </div>
+      ) : visibleNavItems.length > 0 ? (
+        visibleNavItems.map((item) => (
+          <NavLink
+            key={item.href}
+            to={item.href}
+            className={({ isActive }) =>
+              cn(
+                "flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                isActive
+                  ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                  : "text-sidebar-foreground"
+              )
+            }
+            onClick={onLinkClick}
+          >
+            {item.icon}
+            {item.title}
+          </NavLink>
+        ))
+      ) : (
+        <div className="flex items-center px-3 py-2 text-sm text-muted-foreground">
+          No navigation items available for your role.
+        </div>
+      )}
     </nav>
   );
 }
