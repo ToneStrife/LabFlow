@@ -33,14 +33,8 @@ const RequestList: React.FC = () => {
   const [isApproveRequestDialogOpen, setIsApproveRequestDialogOpen] = React.useState(false);
   const [requestToApprove, setRequestToApprove] = React.useState<SupabaseRequest | null>(null);
 
-  // Restored Quote/PO Details Dialog state
-  const [isQuoteAndPODetailsDialogOpen, setIsQuoteAndPODetailsDialogOpen] = React.useState(false);
-  const [quoteUrlInput, setQuoteUrlInput] = React.useState("");
-  const [poNumberInput, setPoNumberInput] = React.useState("");
-  const [currentRequestForQuoteAndPO, setCurrentRequestForQuoteAndPO] = React.useState<SupabaseRequest | null>(null);
-
-  const [isOrderConfirmationDialogOpen, setIsOrderConfirmationDialogOpen] = React.useState(false);
-  const [requestToOrder, setRequestToOrder] = React.useState<SupabaseRequest | null>(null);
+  // Removed Quote/PO Details Dialog state
+  // Removed Order Confirmation Dialog state
 
   const getRequesterName = (requesterId: string) => {
     const profile = profiles?.find(p => p.id === requesterId);
@@ -72,7 +66,7 @@ const RequestList: React.FC = () => {
       return;
     }
     if (!request.quote_url) {
-      toast.error("Cannot send PO request.", { description: "Quote file/URL is missing." });
+      toast.error("Cannot send PO request.", { description: "Quote file is missing." });
       return;
     }
 
@@ -116,74 +110,13 @@ const RequestList: React.FC = () => {
     }
   };
 
-  // --- Quote/PO Details Logic ---
+  // Placeholder functions for RequestListTable actions that should redirect to details page
   const openQuoteAndPODetailsDialog = (request: SupabaseRequest) => {
-    setCurrentRequestForQuoteAndPO(request);
-    setQuoteUrlInput(request.quote_url || "");
-    setPoNumberInput(request.po_number || "");
-    setIsQuoteAndPODetailsDialogOpen(true);
+    navigate(`/requests/${request.id}`);
   };
-
-  const handleSaveDetailsAndRequestPOEmail = async () => {
-    if (currentRequestForQuoteAndPO) {
-      // Update status to PO Requested and save details
-      const updatedRequest = await updateStatusMutation.mutateAsync({
-        id: currentRequestForQuoteAndPO.id,
-        status: "PO Requested",
-        quoteUrl: quoteUrlInput || null,
-        poNumber: poNumberInput || null,
-      });
-      
-      // Send PO Request Email
-      handleSendPORequest(updatedRequest);
-      setIsQuoteAndPODetailsDialogOpen(false);
-    }
-  };
-  
-  const handleSaveDetailsOnly = async () => {
-    if (currentRequestForQuoteAndPO) {
-      await updateStatusMutation.mutateAsync({
-        id: currentRequestForQuoteAndPO.id,
-        status: "PO Requested",
-        quoteUrl: quoteUrlInput || null,
-        poNumber: poNumberInput || null,
-      });
-      setIsQuoteAndPODetailsDialogOpen(false);
-    }
-  };
-  // --- End Quote/PO Details Logic ---
 
   const openOrderConfirmationDialog = (request: SupabaseRequest) => {
-    setRequestToOrder(request);
-    setIsOrderConfirmationDialogOpen(true);
-  };
-
-  const handleMarkAsOrderedOnly = async () => {
-    if (requestToOrder) {
-      await updateStatusMutation.mutateAsync({ id: requestToOrder.id, status: "Ordered" });
-      setIsOrderConfirmationDialogOpen(false);
-    }
-  };
-
-  const handleMarkAsOrderedAndSendEmail = async () => {
-    if (requestToOrder) {
-      await updateStatusMutation.mutateAsync({ id: requestToOrder.id, status: "Ordered" });
-      
-      const vendor = vendors?.find(v => v.id === requestToOrder.vendor_id);
-      const requesterName = getRequesterName(requestToOrder.requester_id);
-      const attachments = [];
-      if (requestToOrder.quote_url) attachments.push({ name: `Quote_Request_${requestToOrder.id}.pdf`, url: requestToOrder.quote_url });
-      if (requestToOrder.po_url) attachments.push({ name: `PO_${requestToOrder.po_number}.pdf`, url: requestToOrder.po_url || "" });
-
-      setEmailInitialData({
-        to: getVendorEmail(requestToOrder.vendor_id),
-        subject: `Official Order - PO: ${requestToOrder.po_number || "N/A"}`,
-        body: `Dear ${vendor?.contact_person || "Vendor"},\n\nThis email confirms the official order for lab request #${requestToOrder.id}.\nPlease find the attached Purchase Order.\n\nThank you,\n${requesterName}`,
-        attachments,
-      });
-      setIsOrderConfirmationDialogOpen(false);
-      setIsEmailDialogOpen(true);
-    }
+    navigate(`/requests/${request.id}`);
   };
 
   const handleMarkAsReceived = async (request: SupabaseRequest) => {
@@ -239,13 +172,13 @@ const RequestList: React.FC = () => {
         isUpdatingStatus={updateStatusMutation.isPending}
         onViewDetails={(id) => navigate(`/requests/${id}`)}
         onApprove={openApproveRequestDialog}
-        onEnterQuoteDetails={openQuoteAndPODetailsDialog}
+        onEnterQuoteDetails={openQuoteAndPODetailsDialog} // Redirect to details page
         onSendPORequest={handleSendPORequest}
-        onMarkAsOrdered={openOrderConfirmationDialog}
+        onMarkAsOrdered={openOrderConfirmationDialog} // Redirect to details page
         onMarkAsReceived={handleMarkAsReceived}
       />
 
-      {/* Dialogs remain in the container component */}
+      {/* Dialogs remaining in RequestList: Approve and Email */}
       <Dialog open={isApproveRequestDialogOpen} onOpenChange={setIsApproveRequestDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
@@ -270,50 +203,6 @@ const RequestList: React.FC = () => {
         onSend={handleSendEmail}
         isSending={sendEmailMutation.isPending}
       />
-
-      {/* RESTORED: Quote/PO Details Dialog */}
-      <Dialog open={isQuoteAndPODetailsDialogOpen} onOpenChange={setIsQuoteAndPODetailsDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Enter Quote Details & PO Number</DialogTitle>
-            <DialogDescription>Please provide the quote URL and the Purchase Order Number (if available).</DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="quoteUrl" className="text-right">Quote URL</Label>
-              <Input id="quoteUrl" value={quoteUrlInput} onChange={(e) => setQuoteUrlInput(e.target.value)} className="col-span-3" placeholder="e.g., https://vendor.com/quote-123.pdf" />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="poNumber" className="text-right">PO Number</Label>
-              <Input id="poNumber" value={poNumberInput} onChange={(e) => setPoNumberInput(e.target.value)} className="col-span-3" placeholder="e.g., PO-12345" />
-            </div>
-          </div>
-          <DialogFooter className="flex flex-col sm:flex-row sm:justify-end sm:space-x-2">
-            <Button variant="outline" onClick={() => setIsQuoteAndPODetailsDialogOpen(false)}>Cancel</Button>
-            <Button variant="outline" onClick={handleSaveDetailsOnly} disabled={updateStatusMutation.isPending}>Save Details Only</Button>
-            <Button onClick={handleSaveDetailsAndRequestPOEmail} disabled={updateStatusMutation.isPending || !currentRequestForQuoteAndPO?.account_manager_id}>
-              {updateStatusMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Save & Request PO (Email)"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isOrderConfirmationDialogOpen} onOpenChange={setIsOrderConfirmationDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Confirm Order</DialogTitle>
-            <DialogDescription>Choose how to proceed with marking this request as ordered.</DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <p>Request ID: {requestToOrder?.id}</p>
-            <p>PO Number: {requestToOrder?.po_number || "N/A"}</p>
-          </div>
-          <DialogFooter className="flex flex-col sm:flex-row sm:justify-end sm:space-x-2">
-            <Button variant="outline" onClick={handleMarkAsOrderedOnly} disabled={updateStatusMutation.isPending}>Mark as Ordered Only</Button>
-            <Button onClick={handleMarkAsOrderedAndSendEmail} disabled={updateStatusMutation.isPending}>Mark as Ordered & Send Email</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

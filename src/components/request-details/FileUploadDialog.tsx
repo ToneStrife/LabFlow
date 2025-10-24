@@ -33,6 +33,14 @@ const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
   const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
   const [poNumber, setPoNumber] = React.useState<string>("");
 
+  // Reset state when dialog opens/closes
+  React.useEffect(() => {
+    if (!isOpen) {
+      setSelectedFile(null);
+      setPoNumber("");
+    }
+  }, [isOpen]);
+
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
       setSelectedFile(event.target.files[0]);
@@ -41,16 +49,16 @@ const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
 
   const handleSubmit = async () => {
     if (selectedFile) {
-      await onUpload(selectedFile, poNumber || undefined);
-      setSelectedFile(null);
-      setPoNumber("");
+      // Only pass poNumber if fileType is 'po'
+      const poNumToPass = fileType === 'po' ? poNumber || undefined : undefined;
+      await onUpload(selectedFile, poNumToPass);
     }
   };
 
   const getTitle = () => {
     switch (fileType) {
-      case "quote": return "Upload Quote";
-      case "po": return "Upload Purchase Order";
+      case "quote": return "Upload Quote File";
+      case "po": return "Upload Purchase Order File";
       case "slip": return "Upload Packing Slip";
       default: return "Upload File";
     }
@@ -66,10 +74,11 @@ const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
+          {/* PO Number is only relevant when uploading the PO file */}
           {fileType === "po" && (
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="poNumber" className="text-right">
-                PO Number
+                PO Number (Optional)
               </Label>
               <Input
                 id="poNumber"

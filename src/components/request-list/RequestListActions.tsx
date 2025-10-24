@@ -10,9 +10,9 @@ interface RequestListActionsProps {
   isUpdatingStatus: boolean;
   onViewDetails: (id: string) => void;
   onApprove: (request: SupabaseRequest) => void;
-  onEnterQuoteDetails: (request: SupabaseRequest) => void;
+  onEnterQuoteDetails: (request: SupabaseRequest) => void; // Now redirects to details
   onSendPORequest: (request: SupabaseRequest) => void;
-  onMarkAsOrdered: (request: SupabaseRequest) => void;
+  onMarkAsOrdered: (request: SupabaseRequest) => void; // Now redirects to details
   onMarkAsReceived: (request: SupabaseRequest) => void;
 }
 
@@ -49,12 +49,13 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
         </Button>
       )}
 
+      {/* Quote Requested: Redirect to details to upload file */}
       {request.status === "Quote Requested" && (
         <Button
           variant="ghost"
           size="icon"
           onClick={() => onEnterQuoteDetails(request)}
-          title="Enter Quote Details & PO Number"
+          title="Upload Quote File"
           disabled={isUpdatingStatus}
         >
           <FileText className="h-4 w-4 text-blue-600" />
@@ -63,6 +64,7 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
 
       {request.status === "PO Requested" && (
         <>
+          {/* Send PO Request Email (Orange envelope) */}
           <Button
             variant="ghost"
             size="icon"
@@ -72,12 +74,12 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
           >
             <Mail className="h-4 w-4 text-orange-600" />
           </Button>
-          {/* Restored Mark as Ordered button, which opens the confirmation dialog */}
+          {/* Mark as Ordered: Redirect to details to upload PO file */}
           <Button
             variant="ghost"
             size="icon"
             onClick={() => onMarkAsOrdered(request)}
-            title="Mark as Ordered"
+            title="Upload PO & Mark as Ordered"
             disabled={isUpdatingStatus}
           >
             <Package className="h-4 w-4 text-green-700" />

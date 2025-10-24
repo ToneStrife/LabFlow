@@ -10,6 +10,7 @@ interface RequestActionsProps {
   isUpdatingStatus: boolean;
   openApproveRequestDialog: (request: SupabaseRequest) => void;
   handleSendPORequest: (request: SupabaseRequest) => void;
+  handleUploadQuote: () => void; // New prop
   handleUploadPOAndOrder: (request: SupabaseRequest) => void;
   handleMarkAsReceived: (request: SupabaseRequest) => Promise<void>;
 }
@@ -19,6 +20,7 @@ const RequestActions: React.FC<RequestActionsProps> = ({
   isUpdatingStatus,
   openApproveRequestDialog,
   handleSendPORequest,
+  handleUploadQuote,
   handleUploadPOAndOrder,
   handleMarkAsReceived,
 }) => {
@@ -30,18 +32,27 @@ const RequestActions: React.FC<RequestActionsProps> = ({
         </Button>
       )}
 
+      {/* If Quote Requested, allow uploading the Quote file */}
+      {request.status === "Quote Requested" && !request.quote_url && (
+        <Button onClick={handleUploadQuote} disabled={isUpdatingStatus}>
+          <Upload className="mr-2 h-4 w-4" /> Upload Quote & Request PO
+        </Button>
+      )}
+      
+      {/* If Quote is uploaded, allow requesting PO from Manager (Email) */}
       {request.status === "Quote Requested" && request.quote_url && (
         <Button onClick={() => handleSendPORequest(request)} disabled={isUpdatingStatus}>
           <Mail className="mr-2 h-4 w-4" /> Request PO from Manager
         </Button>
       )}
 
+      {/* If PO Requested, allow uploading the PO file and marking as Ordered */}
       {request.status === "PO Requested" && (
         <Button
           onClick={() => handleUploadPOAndOrder(request)}
           disabled={isUpdatingStatus}
         >
-          <Upload className="mr-2 h-4 w-4" /> Upload PO & Order
+          <Upload className="mr-2 h-4 w-4" /> Upload PO & Mark as Ordered
         </Button>
       )}
 

@@ -24,6 +24,7 @@ import RequestItemsTable from "@/components/request-details/RequestItemsTable";
 import RequestActions from "@/components/request-details/RequestActions";
 import RequestFilesCard from "@/components/request-details/RequestFilesCard";
 import FileUploadDialog from "@/components/request-details/FileUploadDialog";
+import { toast } from "sonner";
 
 const RequestDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -57,6 +58,15 @@ const RequestDetails: React.FC = () => {
   };
 
   const handleSendPORequest = (request: SupabaseRequest) => {
+    if (!request.account_manager_id) {
+      toast.error("Cannot send PO request.", { description: "No account manager assigned to this request." });
+      return;
+    }
+    if (!request.quote_url) {
+      toast.error("Cannot send PO request.", { description: "Quote file is missing." });
+      return;
+    }
+
     const managerName = getAccountManagerName(request.account_manager_id);
     const requesterName = getRequesterName(request.requester_id);
     const attachments = request.quote_url ? [{ name: `Quote_Request_${request.id}.pdf`, url: request.quote_url }] : [];
@@ -98,6 +108,12 @@ const RequestDetails: React.FC = () => {
     setIsUploadDialogOpen(true);
   };
 
+  // Action for Quote Requested state: Upload Quote file
+  const handleUploadQuote = () => {
+    handleUploadClick("quote");
+  };
+
+  // Action for PO Requested state: Upload PO file and mark as Ordered
   const handleUploadPOAndOrder = () => {
     handleUploadClick("po");
   };
@@ -106,6 +122,7 @@ const RequestDetails: React.FC = () => {
     if (request) {
       // Simulate file upload by creating a mock URL
       const mockFileUrl = `/uploads/${file.name}`;
+      
       await updateFileMutation.mutateAsync({
         id: request.id,
         fileType: fileTypeToUpload,
@@ -116,6 +133,11 @@ const RequestDetails: React.FC = () => {
       // If we just uploaded a PO, automatically change status to Ordered
       if (fileTypeToUpload === "po") {
         await updateStatusMutation.mutateAsync({ id: request.id, status: "Ordered" });
+      }
+      
+      // If we just uploaded a Quote, automatically change status to PO Requested
+      if (fileTypeToUpload === "quote") {
+        await updateStatusMutation.mutateAsync({ id: request.id, status: "PO Requested" });
       }
 
       setIsUploadDialogOpen(false);
@@ -156,6 +178,7 @@ const RequestDetails: React.FC = () => {
         isUpdatingStatus={updateStatusMutation.isPending || updateFileMutation.isPending}
         openApproveRequestDialog={openApproveRequestDialog}
         handleSendPORequest={handleSendPORequest}
+        handleUploadQuote={handleUploadQuote} // New prop for Quote upload
         handleUploadPOAndOrder={handleUploadPOAndOrder}
         handleMarkAsReceived={handleMarkAsReceived}
       />
