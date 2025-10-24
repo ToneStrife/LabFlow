@@ -12,10 +12,6 @@ import {
 
 // Mantener las importaciones de mock data para otras tablas hasta que se conviertan
 import {
-  getMockCustomerAccounts,
-  addMockCustomerAccount,
-  updateMockCustomerAccount,
-  deleteMockCustomerAccount,
   getMockRequests,
   addMockRequest,
   updateMockRequestStatus,
@@ -76,23 +72,26 @@ export const apiDeleteVendor = async (id: string): Promise<void> => {
 
 // --- API de Cuentas de Clientes ---
 export const apiGetCustomerAccounts = async (): Promise<CustomerAccount[]> => {
-  await new Promise(resolve => setTimeout(resolve, 300)); // Simular retraso
-  return getMockCustomerAccounts();
+  const { data, error } = await supabase.from('customer_accounts').select('*');
+  if (error) throw error;
+  return data;
 };
 
 export const apiAddCustomerAccount = async (data: Omit<CustomerAccount, "id" | "created_at">): Promise<CustomerAccount> => {
-  await new Promise(resolve => setTimeout(resolve, 300)); // Simular retraso
-  return addMockCustomerAccount(data);
+  const { data: newAccount, error } = await supabase.from('customer_accounts').insert(data).select().single();
+  if (error) throw error;
+  return newAccount;
 };
 
 export const apiUpdateCustomerAccount = async (id: string, data: Partial<Omit<CustomerAccount, "id" | "created_at">>): Promise<CustomerAccount> => {
-  await new Promise(resolve => setTimeout(resolve, 300)); // Simular retraso
-  return updateMockCustomerAccount(id, data);
+  const { data: updatedAccount, error } = await supabase.from('customer_accounts').update(data).eq('id', id).select().single();
+  if (error) throw error;
+  return updatedAccount;
 };
 
 export const apiDeleteCustomerAccount = async (id: string): Promise<void> => {
-  await new Promise(resolve => setTimeout(resolve, 300)); // Simular retraso
-  return deleteMockCustomerAccount(id);
+  const { error } = await supabase.from('customer_accounts').delete().eq('id', id);
+  if (error) throw error;
 };
 
 // --- API de Solicitudes ---

@@ -125,6 +125,7 @@ export let mockVendors: Vendor[] = [
   },
 ];
 
+/*
 export let mockCustomerAccounts: CustomerAccount[] = [
   {
     id: "ca1",
@@ -149,6 +150,7 @@ export let mockCustomerAccounts: CustomerAccount[] = [
     assigned_manager_id: null,
   },
 ];
+*/
 
 export let mockRequestItems: SupabaseRequestItem[] = [
   {

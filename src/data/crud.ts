@@ -88,7 +88,10 @@ export const deleteMockVendor = async (id: string): Promise<void> => {
 };
 */
 
-// --- CRUD Functions for Customer Accounts ---
+-- -- CRUD Functions for Customer Accounts -- --
+-- Estas funciones han sido migradas a src/integrations/api.ts para usar Supabase directamente.
+-- Se mantienen aquí como referencia si se necesitaran datos simulados para otras partes.
+/*
 export const getMockCustomerAccounts = async (): Promise<CustomerAccount[]> => {
   await simulateNetworkDelay();
   return mockCustomerAccounts;
@@ -117,6 +120,7 @@ export const deleteMockCustomerAccount = async (id: string): Promise<void> => {
   await simulateNetworkDelay();
   mockCustomerAccounts = mockCustomerAccounts.filter(a => a.id !== id);
 };
+*/
 
 // --- CRUD Functions for Requests ---
 export const getMockRequests = async (): Promise<SupabaseRequest[]> => {
