@@ -73,14 +73,13 @@ serve(async (req) => {
     `;
 
     const userPrompt = `
-      Por favor, busca y extrae la información para el siguiente producto:
+      Busca y extrae la información más precisa y oficial para el siguiente producto. Si encuentras la información, asegúrate de que el 'confidence_score' sea alto (0.8 o más).
       - MARCA: ${brand}
       - NÚMERO DE CATÁLOGO: ${catalogNumber}
     `;
 
     const combinedPrompt = `${systemInstruction}\n\n${userPrompt}`;
     
-    // Usando el nombre de modelo exacto solicitado: gemini-2.5-flash
     const MODEL_NAME = "gemini-2.5-flash"; 
 
     // Llamada a la API de Google Gemini
@@ -124,9 +123,12 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'AI response could not be parsed.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    if (!aiResponse || !aiResponse.product_name || (aiResponse.confidence_score && aiResponse.confidence_score < 0.5)) {
-      const confidence = aiResponse.confidence_score || 'N/A';
-      return new Response(JSON.stringify({ error: `AI could not find reliable information (Confidence: ${confidence}) for Catalog #: '${catalogNumber}' and Brand: '${brand || "N/A"}'.` }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    // Lógica de error mejorada
+    const confidence = aiResponse.confidence_score || 0;
+    if (!aiResponse || !aiResponse.product_name || confidence < 0.5) {
+      const brandDisplay = brand || "N/A";
+      const errorMsg = `AI could not find reliable information (Confidence: ${confidence.toFixed(1)}) for Catalog #: '${catalogNumber}' and Brand: '${brandDisplay}'. Please check the inputs or enter details manually.`;
+      return new Response(JSON.stringify({ error: errorMsg }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     const productDetails = {
@@ -137,7 +139,7 @@ serve(async (req) => {
       notes: aiResponse.technical_notes,
       brand: brand,
       catalogNumber: catalogNumber,
-      source: `AI Search (Google Gemini 2.5 Flash) | Confidence: ${aiResponse.confidence_score}`
+      source: `AI Search (Google Gemini 2.5 Flash) | Confidence: ${confidence.toFixed(1)}`
     };
 
     return new Response(JSON.stringify({ products: productDetails }), {
