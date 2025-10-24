@@ -302,6 +302,34 @@ export let mockRequests: SupabaseRequest[] = [
   },
 ];
 
+// --- Inventory Data and Interface ---
+export interface InventoryItem {
+  id: string;
+  product_name: string;
+  catalog_number: string;
+  brand: string | null;
+  quantity: number;
+  unit_price: number | null;
+  format: string | null;
+  added_at: string; // When it was added to inventory
+  last_updated: string;
+}
+
+export let mockInventory: InventoryItem[] = [
+  {
+    id: "inv1",
+    product_name: "Taq DNA Polymerase",
+    catalog_number: "P2000",
+    brand: "Sigma-Aldrich",
+    quantity: 3,
+    unit_price: 50.00,
+    format: "500 units",
+    added_at: new Date(Date.now() - 86400000 * 15).toISOString(),
+    last_updated: new Date(Date.now() - 86400000 * 15).toISOString(),
+  },
+];
+
+
 // Helper to generate unique IDs
 const generateId = () => Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 
@@ -451,4 +479,48 @@ export const deleteMockRequest = async (id: string): Promise<void> => {
   await new Promise(resolve => setTimeout(resolve, 300));
   mockRequests = mockRequests.filter(req => req.id !== id);
   mockRequestItems = mockRequestItems.filter(item => item.request_id !== id);
+};
+
+// --- CRUD Functions for Inventory ---
+export const getMockInventory = async (): Promise<InventoryItem[]> => {
+  await new Promise(resolve => setTimeout(resolve, 100));
+  return mockInventory;
+};
+
+export const addMockInventoryItem = async (data: Omit<InventoryItem, "id" | "added_at" | "last_updated">): Promise<InventoryItem> => {
+  await new Promise(resolve => setTimeout(resolve, 300));
+  const newInventoryItem: InventoryItem = {
+    id: generateId(),
+    added_at: new Date().toISOString(),
+    last_updated: new Date().toISOString(),
+    ...data,
+  };
+  // Check if item already exists in inventory by catalog_number and brand
+  const existingItemIndex = mockInventory.findIndex(
+    (item) => item.catalog_number === newInventoryItem.catalog_number && item.brand === newInventoryItem.brand
+  );
+
+  if (existingItemIndex !== -1) {
+    // If it exists, update quantity
+    mockInventory[existingItemIndex].quantity += newInventoryItem.quantity;
+    mockInventory[existingItemIndex].last_updated = new Date().toISOString();
+    return mockInventory[existingItemIndex];
+  } else {
+    // Otherwise, add new item
+    mockInventory.push(newInventoryItem);
+    return newInventoryItem;
+  }
+};
+
+export const updateMockInventoryItem = async (id: string, data: Partial<Omit<InventoryItem, "id" | "added_at">>): Promise<InventoryItem> => {
+  await new Promise(resolve => setTimeout(resolve, 300));
+  const index = mockInventory.findIndex(item => item.id === id);
+  if (index === -1) throw new Error("Inventory item not found");
+  mockInventory[index] = { ...mockInventory[index], ...data, last_updated: new Date().toISOString() };
+  return mockInventory[index];
+};
+
+export const deleteMockInventoryItem = async (id: string): Promise<void> => {
+  await new Promise(resolve => setTimeout(resolve, 300));
+  mockInventory = mockInventory.filter(item => item.id !== id);
 };

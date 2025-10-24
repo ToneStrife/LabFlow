@@ -1,14 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { SupabaseRequest as MockSupabaseRequest, SupabaseRequestItem as MockSupabaseRequestItem, RequestItem, RequestStatus } from "@/data/mockData";
 import { toast } from "sonner";
-import { apiGetRequests, apiAddRequest, apiUpdateRequestStatus, apiDeleteRequest } from "@/integrations/api"; // Importar desde la nueva API simulada
+import { apiGetRequests, apiAddRequest, apiUpdateRequestStatus, apiDeleteRequest, apiAddInventoryItem } from "@/integrations/api"; // Importar apiAddInventoryItem
 
 export interface SupabaseRequestItem extends MockSupabaseRequestItem {}
 export interface SupabaseRequest extends MockSupabaseRequest {}
 
 // --- Fetch Hook ---
 const fetchRequests = async (): Promise<SupabaseRequest[]> => {
-  return apiGetRequests(); // Usar la función de la API simulada
+  return apiGetRequests();
 };
 
 export const useRequests = () => {
@@ -36,7 +36,7 @@ export const useAddRequest = () => {
     mutationFn: async (data) => {
       const { vendorId, requesterId, accountManagerId, notes, projectCodes, items } = data;
 
-      return apiAddRequest({ // Usar la función de la API simulada
+      return apiAddRequest({
         vendor_id: vendorId,
         requester_id: requesterId,
         account_manager_id: accountManagerId,
@@ -64,10 +64,27 @@ export const useUpdateRequestStatus = () => {
   const queryClient = useQueryClient();
   return useMutation<SupabaseRequest, Error, { id: string; status: RequestStatus }>({
     mutationFn: async ({ id, status }) => {
-      return apiUpdateRequestStatus(id, status); // Usar la función de la API simulada
+      const updatedRequest = await apiUpdateRequestStatus(id, status);
+
+      // If status changes to "Ordered", add items to inventory
+      if (status === "Ordered" && updatedRequest.items) {
+        for (const item of updatedRequest.items) {
+          await apiAddInventoryItem({
+            product_name: item.product_name,
+            catalog_number: item.catalog_number,
+            brand: item.brand,
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            format: item.format,
+          });
+        }
+        toast.success("Items added to inventory!");
+      }
+      return updatedRequest;
     },
     onSuccess: (updatedRequest) => {
       queryClient.invalidateQueries({ queryKey: ["requests"] });
+      queryClient.invalidateQueries({ queryKey: ["inventory"] }); // Invalidate inventory cache
       toast.success(`Request ${updatedRequest.id} status updated to ${updatedRequest.status}!`);
     },
     onError: (error) => {
@@ -83,7 +100,7 @@ export const useDeleteRequest = () => {
   const queryClient = useQueryClient();
   return useMutation<void, Error, string>({
     mutationFn: async (id) => {
-      return apiDeleteRequest(id); // Usar la función de la API simulada
+      return apiDeleteRequest(id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["requests"] });

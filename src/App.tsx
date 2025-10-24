@@ -10,7 +10,8 @@ import Vendors from "./pages/Vendors";
 import RequestDetails from "./pages/RequestDetails";
 import Profile from "./pages/Profile";
 import Accounts from "./pages/Accounts";
-import AccountManagers from "./pages/AccountManagers"; // Import the new AccountManagers page
+import AccountManagers from "./pages/AccountManagers";
+import Inventory from "./pages/Inventory"; // Import the new Inventory page
 import NotFound from "./pages/NotFound";
 import { SessionContextProvider, useSession } from "./components/SessionContextProvider";
 import React from "react";
@@ -39,7 +40,8 @@ const AppRoutes = () => {
         <Route path="/requests/:id" element={<RequestDetails />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/accounts" element={<Accounts />} />
-        <Route path="/account-managers" element={<AccountManagers />} /> {/* New route */}
+        <Route path="/account-managers" element={<AccountManagers />} />
+        <Route path="/inventory" element={<Inventory />} /> {/* New route */}
         {/* No login route needed as we simulate logged in */}
         <Route path="*" element={<NotFound />} />
       </Routes>

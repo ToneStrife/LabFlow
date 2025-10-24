@@ -5,11 +5,12 @@ import {
   SupabaseRequest,
   RequestItem,
   RequestStatus,
+  InventoryItem, // Importar la nueva interfaz
   // Importar las funciones CRUD de mockData
   getMockProfiles,
-  addMockProfile, // Importar la nueva función
+  addMockProfile,
   updateMockProfile as updateMockProfileData,
-  deleteMockProfile, // Importar la nueva función
+  deleteMockProfile,
   getMockVendors,
   addMockVendor,
   updateMockVendor,
@@ -22,6 +23,10 @@ import {
   addMockRequest,
   updateMockRequestStatus,
   deleteMockRequest,
+  getMockInventory, // Importar las nuevas funciones
+  addMockInventoryItem,
+  updateMockInventoryItem,
+  deleteMockInventoryItem,
 } from "@/data/mockData";
 
 // Función para simular un retraso de red
@@ -109,4 +114,25 @@ export const apiUpdateRequestStatus = async (id: string, status: RequestStatus):
 export const apiDeleteRequest = async (id: string): Promise<void> => {
   await simulateNetworkDelay();
   return deleteMockRequest(id);
+};
+
+// --- API de Inventario ---
+export const apiGetInventory = async (): Promise<InventoryItem[]> => {
+  await simulateNetworkDelay();
+  return getMockInventory();
+};
+
+export const apiAddInventoryItem = async (data: Omit<InventoryItem, "id" | "added_at" | "last_updated">): Promise<InventoryItem> => {
+  await simulateNetworkDelay();
+  return addMockInventoryItem(data);
+};
+
+export const apiUpdateInventoryItem = async (id: string, data: Partial<Omit<InventoryItem, "id" | "added_at">>): Promise<InventoryItem> => {
+  await simulateNetworkDelay();
+  return updateMockInventoryItem(id, data);
+};
+
+export const apiDeleteInventoryItem = async (id: string): Promise<void> => {
+  await simulateNetworkDelay();
+  return deleteMockInventoryItem(id);
 };

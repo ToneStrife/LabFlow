@@ -3,7 +3,7 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { Package, ShoppingCart, Users, User, Briefcase, UserCog } from "lucide-react"; // Import UserCog icon
+import { Package, ShoppingCart, Users, User, Briefcase, UserCog, Warehouse } from "lucide-react"; // Import Warehouse icon
 import { Button } from "@/components/ui/button";
 
 interface SidebarNavProps extends React.HTMLAttributes<HTMLElement> {
@@ -33,9 +33,14 @@ const navItems = [
     icon: <Briefcase className="mr-2 h-4 w-4" />,
   },
   {
-    title: "Account Managers", // New link for Account Managers
+    title: "Account Managers",
     href: "/account-managers",
     icon: <UserCog className="mr-2 h-4 w-4" />,
+  },
+  {
+    title: "Inventory", // New link for Inventory
+    href: "/inventory",
+    icon: <Warehouse className="mr-2 h-4 w-4" />,
   },
   {
     title: "Profile",
