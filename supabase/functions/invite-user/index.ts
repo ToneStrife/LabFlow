@@ -43,28 +43,25 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Forbidden: Only Admins can invite new users' }), { status: 403, headers: corsHeaders, 'Content-Type': 'application/json' });
     }
 
-    const { email, first_name, last_name, clientRedirectTo } = await req.json(); // Destructurar clientRedirectTo
+    // Ya no destructuramos clientRedirectTo
+    const { email, first_name, last_name } = await req.json(); 
 
     if (!email) {
       return new Response(JSON.stringify({ error: 'Missing required field: email' }), { status: 400, headers: corsHeaders, 'Content-Type': 'application/json' });
     }
 
-    // Usar clientRedirectTo proporcionado por el cliente.
-    // Si no se proporciona (o si es inválido), Supabase usará su URL de redirección por defecto.
-    const finalRedirectTo = clientRedirectTo; 
-
     // 2. Invitar al usuario
+    // Al no pasar 'redirectTo', Supabase usará la URL de redirección por defecto del proyecto.
     const { data: invitedUser, error: inviteError } = await supabaseClient.auth.admin.inviteUserByEmail(email, {
       data: { first_name, last_name }, // Pasar metadatos para el perfil
-      redirectTo: finalRedirectTo, // Usar el URL de redirección del cliente
+      // redirectTo: finalRedirectTo, // Eliminado para evitar el error de URL no autorizada
     });
 
     if (inviteError) {
       console.error("Supabase inviteUserByEmail error:", inviteError);
-      // Devolver el mensaje de error de Supabase para que el cliente lo muestre
       return new Response(JSON.stringify({ error: inviteError.message }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400, // 400 Bad Request es apropiado para errores de validación de Supabase (como URL no autorizada)
+        status: 400,
       });
     }
 

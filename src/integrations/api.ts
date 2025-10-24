@@ -90,12 +90,10 @@ interface InviteUserData {
 
 export const apiInviteUser = async (data: InviteUserData): Promise<any> => {
   const { email, first_name, last_name } = data;
-  // Usar window.location.origin para obtener la URL base de la aplicación cliente
-  // y redirigir al dashboard después de la confirmación del email.
-  const clientRedirectTo = window.location.origin + '/dashboard'; 
-
+  
+  // Ya no pasamos clientRedirectTo
   const { data: edgeFunctionData, error } = await supabase.functions.invoke('invite-user', {
-    body: JSON.stringify({ email, first_name, last_name, clientRedirectTo }), // Pasar clientRedirectTo
+    body: JSON.stringify({ email, first_name, last_name }),
     method: 'POST',
   });
 
