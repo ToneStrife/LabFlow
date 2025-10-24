@@ -89,17 +89,27 @@ interface InviteUserData {
 }
 
 export const apiInviteUser = async (data: InviteUserData): Promise<any> => {
+  const { email, first_name, last_name } = data;
+  // Usar window.location.origin para obtener la URL base de la aplicación cliente
+  // y redirigir al dashboard después de la confirmación del email.
+  const clientRedirectTo = window.location.origin + '/dashboard'; 
+
   const { data: edgeFunctionData, error } = await supabase.functions.invoke('invite-user', {
-    body: JSON.stringify(data),
+    body: JSON.stringify({ email, first_name, last_name, clientRedirectTo }), // Pasar clientRedirectTo
     method: 'POST',
   });
 
   if (error) {
     console.error("Error invoking invite-user edge function:", error);
     console.error("Edge function response data (on error):", edgeFunctionData);
-    const errorMessage = error.message || 
-                         (edgeFunctionData && typeof edgeFunctionData === 'object' && 'error' in edgeFunctionData ? (edgeFunctionData as any).error : null) || 
-                         'Failed to invite user via Edge Function.';
+    let errorMessage = 'Failed to invite user via Edge Function.';
+    if (error.message) {
+        errorMessage = error.message;
+    } else if (edgeFunctionData && typeof edgeFunctionData === 'object' && 'error' in edgeFunctionData) {
+        errorMessage = (edgeFunctionData as any).error;
+    } else if (typeof edgeFunctionData === 'string') {
+        errorMessage = edgeFunctionData;
+    }
     throw new Error(errorMessage);
   }
   return edgeFunctionData;

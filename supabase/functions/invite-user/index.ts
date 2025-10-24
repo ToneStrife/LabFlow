@@ -27,7 +27,7 @@ serve(async (req) => {
     // 1. Verificar el JWT del usuario que llama (debe ser un Admin)
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      return new Response('Unauthorized: Missing Authorization header', { status: 401, headers: corsHeaders });
+      return new Response(JSON.stringify({ error: 'Unauthorized: Missing Authorization header' }), { status: 401, headers: corsHeaders, 'Content-Type': 'application/json' });
     }
     const token = authHeader.replace('Bearer ', '');
     const { payload } = await verify(token, Deno.env.get('SUPABASE_JWT_SECRET') ?? '', 'HS256');
@@ -40,19 +40,22 @@ serve(async (req) => {
       .single();
 
     if (profileError || callerProfile?.role !== 'Admin') {
-      return new Response('Forbidden: Only Admins can invite new users', { status: 403, headers: corsHeaders });
+      return new Response(JSON.stringify({ error: 'Forbidden: Only Admins can invite new users' }), { status: 403, headers: corsHeaders, 'Content-Type': 'application/json' });
     }
 
-    const { email, first_name, last_name } = await req.json();
+    const { email, first_name, last_name, clientRedirectTo } = await req.json(); // Destructurar clientRedirectTo
 
     if (!email) {
-      return new Response('Missing required field: email', { status: 400, headers: corsHeaders });
+      return new Response(JSON.stringify({ error: 'Missing required field: email' }), { status: 400, headers: corsHeaders, 'Content-Type': 'application/json' });
     }
+
+    // Usar clientRedirectTo proporcionado por el cliente, con un fallback seguro
+    const finalRedirectTo = clientRedirectTo || `${Deno.env.get('SUPABASE_URL')}/auth/v1/callback`;
 
     // 2. Invitar al usuario
     const { data: invitedUser, error: inviteError } = await supabaseClient.auth.admin.inviteUserByEmail(email, {
       data: { first_name, last_name }, // Pasar metadatos para el perfil
-      redirectTo: `${Deno.env.get('SUPABASE_URL')}/auth/v1/callback`, // Redirigir a la URL de callback de Supabase
+      redirectTo: finalRedirectTo, // Usar el URL de redirección del cliente
     });
 
     if (inviteError) {
