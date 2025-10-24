@@ -8,12 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { getFullName, updateMockProfile } from "@/hooks/use-profiles"; // Import updateMockProfile
+import { useUpdateProfile, getFullName } from "@/hooks/use-profiles"; // Import useUpdateProfile
 
 const Profile: React.FC = () => {
   const { session, profile, loading, logout } = useSession();
-  const queryClient = useQueryClient();
+  const updateProfileMutation = useUpdateProfile(); // Usar el hook de mutación
 
   const [firstName, setFirstName] = React.useState(profile?.first_name || "");
   const [lastName, setLastName] = React.useState(profile?.last_name || "");
@@ -27,30 +26,16 @@ const Profile: React.FC = () => {
     }
   }, [profile]);
 
-  const updateProfileMutation = useMutation({
-    mutationFn: async ({ firstName, lastName }: { firstName: string; lastName: string }) => {
-      if (!session?.user?.id) {
-        throw new Error("User not logged in.");
-      }
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      updateMockProfile(session.user.id, { first_name: firstName, last_name: lastName });
-    },
-    onSuccess: () => {
-      toast.success("Profile updated successfully!");
-      queryClient.invalidateQueries({ queryKey: ["session"] }); // Invalidate session to refetch profile
-      queryClient.invalidateQueries({ queryKey: ["allProfiles"] }); // Invalidate allProfiles to update names in other components
-    },
-    onError: (error) => {
-      toast.error("Failed to update profile.", {
-        description: error.message,
-      });
-    },
-  });
-
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    updateProfileMutation.mutate({ firstName, lastName });
+    if (!session?.user?.id) {
+      toast.error("User not logged in.");
+      return;
+    }
+    updateProfileMutation.mutate({
+      id: session.user.id,
+      data: { first_name: firstName, last_name: lastName, email: session.user.email, role: profile?.role || "Requester" },
+    });
   };
 
   const handleLogout = async () => {

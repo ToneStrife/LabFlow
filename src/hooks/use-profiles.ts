@@ -1,13 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Profile as MockProfile } from "@/data/mockData";
 import { toast } from "sonner";
-import { apiGetProfiles, apiAddProfile, apiUpdateProfile, apiDeleteProfile } from "@/integrations/api"; // Importar las nuevas funciones de la API simulada
+import { apiGetProfiles, apiAddProfile, apiUpdateProfile, apiDeleteProfile } from "@/integrations/api";
 
 export interface Profile extends MockProfile {}
 
 // --- Fetch Hook ---
 const fetchAllProfiles = async (): Promise<Profile[]> => {
-  return apiGetProfiles(); // Usar la función de la API simulada
+  return apiGetProfiles();
 };
 
 export const useAllProfiles = () => {
@@ -21,7 +21,7 @@ export const useAccountManagerProfiles = () => {
   return useQuery<Profile[], Error>({
     queryKey: ["accountManagers"],
     queryFn: async () => {
-      const profiles = await apiGetProfiles(); // Usar la función de la API simulada
+      const profiles = await apiGetProfiles();
       return profiles.filter(profile => profile.role === "Account Manager");
     },
   });
@@ -107,5 +107,5 @@ export const useDeleteProfile = () => {
 export const getFullName = (profile: Profile | undefined): string => {
   if (!profile) return "N/A";
   const name = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
-  return name || profile.email || profile.id;
+  return name || profile.id;
 };
