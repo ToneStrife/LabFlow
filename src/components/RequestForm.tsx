@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { PlusCircle, Trash2, Check, ChevronsUpDown, Sparkles, Loader2 } from "lucide-react";
+import { PlusCircle, Trash2, Check, ChevronsUpDown, Sparkles, Globe, Loader2 } from "lucide-react"; // Añadido Globe
 import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
@@ -28,9 +28,10 @@ import { showError, showLoading, dismissToast, showSuccess } from "@/utils/toast
 import { useSession } from "@/components/SessionContextProvider";
 import { useVendors } from "@/hooks/use-vendors";
 import { useAddRequest } from "@/hooks/use-requests";
-import { useAccountManagers } from "@/hooks/use-account-managers"; // Usar el nuevo hook
-import { useProjects } from "@/hooks/use-projects"; // Usar el nuevo hook
-import { getFullName } from "@/hooks/use-profiles"; // Todavía se usa para el nombre del requester
+import { useAccountManagers } from "@/hooks/use-account-managers";
+import { useProjects } from "@/hooks/use-projects";
+import { getFullName } from "@/hooks/use-profiles";
+import { apiSearchExternalProduct } from "@/integrations/api"; // Importar la nueva API de búsqueda externa
 
 const itemSchema = z.object({
   productName: z.string().min(1, { message: "Product name is required." }),
@@ -63,8 +64,8 @@ type RequestFormValues = z.infer<typeof formSchema>;
 const RequestForm: React.FC = () => {
   const { session, profile } = useSession();
   const { data: vendors, isLoading: isLoadingVendors } = useVendors();
-  const { data: accountManagers, isLoading: isLoadingAccountManagers } = useAccountManagers(); // Usar el nuevo hook
-  const { data: projects, isLoading: isLoadingProjects } = useProjects(); // Usar el nuevo hook
+  const { data: accountManagers, isLoading: isLoadingAccountManagers } = useAccountManagers();
+  const { data: projects, isLoading: isLoadingProjects } = useProjects();
   const addRequestMutation = useAddRequest();
 
   const [autofillingIndex, setAutofillingIndex] = React.useState<number | null>(null);
@@ -101,36 +102,48 @@ const RequestForm: React.FC = () => {
     form.setValue(`items.${index}.link`, data.link || '');
   };
 
-  const handleFetchProductDetails = async (index: number) => {
+  const handleFetchProductDetails = async (index: number, searchSource: 'internal' | 'external') => {
     setAutofillingIndex(index);
     setSelectionIndex(null);
     setMatchingProducts([]);
-    const toastId = showLoading("Searching product database...");
+    const toastId = showLoading(`Searching product database (${searchSource === 'internal' ? 'internal' : 'external'})...`);
 
     try {
-      const catalogNumber = form.getValues(`items.${index}.catalogNumber`).trim().toLowerCase();
-      const brand = form.getValues(`items.${index}.brand`)?.trim().toLowerCase();
+      const catalogNumber = form.getValues(`items.${index}.catalogNumber`).trim();
+      const brand = form.getValues(`items.${index}.brand`)?.trim();
 
       if (!catalogNumber) {
         showError("Please enter a catalog number first.");
         return;
       }
 
-      await new Promise(resolve => setTimeout(resolve, 300));
+      let matches: ProductDetails[] = [];
 
-      const matches = productDatabase.filter(p => {
-        const catMatch = p.catalogNumber.toLowerCase() === catalogNumber;
-        const brandMatch = !brand || p.brand.toLowerCase().includes(brand);
-        return catMatch && brandMatch;
-      });
+      if (searchSource === 'internal') {
+        // Search internal database
+        matches = productDatabase.filter(p => {
+          const catMatch = p.catalogNumber.toLowerCase() === catalogNumber.toLowerCase();
+          const brandMatch = !brand || p.brand.toLowerCase().includes(brand.toLowerCase());
+          return catMatch && brandMatch;
+        });
+        if (matches.length > 0) {
+          showSuccess("Product details autofilled from internal database!");
+        }
+      } else { // searchSource === 'external'
+        // Search external via Edge Function
+        const externalProducts = await apiSearchExternalProduct(catalogNumber, brand);
+        matches = externalProducts;
+        if (matches.length > 0) {
+          showSuccess("Product details autofilled from external search!");
+        }
+      }
 
       if (matches.length === 0) {
-        throw new Error(`Product with catalog number '${catalogNumber}' not found.`);
+        throw new Error(`Product with catalog number '${catalogNumber}' not found in ${searchSource === 'internal' ? 'internal database' : 'external sources'}.`);
       }
 
       if (matches.length === 1) {
         applyProductDetails(index, matches[0]);
-        showSuccess("Product details autofilled!");
       } else {
         setMatchingProducts(matches);
         setSelectionIndex(index);
@@ -139,7 +152,7 @@ const RequestForm: React.FC = () => {
 
     } catch (error: any) {
       console.error("Error fetching product details:", error);
-      showError(error.message || "Could not fetch product details.");
+      showError(error.message || `Could not fetch product details from ${searchSource === 'internal' ? 'internal database' : 'external sources'}.`);
     } finally {
       dismissToast(toastId);
       setAutofillingIndex(null);
@@ -333,8 +346,11 @@ const RequestForm: React.FC = () => {
                       <FormControl>
                         <div className="flex items-center gap-2">
                           <Input placeholder="e.g., 18265017" {...itemField} />
-                          <Button type="button" variant="outline" size="icon" onClick={() => handleFetchProductDetails(index)} disabled={autofillingIndex === index} title="Autofill product details">
+                          <Button type="button" variant="outline" size="icon" onClick={() => handleFetchProductDetails(index, 'internal')} disabled={autofillingIndex === index} title="Autofill from internal database">
                             {autofillingIndex === index ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4 text-purple-600" />}
+                          </Button>
+                          <Button type="button" variant="outline" size="icon" onClick={() => handleFetchProductDetails(index, 'external')} disabled={autofillingIndex === index} title="Search external sources">
+                            {autofillingIndex === index ? <Loader2 className="h-4 w-4 animate-spin" /> : <Globe className="h-4 w-4 text-blue-600" />}
                           </Button>
                         </div>
                       </FormControl>
@@ -354,7 +370,7 @@ const RequestForm: React.FC = () => {
                       <SelectContent>
                         {matchingProducts.map((product) => (
                           <SelectItem key={product.id} value={product.id}>
-                            {product.productName} ({product.brand}) - ${product.unitPrice?.toFixed(2) || 'N/A'}
+                            {product.productName} ({product.brand}) - ${product.unitPrice?.toFixed(2) || 'N/A'} {product.source && `(${product.source})`}
                           </SelectItem>
                         ))}
                       </SelectContent>

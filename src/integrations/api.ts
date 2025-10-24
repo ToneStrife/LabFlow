@@ -9,6 +9,7 @@ import {
   RequestStatus,
   InventoryItem,
   MockEmail,
+  ProductDetails, // Importar ProductDetails para la búsqueda externa
 } from "@/data/types";
 
 // Mantener las importaciones de mock data para otras tablas hasta que se conviertan
@@ -124,7 +125,7 @@ export const apiAddAccountManager = async (data: Omit<AccountManager, "id" | "cr
   return newManager;
 };
 
-export const apiUpdateAccountManager = async (id: string, data: Partial<OOmit<AccountManager, "id" | "created_at">>): Promise<AccountManager> => {
+export const apiUpdateAccountManager = async (id: string, data: Partial<Omit<AccountManager, "id" | "created_at">>): Promise<AccountManager> => {
   const { data: updatedManager, error } = await supabase.from('account_managers').update(data).eq('id', id).select().single();
   if (error) throw error;
   return updatedManager;
@@ -157,6 +158,33 @@ export const apiUpdateProject = async (id: string, data: Partial<Omit<Project, "
 export const apiDeleteProject = async (id: string): Promise<void> => {
   const { error } = await supabase.from('projects').delete().eq('id', id);
   if (error) throw error;
+};
+
+// --- API de Búsqueda Externa de Productos ---
+interface ExternalProductSearchResponse {
+  products: ProductDetails[];
+}
+
+export const apiSearchExternalProduct = async (catalogNumber: string, brand?: string): Promise<ProductDetails[]> => {
+  const { data, error } = await supabase.functions.invoke('search-product', {
+    body: JSON.stringify({ catalogNumber, brand }),
+    method: 'POST',
+  });
+
+  if (error) {
+    console.error("Error invoking search-product edge function:", error);
+    let errorMessage = 'Failed to search external product via Edge Function.';
+    if (data && typeof data === 'object' && 'error' in data) {
+        errorMessage = (data as any).error;
+    } else if (error.message) {
+        errorMessage = error.message;
+    } else if (typeof data === 'string') {
+        errorMessage = data;
+    }
+    throw new Error(errorMessage);
+  }
+
+  return (data as ExternalProductSearchResponse).products;
 };
 
 
