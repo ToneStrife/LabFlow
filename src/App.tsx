@@ -9,20 +9,21 @@ import NewRequest from "./pages/NewRequest";
 import Vendors from "./pages/Vendors";
 import RequestDetails from "./pages/RequestDetails";
 import Profile from "./pages/Profile";
-import Users from "./pages/Users"; // Importar la nueva página de Users
+import Users from "./pages/Users";
 import AccountManagers from "./pages/AccountManagers";
 import Inventory from "./pages/Inventory"; 
 import NotFound from "./pages/NotFound";
 import { SessionContextProvider, useSession } from "./components/SessionContextProvider";
 import React from "react";
-import Login from "./pages/Login"; // Importar la nueva página de Login
-import { Loader2 } from "lucide-react"; // Importar Loader2
+import Login from "./pages/Login";
+import { Loader2 } from "lucide-react";
+import { Profile as UserProfileType } from "@/hooks/use-profiles"; // Importar el tipo Profile
 
 const queryClient = new QueryClient();
 
-// Componente PrivateRoute para proteger rutas
-const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { session, loading } = useSession();
+// Componente PrivateRoute para proteger rutas con verificación de sesión y roles
+const PrivateRoute: React.FC<{ children: React.ReactNode; requiredRoles?: UserProfileType['role'][] }> = ({ children, requiredRoles }) => {
+  const { session, profile, loading } = useSession();
 
   if (loading) {
     return (
@@ -34,6 +35,12 @@ const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 
   if (!session) {
     return <Navigate to="/login" replace />;
+  }
+
+  // Si se requieren roles, verificar si el perfil del usuario tiene alguno de ellos
+  if (requiredRoles && profile && !requiredRoles.includes(profile.role)) {
+    // Redirigir a una página de acceso denegado o al dashboard
+    return <Navigate to="/dashboard" replace />; // O a una página 403 específica
   }
 
   return <>{children}</>;
@@ -57,12 +64,12 @@ const AppRoutes = () => {
         <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
         <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
         <Route path="/new-request" element={<PrivateRoute><NewRequest /></PrivateRoute>} />
-        <Route path="/vendors" element={<PrivateRoute><Vendors /></PrivateRoute>} />
+        <Route path="/vendors" element={<PrivateRoute requiredRoles={["Account Manager", "Admin"]}><Vendors /></PrivateRoute>} />
         <Route path="/requests/:id" element={<PrivateRoute><RequestDetails /></PrivateRoute>} />
         <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
-        <Route path="/users" element={<PrivateRoute><Users /></PrivateRoute>} /> {/* Nueva ruta para Users */}
-        <Route path="/account-managers" element={<PrivateRoute><AccountManagers /></PrivateRoute>} />
-        <Route path="/inventory" element={<PrivateRoute><Inventory /></PrivateRoute>} />
+        <Route path="/users" element={<PrivateRoute requiredRoles={["Admin"]}><Users /></PrivateRoute>} />
+        <Route path="/account-managers" element={<PrivateRoute requiredRoles={["Admin"]}><AccountManagers /></PrivateRoute>} />
+        <Route path="/inventory" element={<PrivateRoute requiredRoles={["Account Manager", "Admin"]}><Inventory /></PrivateRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Layout>

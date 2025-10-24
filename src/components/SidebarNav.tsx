@@ -6,13 +6,21 @@ import { cn } from "@/lib/utils";
 import { Package, ShoppingCart, Users, User, Briefcase, UserCog, Warehouse, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSession } from "@/components/SessionContextProvider";
+import { Profile as UserProfileType } from "@/hooks/use-profiles"; // Importar el tipo Profile
 
 interface SidebarNavProps extends React.HTMLAttributes<HTMLElement> {
   isMobile?: boolean;
   onLinkClick?: () => void;
 }
 
-const navItems = [
+interface NavItem {
+  title: string;
+  href: string;
+  icon: JSX.Element;
+  roles: UserProfileType['role'][]; // Usar el tipo Profile['role']
+}
+
+const navItems: NavItem[] = [
   {
     title: "Dashboard",
     href: "/dashboard",
@@ -38,7 +46,7 @@ const navItems = [
     roles: ["Admin"],
   },
   {
-    title: "Users", // Nuevo elemento de navegación
+    title: "Users",
     href: "/users",
     icon: <Users className="mr-2 h-4 w-4" />,
     roles: ["Admin"],
@@ -60,12 +68,6 @@ const navItems = [
 export function SidebarNav({ className, isMobile, onLinkClick, ...props }: SidebarNavProps) {
   const { profile, loading: sessionLoading } = useSession();
   const userRole = profile?.role;
-
-  // TEMPORARY LOGS FOR DEBUGGING
-  console.log("SidebarNav Debug - sessionLoading:", sessionLoading);
-  console.log("SidebarNav Debug - profile:", profile);
-  console.log("SidebarNav Debug - userRole:", userRole);
-  // END TEMPORARY LOGS
 
   const visibleNavItems = navItems.filter(item => userRole && item.roles.includes(userRole));
 
