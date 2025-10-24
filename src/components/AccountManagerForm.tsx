@@ -3,7 +3,7 @@
 import React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import *s as z from "zod";
+import * as z from "zod"; // Corregido: de '*s as z' a '* as z'
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -21,7 +21,6 @@ const accountManagerFormSchema = z.object({
   first_name: z.string().min(1, { message: "First name is required." }),
   last_name: z.string().min(1, { message: "Last name is required." }),
   email: z.string().email({ message: "Must be a valid email address." }).min(1, { message: "Email is required." }),
-  // La contraseña se elimina ya que los Account Managers serán invitados y no se les asignará una contraseña directamente.
 });
 
 export type AccountManagerFormValues = z.infer<typeof accountManagerFormSchema>;
@@ -31,7 +30,6 @@ interface AccountManagerFormProps {
   onSubmit: (data: AccountManagerFormValues) => void;
   onCancel?: () => void;
   isSubmitting: boolean;
-  // isNew prop ya no es necesaria para la lógica de contraseña
 }
 
 const AccountManagerForm: React.FC<AccountManagerFormProps> = ({ initialData, onSubmit, onCancel, isSubmitting }) => {
