@@ -9,6 +9,7 @@ import NewRequest from "./pages/NewRequest";
 import Vendors from "./pages/Vendors";
 import RequestDetails from "./pages/RequestDetails";
 import Profile from "./pages/Profile";
+import Accounts from "./pages/Accounts"; // Import the new Accounts page
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import { SessionContextProvider, useSession } from "./components/SessionContextProvider";
@@ -50,6 +51,7 @@ const AppRoutes = () => {
         <Route path="/vendors" element={<Vendors />} />
         <Route path="/requests/:id" element={<RequestDetails />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/accounts" element={<Accounts />} /> {/* New Accounts route */}
         <Route path="/login" element={<Navigate to="/dashboard" replace />} />
         <Route path="*" element={<NotFound />} />
       </Routes>

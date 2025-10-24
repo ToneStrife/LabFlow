@@ -23,12 +23,13 @@ export interface User {
   role: "Requester" | "Account Manager" | "Admin"; // Example roles
 }
 
-export interface AccountManager {
-  id: string;
-  name: string;
-  email: string;
-  phone?: string;
-}
+// NOTE: AccountManager interface is no longer needed as profiles will be used
+// export interface AccountManager {
+//   id: string;
+//   name: string;
+//   email: string;
+//   phone?: string;
+// }
 
 // NOTE: This type is now primarily used for form input/local mock data linking
 export interface LabRequest {
@@ -165,10 +166,7 @@ export let mockVendors: Vendor[] = [
   },
 ];
 
-export let mockAccountManagers: AccountManager[] = [
-  { id: "am1", name: "Manager A", email: "manager.a@lab.com", phone: "555-111-2222" },
-  { id: "am2", name: "Manager B", email: "manager.b@lab.com", phone: "555-333-4444" },
-];
+// Removed mockAccountManagers
 
 export const mockProjects: Project[] = [
   { id: "p1", name: "Project Alpha", code: "PA-001" },
@@ -193,49 +191,8 @@ type Listener<T> = (data: T) => void;
 
 // Removed userListeners and related functions
 
-const accountManagerListeners: Listener<AccountManager[]>[] = [];
-
-export const subscribeToAccountManagers = (listener: Listener<AccountManager[]>) => {
-  accountManagerListeners.push(listener);
-  return () => {
-    const index = accountManagerListeners.indexOf(listener);
-    if (index > -1) {
-      accountManagerListeners.splice(index, 1);
-    }
-  };
-};
-
-const notifyAccountManagerListeners = () => {
-  accountManagerListeners.forEach(listener => listener([...mockAccountManagers]));
-};
+// Removed accountManagerListeners and related functions
 
 // --- Functions to modify mock data (simulating API calls) ---
 // Removed addUser, updateUser, deleteUser
-
-export const addAccountManager = (newManager: Omit<AccountManager, "id">) => {
-  const id = `am${mockAccountManagers.length + 1}`;
-  const managerToAdd: AccountManager = { id, ...newManager };
-  mockAccountManagers.push(managerToAdd);
-  notifyAccountManagerListeners();
-  return managerToAdd;
-};
-
-export const updateAccountManager = (managerId: string, updatedData: Partial<AccountManager>) => {
-  const managerIndex = mockAccountManagers.findIndex(am => am.id === managerId);
-  if (managerIndex > -1) {
-    mockAccountManagers[managerIndex] = { ...mockAccountManagers[managerIndex], ...updatedData };
-    notifyAccountManagerListeners();
-    return mockAccountManagers[managerIndex];
-  }
-  return null;
-};
-
-export const deleteAccountManager = (managerId: string) => {
-  const initialLength = mockAccountManagers.length;
-  mockAccountManagers = mockAccountManagers.filter(am => am.id !== managerId);
-  if (mockAccountManagers.length < initialLength) {
-    notifyAccountManagerListeners();
-    return true;
-  }
-  return false;
-};
+// Removed addAccountManager, updateAccountManager, deleteAccountManager

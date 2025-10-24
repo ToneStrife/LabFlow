@@ -15,7 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ArrowLeft, Loader2 } from "lucide-react";
-import { mockProjects, mockAccountManagers, RequestStatus } from "@/data/mockData";
+import { mockProjects, RequestStatus } from "@/data/mockData"; // Removed mockAccountManagers
 import { useRequests, SupabaseRequest } from "@/hooks/use-requests";
 import { useVendors } from "@/hooks/use-vendors";
 import { useAllProfiles, getFullName } from "@/hooks/use-profiles"; // Import profile hook and helper
@@ -68,7 +68,8 @@ const RequestDetails: React.FC = () => {
   }
 
   const vendor = vendors?.find(v => v.id === request.vendor_id);
-  const accountManager = mockAccountManagers.find(am => am.id === request.account_manager_id);
+  const accountManagerProfile = profiles?.find(p => p.id === request.account_manager_id); // Find manager profile
+  const accountManagerName = getFullName(accountManagerProfile); // Use helper function
   const requesterProfile = profiles?.find(p => p.id === request.requester_id);
   const requesterName = getFullName(requesterProfile); // Use helper function
 
@@ -100,7 +101,7 @@ const RequestDetails: React.FC = () => {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Account Manager</p>
-              <p className="font-medium">{accountManager?.name || "N/A"}</p>
+              <p className="font-medium">{accountManagerName}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Project Codes</p>

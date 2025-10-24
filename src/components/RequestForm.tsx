@@ -22,11 +22,12 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { mockProjects, mockAccountManagers, productDatabase, ProductDetails } from "@/data/mockData";
+import { mockProjects, productDatabase, ProductDetails } from "@/data/mockData"; // Removed mockAccountManagers
 import { showError, showLoading, dismissToast, showSuccess } from "@/utils/toast";
 import { useSession } from "@/components/SessionContextProvider";
 import { useVendors } from "@/hooks/use-vendors";
 import { useAddRequest } from "@/hooks/use-requests";
+import { useAccountManagerProfiles, getFullName } from "@/hooks/use-profiles"; // Import useAccountManagerProfiles
 
 const itemSchema = z.object({
   productName: z.string().min(1, { message: "Product name is required." }),
@@ -48,7 +49,7 @@ const itemSchema = z.object({
 const formSchema = z.object({
   vendorId: z.string().min(1, { message: "Vendor is required." }),
   requesterId: z.string().min(1, { message: "Requester is required." }),
-  accountManagerId: z.string().min(1, { message: "Account Manager is required." }),
+  accountManagerId: z.string().uuid({ message: "Account Manager is required." }), // Changed to UUID
   items: z.array(itemSchema).min(1, { message: "At least one item is required." }),
   attachments: z.any().optional(),
   projectCodes: z.array(z.string()).optional(),
@@ -59,6 +60,7 @@ type RequestFormValues = z.infer<typeof formSchema>;
 const RequestForm: React.FC = () => {
   const { session, profile } = useSession();
   const { data: vendors, isLoading: isLoadingVendors } = useVendors();
+  const { data: accountManagers, isLoading: isLoadingAccountManagers } = useAccountManagerProfiles(); // Use new hook
   const addRequestMutation = useAddRequest();
 
   const [autofillingIndex, setAutofillingIndex] = React.useState<number | null>(null);
@@ -182,7 +184,7 @@ const RequestForm: React.FC = () => {
     });
   };
 
-  const requesterName = profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 'Loading...';
+  const requesterName = profile ? getFullName(profile) : 'Loading...';
 
   return (
     <Form {...form}>
@@ -224,13 +226,13 @@ const RequestForm: React.FC = () => {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Account Manager</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoadingAccountManagers}>
                 <FormControl>
-                  <SelectTrigger><SelectValue placeholder="Select an account manager" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder={isLoadingAccountManagers ? "Loading managers..." : "Select an account manager"} /></SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {mockAccountManagers.map((manager) => (
-                    <SelectItem key={manager.id} value={manager.id}>{manager.name}</SelectItem>
+                  {accountManagers?.map((manager) => (
+                    <SelectItem key={manager.id} value={manager.id}>{getFullName(manager)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

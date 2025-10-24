@@ -61,9 +61,16 @@ const RequestList: React.FC = () => {
     return getFullName(profile);
   };
 
+  const getAccountManagerName = (managerId: string | null) => {
+    if (!managerId) return "N/A";
+    const managerProfile = profiles?.find(p => p.id === managerId);
+    return getFullName(managerProfile);
+  };
+
   const filteredRequests = allRequests.filter(request => {
     const vendorName = vendors?.find(v => v.id === request.vendor_id)?.name || "";
     const requesterName = getRequesterName(request.requester_id);
+    const accountManagerName = getAccountManagerName(request.account_manager_id);
 
     const matchesSearchTerm = searchTerm.toLowerCase() === "" ||
       request.items?.some(item =>
@@ -72,7 +79,8 @@ const RequestList: React.FC = () => {
         (item.brand && item.brand.toLowerCase().includes(searchTerm.toLowerCase()))
       ) ||
       vendorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      requesterName.toLowerCase().includes(searchTerm.toLowerCase());
+      requesterName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      accountManagerName.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesStatus = filterStatus === "All" || request.status === filterStatus;
 
@@ -95,7 +103,7 @@ const RequestList: React.FC = () => {
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row gap-4">
         <Input
-          placeholder="Search requests (product, catalog, brand, vendor, requester)..."
+          placeholder="Search requests (product, catalog, brand, vendor, requester, manager)..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="flex-1"
@@ -119,6 +127,7 @@ const RequestList: React.FC = () => {
             <TableRow>
               <TableHead>Vendor</TableHead>
               <TableHead>Requester</TableHead>
+              <TableHead>Account Manager</TableHead> {/* New column */}
               <TableHead>Status</TableHead>
               <TableHead>Date</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -127,7 +136,7 @@ const RequestList: React.FC = () => {
           <TableBody>
             {filteredRequests.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
                   No requests found matching your criteria.
                 </TableCell>
               </TableRow>
@@ -135,12 +144,14 @@ const RequestList: React.FC = () => {
               filteredRequests.map((request) => {
                 const vendor = vendors?.find(v => v.id === request.vendor_id);
                 const requesterName = getRequesterName(request.requester_id);
+                const accountManagerName = getAccountManagerName(request.account_manager_id);
                 const date = format(new Date(request.created_at), 'yyyy-MM-dd');
 
                 return (
                   <TableRow key={request.id}>
                     <TableCell className="font-medium">{vendor?.name || "N/A"}</TableCell>
                     <TableCell>{requesterName}</TableCell>
+                    <TableCell>{accountManagerName}</TableCell> {/* Display manager name */}
                     <TableCell>
                       <Badge variant={getStatusBadgeVariant(request.status)}>
                         {request.status}

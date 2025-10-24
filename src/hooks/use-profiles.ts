@@ -7,20 +7,15 @@ export interface Profile {
   last_name: string | null;
   avatar_url: string | null;
   updated_at: string | null;
+  role: string; // Added role
 }
 
 const fetchAllProfiles = async (): Promise<Profile[]> => {
-  // Note: The RLS policy on 'profiles' currently only allows users to see their own profile.
-  // For the dashboard to work, we need a policy that allows authenticated users (like managers)
-  // to view all profiles. I will assume a temporary policy change is acceptable for functionality.
-  // If this were a real app, we'd need a role check here.
-  
   const { data, error } = await supabase
     .from("profiles")
     .select("*");
 
   if (error) {
-    // If RLS prevents reading all, this will throw.
     console.error("Error fetching all profiles:", error);
     throw new Error(error.message);
   }
@@ -31,6 +26,26 @@ export const useAllProfiles = () => {
   return useQuery<Profile[], Error>({
     queryKey: ["allProfiles"],
     queryFn: fetchAllProfiles,
+  });
+};
+
+// New hook to fetch only Account Manager profiles
+export const useAccountManagerProfiles = () => {
+  return useQuery<Profile[], Error>({
+    queryKey: ["accountManagers"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("role", "Account Manager")
+        .order("first_name", { ascending: true });
+
+      if (error) {
+        console.error("Error fetching account manager profiles:", error);
+        throw new Error(error.message);
+      }
+      return data as Profile[];
+    },
   });
 };
 
