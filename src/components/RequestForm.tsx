@@ -383,16 +383,21 @@ const RequestForm: React.FC = () => {
                 <FormField
                   control={form.control}
                   name={`items.${index}.unitPrice`}
-                  render={({ field: itemField }) => (
-                    <FormItem>
-                      <FormLabel>Unit Price (Optional)</FormLabel>
-                      <FormControl><Input type="number" step="0.01" placeholder="e.g., 120.50" {...itemField} /></FormControl>
-                      <FormMessage />
-                      {form.watch(`items.${index}.ai_enriched_estimated_price`) !== undefined && (
-                        <p className="text-xs text-muted-foreground">AI Suggestion: ${form.watch(`items.${index}.ai_enriched_estimated_price`)?.toFixed(2)}</p>
-                      )}
-                    </FormItem>
-                  )}
+                  render={({ field: itemField }) => {
+                    const aiPriceValue = form.watch(`items.${index}.ai_enriched_estimated_price`);
+                    const hasAiPrice = aiPriceValue !== undefined && aiPriceValue !== null && aiPriceValue !== '';
+
+                    return (
+                      <FormItem>
+                        <FormLabel>Unit Price (Optional)</FormLabel>
+                        <FormControl><Input type="number" step="0.01" placeholder="e.g., 120.50" {...itemField} /></FormControl>
+                        <FormMessage />
+                        {hasAiPrice && (
+                          <p className="text-xs text-muted-foreground">AI Suggestion: ${Number(aiPriceValue).toFixed(2)}</p>
+                        )}
+                      </FormItem>
+                    );
+                  }}
                 />
                 <FormField
                   control={form.control}
