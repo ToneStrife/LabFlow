@@ -13,6 +13,7 @@ serve(async (req) => {
   }
 
   try {
+    // Autenticación del usuario que llama a la función
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -29,17 +30,19 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Unauthorized: Invalid session' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
+    // Obtener datos de la solicitud
     const { catalogNumber, brand } = await req.json();
-
     if (!catalogNumber) {
       return new Response(JSON.stringify({ error: 'Missing required field: catalogNumber' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    const aiApiKey = Deno.env.get('AI_API_KEY');
-    if (!aiApiKey) {
-      return new Response(JSON.stringify({ error: 'Server configuration error: AI_API_KEY is not set.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    // Verificar la clave de API de Gemini
+    const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
+    if (!geminiApiKey) {
+      return new Response(JSON.stringify({ error: 'Server configuration error: GEMINI_API_KEY is not set.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
+    // Prompt para la IA
     const systemInstruction = `
       Eres un asistente de IA experto en la búsqueda y extracción de información de productos científicos y de laboratorio. Tu tarea es encontrar información precisa sobre un producto basándote en su marca y número de catálogo.
 
@@ -77,31 +80,32 @@ serve(async (req) => {
 
     const combinedPrompt = `${systemInstruction}\n\n${userPrompt}`;
 
-    const response = await fetch("https://api.aimlapi.com/v1/chat/completions", {
+    // Llamada a la API de Google Gemini
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${geminiApiKey}`, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${aiApiKey}`,
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        "model": "google/gemini-1.5-flash",
-        "response_format": { "type": "json_object" },
-        "messages": [
-          { "role": "user", "content": combinedPrompt }
-        ]
+        "contents": [{
+          "parts": [{ "text": combinedPrompt }]
+        }],
+        "generationConfig": {
+          "response_mime_type": "application/json",
+        }
       })
     });
 
     if (!response.ok) {
       const errorBody = await response.text();
-      console.error('Edge Function: AIMLAPI API error:', errorBody);
-      return new Response(JSON.stringify({ error: `AIMLAPI API error: ${response.statusText}` }), { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      console.error('Edge Function: Google Gemini API error:', errorBody);
+      return new Response(JSON.stringify({ error: `Google Gemini API error: ${response.statusText}` }), { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     const data = await response.json();
-    const rawResponse = data.choices[0].message.content;
+    const rawResponse = data.candidates[0].content.parts[0].text;
     
-    console.log('Edge Function: Raw AI Response:', rawResponse); // Registro añadido para depuración
+    console.log('Edge Function: Raw AI Response from Google Gemini:', rawResponse);
 
     let aiResponse: any;
     try {
@@ -124,10 +128,8 @@ serve(async (req) => {
       notes: aiResponse.technical_notes,
       brand: brand,
       catalogNumber: catalogNumber,
-      source: `AI Search (AIMLAPI - Gemini 1.5 Flash)`
+      source: `AI Search (Google Gemini 1.5 Flash) | Confidence: ${aiResponse.confidence_score}`
     };
-
-    console.log(`Edge Function: External search for catalog ${catalogNumber}, brand ${brand} found details via AIMLAPI.`);
 
     return new Response(JSON.stringify({ products: productDetails }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
