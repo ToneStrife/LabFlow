@@ -70,6 +70,11 @@ const RequestForm: React.FC = () => {
   const [matchingProducts, setMatchingProducts] = React.useState<ProductDetails[]>([]);
   const [selectionIndex, setSelectionIndex] = React.useState<number | null>(null);
 
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "items",
+  });
+
   const form = useForm<RequestFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
