@@ -160,59 +160,32 @@ export const apiDeleteProject = async (id: string): Promise<void> => {
   if (error) throw error;
 };
 
-// --- API de Búsqueda Externa de Productos (Simulando LLM con acceso a internet) ---
-// Esta función ahora simula la llamada a base44.integrations.Core.InvokeLLM
+// --- API de Búsqueda Externa de Productos (Ahora invoca la Edge Function) ---
 export const apiSearchExternalProduct = async (catalogNumber: string, brand?: string): Promise<ProductDetails> => {
-  await new Promise(resolve => setTimeout(resolve, 2000)); // Simular el tiempo de respuesta de la IA
+  const { data, error } = await supabase.functions.invoke('search-product', {
+    body: JSON.stringify({ catalogNumber, brand }),
+    method: 'POST',
+  });
 
-  // Aquí se simularía la lógica del LLM con acceso a internet
-  // El "prompt" a la IA sería algo como:
-  // "Busca en internet un producto de laboratorio/científico con Marca: '${brand}' y Número de Catálogo: '${catalogNumber}'.
-  // Extrae el nombre completo del producto, tamaño del paquete/formato, precio estimado en EUROS, URL de un producto fiable y notas técnicas breves.
-  // Devuelve la información en el siguiente formato JSON:
-  // { "product_name": "string", "pack_size": "string", "estimated_price": "number", "product_url": "string", "technical_notes": "string" }"
+  if (error) {
+    console.error("Error invoking search-product edge function:", error);
+    let errorMessage = 'Failed to search external product via Edge Function.';
+    if (data && typeof data === 'object' && 'error' in data) {
+        errorMessage = (data as any).error;
+    } else if (error.message) {
+        errorMessage = error.message;
+    } else if (typeof data === 'string') {
+        errorMessage = data;
+    }
+    throw new Error(errorMessage);
+  }
 
-  // Simulación de la respuesta del LLM
-  if (catalogNumber.toLowerCase().includes("18265017") && brand?.toLowerCase().includes("invitrogen")) {
-    return {
-      id: "ai-pdt-18265017",
-      productName: "E. coli DH5a Competent Cells",
-      catalogNumber: "18265017",
-      unitPrice: 155.75, // Precio estimado
-      format: "10x 50µl (500µl total)", // Tamaño del paquete
-      link: "https://www.thermofisher.com/order/catalog/product/18265017",
-      brand: "Invitrogen",
-      source: "AI Search",
-      notes: "High efficiency transformation, suitable for general cloning applications. Store at -80°C."
-    };
-  } else if (catalogNumber.toLowerCase().includes("ab12345") && brand?.toLowerCase().includes("abcam")) {
-    return {
-      id: "ai-pdt-ab12345",
-      productName: "Anti-GFP Antibody (Rabbit Polyclonal)",
-      catalogNumber: "ab12345",
-      unitPrice: 125.00,
-      format: "100 µg (200 µl at 0.5 mg/ml)",
-      link: "https://www.abcam.com/anti-gfp-antibody-ab12345.html",
-      brand: "Abcam",
-      source: "AI Search",
-      notes: "Reacts with Aequorea victoria GFP. Suitable for Western Blot, Immunofluorescence, ELISA. Store at -20°C."
-    };
-  } else if (catalogNumber.toLowerCase().includes("p2000") && brand?.toLowerCase().includes("sigma-aldrich")) {
-    return {
-      id: "ai-pdt-p2000",
-      productName: "Taq DNA Polymerase",
-      catalogNumber: "P2000",
-      unitPrice: 52.50,
-      format: "500 units (5 units/µl)",
-      link: "https://www.sigmaaldrich.com/P2000",
-      brand: "Sigma-Aldrich",
-      source: "AI Search",
-      notes: "Thermostable DNA polymerase for PCR. Optimal activity at 72°C. Includes 10x reaction buffer."
-    };
+  // La Edge Function devuelve un objeto con una propiedad 'products'
+  if (!data || !data.products) {
+    throw new Error("AI did not return valid product details.");
   }
   
-  // Si no se encuentra, simular que la IA no encontró nada
-  throw new Error(`AI could not find detailed information for product with Catalog Number: '${catalogNumber}' and Brand: '${brand || "N/A"}'.`);
+  return data.products as ProductDetails;
 };
 
 
