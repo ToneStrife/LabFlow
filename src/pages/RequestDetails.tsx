@@ -3,46 +3,27 @@
 import React from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+import { Loader2, ArrowLeft } from "lucide-react";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { ArrowLeft, Loader2, CheckCircle, FileText, Mail, Package, Receipt } from "lucide-react";
-import { RequestStatus } from "@/data/types"; // Importar RequestStatus desde types
-import { useRequests, SupabaseRequest, useUpdateRequestStatus, useSendEmail } from "@/hooks/use-requests";
-import { useVendors } from "@/hooks/use-vendors";
-import { useAllProfiles, getFullName } from "@/hooks/use-profiles";
-import { format } from "date-fns";
-import EmailDialog, { EmailFormValues } from "@/components/EmailDialog";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 
-const getStatusBadgeVariant = (status: RequestStatus) => {
-  switch (status) {
-    case "Pending":
-      return "secondary";
-    case "Approved":
-      return "default";
-    case "Quote Requested":
-      return "outline";
-    case "PO Requested":
-      return "destructive";
-    case "Ordered":
-      return "default";
-    case "Received":
-      return "success"; // Assuming 'success' variant exists or can be styled
-    default:
-      return "secondary";
-  }
-};
+import { useRequests, SupabaseRequest, useUpdateRequestStatus, useSendEmail } from "@/hooks/use-requests";
+import { useVendors } from "@/hooks/use-vendors";
+import { useAllProfiles, getFullName } from "@/hooks/use-profiles";
+import EmailDialog, { EmailFormValues } from "@/components/EmailDialog";
+
+// Import new modular components
+import RequestSummaryCard from "@/components/request-details/RequestSummaryCard";
+import RequestItemsTable from "@/components/request-details/RequestItemsTable";
+import RequestActions from "@/components/request-details/RequestActions";
 
 const RequestDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -77,6 +58,14 @@ const RequestDetails: React.FC = () => {
     }
   }, [request]);
 
+  const getVendorEmail = (vendorId: string) => {
+    return vendors?.find(v => v.id === vendorId)?.email || "";
+  };
+
+  const getAccountManagerEmail = (managerId: string | null) => {
+    return profiles?.find(p => p.id === managerId)?.email || "";
+  };
+
   const getRequesterName = (requesterId: string) => {
     const profile = profiles?.find(p => p.id === requesterId);
     return getFullName(profile);
@@ -86,14 +75,6 @@ const RequestDetails: React.FC = () => {
     if (!managerId) return "N/A";
     const managerProfile = profiles?.find(p => p.id === managerId);
     return getFullName(managerProfile);
-  };
-
-  const getVendorEmail = (vendorId: string) => {
-    return vendors?.find(v => v.id === vendorId)?.email || "";
-  };
-
-  const getAccountManagerEmail = (managerId: string | null) => {
-    return profiles?.find(p => p.id === managerId)?.email || "";
   };
 
   const handleSendEmail = async (emailData: EmailFormValues) => {
@@ -130,7 +111,7 @@ ${requestToApprove.items?.map(item => `- ${item.quantity}x ${item.product_name} 
 Please provide your best pricing and estimated delivery times.
 
 Thank you,
-${getRequesterName(requestToApp_requester_id)}`,
+${getRequesterName(requestToApprove.requester_id)}`,
       });
       setIsApproveRequestDialogOpen(false); // Close approval dialog
       setIsEmailDialogOpen(true); // Open email dialog
@@ -298,17 +279,6 @@ ${requesterName}`,
   }
 
   const vendor = vendors?.find(v => v.id === request.vendor_id);
-  const accountManagerProfile = profiles?.find(p => p.id === request.account_manager_id);
-  const accountManagerName = getFullName(accountManagerProfile);
-  const requesterProfile = profiles?.find(p => p.id === request.requester_id);
-  const requesterName = getFullName(requesterProfile);
-
-  const projectCodesDisplay = request.project_codes?.map(projectId => {
-    // const project = mockProjects.find(p => p.id === projectId); // mockProjects is not imported
-    return projectId; // Using projectId directly for now
-  }).join(", ") || "N/A";
-
-  const dateSubmitted = format(new Date(request.created_at), 'yyyy-MM-dd HH:mm');
 
   return (
     <div className="container mx-auto py-8">
@@ -316,145 +286,19 @@ ${requesterName}`,
         <ArrowLeft className="mr-2 h-4 w-4" /> Back to Dashboard
       </Button>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span>Request from: {vendor?.name || "N/A"}</span>
-            <Badge variant={getStatusBadgeVariant(request.status)}>{request.status}</Badge>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <p className="text-sm text-muted-foreground">Requester</p>
-              <p className="font-medium">{requesterName}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Account Manager</p>
-              <p className="font-medium">{accountManagerName}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Project Codes</p>
-              <p className="font-medium">{projectCodesDisplay}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Date Submitted</p>
-              <p className="font-medium">{dateSubmitted}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Quote Details</p>
-              <p className="font-medium">
-                {request.quote_details ? (
-                  <a href={request.quote_details} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
-                    View Quote
-                  </a>
-                ) : "N/A"}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">PO Number</p>
-              <p className="font-medium">{request.po_number || "N/A"}</p>
-            </div>
-          </div>
+      <RequestSummaryCard request={request} vendor={vendor} profiles={profiles} />
 
-          {request.notes && (
-            <>
-              <Separator />
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Notes</p>
-                <p className="text-sm">{request.notes}</p>
-              </div>
-            </>
-          )}
+      <RequestItemsTable items={request.items} />
 
-          <Separator />
-
-          <h2 className="text-xl font-semibold mb-4">Requested Items</h2>
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Product Name</TableHead>
-                  <TableHead>Brand</TableHead>
-                  <TableHead>Catalog #</TableHead>
-                  <TableHead>Quantity</TableHead>
-                  <TableHead>Unit Price</TableHead>
-                  <TableHead>Format</TableHead>
-                  <TableHead>Link</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {request.items?.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell className="font-medium">{item.product_name}</TableCell>
-                    <TableCell>{item.brand || "N/A"}</TableCell>
-                    <TableCell>{item.catalog_number || "N/A"}</TableCell>
-                    <TableCell>{item.quantity}</TableCell>
-                    <TableCell>{item.unit_price ? `$${Number(item.unit_price).toFixed(2)}` : "N/A"}</TableCell>
-                    <TableCell>{item.format || "N/A"}</TableCell>
-                    <TableCell>
-                      {item.link ? (
-                        <a href={item.link} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
-                          View Product
-                        </a>
-                      ) : (
-                        "N/A"
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-
-          <div className="flex justify-end space-x-2 mt-6">
-            {request.status === "Pending" && (
-              <Button
-                onClick={() => openApproveRequestDialog(request)}
-                disabled={updateStatusMutation.isPending}
-              >
-                <CheckCircle className="mr-2 h-4 w-4" /> Approve Request
-              </Button>
-            )}
-
-            {request.status === "Quote Requested" && (
-              <Button
-                onClick={() => handleOpenQuoteAndPODetailsDialog(request)}
-                disabled={updateStatusMutation.isPending}
-              >
-                <FileText className="mr-2 h-4 w-4" /> Enter Quote Details & PO Number
-              </Button>
-            )}
-
-            {request.status === "PO Requested" && (
-              <Button
-                onClick={() => handleSendPORequest(request)}
-                disabled={updateStatusMutation.isPending}
-              >
-                <Mail className="mr-2 h-4 w-4" /> Send PO Request to Account Manager
-              </Button>
-            )}
-
-            {(request.status === "PO Requested" && request.po_number) && (
-              <Button
-                onClick={() => openOrderConfirmationDialog(request)}
-                disabled={updateStatusMutation.isPending}
-              >
-                <Package className="mr-2 h-4 w-4" /> Mark as Ordered
-              </Button>
-            )}
-
-            {request.status === "Ordered" && (
-              <Button
-                onClick={() => handleMarkAsReceived(request)}
-                disabled={updateStatusMutation.isPending}
-              >
-                <Receipt className="mr-2 h-4 w-4" /> Mark as Received
-              </Button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      <RequestActions
+        request={request}
+        isUpdatingStatus={updateStatusMutation.isPending}
+        openApproveRequestDialog={openApproveRequestDialog}
+        handleOpenQuoteAndPODetailsDialog={handleOpenQuoteAndPODetailsDialog}
+        handleSendPORequest={handleSendPORequest}
+        openOrderConfirmationDialog={openOrderConfirmationDialog}
+        handleMarkAsReceived={handleMarkAsReceived}
+      />
 
       {/* Approve Request Dialog */}
       <Dialog open={isApproveRequestDialogOpen} onOpenChange={setIsApproveRequestDialogOpen}>
