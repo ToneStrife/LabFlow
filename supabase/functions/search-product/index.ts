@@ -79,9 +79,12 @@ serve(async (req) => {
     `;
 
     const combinedPrompt = `${systemInstruction}\n\n${userPrompt}`;
+    
+    // Usando el nombre de modelo exacto solicitado: gemini-2.5-flash
+    const MODEL_NAME = "gemini-2.5-flash"; 
 
     // Llamada a la API de Google Gemini
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${geminiApiKey}`, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${geminiApiKey}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -98,11 +101,17 @@ serve(async (req) => {
 
     if (!response.ok) {
       const errorBody = await response.text();
-      console.error('Edge Function: Google Gemini API error:', errorBody);
-      return new Response(JSON.stringify({ error: `Google Gemini API error: ${response.statusText}` }), { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      console.error('Edge Function: Google Gemini API error:', response.status, errorBody);
+      return new Response(JSON.stringify({ error: `Google Gemini API error (${response.status}): ${response.statusText}` }), { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     const data = await response.json();
+    
+    if (!data.candidates || data.candidates.length === 0) {
+        console.error('Edge Function: No candidates returned from Gemini API:', data);
+        return new Response(JSON.stringify({ error: 'AI returned an empty response.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    
     const rawResponse = data.candidates[0].content.parts[0].text;
     
     console.log('Edge Function: Raw AI Response from Google Gemini:', rawResponse);
@@ -128,7 +137,7 @@ serve(async (req) => {
       notes: aiResponse.technical_notes,
       brand: brand,
       catalogNumber: catalogNumber,
-      source: `AI Search (Google Gemini 1.5 Flash) | Confidence: ${aiResponse.confidence_score}`
+      source: `AI Search (Google Gemini 2.5 Flash) | Confidence: ${aiResponse.confidence_score}`
     };
 
     return new Response(JSON.stringify({ products: productDetails }), {
