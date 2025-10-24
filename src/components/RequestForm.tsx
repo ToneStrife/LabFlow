@@ -22,7 +22,8 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { mockProjects, productDatabase, ProductDetails, RequestItem } from "@/data/mockData";
+import { mockProjects, productDatabase } from "@/data/storage"; // Importar desde storage
+import { ProductDetails, RequestItem } from "@/data/types"; // Importar tipos desde types
 import { showError, showLoading, dismissToast, showSuccess } from "@/utils/toast";
 import { useSession } from "@/components/SessionContextProvider";
 import { useVendors } from "@/hooks/use-vendors";
