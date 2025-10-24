@@ -70,7 +70,7 @@ serve(async (req) => {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        "model": "openai/gpt-4o", // Cambiado a GPT-4o
+        "model": "anthropic/claude-3-opus", // Cambiado a Claude 3 Opus
         "response_format": { "type": "json_object" },
         "messages": [
           { "role": "user", "content": combinedPrompt }
@@ -107,7 +107,7 @@ serve(async (req) => {
       notes: aiResponse.technical_notes,
       brand: brand,
       catalogNumber: catalogNumber,
-      source: "AI Search (AIMLAPI - GPT-4o)" // Fuente actualizada
+      source: "AI Search (AIMLAPI - Claude 3 Opus)" // Fuente actualizada
     };
 
     console.log(`Edge Function: External search for catalog ${catalogNumber}, brand ${brand} found details via AIMLAPI.`);
