@@ -64,8 +64,8 @@ serve(async (req) => {
     }
 
     const genAI = new GoogleGenerativeAI(geminiApiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }); // Puedes usar "gemini-1.5-pro" si necesitas un modelo más potente
-
+    const model = genAI.getGenerativeModel({ model: "gemini-pro" }); // CAMBIADO a gemini-pro
+    
     const prompt = `
       Search the internet for a lab/scientific product with Brand: '${brand}' and Catalog Number: '${catalogNumber}'.
       Extract the following details:
@@ -75,7 +75,7 @@ serve(async (req) => {
       - URL of a reliable product page (e.g., manufacturer, major distributor)
       - Brief technical notes (key specifications, storage conditions, applications).
 
-      Be precise and only return information you are confident about. If you cannot find a specific piece of information, omit it or state "N/A".
+      Be precise and only return information you are confident about. If you cannot find a specific piece de information, omit it or state "N/A".
       Return the information in a JSON object matching the following schema:
       {
         "productName": "string",
