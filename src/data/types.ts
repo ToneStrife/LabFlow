@@ -35,17 +35,20 @@ export interface Vendor {
   brands: string[] | null;
 }
 
-// ELIMINADO: export interface CustomerAccount {
-//   id: string;
-//   created_at: string;
-//   name: string;
-//   contact_person: string | null;
-//   email: string | null;
-//   phone: string | null;
-//   notes: string | null;
-//   owner_id: string;
-//   assigned_manager_id: string | null;
-// }
+export interface AccountManager {
+  id: string;
+  created_at: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+}
+
+export interface Project {
+  id: string;
+  created_at: string;
+  name: string;
+  code: string;
+}
 
 export interface SupabaseRequestItem {
   id: string;
@@ -64,16 +67,16 @@ export interface SupabaseRequest {
   id: string;
   created_at: string;
   vendor_id: string;
-  requester_id: string;
-  account_manager_id: string | null;
+  requester_id: string; // Still references auth.users.id via profiles
+  account_manager_id: string | null; // Now references public.account_managers.id
   status: RequestStatus;
   notes: string | null;
-  project_codes: string[] | null;
+  project_codes: string[] | null; // Still string[] but values are public.projects.id
   items: SupabaseRequestItem[] | null;
   po_number: string | null;
-  quote_url: string | null; // Renamed from quote_details
-  po_url: string | null;    // New field for PO file URL
-  slip_url: string | null;  // New field for packing slip URL
+  quote_url: string | null;
+  po_url: string | null;
+  slip_url: string | null;
 }
 
 export interface ProductDetails {

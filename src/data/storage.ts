@@ -1,6 +1,6 @@
 // src/data/storage.ts
 
-import { Profile, Vendor, CustomerAccount, SupabaseRequest, SupabaseRequestItem, ProductDetails, InventoryItem } from "./types";
+import { Profile, Vendor, SupabaseRequest, SupabaseRequestItem, ProductDetails, InventoryItem } from "./types";
 
 // Helper to generate unique IDs
 export const generateId = () => Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
@@ -54,12 +54,7 @@ export const productDatabase: ProductDetails[] = [
   },
 ];
 
-export const mockProjects: { id: string; name: string; code: string }[] = [
-  { id: "p1", name: "Project Alpha", code: "PA-001" },
-  { id: "p2", name: "Project Beta", code: "PB-002" },
-  { id: "p3", name: "Project Gamma", code: "PG-003" },
-  { id: "p4", name: "Project Delta", code: "PD-004" },
-];
+export let mockProjects: { id: string; name: string; code: string }[] = []; // Removed mock data, will fetch from Supabase
 
 // --- Mock Data Storage ---
 export let mockProfiles: Profile[] = [
@@ -172,10 +167,10 @@ export let mockRequests: SupabaseRequest[] = [
     created_at: new Date(Date.now() - 86400000 * 2).toISOString(), // 2 days ago
     vendor_id: "v1",
     requester_id: "mock-user-id-123",
-    account_manager_id: "manager-id-456",
+    account_manager_id: "manager-id-456", // This ID will need to be updated to a real account_manager.id
     status: "Pending",
     notes: "Urgent request for cell culture supplies.",
-    project_codes: ["p1"],
+    project_codes: ["p1"], // These IDs will need to be updated to real project.id
     items: [], // Items will be joined later
     quote_url: null,
     po_number: null,
@@ -190,7 +185,7 @@ export let mockRequests: SupabaseRequest[] = [
     account_manager_id: null,
     status: "Quote Requested",
     notes: "Antibody for western blot.",
-    project_codes: ["p2"],
+    project_codes: ["p2"], // These IDs will need to be updated to real project.id
     items: [], // Items will be joined later
     quote_url: null,
     po_number: null,
@@ -202,10 +197,10 @@ export let mockRequests: SupabaseRequest[] = [
     created_at: new Date(Date.now() - 86400000 * 10).toISOString(), // 10 days ago
     vendor_id: "v2",
     requester_id: "mock-user-id-123",
-    account_manager_id: "manager-id-789",
+    account_manager_id: "manager-id-789", // This ID will need to be updated to a real account_manager.id
     status: "Ordered",
     notes: "Chemicals for new experiment.",
-    project_codes: ["p3"],
+    project_codes: ["p3"], // These IDs will need to be updated to real project.id
     items: [], // Items will be joined later
     quote_url: "https://example.com/quote-req3.pdf",
     po_number: "PO-CHEM-001",
