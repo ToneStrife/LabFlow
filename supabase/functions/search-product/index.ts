@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import { verify } from 'https://deno.land/x/djwt@v2.8/mod.ts';
+import OpenAI from 'https://esm.sh/openai@4.52.2'; // Importar el SDK de OpenAI
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -16,7 +17,7 @@ serve(async (req) => {
   try {
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '', // Usar anon key para operaciones de lectura si RLS lo permite
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       {
         auth: {
           autoRefreshToken: false,
@@ -56,87 +57,70 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Missing required field: catalogNumber' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // --- AQUÍ ES DONDE INTEGRARÍAS LA LLAMADA A UNA API EXTERNA REAL ---
-    // Ejemplo hipotético:
-    // const EXTERNAL_API_KEY = Deno.env.get('EXTERNAL_PRODUCT_API_KEY'); // Configura esto como un secreto en Supabase
-    // const externalApiUrl = `https://api.hypothetical-product-search.com/v1/products?catalog_number=${catalogNumber}&brand=${brand || ''}&api_key=${EXTERNAL_API_KEY}`;
-    
-    // const externalApiResponse = await fetch(externalApiUrl, {
-    //   headers: {
-    //     'Content-Type': 'application/json',
-    //     // Otros headers necesarios para la API externa
-    //   },
-    // });
+    // --- INTEGRACIÓN REAL CON OPENAI GPT-4o ---
+    const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
+    if (!openaiApiKey) {
+      return new Response(JSON.stringify({ error: 'Server configuration error: OPENAI_API_KEY is not set.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
 
-    // if (!externalApiResponse.ok) {
-    //   const errorText = await externalApiResponse.text();
-    //   throw new Error(`External API error: ${externalApiResponse.status} - ${errorText}`);
-    // }
+    const openai = new OpenAI({ apiKey: openaiApiKey });
 
-    // const externalApiData = await externalApiResponse.json();
+    const prompt = `
+      Search the internet for a lab/scientific product with Brand: '${brand}' and Catalog Number: '${catalogNumber}'.
+      Extract the following details:
+      - Full product name
+      - Package size/format (e.g., "100 tubes", "500ml", "50 reactions")
+      - Estimated price in EUROS (only if clearly stated and reliable)
+      - URL of a reliable product page (e.g., manufacturer, major distributor)
+      - Brief technical notes (key specifications, storage conditions, applications).
 
-    // --- TRANSFORMA LOS DATOS DE LA API EXTERNA AL FORMATO ProductDetails ---
-    // Esto es crucial. La respuesta de la API externa tendrá su propio formato.
-    // Necesitas mapear esos campos a tu interfaz ProductDetails.
-    // Ejemplo:
-    // const products: ProductDetails[] = externalApiData.results.map((item: any) => ({
-    //   id: item.id.toString(),
-    //   productName: item.name,
-    //   catalogNumber: item.catalog,
-    //   unitPrice: item.price,
-    //   format: item.packaging,
-    //   link: item.url,
-    //   brand: item.manufacturer,
-    //   source: "External API" // Para indicar de dónde viene el dato
-    // }));
-
-    // --- SIMULACIÓN TEMPORAL (REEMPLAZA ESTO CON LA LÓGICA REAL) ---
-    // Mientras no tengas una API real, puedes mantener una simulación aquí
-    // o simplemente devolver un array vacío si no hay una API configurada.
-    await new Promise(resolve => setTimeout(resolve, 1500)); // Simular retraso de red
-    const simulatedExternalProducts = [
+      Be precise and only return information you are confident about. If you cannot find a specific piece of information, omit it or state "N/A".
+      Return the information in a JSON object matching the following schema:
       {
-        id: "ext-pdt1",
-        productName: "Advanced Cell Culture Medium X",
-        catalogNumber: "ACC-001",
-        unitPrice: 250.00,
-        format: "1L bottle",
-        link: "https://www.external-supplier.com/acc-001",
-        brand: "BioTech Solutions",
-        source: "External Search"
-      },
-      {
-        id: "ext-pdt2",
-        productName: "High-Purity DNA Ligase",
-        catalogNumber: "DNAL-HP",
-        unitPrice: 320.00,
-        format: "200 units",
-        link: "https://www.external-supplier.com/dnal-hp",
-        brand: "Enzyme Innovations",
-        source: "External Search"
-      },
-      {
-        id: "ext-pdt3",
-        productName: "Fluorescent Microscopy Dye Kit",
-        catalogNumber: "FMD-KIT",
-        unitPrice: 899.99,
-        format: "1 kit",
-        link: "https://www.external-supplier.com/fmd-kit",
-        brand: "Imaging Pro",
-        source: "External Search"
-      },
-    ];
+        "productName": "string",
+        "catalogNumber": "string",
+        "unitPrice": "number | undefined",
+        "format": "string | undefined",
+        "link": "string | undefined",
+        "brand": "string",
+        "notes": "string | undefined",
+        "source": "string"
+      }
+      Ensure the 'catalogNumber' and 'brand' in the output match the input.
+      If no reliable information is found, return an empty JSON object {}.
+    `;
 
-    const matches = simulatedExternalProducts.filter(p => {
-      const catMatch = p.catalogNumber.toLowerCase() === catalogNumber.toLowerCase();
-      const brandMatch = !brand || p.brand.toLowerCase().includes(brand.toLowerCase());
-      return catMatch && brandMatch;
+    const chatCompletion = await openai.chat.completions.create({
+      model: 'gpt-4o', // O 'gpt-4-turbo' si prefieres
+      messages: [{ role: 'user', content: prompt }],
+      response_format: { type: "json_object" },
+      temperature: 0.2, // Mantener la temperatura baja para respuestas más fácticas
     });
-    // --- FIN DE LA SIMULACIÓN TEMPORAL ---
 
-    console.log(`Edge Function: External search for catalog ${catalogNumber}, brand ${brand} found ${matches.length} matches.`);
+    const rawResponse = chatCompletion.choices[0].message.content;
+    let productDetails: any = {};
 
-    return new Response(JSON.stringify({ products: matches }), { // Cambia `matches` por `products` de tu API real
+    if (rawResponse) {
+      try {
+        productDetails = JSON.parse(rawResponse);
+        // Asegurarse de que el catalogNumber y brand coincidan con la entrada
+        productDetails.catalogNumber = catalogNumber;
+        productDetails.brand = brand;
+        productDetails.source = "AI Search (OpenAI)";
+      } catch (jsonError) {
+        console.error('Edge Function: Failed to parse OpenAI JSON response:', jsonError);
+        // Si falla el parseo, podemos intentar devolver un error o un objeto vacío
+        return new Response(JSON.stringify({ error: 'AI response could not be parsed.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+    }
+
+    if (!productDetails || Object.keys(productDetails).length === 0 || !productDetails.productName) {
+      return new Response(JSON.stringify({ error: `AI could not find detailed information for product with Catalog Number: '${catalogNumber}' and Brand: '${brand || "N/A"}'.` }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    console.log(`Edge Function: External search for catalog ${catalogNumber}, brand ${brand} found details.`);
+
+    return new Response(JSON.stringify({ products: productDetails }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     });
