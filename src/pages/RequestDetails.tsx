@@ -15,13 +15,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ArrowLeft, Loader2, CheckCircle, FileText, Mail, Package, Receipt } from "lucide-react";
-import { RequestStatus } from "@/data/mockData";
+import { RequestStatus } from "@/data/types"; // Importar RequestStatus desde types
 import { useRequests, SupabaseRequest, useUpdateRequestStatus, useSendEmail } from "@/hooks/use-requests";
 import { useVendors } from "@/hooks/use-vendors";
 import { useAllProfiles, getFullName } from "@/hooks/use-profiles";
 import { format } from "date-fns";
 import EmailDialog, { EmailFormValues } from "@/components/EmailDialog";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 
@@ -59,10 +59,13 @@ const RequestDetails: React.FC = () => {
   const [emailInitialData, setEmailInitialData] = React.useState<Partial<EmailFormValues>>({});
   const [currentRequestForEmail, setCurrentRequestForEmail] = React.useState<SupabaseRequest | null>(null);
 
-  const [isQuoteDetailsDialogOpen, setIsQuoteDetailsDialogOpen] = React.useState(false);
+  const [isApproveRequestDialogOpen, setIsApproveRequestDialogOpen] = React.useState(false);
+  const [requestToApprove, setRequestToApprove] = React.useState<SupabaseRequest | null>(null);
+
+  const [isQuoteAndPODetailsDialogOpen, setIsQuoteAndPODetailsDialogOpen] = React.useState(false);
   const [quoteDetailsInput, setQuoteDetailsInput] = React.useState(request?.quote_details || "");
   const [poNumberInput, setPoNumberInput] = React.useState(request?.po_number || "");
-  const [currentRequestForQuote, setCurrentRequestForQuote] = React.useState<SupabaseRequest | null>(null);
+  const [currentRequestForQuoteAndPO, setCurrentRequestForQuoteAndPO] = React.useState<SupabaseRequest | null>(null);
 
   React.useEffect(() => {
     if (request) {
@@ -95,23 +98,40 @@ const RequestDetails: React.FC = () => {
     setIsEmailDialogOpen(false);
   };
 
-  const handleApproveRequest = (request: SupabaseRequest) => {
-    setCurrentRequestForEmail(request);
-    setEmailInitialData({
-      to: getVendorEmail(request.vendor_id),
-      subject: `Quote Request for Lab Order #${request.id}`,
-      body: `Dear ${vendors?.find(v => v.id === request.vendor_id)?.contact_person || "Vendor"},
+  // --- New Approval Flow ---
+  const openApproveRequestDialog = (request: SupabaseRequest) => {
+    setRequestToApprove(request);
+    setIsApproveRequestDialogOpen(true);
+  };
 
-We would like to request a quote for the following items from our lab order request #${request.id}:
+  const handleApproveOnly = async () => {
+    if (requestToApprove) {
+      await updateStatusMutation.mutateAsync({ id: requestToApprove.id, status: "Quote Requested" });
+      setIsApproveRequestDialogOpen(false);
+      setRequestToApprove(null);
+    }
+  };
 
-${request.items?.map(item => `- ${item.quantity}x ${item.product_name} (Catalog #: ${item.catalog_number})`).join("\n")}
+  const handleApproveAndRequestQuoteEmail = () => {
+    if (requestToApprove) {
+      setCurrentRequestForEmail(requestToApprove);
+      setEmailInitialData({
+        to: getVendorEmail(requestToApprove.vendor_id),
+        subject: `Quote Request for Lab Order #${requestToApprove.id}`,
+        body: `Dear ${vendors?.find(v => v.id === requestToApprove.vendor_id)?.contact_person || "Vendor"},
+
+We would like to request a quote for the following items from our lab order request #${requestToApprove.id}:
+
+${requestToApprove.items?.map(item => `- ${item.quantity}x ${item.product_name} (Catalog #: ${item.catalog_number})`).join("\n")}
 
 Please provide your best pricing and estimated delivery times.
 
 Thank you,
-${getRequesterName(request.requester_id)}`,
-    });
-    setIsEmailDialogOpen(true);
+${getRequesterName(requestToApprove.requester_id)}`,
+      });
+      setIsApproveRequestDialogOpen(false); // Close approval dialog
+      setIsEmailDialogOpen(true); // Open email dialog
+    }
   };
 
   const handleConfirmQuoteRequest = async () => {
@@ -120,35 +140,48 @@ ${getRequesterName(request.requester_id)}`,
       setCurrentRequestForEmail(null);
     }
   };
+  // --- End New Approval Flow ---
 
-  const handleOpenQuoteDetailsDialog = (request: SupabaseRequest) => {
-    setCurrentRequestForQuote(request);
+  // --- Quote and PO Details Dialog ---
+  const handleOpenQuoteAndPODetailsDialog = (request: SupabaseRequest) => {
+    setCurrentRequestForQuoteAndPO(request);
     setQuoteDetailsInput(request.quote_details || "");
     setPoNumberInput(request.po_number || "");
-    setIsQuoteDetailsDialogOpen(true);
+    setIsQuoteAndPODetailsDialogOpen(true);
   };
 
-  const handleSaveQuoteDetails = async () => {
-    if (currentRequestForQuote) {
+  const handleSaveQuoteAndPODetails = async () => {
+    if (currentRequestForQuoteAndPO) {
       await updateStatusMutation.mutateAsync({
-        id: currentRequestForQuote.id,
+        id: currentRequestForQuoteAndPO.id,
         status: "PO Requested",
         quoteDetails: quoteDetailsInput,
         poNumber: poNumberInput || null,
       });
-      setIsQuoteDetailsDialogOpen(false);
-      setCurrentRequestForQuote(null);
+      setIsQuoteAndPODetailsDialogOpen(false);
+      setCurrentRequestForQuoteAndPO(null);
       setQuoteDetailsInput("");
       setPoNumberInput("");
     }
   };
+  // --- End Quote and PO Details Dialog ---
 
   const handleSendPORequest = (request: SupabaseRequest) => {
     setCurrentRequestForEmail(request);
+    const vendor = vendors?.find(v => v.id === request.vendor_id);
+    const managerName = getAccountManagerName(request.account_manager_id);
+    const requesterName = getRequesterName(request.requester_id);
+
+    const attachments = [];
+    if (request.quote_details) {
+      // Simulate attachment if quote_details is a URL or a file name
+      attachments.push({ name: `Quote_Request_${request.id}.pdf`, url: request.quote_details });
+    }
+
     setEmailInitialData({
       to: getAccountManagerEmail(request.account_manager_id),
       subject: `PO Request for Lab Order #${request.id}`,
-      body: `Dear ${getAccountManagerName(request.account_manager_id)},
+      body: `Dear ${managerName},
 
 We have received a quote for lab order request #${request.id}.
 Quote Details: ${request.quote_details || "N/A"}
@@ -156,8 +189,8 @@ Quote Details: ${request.quote_details || "N/A"}
 Please generate a Purchase Order (PO) for this request.
 
 Thank you,
-${getRequesterName(request.requester_id)}`,
-      attachments: request.quote_details ? [{ name: `Quote_Request_${request.id}.pdf`, url: request.quote_details }] : [],
+${requesterName}`,
+      attachments: attachments,
     });
     setIsEmailDialogOpen(true);
   };
@@ -171,10 +204,21 @@ ${getRequesterName(request.requester_id)}`,
 
   const handleMarkAsOrdered = (request: SupabaseRequest) => {
     setCurrentRequestForEmail(request);
+    const vendor = vendors?.find(v => v.id === request.vendor_id);
+    const requesterName = getRequesterName(request.requester_id);
+
+    const attachments = [];
+    if (request.quote_details) {
+      attachments.push({ name: `Quote_Request_${request.id}.pdf`, url: request.quote_details });
+    }
+    if (request.po_number) {
+      attachments.push({ name: `PO_${request.po_number}.pdf`, url: `https://example.com/po/${request.po_number}.pdf` }); // Mock PO attachment
+    }
+
     setEmailInitialData({
       to: getVendorEmail(request.vendor_id),
       subject: `Official Order for Lab Order #${request.id} (PO: ${request.po_number || "N/A"})`,
-      body: `Dear ${vendors?.find(v => v.id === request.vendor_id)?.contact_person || "Vendor"},
+      body: `Dear ${vendor?.contact_person || "Vendor"},
 
 This email confirms the official order for lab request #${request.id}.
 Please find the attached quote and Purchase Order for your reference.
@@ -185,11 +229,8 @@ PO Number: ${request.po_number || "N/A"}
 Please proceed with the order.
 
 Thank you,
-${getRequesterName(request.requester_id)}`,
-      attachments: [
-        ...(request.quote_details ? [{ name: `Quote_Request_${request.id}.pdf`, url: request.quote_details }] : []),
-        ...(request.po_number ? [{ name: `PO_${request.po_number}.pdf`, url: `https://example.com/po/${request.po_number}.pdf` }] : []), // Mock PO attachment
-      ],
+${requesterName}`,
+      attachments: attachments,
     });
     setIsEmailDialogOpen(true);
   };
@@ -340,19 +381,19 @@ ${getRequesterName(request.requester_id)}`,
           <div className="flex justify-end space-x-2 mt-6">
             {request.status === "Pending" && (
               <Button
-                onClick={() => handleApproveRequest(request)}
+                onClick={() => openApproveRequestDialog(request)}
                 disabled={updateStatusMutation.isPending}
               >
-                <CheckCircle className="mr-2 h-4 w-4" /> Approve Request & Request Quote
+                <CheckCircle className="mr-2 h-4 w-4" /> Approve Request
               </Button>
             )}
 
             {request.status === "Quote Requested" && (
               <Button
-                onClick={() => handleOpenQuoteDetailsDialog(request)}
+                onClick={() => handleOpenQuoteAndPODetailsDialog(request)}
                 disabled={updateStatusMutation.isPending}
               >
-                <FileText className="mr-2 h-4 w-4" /> Enter Quote Details
+                <FileText className="mr-2 h-4 w-4" /> Enter Quote Details & PO Number
               </Button>
             )}
 
@@ -386,6 +427,31 @@ ${getRequesterName(request.requester_id)}`,
         </CardContent>
       </Card>
 
+      {/* Approve Request Dialog */}
+      <Dialog open={isApproveRequestDialogOpen} onOpenChange={setIsApproveRequestDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Approve Request</DialogTitle>
+            <DialogDescription>
+              Choose how to proceed with this request.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <p>Request ID: {requestToApprove?.id}</p>
+            <p>Vendor: {vendors?.find(v => v.id === requestToApprove?.vendor_id)?.name || "N/A"}</p>
+          </div>
+          <DialogFooter className="flex flex-col sm:flex-row sm:justify-end sm:space-x-2">
+            <Button variant="outline" onClick={handleApproveOnly} disabled={updateStatusMutation.isPending}>
+              Approve Only
+            </Button>
+            <Button onClick={handleApproveAndRequestQuoteEmail} disabled={updateStatusMutation.isPending}>
+              Approve & Request Quote (Email)
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Email Dialog */}
       <EmailDialog
         isOpen={isEmailDialogOpen}
         onOpenChange={(open) => {
@@ -395,9 +461,7 @@ ${getRequesterName(request.requester_id)}`,
               handleConfirmQuoteRequest();
             } else if (currentRequestForEmail.status === "PO Requested") {
               handleConfirmPORequest();
-            } else if (currentRequestForEmail.status === "Approved") {
-              handleConfirmQuoteRequest();
-            } else if (currentRequestForEmail.status === "PO Requested" && currentRequestForEmail.po_number) {
+            } else if (currentRequestForEmail.status === "Ordered") {
               handleConfirmOrderEmail();
             }
           }
@@ -407,12 +471,13 @@ ${getRequesterName(request.requester_id)}`,
         isSending={sendEmailMutation.isPending}
       />
 
-      <Dialog open={isQuoteDetailsDialogOpen} onOpenChange={setIsQuoteDetailsDialogOpen}>
+      {/* Quote and PO Details Dialog */}
+      <Dialog open={isQuoteAndPODetailsDialogOpen} onOpenChange={setIsQuoteAndPODetailsDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Enter Quote Details</DialogTitle>
+            <DialogTitle>Enter Quote Details & PO Number</DialogTitle>
             <DialogDescription>
-              Please provide the quote details (e.g., a link to the quote PDF or relevant text) and PO Number.
+              Please provide the quote details (e.g., a link to the quote PDF or relevant text) and the Purchase Order Number.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -440,16 +505,29 @@ ${getRequesterName(request.requester_id)}`,
                 placeholder="e.g., PO-12345"
               />
             </div>
-          </div>
-          <div className="flex justify-end space-x-2">
-            <Button variant="outline" onClick={() => setIsQuoteDetailsDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSaveQuoteDetails} disabled={updateStatusMutation.isPending}>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="quotePdfUpload" className="text-right">
+                Quote PDF (Simulated)
+              </Label>
+              <Input
+                id="quotePdfUpload"
+                type="text" // Changed to text for simulation
+                className="col-span-3"
+                placeholder="e.g., quote_document.pdf (simulated upload)"
+                value={quoteDetailsInput.startsWith('http') ? '' : quoteDetailsInput} // Clear if it's a URL
+                onChange={(e) => setQuoteDetailsInput(e.target.value)}
+              />
+            </div>
+          </div >
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsQuoteAndPODetailsDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSaveQuoteAndPODetails} disabled={updateStatusMutation.isPending}>
               {updateStatusMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Save & Request PO"}
             </Button>
-          </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </div >
   );
 };
 
