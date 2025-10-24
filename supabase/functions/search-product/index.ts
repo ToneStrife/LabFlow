@@ -14,7 +14,6 @@ serve(async (req) => {
   }
 
   try {
-    // Crear un cliente de Supabase con el contexto de autenticación del usuario
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -25,21 +24,18 @@ serve(async (req) => {
       }
     );
 
-    // Verificar la sesión del usuario
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
     if (authError || !user) {
       console.error('Edge Function: Authentication error', authError);
       return new Response(JSON.stringify({ error: 'Unauthorized: Invalid session' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // El usuario está autenticado, continuar con la lógica de la función
     const { catalogNumber, brand } = await req.json();
 
     if (!catalogNumber) {
       return new Response(JSON.stringify({ error: 'Missing required field: catalogNumber' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // --- INTEGRACIÓN REAL CON GOOGLE GEMINI ---
     const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
     if (!geminiApiKey) {
       return new Response(JSON.stringify({ error: 'Server configuration error: GEMINI_API_KEY is not set.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
@@ -49,79 +45,70 @@ serve(async (req) => {
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
     
     const prompt = `
-      You are a meticulous data verification specialist for a lab supply company. Your sole task is to find a specific product online and return its details in a precise JSON format. Accuracy is paramount.
+      Busca información sobre el siguiente producto de laboratorio/científico:
 
-      **Product to Verify:**
-      - Brand: "${brand}"
-      - Catalog Number: "${catalogNumber}"
+      MARCA: ${brand}
+      NÚMERO DE CATÁLOGO: ${catalogNumber}
 
-      **Your Internal Thought Process (Follow this before generating the output):**
-      1.  **Search:** I will search for the official manufacturer's page or a major distributor's page for "${brand} ${catalogNumber}".
-      2.  **Verify Source:** Is the webpage I found from the official brand website or a top-tier distributor (like Thermo Fisher, Sigma-Aldrich, VWR)? If not, I must fail.
-      3.  **Confirm Exact Match:** Does the page explicitly list the Brand as "${brand}" and the Catalog Number as "${catalogNumber}"? It must be an exact match. If not, I must fail.
-      4.  **Extract Data:** Now that I've confirmed the source and the match, I will extract the required fields.
-          -   \`productName\`: What is the full product name?
-          -   \`format\`: What is the size/quantity (e.g., "500 mL")?
-          -   \`unitPrice\`: Is there a price listed? Is it in EUROS? If it's in another currency, I will convert it to EUR and make a note. If no price is found, I will use \`null\`.
-          -   \`link\`: What is the direct URL of this page?
-          -   \`notes\`: I will add a key technical detail, like storage temperature. If I converted the price, I will note the original currency here (e.g., "Storage: -20°C. Price converted from USD.").
-      5.  **Final Check:** Does my JSON output strictly follow the format rules? Is there any text outside the markdown block?
+      Tu tarea es buscar este producto específico en internet (sitios web de proveedores científicos, catálogos de laboratorio, etc.) y extraer la siguiente información en un formato JSON estricto.
 
-      **Output Instructions:**
-      - Your entire response MUST be ONLY a single JSON object inside a markdown code block.
-      - If you successfully extract the data, provide the full JSON object.
-      - If you fail at any step (cannot find a reliable source or confirm an exact match), you MUST return an empty JSON object.
-
-      **Successful Output Example:**
+      **Esquema JSON Requerido:**
       \`\`\`json
       {
-        "productName": "E. coli DH5a Competent Cells",
-        "format": "10x 50µl",
-        "unitPrice": 145.50,
-        "link": "https://www.thermofisher.com/order/catalog/product/18265017",
-        "notes": "Storage: -80°C. Price converted from USD.",
-        "brand": "${brand}",
-        "catalogNumber": "${catalogNumber}",
-        "source": "AI Search (Gemini 2.5 Pro)"
+        "product_name": "Nombre completo oficial del producto",
+        "pack_size": "Tamaño/formato del paquete con unidades",
+        "estimated_price": "Precio estimado en euros (número, no texto)",
+        "product_url": "URL directa al producto",
+        "technical_notes": "Notas técnicas y especificaciones relevantes"
       }
       \`\`\`
 
-      **Failure Output:**
-      \`\`\`json
-      {}
-      \`\`\`
+      **Instrucciones Detalladas para cada campo:**
+      1.  **product_name**: El nombre oficial y completo del producto tal como aparece en el catálogo del fabricante.
+      2.  **pack_size**: Información CRÍTICA sobre el contenido del paquete (ej: "100 tubos/paquete", "500 ml", "50 reacciones", "1 kit", "25 g"). Sé específico sobre las unidades y cantidad.
+      3.  **estimated_price**: Precio aproximado del producto en EUROS (€). Si encuentras el precio en otra moneda, conviértelo a euros. Debe ser un número, no un texto (ej: 125.50, no "125,50 €").
+      4.  **product_url**: Un enlace directo y fiable a la página del producto (preferiblemente del fabricante o de un distribuidor oficial).
+      5.  **technical_notes**: Información breve pero relevante como condiciones de almacenamiento, aplicaciones principales, etc.
+
+      **REGLAS IMPORTANTES:**
+      - Tu respuesta DEBE ser únicamente el objeto JSON. No incluyas texto antes o después del JSON.
+      - Sé preciso y exacto. Prioriza fuentes oficiales.
+      - Si no puedes encontrar algún dato específico, el valor del campo debe ser \`null\`.
+      - Si no encuentras información fiable sobre el producto, devuelve un objeto JSON donde todos los campos sean \`null\`.
     `;
 
     const result = await model.generateContent(prompt);
     const response = await result.response;
     let rawResponse = response.text();
 
-    let productDetails: any = {};
-
-    if (rawResponse) {
+    let aiResponse: any;
+    try {
+      // La IA debería devolver JSON directamente, pero por si acaso, limpiamos el markdown si existe.
       const jsonMatch = rawResponse.match(/```json\n([\s\S]*?)\n```/);
       if (jsonMatch && jsonMatch[1]) {
         rawResponse = jsonMatch[1];
-      } else {
-        console.warn('Edge Function: Gemini response did not contain ```json block. Attempting direct parse.');
       }
-
-      const cleanedResponse = rawResponse.replace(/: undefined/g, ': null');
-
-      try {
-        productDetails = JSON.parse(cleanedResponse);
-        productDetails.catalogNumber = catalogNumber;
-        productDetails.brand = brand;
-        productDetails.source = "AI Search (Gemini 2.5 Pro)";
-      } catch (jsonError) {
-        console.error('Edge Function: Failed to parse Gemini JSON response:', jsonError);
-        return new Response(JSON.stringify({ error: 'AI response could not be parsed.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-      }
+      aiResponse = JSON.parse(rawResponse);
+    } catch (jsonError) {
+      console.error('Edge Function: Failed to parse Gemini JSON response:', jsonError, 'Raw Response:', rawResponse);
+      return new Response(JSON.stringify({ error: 'AI response could not be parsed.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    if (!productDetails || Object.keys(productDetails).length === 0 || !productDetails.productName) {
+    if (!aiResponse || !aiResponse.product_name) {
       return new Response(JSON.stringify({ error: `AI could not find reliable information for Catalog #: '${catalogNumber}' and Brand: '${brand || "N/A"}'.` }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
+
+    // Mapear la respuesta de la IA al formato que espera el frontend (camelCase)
+    const productDetails = {
+      productName: aiResponse.product_name,
+      format: aiResponse.pack_size,
+      unitPrice: aiResponse.estimated_price,
+      link: aiResponse.product_url,
+      notes: aiResponse.technical_notes,
+      brand: brand,
+      catalogNumber: catalogNumber,
+      source: "AI Search (Gemini 2.5 Pro)"
+    };
 
     console.log(`Edge Function: External search for catalog ${catalogNumber}, brand ${brand} found details.`);
 
