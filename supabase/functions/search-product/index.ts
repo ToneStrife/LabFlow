@@ -75,16 +75,16 @@ serve(async (req) => {
       - URL of a reliable product page (e.g., manufacturer, major distributor)
       - Brief technical notes (key specifications, storage conditions, applications).
 
-      Be precise and only return information you are confident about. If you cannot find a specific piece de information, omit it or state "N/A".
+      Be precise and only return information you are confident about. If you cannot find a specific piece de information, omit it or use the value 'null'.
       Return the information in a JSON object matching the following schema:
       {
         "productName": "string",
         "catalogNumber": "string",
-        "unitPrice": "number | undefined",
-        "format": "string | undefined",
-        "link": "string | undefined",
+        "unitPrice": "number | null",
+        "format": "string | null",
+        "link": "string | null",
         "brand": "string",
-        "notes": "string | undefined",
+        "notes": "string | null",
         "source": "string"
       }
       Ensure the 'catalogNumber' and 'brand' in the output match the input.
@@ -98,17 +98,20 @@ serve(async (req) => {
     let productDetails: any = {};
 
     if (rawResponse) {
-      // Extraer la cadena JSON de los bloques de código Markdown
+      // 1. Extraer la cadena JSON de los bloques de código Markdown
       const jsonMatch = rawResponse.match(/```json\n([\s\S]*?)\n```/);
       if (jsonMatch && jsonMatch[1]) {
         rawResponse = jsonMatch[1];
       } else {
-        // Si no se encuentra el bloque ```json, intentar parsear directamente (podría ser JSON puro)
         console.warn('Edge Function: Gemini response did not contain ```json block. Attempting direct parse.');
       }
 
+      // 2. Limpiar la cadena JSON: reemplazar 'undefined' por 'null'
+      // Esto es crucial porque LLMs a menudo usan 'undefined' para campos opcionales, lo cual no es JSON válido.
+      const cleanedResponse = rawResponse.replace(/: undefined/g, ': null');
+
       try {
-        productDetails = JSON.parse(rawResponse);
+        productDetails = JSON.parse(cleanedResponse);
         // Asegurarse de que el catalogNumber y brand coincidan con la entrada
         productDetails.catalogNumber = catalogNumber;
         productDetails.brand = brand;
