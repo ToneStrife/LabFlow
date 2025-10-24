@@ -10,106 +10,89 @@ import {
 } from "@/data/types";
 
 import {
-  getMockProfiles,
-  addMockProfile,
-  updateMockProfile,
-  deleteMockProfile,
-  getMockVendors,
-  addMockVendor,
-  updateMockVendor,
-  deleteMockVendor,
-  getMockCustomerAccounts,
-  addMockCustomerAccount,
-  updateMockCustomerAccount,
-  deleteMockCustomerAccount,
-  getMockRequests,
-  addMockRequest,
-  updateMockRequestStatus,
-  updateMockRequestFile,
-  updateMockRequestMetadata, // Importar la nueva función
-  deleteMockRequest,
-  getMockInventory,
-  addMockInventoryItem,
-  updateMockInventoryItem,
-  deleteMockInventoryItem,
-  sendMockEmail,
-} from "@/data/crud";
-
-// Función para simular un retraso de red
-const simulateNetworkDelay = (ms = 300) => new Promise(resolve => setTimeout(resolve, ms));
+  apiGetProfiles as supabaseGetProfiles,
+  apiAddProfile as supabaseAddProfile,
+  apiUpdateProfile as supabaseUpdateProfile,
+  apiDeleteProfile as supabaseDeleteProfile,
+  apiGetVendors as supabaseGetVendors,
+  apiAddVendor as supabaseAddVendor,
+  apiUpdateVendor as supabaseUpdateVendor,
+  apiDeleteVendor as supabaseDeleteVendor,
+  apiGetCustomerAccounts as supabaseGetCustomerAccounts,
+  apiAddCustomerAccount as supabaseAddCustomerAccount,
+  apiUpdateCustomerAccount as supabaseUpdateCustomerAccount,
+  apiDeleteCustomerAccount as supabaseDeleteCustomerAccount,
+  apiGetRequests as supabaseGetRequests,
+  apiAddRequest as supabaseAddRequest,
+  apiUpdateRequestStatus as supabaseUpdateRequestStatus,
+  apiUpdateRequestFile as supabaseUpdateRequestFile,
+  apiUpdateRequestMetadata as supabaseUpdateRequestMetadata,
+  apiDeleteRequest as supabaseDeleteRequest,
+  apiGetInventory as supabaseGetInventory,
+  apiAddInventoryItem as supabaseAddInventoryItem,
+  apiUpdateInventoryItem as supabaseUpdateInventoryItem,
+  apiDeleteInventoryItem as supabaseDeleteInventoryItem,
+  apiSendEmail as supabaseSendEmail,
+} from "@/integrations/supabase/api";
 
 // --- API de Perfiles ---
 export const apiGetProfiles = async (): Promise<Profile[]> => {
-  await simulateNetworkDelay();
-  return getMockProfiles();
+  return supabaseGetProfiles();
 };
 
 export const apiAddProfile = async (data: Omit<Profile, "id" | "updated_at">): Promise<Profile> => {
-  await simulateNetworkDelay();
-  return addMockProfile(data);
+  return supabaseAddProfile(data);
 };
 
 export const apiUpdateProfile = async (id: string, data: Partial<Profile>): Promise<void> => {
-  await simulateNetworkDelay();
-  updateMockProfile(id, data);
+  return supabaseUpdateProfile(id, data);
 };
 
 export const apiDeleteProfile = async (id: string): Promise<void> => {
-  await simulateNetworkDelay();
-  return deleteMockProfile(id);
+  return supabaseDeleteProfile(id);
 };
 
 // --- API de Vendedores ---
 export const apiGetVendors = async (): Promise<Vendor[]> => {
-  await simulateNetworkDelay();
-  return getMockVendors();
+  return supabaseGetVendors();
 };
 
 export const apiAddVendor = async (data: Omit<Vendor, "id" | "created_at">): Promise<Vendor> => {
-  await simulateNetworkDelay();
-  return addMockVendor(data);
+  return supabaseAddVendor(data);
 };
 
 export const apiUpdateVendor = async (id: string, data: Partial<Omit<Vendor, "id" | "created_at">>): Promise<Vendor> => {
-  await simulateNetworkDelay();
-  return updateMockVendor(id, data);
+  return supabaseUpdateVendor(id, data);
 };
 
 export const apiDeleteVendor = async (id: string): Promise<void> => {
-  await simulateNetworkDelay();
-  return deleteMockVendor(id);
+  return supabaseDeleteVendor(id);
 };
 
 // --- API de Cuentas de Clientes ---
 export const apiGetCustomerAccounts = async (): Promise<CustomerAccount[]> => {
-  await simulateNetworkDelay();
-  return getMockCustomerAccounts();
+  return supabaseGetCustomerAccounts();
 };
 
 export const apiAddCustomerAccount = async (data: Omit<CustomerAccount, "id" | "created_at">): Promise<CustomerAccount> => {
-  await simulateNetworkDelay();
-  return addMockCustomerAccount(data);
+  return supabaseAddCustomerAccount(data);
 };
 
 export const apiUpdateCustomerAccount = async (id: string, data: Partial<Omit<CustomerAccount, "id" | "created_at">>): Promise<CustomerAccount> => {
-  await simulateNetworkDelay();
-  return updateMockCustomerAccount(id, data);
+  return supabaseUpdateCustomerAccount(id, data);
 };
 
 export const apiDeleteCustomerAccount = async (id: string): Promise<void> => {
-  await simulateNetworkDelay();
-  return deleteMockCustomerAccount(id);
+  return supabaseDeleteCustomerAccount(id);
 };
 
 // --- API de Solicitudes ---
 export const apiGetRequests = async (): Promise<SupabaseRequest[]> => {
-  await simulateNetworkDelay();
-  return getMockRequests();
+  return supabaseGetRequests();
 };
 
 export const apiAddRequest = async (data: Omit<SupabaseRequest, "id" | "created_at" | "status" | "items" | "po_number" | "quote_url" | "po_url" | "slip_url"> & { items: RequestItem[] }): Promise<SupabaseRequest> => {
-  await simulateNetworkDelay();
-  return addMockRequest(data);
+  return supabaseAddRequest(data);
 };
 
 export const apiUpdateRequestStatus = async (
@@ -118,8 +101,7 @@ export const apiUpdateRequestStatus = async (
   quoteUrl: string | null = null,
   poNumber: string | null = null
 ): Promise<SupabaseRequest> => {
-  await simulateNetworkDelay();
-  return updateMockRequestStatus(id, status, quoteUrl, poNumber);
+  return supabaseUpdateRequestStatus(id, status, quoteUrl, poNumber);
 };
 
 export const apiUpdateRequestMetadata = async (
@@ -130,8 +112,7 @@ export const apiUpdateRequestMetadata = async (
     projectCodes?: string[] | null;
   }
 ): Promise<SupabaseRequest> => {
-  await simulateNetworkDelay();
-  return updateMockRequestMetadata(id, data);
+  return supabaseUpdateRequestMetadata(id, data);
 };
 
 export const apiUpdateRequestFile = async (
@@ -140,34 +121,28 @@ export const apiUpdateRequestFile = async (
   fileUrl: string,
   poNumber: string | null = null
 ): Promise<SupabaseRequest> => {
-  await simulateNetworkDelay();
-  return updateMockRequestFile(id, fileType, fileUrl, poNumber);
+  return supabaseUpdateRequestFile(id, fileType, fileUrl, poNumber);
 };
 
 export const apiDeleteRequest = async (id: string): Promise<void> => {
-  await simulateNetworkDelay();
-  return deleteMockRequest(id);
+  return supabaseDeleteRequest(id);
 };
 
 // --- API de Inventario ---
 export const apiGetInventory = async (): Promise<InventoryItem[]> => {
-  await simulateNetworkDelay();
-  return getMockInventory();
+  return supabaseGetInventory();
 };
 
 export const apiAddInventoryItem = async (data: Omit<InventoryItem, "id" | "added_at" | "last_updated">): Promise<InventoryItem> => {
-  await simulateNetworkDelay();
-  return addMockInventoryItem(data);
+  return supabaseAddInventoryItem(data);
 };
 
 export const apiUpdateInventoryItem = async (id: string, data: Partial<Omit<InventoryItem, "id" | "added_at">>): Promise<InventoryItem> => {
-  await simulateNetworkDelay();
-  return updateMockInventoryItem(id, data);
+  return supabaseUpdateInventoryItem(id, data);
 };
 
 export const apiDeleteInventoryItem = async (id: string): Promise<void> => {
-  await simulateNetworkDelay();
-  return deleteMockInventoryItem(id);
+  return supabaseDeleteInventoryItem(id);
 };
 
 // --- API de Envío de Correo Electrónico ---
@@ -179,6 +154,5 @@ interface EmailData {
 }
 
 export const apiSendEmail = async (email: EmailData): Promise<void> => {
-  await simulateNetworkDelay();
-  return sendMockEmail(email);
+  return supabaseSendEmail(email);
 };

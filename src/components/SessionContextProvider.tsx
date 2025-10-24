@@ -1,67 +1,86 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import { Profile } from "@/hooks/use-profiles"; // Assuming Profile interface exists
+import { useQueryClient, useQuery } from "@tanstack/react-query";
+import { Session } from "@supabase/supabase-js";
+import { createClient } from "@/integrations/supabase/client";
+import { Profile } from "@/hooks/use-profiles";
+import { apiGetProfiles } from "@/integrations/supabase/api"; // Use the real API to fetch profiles
+
+const supabase = createClient();
 
 interface SessionContextType {
-  session: { user: { id: string; email: string } } | null;
+  session: Session | null;
   profile: Profile | null;
   loading: boolean;
-  login: () => void;
+  login: () => void; // Placeholder for redirect/triggering auth UI
   logout: () => void;
 }
 
 const SessionContext = createContext<SessionContextType | undefined>(undefined);
 
+// Hook to fetch the current user's profile based on session ID
+const useCurrentProfile = (userId: string | undefined) => {
+  return useQuery<Profile | null, Error>({
+    queryKey: ["sessionProfile", userId],
+    queryFn: async () => {
+      if (!userId) return null;
+      
+      // Fetch all profiles and find the current user's profile
+      const profiles = await apiGetProfiles();
+      return profiles.find(p => p.id === userId) || null;
+    },
+    enabled: !!userId,
+  });
+};
+
 export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [session, setSession] = useState<{ user: { id: string; email: string } } | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const queryClient = useQueryClient();
 
-  // Simulate a logged-in user and profile
+  // 1. Handle Supabase Auth State Changes
   useEffect(() => {
-    const mockUser = { id: "mock-user-id-123", email: "user@example.com" };
-    const mockProfile: Profile = {
-      id: "mock-user-id-123",
-      first_name: "Mock",
-      last_name: "User",
-      avatar_url: null,
-      updated_at: new Date().toISOString(),
-      role: "Requester",
-    };
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
+      setSession(currentSession);
+      setLoading(false);
+      queryClient.invalidateQueries({ queryKey: ["sessionProfile"] });
+      queryClient.invalidateQueries(); // Invalidate all queries on auth change
+    });
 
-    setSession({ user: mockUser });
-    setProfile(mockProfile);
-    setLoading(false);
-  }, []);
+    // Fetch initial session state
+    supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
+      setSession(initialSession);
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, [queryClient]);
+
+  // 2. Fetch Profile based on current session
+  const userId = session?.user?.id;
+  const { data: profile, isLoading: isLoadingProfile } = useCurrentProfile(userId);
 
   const login = () => {
-    // In a real app, this would handle actual login logic
-    const mockUser = { id: "mock-user-id-123", email: "user@example.com" };
-    const mockProfile: Profile = {
-      id: "mock-user-id-123",
-      first_name: "Mock",
-      last_name: "User",
-      avatar_url: null,
-      updated_at: new Date().toISOString(),
-      role: "Requester",
-    };
-    setSession({ user: mockUser });
-    setProfile(mockProfile);
-    queryClient.invalidateQueries();
+    // In a real app, this would redirect to the login page or open the Auth UI
+    console.log("Simulating login redirect/action.");
+    // Since we don't have a dedicated login page yet, this is a placeholder.
+    // We will implement the login page next.
   };
 
-  const logout = () => {
-    // In a real app, this would handle actual logout logic
-    setSession(null);
-    setProfile(null);
-    queryClient.invalidateQueries();
+  const logout = async () => {
+    await supabase.auth.signOut();
+    queryClient.clear(); // Clear all query cache on logout
   };
 
   return (
-    <SessionContext.Provider value={{ session, profile, loading, login, logout }}>
+    <SessionContext.Provider value={{ 
+      session, 
+      profile: profile || null, 
+      loading: loading || isLoadingProfile, 
+      login, 
+      logout 
+    }}>
       {children}
     </SessionContext.Provider>
   );

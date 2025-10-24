@@ -11,41 +11,61 @@ import RequestDetails from "./pages/RequestDetails";
 import Profile from "./pages/Profile";
 import Accounts from "./pages/Accounts";
 import AccountManagers from "./pages/AccountManagers";
-import Inventory from "./pages/Inventory"; // Import the new Inventory page
+import Inventory from "./pages/Inventory";
+import Login from "./pages/Login"; // Import Login page
 import NotFound from "./pages/NotFound";
 import { SessionContextProvider, useSession } from "./components/SessionContextProvider";
 import React from "react";
+import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient();
 
-const AppRoutes = () => {
-  const { loading } = useSession(); // We assume a session always exists with mock data
+// Component to protect routes
+const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { session, loading } = useSession();
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <p className="text-lg">Loading application...</p>
+        <Loader2 className="h-8 w-8 animate-spin mr-2" /> Loading session...
       </div>
     );
   }
 
-  // With mock data, we always assume a user is "logged in"
+  if (!session) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <Layout>{children}</Layout>;
+};
+
+const AppRoutes = () => {
+  const { session, loading } = useSession();
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin mr-2" /> Loading application...
+      </div>
+    );
+  }
+
   return (
-    <Layout>
-      <Routes>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/new-request" element={<NewRequest />} />
-        <Route path="/vendors" element={<Vendors />} />
-        <Route path="/requests/:id" element={<RequestDetails />} />
-        <Route path="/profile" element={<Profile />} />
-        <Route path="/accounts" element={<Accounts />} />
-        <Route path="/account-managers" element={<AccountManagers />} />
-        <Route path="/inventory" element={<Inventory />} /> {/* New route */}
-        {/* No login route needed as we simulate logged in */}
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </Layout>
+    <Routes>
+      <Route path="/login" element={session ? <Navigate to="/dashboard" replace /> : <Login />} />
+      
+      <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+      <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+      <Route path="/new-request" element={<ProtectedRoute><NewRequest /></ProtectedRoute>} />
+      <Route path="/vendors" element={<ProtectedRoute><Vendors /></ProtectedRoute>} />
+      <Route path="/requests/:id" element={<ProtectedRoute><RequestDetails /></ProtectedRoute>} />
+      <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+      <Route path="/accounts" element={<ProtectedRoute><Accounts /></ProtectedRoute>} />
+      <Route path="/account-managers" element={<ProtectedRoute><AccountManagers /></ProtectedRoute>} />
+      <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
+      
+      <Route path="*" element={<NotFound />} />
+    </Routes>
   );
 };
 
