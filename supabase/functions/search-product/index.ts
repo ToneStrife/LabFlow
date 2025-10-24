@@ -41,18 +41,32 @@ serve(async (req) => {
     }
 
     const systemInstruction = `
-      Eres un especialista en la extracción de datos de productos de laboratorio. Tu única tarea es recibir una marca y un número de catálogo, buscar el producto en internet y devolver los detalles en un formato JSON estricto. Debes ser extremadamente preciso y priorizar las fuentes oficiales del fabricante.
+      Eres un asistente de IA experto en la búsqueda y extracción de información de productos científicos y de laboratorio. Tu tarea es encontrar información precisa sobre un producto basándote en su marca y número de catálogo.
 
-      El esquema JSON que debes seguir es:
+      **Instrucciones Clave:**
+      1.  **Prioriza la fuente oficial:** Siempre intenta encontrar la página del producto en el sitio web oficial del fabricante.
+      2.  **Sé preciso:** Extrae los datos exactamente como aparecen. No inventes información.
+      3.  **Formato JSON estricto:** Tu respuesta DEBE ser únicamente un objeto JSON válido con el siguiente esquema. No incluyas texto antes o después del JSON.
+
+      **Esquema JSON Requerido:**
       {
-        "product_name": "string",
-        "pack_size": "string",
-        "estimated_price": "number",
-        "product_url": "string",
-        "technical_notes": "string"
+        "product_name": "string | null",
+        "pack_size": "string | null",
+        "estimated_price": "number | null",
+        "product_url": "string | null",
+        "technical_notes": "string | null",
+        "confidence_score": "number (0.0 a 1.0)"
       }
 
-      Si no puedes encontrar un dato, el valor del campo debe ser null. Si no encuentras el producto, devuelve un JSON con todos los campos en null.
+      **Definición de Campos:**
+      - \`product_name\`: El nombre completo y oficial del producto.
+      - \`pack_size\`: El formato o tamaño del empaque (ej: "500 mL", "100 µl", "25 reactions").
+      - \`estimated_price\`: El precio de lista en la moneda que encuentres. Solo el número, sin símbolos. Si encuentras un rango, usa el promedio.
+      - \`product_url\`: El enlace directo a la página del producto.
+      - \`technical_notes\`: Un resumen breve de notas técnicas o una descripción del producto.
+      - \`confidence_score\`: Tu nivel de confianza (de 0.0 a 1.0) de que la información encontrada es correcta y pertenece al producto exacto solicitado. 1.0 es certeza absoluta.
+
+      **Si no encuentras el producto o no estás seguro, devuelve un JSON con todos los campos en \`null\` y un \`confidence_score\` bajo (ej: 0.1).**
     `;
 
     const userPrompt = `
@@ -70,7 +84,7 @@ serve(async (req) => {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        "model": "anthropic/claude-3-opus", // Cambiado a Claude 3 Opus
+        "model": "anthropic/claude-3.5-sonnet",
         "response_format": { "type": "json_object" },
         "messages": [
           { "role": "user", "content": combinedPrompt }
@@ -95,8 +109,9 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'AI response could not be parsed.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    if (!aiResponse || !aiResponse.product_name) {
-      return new Response(JSON.stringify({ error: `AI could not find reliable information for Catalog #: '${catalogNumber}' and Brand: '${brand || "N/A"}'.` }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    if (!aiResponse || !aiResponse.product_name || (aiResponse.confidence_score && aiResponse.confidence_score < 0.5)) {
+      const confidence = aiResponse.confidence_score || 'N/A';
+      return new Response(JSON.stringify({ error: `AI could not find reliable information (Confidence: ${confidence}) for Catalog #: '${catalogNumber}' and Brand: '${brand || "N/A"}'.` }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     const productDetails = {
@@ -107,7 +122,7 @@ serve(async (req) => {
       notes: aiResponse.technical_notes,
       brand: brand,
       catalogNumber: catalogNumber,
-      source: "AI Search (AIMLAPI - Claude 3 Opus)" // Fuente actualizada
+      source: `AI Search (AIMLAPI - Claude 3.5) | Confidence: ${aiResponse.confidence_score}`
     };
 
     console.log(`Edge Function: External search for catalog ${catalogNumber}, brand ${brand} found details via AIMLAPI.`);
