@@ -67,34 +67,44 @@ serve(async (req) => {
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     
     const prompt = `
-      CRITICAL INSTRUCTION: You are a highly precise scientific product verification agent. Your ONLY task is to find and extract EXACT lab product details based on the provided Brand and Catalog Number.
+      You are an automated agent for a laboratory supply management system. Your task is to find specific product information online and return it in a structured JSON format.
 
-      STRICT RULES FOR SEARCH AND EXTRACTION:
-      1.  **SEARCH:** Perform a thorough internet search for the product using BOTH the provided 'Brand' and 'Catalog Number'.
-      2.  **VERIFICATION (CRITICAL):** You MUST verify the product name and specifications from an **OFFICIAL MANUFACTURER WEBSITE** or a **MAJOR LABORATORY DISTRIBUTOR WEBSITE** (e.g., Thermo Fisher Scientific, Sigma-Aldrich, Bio-Rad, Abcam, Corning, VWR, Avantor). Prioritize the manufacturer's website.
-      3.  **EXACT MATCH ONLY:** Only if an **EXACT, UNDISPUTED MATCH** for the product (matching both brand and catalog number) is found on a reliable source, proceed to extract the details.
-      4.  **NO GUESSING/INVENTION:** If no official, exact product page is found, or if the search results are ambiguous, speculative, or from unreliable sources (e.g., forums, blogs, non-official resellers), you MUST **STOP IMMEDIATELY** and return an **EMPTY JSON OBJECT {}**. Do NOT guess, substitute, invent, or infer any information or product name.
+      **INPUTS:**
+      - Brand: "${brand}"
+      - Catalog Number: "${catalogNumber}"
 
-      If an EXACT match is reliably found, extract the following details:
-      -   **Full product name:** The complete official name of the product.
-      -   **Package size/format:** The specific packaging or format (e.g., "100 tubes", "500 mL", "50 reactions", "200pack 8cs of 25").
-      -   **Estimated price in EUROS:** Only if clearly stated and reliable on the product page. If not found, use 'null'.
-      -   **URL of the reliable product page:** The direct link to the official product page.
-      -   **Brief technical notes:** Key specifications, storage conditions, or primary applications. Keep it concise. If not found, use 'null'.
+      **INSTRUCTIONS (Follow these steps exactly):**
 
-      Return ONLY the JSON object, wrapped in a markdown code block like this: \`\`\`json\n{...}\n\`\`\`. Do NOT include any other text or explanation outside of this JSON block.
+      **Step 1: Search**
+      - Perform a web search for a product with the EXACT Brand AND Catalog Number provided above.
+      - Example search query: "${brand} ${catalogNumber} official site"
 
-      JSON SCHEMA:
-      {
-        "productName": "string",
-        "catalogNumber": "string",
-        "unitPrice": "number | null",
-        "format": "string | null",
-        "link": "string | null",
-        "brand": "string",
-        "notes": "string | null",
-        "source": "string"
-      }
+      **Step 2: Verify Source**
+      - From the search results, find a link to the OFFICIAL manufacturer's product page or a page from a MAJOR, reputable distributor (like Thermo Fisher, Sigma-Aldrich, VWR, Millipore, Bio-Rad, Abcam).
+      - DO NOT use data from non-official resellers, forums, or research papers.
+
+      **Step 3: Confirm Match**
+      - On the verified page, confirm that BOTH the Brand and the Catalog Number EXACTLY match the inputs.
+      - If there is any ambiguity or if it's a similar but not identical product, consider it a failure.
+
+      **Step 4: Extract Data (ONLY if Step 3 is successful)**
+      - If an exact match is confirmed, extract the following fields from the page:
+        - \`productName\`: The full, official product name.
+        - \`format\`: The package size or format (e.g., "500 mL", "100 reactions").
+        - \`unitPrice\`: The price in EUROS. If not available or not in EUROS, use \`null\`.
+        - \`link\`: The direct URL to the product page you used for verification.
+        - \`notes\`: A brief, one-sentence technical detail (e.g., "Storage: -20°C").
+        - \`source\`: "AI Search (Gemini)"
+
+      **Step 5: Format Output**
+      - Construct a JSON object with the extracted data.
+      - The \`brand\` and \`catalogNumber\` fields in the JSON MUST be the same as the input values.
+      - **CRITICAL:** Your entire response MUST be ONLY the JSON object, enclosed in a markdown code block. Example: \`\`\`json\n{"key": "value"}\n\`\`\`
+      - Do not add any text, explanation, or apologies before or after the JSON block.
+
+      **FAILURE PROTOCOL:**
+      - If you cannot complete Step 2 (no reliable source) or Step 3 (no exact match), you MUST immediately STOP and return an empty JSON object.
+      - Failure output format: \`\`\`json\n{}\n\`\`\`
     `;
 
     const result = await model.generateContent(prompt);
