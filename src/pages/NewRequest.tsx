@@ -6,9 +6,9 @@ import RequestForm from "@/components/RequestForm"; // Import the new form compo
 const NewRequest = () => {
   return (
     <div className="container mx-auto py-8">
-      <h1 className="text-3xl font-bold mb-6">Create New Request</h1>
+      <h1 className="text-3xl font-bold mb-6">Crear Nueva Solicitud</h1>
       <p className="text-lg text-muted-foreground mb-8">
-        Fill out the form below to submit a new lab product request. You can add multiple items to a single request.
+        Rellena el siguiente formulario para enviar una nueva solicitud de productos de laboratorio. Puedes añadir múltiples artículos a una sola solicitud.
       </p>
       <RequestForm />
     </div>

@@ -30,7 +30,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         <aside className="w-64 border-r bg-sidebar p-4 flex flex-col">
           <div className="mb-6">
             <Link to="/dashboard" className="text-2xl font-bold text-sidebar-primary-foreground">
-              Lab Orders
+              Pedidos de Laboratorio
             </Link>
           </div>
           <SidebarNav className="flex-grow" />
@@ -51,7 +51,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               <SheetContent side="left" className="w-64 p-4 flex flex-col">
                 <div className="mb-6">
                   <Link to="/dashboard" className="text-2xl font-bold text-sidebar-primary-foreground" onClick={handleLinkClick}>
-                    Lab Orders
+                    Pedidos de Laboratorio
                   </Link>
                 </div>
                 <SidebarNav className="flex-grow" onLinkClick={handleLinkClick} />
@@ -59,7 +59,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               </SheetContent>
             </Sheet>
           )}
-          <h1 className="text-xl font-semibold">Lab Order Management</h1>
+          <h1 className="text-xl font-semibold">Gestión de Pedidos de Laboratorio</h1>
           {/* User/Profile Placeholder - can add later */}
           {/* <Avatar className="h-8 w-8">
             <AvatarFallback>JD</AvatarFallback>

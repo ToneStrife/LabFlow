@@ -25,7 +25,7 @@ const Dashboard = () => {
   if (isLoading) {
     return (
       <div className="container mx-auto py-8 flex justify-center items-center">
-        <Loader2 className="h-8 w-8 animate-spin mr-2" /> Loading Dashboard...
+        <Loader2 className="h-8 w-8 animate-spin mr-2" /> Cargando Panel de Control...
       </div>
     );
   }
@@ -33,38 +33,38 @@ const Dashboard = () => {
   if (error) {
     return (
       <div className="container mx-auto py-8 text-red-600">
-        Error loading dashboard data: {error.message}
+        Error al cargar los datos del panel: {error.message}
       </div>
     );
   }
 
   return (
     <div className="container mx-auto py-8">
-      <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
+      <h1 className="text-3xl font-bold mb-6">Panel de Control</h1>
       <p className="text-lg text-muted-foreground">
-        Welcome to your Lab Order Management Dashboard.
+        Bienvenido a tu Panel de Gestión de Pedidos de Laboratorio.
       </p>
       <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {/* Dynamic order status cards */}
         <div className="bg-card p-6 rounded-lg shadow-sm border">
-          <h2 className="text-xl font-semibold mb-2">Pending Requests</h2>
+          <h2 className="text-xl font-semibold mb-2">Solicitudes Pendientes</h2>
           <p className="text-3xl font-bold">{pendingRequestsCount}</p>
         </div>
         <div className="bg-card p-6 rounded-lg shadow-sm border">
-          <h2 className="text-xl font-semibold mb-2">Ordered Items</h2>
+          <h2 className="text-xl font-semibold mb-2">Artículos Pedidos</h2>
           <p className="text-3xl font-bold">{orderedItemsCount}</p>
         </div>
         <div className="bg-card p-6 rounded-lg shadow-sm border">
-          <h2 className="text-xl font-semibold mb-2">Received Items</h2>
+          <h2 className="text-xl font-semibold mb-2">Artículos Recibidos</h2>
           <p className="text-3xl font-bold">{receivedItemsCount}</p>
         </div>
       </div>
 
       <div className="mt-12">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-bold">Recent Requests</h2>
+          <h2 className="text-2xl font-bold">Solicitudes Recientes</h2>
           <Button onClick={() => navigate("/new-request")}>
-            <PlusCircle className="mr-2 h-4 w-4" /> New Request
+            <PlusCircle className="mr-2 h-4 w-4" /> Nueva Solicitud
           </Button>
         </div>
         <RequestList />

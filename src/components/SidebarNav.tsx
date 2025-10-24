@@ -22,43 +22,43 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   {
-    title: "Dashboard",
+    title: "Panel de Control",
     href: "/dashboard",
     icon: <ShoppingCart className="mr-2 h-4 w-4" />,
     roles: ["Requester", "Account Manager", "Admin"],
   },
   {
-    title: "New Request",
+    title: "Nueva Solicitud",
     href: "/new-request",
     icon: <Package className="mr-2 h-4 w-4" />,
     roles: ["Requester", "Account Manager", "Admin"],
   },
   {
-    title: "Vendors",
+    title: "Proveedores",
     href: "/vendors",
     icon: <Users className="mr-2 h-4 w-4" />,
     roles: ["Account Manager", "Admin"],
   },
   {
-    title: "Accounts", // Título actualizado
-    href: "/accounts", // Ruta actualizada
-    icon: <Briefcase className="mr-2 h-4 w-4" />, // Icono actualizado
+    title: "Cuentas",
+    href: "/accounts",
+    icon: <Briefcase className="mr-2 h-4 w-4" />,
     roles: ["Admin"],
   },
   {
-    title: "Users",
+    title: "Usuarios",
     href: "/users",
-    icon: <UserCog className="mr-2 h-4 w-4" />, // Icono actualizado
+    icon: <UserCog className="mr-2 h-4 w-4" />,
     roles: ["Admin"],
   },
   {
-    title: "Inventory",
+    title: "Inventario",
     href: "/inventory",
     icon: <Warehouse className="mr-2 h-4 w-4" />,
     roles: ["Account Manager", "Admin"],
   },
   {
-    title: "Profile",
+    title: "Perfil",
     href: "/profile",
     icon: <User className="mr-2 h-4 w-4" />,
     roles: ["Requester", "Account Manager", "Admin"],
@@ -81,7 +81,7 @@ export function SidebarNav({ className, isMobile, onLinkClick, ...props }: Sideb
     >
       {sessionLoading ? (
         <div className="flex items-center px-3 py-2 text-sm text-muted-foreground">
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading navigation...
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Cargando navegación...
         </div>
       ) : visibleNavItems.length > 0 ? (
         visibleNavItems.map((item) => (
@@ -104,7 +104,7 @@ export function SidebarNav({ className, isMobile, onLinkClick, ...props }: Sideb
         ))
       ) : (
         <div className="flex items-center px-3 py-2 text-sm text-muted-foreground">
-          No navigation items available for your role.
+          No hay elementos de navegación disponibles para tu rol.
         </div>
       )}
     </nav>

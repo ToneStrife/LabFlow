@@ -33,18 +33,18 @@ import { getFullName } from "@/hooks/use-profiles";
 import { apiSearchExternalProduct } from "@/integrations/api"; // Importar la API de búsqueda externa (ahora simula la IA)
 
 const itemSchema = z.object({
-  productName: z.string().min(1, { message: "Product name is required." }),
-  catalogNumber: z.string().min(1, { message: "Catalog number is required." }),
+  productName: z.string().min(1, { message: "El nombre del producto es obligatorio." }),
+  catalogNumber: z.string().min(1, { message: "El número de catálogo es obligatorio." }),
   quantity: z.preprocess(
     (val) => Number(val),
-    z.number().min(1, { message: "Quantity must be at least 1." })
+    z.number().min(1, { message: "La cantidad debe ser al menos 1." })
   ),
   unitPrice: z.preprocess(
     (val) => (val === "" ? undefined : Number(val)),
-    z.number().min(0, { message: "Unit price cannot be negative." }).optional()
+    z.number().min(0, { message: "El precio unitario no puede ser negativo." }).optional()
   ),
   format: z.string().optional(),
-  link: z.string().url({ message: "Must be a valid URL." }).optional().or(z.literal("")),
+  link: z.string().url({ message: "Debe ser una URL válida." }).optional().or(z.literal("")),
   notes: z.string().optional(),
   brand: z.string().optional(),
   // AI-enriched fields
@@ -56,10 +56,10 @@ const itemSchema = z.object({
 });
 
 const formSchema = z.object({
-  vendorId: z.string().min(1, { message: "Vendor is required." }),
-  requesterId: z.string().min(1, { message: "Requester ID is required." }), 
+  vendorId: z.string().min(1, { message: "El proveedor es obligatorio." }),
+  requesterId: z.string().min(1, { message: "El ID del solicitante es obligatorio." }), 
   accountManagerId: z.string().optional(), 
-  items: z.array(itemSchema).min(1, { message: "At least one item is required." }),
+  items: z.array(itemSchema).min(1, { message: "Se requiere al menos un artículo." }),
   attachments: z.any().optional(),
   projectCodes: z.array(z.string()).optional(),
 });
@@ -113,14 +113,14 @@ const RequestForm: React.FC = () => {
 
   const handleEnrichWithAI = async (index: number) => {
     setEnrichingIndex(index);
-    const toastId = showLoading("AI is searching for product details...");
+    const toastId = showLoading("La IA está buscando detalles del producto...");
 
     try {
       const catalogNumber = form.getValues(`items.${index}.catalogNumber`)?.trim();
       const brand = form.getValues(`items.${index}.brand`)?.trim();
 
       if (!catalogNumber || !brand) {
-        showError("Please enter both 'Brand' and 'Catalog Number' to enrich with AI.");
+        showError("Por favor, ingresa tanto la 'Marca' como el 'Número de Catálogo' para enriquecer con IA.");
         return;
       }
 
@@ -140,11 +140,11 @@ const RequestForm: React.FC = () => {
       form.setValue(`items.${index}.ai_enriched_link`, aiProductDetails.link || undefined);
       form.setValue(`items.${index}.ai_enriched_notes`, aiProductDetails.notes || undefined);
 
-      showSuccess("Product details enriched by AI!");
+      showSuccess("¡Detalles del producto enriquecidos por IA!");
 
     } catch (error: any) {
       console.error("Error enriching product details with AI:", error);
-      showError(error.message || "Failed to enrich product details with AI.");
+      showError(error.message || "Fallo al enriquecer los detalles del producto con IA.");
     } finally {
       dismissToast(toastId);
       setEnrichingIndex(null);
@@ -153,7 +153,7 @@ const RequestForm: React.FC = () => {
 
   const onSubmit = async (data: RequestFormValues) => {
     if (!session?.user?.id) {
-      showError("You must be logged in to submit a request.");
+      showError("Debes iniciar sesión para enviar una solicitud.");
       return;
     }
 
@@ -193,14 +193,14 @@ const RequestForm: React.FC = () => {
     });
   };
 
-  const requesterName = profile ? getFullName(profile) : 'Loading...';
+  const requesterName = profile ? getFullName(profile) : 'Cargando...';
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormItem>
-            <FormLabel>Requester</FormLabel>
+            <FormLabel>Solicitante</FormLabel>
             <FormControl>
               <Input value={requesterName} readOnly disabled />
             </FormControl>
@@ -211,11 +211,11 @@ const RequestForm: React.FC = () => {
             name="vendorId"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Vendor</FormLabel>
+                <FormLabel>Proveedor</FormLabel>
                 <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoadingVendors}>
                   <FormControl>
                     <SelectTrigger>
-                      <SelectValue placeholder={isLoadingVendors ? "Loading vendors..." : "Select a vendor"} />
+                      <SelectValue placeholder={isLoadingVendors ? "Cargando proveedores..." : "Selecciona un proveedor"} />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
@@ -235,13 +235,13 @@ const RequestForm: React.FC = () => {
             name="accountManagerId"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Account Manager (Optional)</FormLabel>
+                <FormLabel>Gerente de Cuenta (Opcional)</FormLabel>
                 <Select onValueChange={field.onChange} value={field.value || "unassigned"} disabled={isLoadingAccountManagers}>
                   <FormControl>
-                    <SelectTrigger><SelectValue placeholder={isLoadingAccountManagers ? "Loading managers..." : "Select an account manager"} /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder={isLoadingAccountManagers ? "Cargando gerentes..." : "Selecciona un gerente de cuenta"} /></SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="unassigned">No Manager</SelectItem>
+                    <SelectItem value="unassigned">Sin Asignar</SelectItem>
                     {accountManagers?.map((manager) => (
                       <SelectItem key={manager.id} value={manager.id}>{`${manager.first_name} ${manager.last_name}`}</SelectItem>
                     ))}
@@ -256,7 +256,7 @@ const RequestForm: React.FC = () => {
             name="projectCodes"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Project Codes (Optional)</FormLabel>
+                <FormLabel>Códigos de Proyecto (Opcional)</FormLabel>
                 <Popover>
                   <PopoverTrigger asChild>
                     <FormControl>
@@ -268,15 +268,15 @@ const RequestForm: React.FC = () => {
                               return project ? <Badge key={projectId} variant="secondary">{project.code}</Badge> : null;
                             })}
                           </div>
-                        ) : "Select projects..."}
+                        ) : "Seleccionar proyectos..."}
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </FormControl>
                   </PopoverTrigger>
                   <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                     <Command>
-                      <CommandInput placeholder="Search projects..." />
-                      <CommandEmpty>No project found.</CommandEmpty>
+                      <CommandInput placeholder="Buscar proyectos..." />
+                      <CommandEmpty>No se encontró ningún proyecto.</CommandEmpty>
                       <CommandGroup>
                         {projects?.map((project) => (
                           <CommandItem value={project.name} key={project.id} onSelect={() => {
@@ -300,11 +300,11 @@ const RequestForm: React.FC = () => {
             )}
           />
         </div>
-        <h2 className="text-xl font-semibold">Items</h2>
+        <h2 className="text-xl font-semibold">Artículos</h2>
         <div className="space-y-6">
           {fields.map((field, index) => (
             <div key={field.id} className="border p-4 rounded-md relative">
-              <h3 className="text-lg font-medium mb-4">Item #{index + 1}</h3>
+              <h3 className="text-lg font-medium mb-4">Artículo #{index + 1}</h3>
               {fields.length > 1 && (
                 <Button type="button" variant="destructive" size="icon" onClick={() => remove(index)} className="absolute top-4 right-4">
                   <Trash2 className="h-4 w-4" />
@@ -316,8 +316,8 @@ const RequestForm: React.FC = () => {
                   name={`items.${index}.brand`}
                   render={({ field: itemField }) => (
                     <FormItem>
-                      <FormLabel>Brand</FormLabel>
-                      <FormControl><Input placeholder="e.g., Invitrogen" {...itemField} /></FormControl>
+                      <FormLabel>Marca</FormLabel>
+                      <FormControl><Input placeholder="ej. Invitrogen" {...itemField} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -327,8 +327,8 @@ const RequestForm: React.FC = () => {
                   name={`items.${index}.catalogNumber`}
                   render={({ field: itemField }) => (
                     <FormItem>
-                      <FormLabel>Catalog Number</FormLabel>
-                      <FormControl><Input placeholder="e.g., 18265017" {...itemField} /></FormControl>
+                      <FormLabel>Número de Catálogo</FormLabel>
+                      <FormControl><Input placeholder="ej. 18265017" {...itemField} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -346,11 +346,11 @@ const RequestForm: React.FC = () => {
                   >
                     {enrichingIndex === index ? (
                       <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Enriching...
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Enriqueciendo...
                       </>
                     ) : (
                       <>
-                        <Sparkles className="mr-2 h-4 w-4 text-purple-600" /> Enrich with AI
+                        <Sparkles className="mr-2 h-4 w-4 text-purple-600" /> Enriquecer con IA
                       </>
                     )}
                   </Button>
@@ -360,11 +360,11 @@ const RequestForm: React.FC = () => {
                   name={`items.${index}.productName`}
                   render={({ field: itemField }) => (
                     <FormItem>
-                      <FormLabel>Product Name</FormLabel>
-                      <FormControl><Input placeholder="e.g., E. coli DH5a Competent Cells" {...itemField} /></FormControl>
+                      <FormLabel>Nombre del Producto</FormLabel>
+                      <FormControl><Input placeholder="ej. Células Competentes E. coli DH5a" {...itemField} /></FormControl>
                       <FormMessage />
                       {form.watch(`items.${index}.ai_enriched_product_name`) && (
-                        <p className="text-xs text-muted-foreground">AI Suggestion: {form.watch(`items.${index}.ai_enriched_product_name`)}</p>
+                        <p className="text-xs text-muted-foreground">Sugerencia IA: {form.watch(`items.${index}.ai_enriched_product_name`)}</p>
                       )}
                     </FormItem>
                   )}
@@ -374,7 +374,7 @@ const RequestForm: React.FC = () => {
                   name={`items.${index}.quantity`}
                   render={({ field: itemField }) => (
                     <FormItem>
-                      <FormLabel>Quantity</FormLabel>
+                      <FormLabel>Cantidad</FormLabel>
                       <FormControl><Input type="number" {...itemField} /></FormControl>
                       <FormMessage />
                     </FormItem>
@@ -389,11 +389,11 @@ const RequestForm: React.FC = () => {
 
                     return (
                       <FormItem>
-                        <FormLabel>Unit Price (Optional)</FormLabel>
-                        <FormControl><Input type="number" step="0.01" placeholder="e.g., 120.50" {...itemField} /></FormControl>
+                        <FormLabel>Precio Unitario (Opcional)</FormLabel>
+                        <FormControl><Input type="number" step="0.01" placeholder="ej. 120.50" {...itemField} /></FormControl>
                         <FormMessage />
                         {hasAiPrice && (
-                          <p className="text-xs text-muted-foreground">AI Suggestion: ${Number(aiPriceValue).toFixed(2)}</p>
+                          <p className="text-xs text-muted-foreground">Sugerencia IA: ${Number(aiPriceValue).toFixed(2)}</p>
                         )}
                       </FormItem>
                     );
@@ -404,11 +404,11 @@ const RequestForm: React.FC = () => {
                   name={`items.${index}.format`}
                   render={({ field: itemField }) => (
                     <FormItem>
-                      <FormLabel>Format (Optional)</FormLabel>
-                      <FormControl><Input placeholder="e.g., 200pack 8cs of 25" {...itemField} /></FormControl>
+                      <FormLabel>Formato (Opcional)</FormLabel>
+                      <FormControl><Input placeholder="ej. 200pack 8cs of 25" {...itemField} /></FormControl>
                       <FormMessage />
                       {form.watch(`items.${index}.ai_enriched_pack_size`) && (
-                        <p className="text-xs text-muted-foreground">AI Suggestion: {form.watch(`items.${index}.ai_enriched_pack_size`)}</p>
+                        <p className="text-xs text-muted-foreground">Sugerencia IA: {form.watch(`items.${index}.ai_enriched_pack_size`)}</p>
                       )}
                     </FormItem>
                   )}
@@ -418,11 +418,11 @@ const RequestForm: React.FC = () => {
                   name={`items.${index}.link`}
                   render={({ field: itemField }) => (
                     <FormItem>
-                      <FormLabel>Product Link (Optional)</FormLabel>
-                      <FormControl><Input type="url" placeholder="e.g., https://www.vendor.com/product" {...itemField} /></FormControl>
+                      <FormLabel>Enlace del Producto (Opcional)</FormLabel>
+                      <FormControl><Input type="url" placeholder="ej. https://www.vendor.com/product" {...itemField} /></FormControl>
                       <FormMessage />
                       {form.watch(`items.${index}.ai_enriched_link`) && (
-                        <p className="text-xs text-muted-foreground">AI Suggestion: <a href={form.watch(`items.${index}.ai_enriched_link`)} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">View Link</a></p>
+                        <p className="text-xs text-muted-foreground">Sugerencia IA: <a href={form.watch(`items.${index}.ai_enriched_link`)} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">Ver Enlace</a></p>
                       )}
                     </FormItem>
                   )}
@@ -432,11 +432,11 @@ const RequestForm: React.FC = () => {
                   name={`items.${index}.notes`}
                   render={({ field: itemField }) => (
                     <FormItem className="md:col-span-2">
-                      <FormLabel>Notes (Optional)</FormLabel>
-                      <FormControl><Textarea placeholder="Any specific requirements or details..." {...itemField} /></FormControl>
+                      <FormLabel>Notas (Opcional)</FormLabel>
+                      <FormControl><Textarea placeholder="Cualquier requisito o detalle específico..." {...itemField} /></FormControl>
                       <FormMessage />
                       {form.watch(`items.${index}.ai_enriched_notes`) && (
-                        <p className="text-xs text-muted-foreground">AI Suggestion: {form.watch(`items.${index}.ai_enriched_notes`)}</p>
+                        <p className="text-xs text-muted-foreground">Sugerencia IA: {form.watch(`items.${index}.ai_enriched_notes`)}</p>
                       )}
                     </FormItem>
                   )}
@@ -460,23 +460,23 @@ const RequestForm: React.FC = () => {
           ai_enriched_link: undefined,
           ai_enriched_notes: undefined,
         })} className="w-full">
-          <PlusCircle className="mr-2 h-4 w-4" /> Add Another Item
+          <PlusCircle className="mr-2 h-4 w-4" /> Añadir Otro Artículo
         </Button>
-        <h2 className="text-xl font-semibold mt-8 mb-4">Attachments (Optional)</h2>
+        <h2 className="text-xl font-semibold mt-8 mb-4">Archivos Adjuntos (Opcional)</h2>
         <FormField
           control={form.control}
           name="attachments"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Upload Files (e.g., Quotes, PDFs)</FormLabel>
+              <FormLabel>Subir Archivos (ej. Cotizaciones, PDFs)</FormLabel>
               <FormControl><Input type="file" multiple onChange={(e) => field.onChange(e.target.files)} /></FormControl>
               <FormMessage />
-              <p className="text-sm text-muted-foreground">Note: File uploads require a backend to store the files. This is a placeholder.</p>
+              <p className="text-sm text-muted-foreground">Nota: La subida de archivos requiere un backend para almacenar los archivos. Esto es un marcador de posición.</p>
             </FormItem>
           )}
         />
         <Button type="submit" className="w-full" disabled={addRequestMutation.isPending}>
-          {addRequestMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : "Submit Request"}
+          {addRequestMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : "Enviar Solicitud"}
         </Button>
       </form>
     </Form>

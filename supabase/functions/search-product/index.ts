@@ -27,22 +27,22 @@ serve(async (req) => {
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
     if (authError || !user) {
       console.error('Edge Function: Authentication error', authError);
-      return new Response(JSON.stringify({ error: 'Unauthorized: Invalid session' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      return new Response(JSON.stringify({ error: 'No autorizado: Sesión inválida' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     // Obtener datos de la solicitud
     const { catalogNumber, brand } = await req.json();
     if (!catalogNumber) {
-      return new Response(JSON.stringify({ error: 'Missing required field: catalogNumber' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      return new Response(JSON.stringify({ error: 'Campo requerido faltante: catalogNumber' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     // Verificar la clave de API de Gemini
     const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
     if (!geminiApiKey) {
-      return new Response(JSON.stringify({ error: 'Server configuration error: GEMINI_API_KEY is not set.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      return new Response(JSON.stringify({ error: 'Error de configuración del servidor: GEMINI_API_KEY no está configurada.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // Prompt para la IA
+    // Prompt para la IA (Traducido y ajustado para búsqueda en español)
     const systemInstruction = `
       Eres un asistente de IA experto en la búsqueda y extracción de información de productos científicos y de laboratorio. Tu tarea es encontrar información precisa sobre un producto basándote en su marca y número de catálogo.
 
@@ -101,14 +101,14 @@ serve(async (req) => {
     if (!response.ok) {
       const errorBody = await response.text();
       console.error('Edge Function: Google Gemini API error:', response.status, errorBody);
-      return new Response(JSON.stringify({ error: `Google Gemini API error (${response.status}): ${response.statusText}` }), { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      return new Response(JSON.stringify({ error: `Error de la API de Google Gemini (${response.status}): ${response.statusText}` }), { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     const data = await response.json();
     
     if (!data.candidates || data.candidates.length === 0) {
         console.error('Edge Function: No candidates returned from Gemini API:', data);
-        return new Response(JSON.stringify({ error: 'AI returned an empty response.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        return new Response(JSON.stringify({ error: 'La IA devolvió una respuesta vacía.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
     
     const rawResponse = data.candidates[0].content.parts[0].text;
@@ -120,14 +120,14 @@ serve(async (req) => {
       aiResponse = JSON.parse(rawResponse);
     } catch (jsonError) {
       console.error('Edge Function: Failed to parse AI JSON response:', jsonError, 'Raw Response:', rawResponse);
-      return new Response(JSON.stringify({ error: 'AI response could not be parsed.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      return new Response(JSON.stringify({ error: 'La respuesta de la IA no pudo ser analizada.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     // Lógica de error mejorada
     const confidence = aiResponse.confidence_score || 0;
     if (!aiResponse || !aiResponse.product_name || confidence < 0.5) {
       const brandDisplay = brand || "N/A";
-      const errorMsg = `AI could not find reliable information (Confidence: ${confidence.toFixed(1)}) for Catalog #: '${catalogNumber}' and Brand: '${brandDisplay}'. Please check the inputs or enter details manually.`;
+      const errorMsg = `La IA no pudo encontrar información fiable (Confianza: ${confidence.toFixed(1)}) para el Número de Catálogo: '${catalogNumber}' y Marca: '${brandDisplay}'. Por favor, verifica las entradas o ingresa los detalles manualmente.`;
       return new Response(JSON.stringify({ error: errorMsg }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
@@ -139,7 +139,7 @@ serve(async (req) => {
       notes: aiResponse.technical_notes,
       brand: brand,
       catalogNumber: catalogNumber,
-      source: `AI Search (Google Gemini 2.5 Flash) | Confidence: ${confidence.toFixed(1)}`
+      source: `Búsqueda IA (Google Gemini 2.5 Flash) | Confianza: ${confidence.toFixed(1)}`
     };
 
     return new Response(JSON.stringify({ products: productDetails }), {
@@ -149,7 +149,7 @@ serve(async (req) => {
 
   } catch (error: any) {
     console.error('Edge Function: Unhandled error in search-product:', error);
-    return new Response(JSON.stringify({ error: error.message || 'An unexpected error occurred.' }), {
+    return new Response(JSON.stringify({ error: error.message || 'Ocurrió un error inesperado.' }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
     });
