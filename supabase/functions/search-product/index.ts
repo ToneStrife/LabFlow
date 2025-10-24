@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
-import { GoogleGenerativeAI } from 'https://esm.sh/@google/generative-ai@0.15.0';
+import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from 'https://esm.sh/@google/generative-ai@0.15.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -43,51 +43,50 @@ serve(async (req) => {
 
     const genAI = new GoogleGenerativeAI(geminiApiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
-    
-    const prompt = `
-      Busca información sobre el siguiente producto de laboratorio/científico:
 
-      MARCA: ${brand}
-      NÚMERO DE CATÁLOGO: ${catalogNumber}
+    const systemInstruction = `
+      Eres un especialista en la extracción de datos de productos de laboratorio. Tu única tarea es recibir una marca y un número de catálogo, buscar el producto en internet y devolver los detalles en un formato JSON estricto. Debes ser extremadamente preciso y priorizar las fuentes oficiales del fabricante.
 
-      Tu tarea es buscar este producto específico en internet (sitios web de proveedores científicos, catálogos de laboratorio, etc.) y extraer la siguiente información en un formato JSON estricto.
-
-      **Esquema JSON Requerido:**
-      \`\`\`json
+      El esquema JSON que debes seguir es:
       {
-        "product_name": "Nombre completo oficial del producto",
-        "pack_size": "Tamaño/formato del paquete con unidades",
-        "estimated_price": "Precio estimado en euros (número, no texto)",
-        "product_url": "URL directa al producto",
-        "technical_notes": "Notas técnicas y especificaciones relevantes"
+        "product_name": "string",
+        "pack_size": "string",
+        "estimated_price": "number",
+        "product_url": "string",
+        "technical_notes": "string"
       }
-      \`\`\`
 
-      **Instrucciones Detalladas para cada campo:**
-      1.  **product_name**: El nombre oficial y completo del producto tal como aparece en el catálogo del fabricante.
-      2.  **pack_size**: Información CRÍTICA sobre el contenido del paquete (ej: "100 tubos/paquete", "500 ml", "50 reacciones", "1 kit", "25 g"). Sé específico sobre las unidades y cantidad.
-      3.  **estimated_price**: Precio aproximado del producto en EUROS (€). Si encuentras el precio en otra moneda, conviértelo a euros. Debe ser un número, no un texto (ej: 125.50, no "125,50 €").
-      4.  **product_url**: Un enlace directo y fiable a la página del producto (preferiblemente del fabricante o de un distribuidor oficial).
-      5.  **technical_notes**: Información breve pero relevante como condiciones de almacenamiento, aplicaciones principales, etc.
-
-      **REGLAS IMPORTANTES:**
-      - Tu respuesta DEBE ser únicamente el objeto JSON. No incluyas texto antes o después del JSON.
-      - Sé preciso y exacto. Prioriza fuentes oficiales.
-      - Si no puedes encontrar algún dato específico, el valor del campo debe ser \`null\`.
-      - Si no encuentras información fiable sobre el producto, devuelve un objeto JSON donde todos los campos sean \`null\`.
+      Si no puedes encontrar un dato, el valor del campo debe ser null. Si no encuentras el producto, devuelve un JSON con todos los campos en null.
     `;
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    let rawResponse = response.text();
+    const userPrompt = `
+      Por favor, busca y extrae la información para el siguiente producto:
+      - MARCA: ${brand}
+      - NÚMERO DE CATÁLOGO: ${catalogNumber}
+    `;
 
+    const result = await model.generateContent({
+      contents: [{ role: "user", parts: [{ text: userPrompt }] }],
+      systemInstruction: {
+        role: "system",
+        parts: [{ text: systemInstruction }],
+      },
+      generationConfig: {
+        responseMimeType: "application/json",
+      },
+      safetySettings: [
+        { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+        { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+        { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+        { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+      ],
+    });
+
+    const response = await result.response;
+    const rawResponse = response.text();
+    
     let aiResponse: any;
     try {
-      // La IA debería devolver JSON directamente, pero por si acaso, limpiamos el markdown si existe.
-      const jsonMatch = rawResponse.match(/```json\n([\s\S]*?)\n```/);
-      if (jsonMatch && jsonMatch[1]) {
-        rawResponse = jsonMatch[1];
-      }
       aiResponse = JSON.parse(rawResponse);
     } catch (jsonError) {
       console.error('Edge Function: Failed to parse Gemini JSON response:', jsonError, 'Raw Response:', rawResponse);
@@ -98,7 +97,6 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: `AI could not find reliable information for Catalog #: '${catalogNumber}' and Brand: '${brand || "N/A"}'.` }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // Mapear la respuesta de la IA al formato que espera el frontend (camelCase)
     const productDetails = {
       productName: aiResponse.product_name,
       format: aiResponse.pack_size,
