@@ -64,8 +64,8 @@ serve(async (req) => {
     }
 
     const genAI = new GoogleGenerativeAI(geminiApiKey);
-    // CAMBIADO: Usando gemini-2.5-pro
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
+    // CAMBIADO: Usando gemini-2.5-flash
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     
     const prompt = `
       CRITICAL INSTRUCTION: You are a scientific product verification agent. Your sole task is to find the EXACT lab product details based on the provided Brand and Catalog Number.
