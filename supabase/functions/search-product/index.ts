@@ -64,7 +64,7 @@ serve(async (req) => {
     }
 
     const genAI = new GoogleGenerativeAI(geminiApiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" }); // CAMBIADO a gemini-2.5-flash-lite
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
     
     const prompt = `
       Search the internet for a lab/scientific product with Brand: '${brand}' and Catalog Number: '${catalogNumber}'.
@@ -93,11 +93,20 @@ serve(async (req) => {
 
     const result = await model.generateContent(prompt);
     const response = await result.response;
-    const rawResponse = response.text(); // Gemini devuelve el contenido como texto
+    let rawResponse = response.text(); // Gemini devuelve el contenido como texto
 
     let productDetails: any = {};
 
     if (rawResponse) {
+      // Extraer la cadena JSON de los bloques de código Markdown
+      const jsonMatch = rawResponse.match(/```json\n([\s\S]*?)\n```/);
+      if (jsonMatch && jsonMatch[1]) {
+        rawResponse = jsonMatch[1];
+      } else {
+        // Si no se encuentra el bloque ```json, intentar parsear directamente (podría ser JSON puro)
+        console.warn('Edge Function: Gemini response did not contain ```json block. Attempting direct parse.');
+      }
+
       try {
         productDetails = JSON.parse(rawResponse);
         // Asegurarse de que el catalogNumber y brand coincidan con la entrada
@@ -106,7 +115,7 @@ serve(async (req) => {
         productDetails.source = "AI Search (Gemini)";
       } catch (jsonError) {
         console.error('Edge Function: Failed to parse Gemini JSON response:', jsonError);
-        return new Response(JSON.stringify({ error: 'AI response could not be parsed.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        return new Response(JSON.stringify({ error: 'AI response could not be parsed. It might not be valid JSON or the format is unexpected.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
     }
 
