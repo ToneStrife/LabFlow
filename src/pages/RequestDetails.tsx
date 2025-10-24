@@ -82,6 +82,33 @@ const RequestDetails: React.FC = () => {
     setIsEmailDialogOpen(false);
   };
 
+  const handleSendPORequest = (request: SupabaseRequest) => {
+    setCurrentRequestForEmail(request);
+    const managerName = getAccountManagerName(request.account_manager_id);
+    const requesterName = getRequesterName(request.requester_id);
+
+    const attachments = [];
+    if (request.quote_details) {
+      attachments.push({ name: `Quote_Request_${request.id}.pdf`, url: request.quote_details });
+    }
+
+    setEmailInitialData({
+      to: getAccountManagerEmail(request.account_manager_id),
+      subject: `PO Request for Lab Order #${request.id}`,
+      body: `Dear ${managerName},
+
+We have received a quote for lab order request #${request.id}.
+Quote Details: ${request.quote_details || "N/A"}
+
+Please generate a Purchase Order (PO) for this request.
+
+Thank you,
+${requesterName}`,
+      attachments: attachments,
+    });
+    setIsEmailDialogOpen(true);
+  };
+
   // --- Approval Flow ---
   const openApproveRequestDialog = (request: SupabaseRequest) => {
     setRequestToApprove(request);
