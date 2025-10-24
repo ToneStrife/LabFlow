@@ -6,10 +6,13 @@ import {
   RequestItem,
   RequestStatus,
   InventoryItem,
-  // Importar las funciones CRUD de mockData
+  MockEmail, // Importar la nueva interfaz MockEmail
+} from "@/data/types"; // Importar tipos desde el nuevo archivo de tipos
+
+import {
   getMockProfiles,
   addMockProfile,
-  updateMockProfile as updateMockProfileData,
+  updateMockProfile,
   deleteMockProfile,
   getMockVendors,
   addMockVendor,
@@ -21,14 +24,14 @@ import {
   deleteMockCustomerAccount,
   getMockRequests,
   addMockRequest,
-  updateMockRequestStatus, // Importar la función actualizada
+  updateMockRequestStatus,
   deleteMockRequest,
   getMockInventory,
   addMockInventoryItem,
   updateMockInventoryItem,
   deleteMockInventoryItem,
-  sendMockEmail, // Importar la nueva función de email
-} from "@/data/mockData";
+  sendMockEmail,
+} from "@/data/crud"; // Importar todas las funciones CRUD desde el nuevo archivo crud.ts
 
 // Función para simular un retraso de red
 const simulateNetworkDelay = (ms = 300) => new Promise(resolve => setTimeout(resolve, ms));
@@ -46,7 +49,7 @@ export const apiAddProfile = async (data: Omit<Profile, "id" | "updated_at">): P
 
 export const apiUpdateProfile = async (id: string, data: Partial<Profile>): Promise<void> => {
   await simulateNetworkDelay();
-  updateMockProfileData(id, data);
+  updateMockProfile(id, data);
 };
 
 export const apiDeleteProfile = async (id: string): Promise<void> => {
