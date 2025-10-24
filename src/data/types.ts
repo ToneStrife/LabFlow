@@ -70,8 +70,10 @@ export interface SupabaseRequest {
   notes: string | null;
   project_codes: string[] | null;
   items: SupabaseRequestItem[] | null;
-  quote_details: string | null;
   po_number: string | null;
+  quote_url: string | null; // Renamed from quote_details
+  po_url: string | null;    // New field for PO file URL
+  slip_url: string | null;  // New field for packing slip URL
 }
 
 export interface ProductDetails {
