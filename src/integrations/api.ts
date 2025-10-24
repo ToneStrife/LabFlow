@@ -2,7 +2,7 @@ import { supabase } from "./supabase/client"; // Importar cliente de Supabase
 import {
   Profile,
   Vendor,
-  CustomerAccount,
+  // CustomerAccount, // ELIMINADO
   SupabaseRequest,
   RequestItem,
   RequestStatus,
@@ -70,29 +70,29 @@ export const apiDeleteVendor = async (id: string): Promise<void> => {
   if (error) throw error;
 };
 
-// --- API de Cuentas de Clientes ---
-export const apiGetCustomerAccounts = async (): Promise<CustomerAccount[]> => {
-  const { data, error } = await supabase.from('customer_accounts').select('*');
-  if (error) throw error;
-  return data;
-};
+// --- API de Cuentas de Clientes --- ELIMINADO
+// export const apiGetCustomerAccounts = async (): Promise<CustomerAccount[]> => {
+//   const { data, error } = await supabase.from('customer_accounts').select('*');
+//   if (error) throw error;
+//   return data;
+// };
 
-export const apiAddCustomerAccount = async (data: Omit<CustomerAccount, "id" | "created_at">): Promise<CustomerAccount> => {
-  const { data: newAccount, error } = await supabase.from('customer_accounts').insert(data).select().single();
-  if (error) throw error;
-  return newAccount;
-};
+// export const apiAddCustomerAccount = async (data: Omit<CustomerAccount, "id" | "created_at">): Promise<CustomerAccount> => {
+//   const { data: newAccount, error } = await supabase.from('customer_accounts').insert(data).select().single();
+//   if (error) throw error;
+//   return newAccount;
+// };
 
-export const apiUpdateCustomerAccount = async (id: string, data: Partial<Omit<CustomerAccount, "id" | "created_at">>): Promise<CustomerAccount> => {
-  const { data: updatedAccount, error } = await supabase.from('customer_accounts').update(data).eq('id', id).select().single();
-  if (error) throw error;
-  return updatedAccount;
-};
+// export const apiUpdateCustomerAccount = async (id: string, data: Partial<Omit<CustomerAccount, "id" | "created_at">>): Promise<CustomerAccount> => {
+//   const { data: updatedAccount, error } = await supabase.from('customer_accounts').update(data).eq('id', id).select().single();
+//   if (error) throw error;
+//   return updatedAccount;
+// };
 
-export const apiDeleteCustomerAccount = async (id: string): Promise<void> => {
-  const { error } = await supabase.from('customer_accounts').delete().eq('id', id);
-  if (error) throw error;
-};
+// export const apiDeleteCustomerAccount = async (id: string): Promise<void> => {
+//   const { error } = await supabase.from('customer_accounts').delete().eq('id', id);
+//   if (error) throw error;
+// };
 
 // --- API de Solicitudes ---
 export const apiGetRequests = async (): Promise<SupabaseRequest[]> => {

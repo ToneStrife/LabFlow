@@ -3,9 +3,9 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { Package, ShoppingCart, Users, User, Briefcase, UserCog, Warehouse } from "lucide-react"; // Import Warehouse icon
+import { Package, ShoppingCart, Users, User, Briefcase, UserCog, Warehouse } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useSession } from "@/components/SessionContextProvider"; // Import useSession
+import { useSession } from "@/components/SessionContextProvider";
 
 interface SidebarNavProps extends React.HTMLAttributes<HTMLElement> {
   isMobile?: boolean;
@@ -29,25 +29,25 @@ const navItems = [
     title: "Vendors",
     href: "/vendors",
     icon: <Users className="mr-2 h-4 w-4" />,
-    roles: ["Account Manager", "Admin"], // Assuming vendors are managed by managers/admins
+    roles: ["Account Manager", "Admin"],
   },
-  {
-    title: "Customer Accounts", // Renamed to Customer Accounts for clarity, will be 'Users' in UI
-    href: "/users", // Changed to /users
-    icon: <Briefcase className="mr-2 h-4 w-4" />,
-    roles: ["Admin"], // Only Admins can see/manage customer accounts
-  },
+  // {
+  //   title: "Customer Accounts", // Renamed to Customer Accounts for clarity, will be 'Users' in UI
+  //   href: "/users", // Changed to /users
+  //   icon: <Briefcase className="mr-2 h-4 w-4" />,
+  //   roles: ["Admin"], // Only Admins can see/manage customer accounts
+  // }, // ELIMINADO
   {
     title: "Account Managers",
     href: "/account-managers",
     icon: <UserCog className="mr-2 h-4 w-4" />,
-    roles: ["Admin"], // Only Admins can see/manage account managers
+    roles: ["Admin"],
   },
   {
     title: "Inventory",
     href: "/inventory",
     icon: <Warehouse className="mr-2 h-4 w-4" />,
-    roles: ["Account Manager", "Admin"], // Assuming inventory is managed by managers/admins
+    roles: ["Account Manager", "Admin"],
   },
   {
     title: "Profile",
@@ -87,7 +87,7 @@ export function SidebarNav({ className, isMobile, onLinkClick, ...props }: Sideb
               onClick={onLinkClick}
             >
               {item.icon}
-              {item.title === "Customer Accounts" ? "Users" : item.title} {/* Display "Users" for Customer Accounts */}
+              {item.title === "Customer Accounts" ? "Users" : item.title}
             </NavLink>
           );
         }

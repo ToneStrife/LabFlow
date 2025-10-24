@@ -35,17 +35,17 @@ export interface Vendor {
   brands: string[] | null;
 }
 
-export interface CustomerAccount {
-  id: string;
-  created_at: string;
-  name: string;
-  contact_person: string | null;
-  email: string | null;
-  phone: string | null;
-  notes: string | null;
-  owner_id: string;
-  assigned_manager_id: string | null;
-}
+// ELIMINADO: export interface CustomerAccount {
+//   id: string;
+//   created_at: string;
+//   name: string;
+//   contact_person: string | null;
+//   email: string | null;
+//   phone: string | null;
+//   notes: string | null;
+//   owner_id: string;
+//   assigned_manager_id: string | null;
+// }
 
 export interface SupabaseRequestItem {
   id: string;

@@ -125,32 +125,7 @@ export let mockVendors: Vendor[] = [
   },
 ];
 
-/*
-export let mockCustomerAccounts: CustomerAccount[] = [
-  {
-    id: "ca1",
-    created_at: new Date().toISOString(),
-    name: "Biology Department",
-    contact_person: "Dr. Alice Smith",
-    email: "alice.smith@bio.edu",
-    phone: "555-111-2222",
-    notes: "Main research department.",
-    owner_id: "mock-user-id-123",
-    assigned_manager_id: "manager-id-456",
-  },
-  {
-    id: "ca2",
-    created_at: new Date().toISOString(),
-    name: "Chemistry Department",
-    contact_person: "Dr. Bob Johnson",
-    email: "bob.johnson@chem.edu",
-    phone: "555-333-4444",
-    notes: "Organic synthesis lab.",
-    owner_id: "mock-user-id-123",
-    assigned_manager_id: null,
-  },
-];
-*/
+// ELIMINADO: export let mockCustomerAccounts: CustomerAccount[] = [...];
 
 export let mockRequestItems: SupabaseRequestItem[] = [
   {
