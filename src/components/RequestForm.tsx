@@ -226,27 +226,78 @@ const RequestForm: React.FC = () => {
             )}
           />
         </div>
-        <FormField
-          control={form.control}
-          name="accountManagerId"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Account Manager (Optional)</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value || "unassigned"} disabled={isLoadingAccountManagers}>
-                <FormControl>
-                  <SelectTrigger><SelectValue placeholder={isLoadingAccountManagers ? "Loading managers..." : "Select an account manager"} /></SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="unassigned">No Manager</SelectItem>
-                  {accountManagers?.map((manager) => (
-                    <SelectItem key={manager.id} value={manager.id}>{getFullName(manager)}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        {/* New grid for Account Manager and Project Codes */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="accountManagerId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Account Manager (Optional)</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value || "unassigned"} disabled={isLoadingAccountManagers}>
+                  <FormControl>
+                    <SelectTrigger><SelectValue placeholder={isLoadingAccountManagers ? "Loading managers..." : "Select an account manager"} /></SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="unassigned">No Manager</SelectItem>
+                    {accountManagers?.map((manager) => (
+                      <SelectItem key={manager.id} value={manager.id}>{getFullName(manager)}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="projectCodes"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Project Codes (Optional)</FormLabel>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <FormControl>
+                      <Button variant="outline" role="combobox" className={cn("w-full justify-between", !field.value || field.value.length === 0 && "text-muted-foreground")}>
+                        {field.value && field.value.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {field.value.map((projectId) => {
+                              const project = mockProjects.find((p) => p.id === projectId);
+                              return project ? <Badge key={projectId} variant="secondary">{project.code}</Badge> : null;
+                            })}
+                          </div>
+                        ) : "Select projects..."}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </FormControl>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                    <Command>
+                      <CommandInput placeholder="Search projects..." />
+                      <CommandEmpty>No project found.</CommandEmpty>
+                      <CommandGroup>
+                        {mockProjects.map((project) => (
+                          <CommandItem value={project.name} key={project.id} onSelect={() => {
+                            const currentValues = field.value || [];
+                            if (currentValues.includes(project.id)) {
+                              field.onChange(currentValues.filter((id) => id !== project.id));
+                            } else {
+                              field.onChange([...currentValues, project.id]);
+                            }
+                          }}>
+                            <Check className={cn("mr-2 h-4 w-4", field.value?.includes(project.id) ? "opacity-100" : "opacity-0")} />
+                            {project.name} ({project.code})
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
         <h2 className="text-xl font-semibold">Items</h2>
         <div className="space-y-6">
           {fields.map((field, index) => (
@@ -393,55 +444,7 @@ const RequestForm: React.FC = () => {
             </FormItem>
           )}
         />
-        <h2 className="text-xl font-semibold mt-8 mb-4">Project Codes (Optional)</h2>
-        <FormField
-          control={form.control}
-          name="projectCodes"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Associate with Projects</FormLabel>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <FormControl>
-                    <Button variant="outline" role="combobox" className={cn("w-full justify-between", !field.value || field.value.length === 0 && "text-muted-foreground")}>
-                      {field.value && field.value.length > 0 ? (
-                        <div className="flex flex-wrap gap-1">
-                          {field.value.map((projectId) => {
-                            const project = mockProjects.find((p) => p.id === projectId);
-                            return project ? <Badge key={projectId} variant="secondary">{project.code}</Badge> : null;
-                          })}
-                        </div>
-                      ) : "Select projects..."}
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </FormControl>
-                </PopoverTrigger>
-                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                  <Command>
-                    <CommandInput placeholder="Search projects..." />
-                    <CommandEmpty>No project found.</CommandEmpty>
-                    <CommandGroup>
-                      {mockProjects.map((project) => (
-                        <CommandItem value={project.name} key={project.id} onSelect={() => {
-                          const currentValues = field.value || [];
-                          if (currentValues.includes(project.id)) {
-                            field.onChange(currentValues.filter((id) => id !== project.id));
-                          } else {
-                            field.onChange([...currentValues, project.id]);
-                          }
-                        }}>
-                          <Check className={cn("mr-2 h-4 w-4", field.value?.includes(project.id) ? "opacity-100" : "opacity-0")} />
-                          {project.name} ({project.code})
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        {/* Removed the old Project Codes section as it's now moved */}
         <Button type="submit" className="w-full" disabled={addRequestMutation.isPending}>
           {addRequestMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : "Submit Request"}
         </Button>
