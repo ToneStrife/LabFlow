@@ -22,8 +22,12 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { mockVendors, mockProjects, addRequest, mockUsers, mockAccountManagers, productDatabase } from "@/data/mockData";
-import { showSuccess, showError, showLoading, dismissToast } from "@/utils/toast";
+import { mockProjects, productDatabase, ProductDetails } from "@/data/mockData"; // Removed mockAccountManagers
+import { showError, showLoading, dismissToast, showSuccess } from "@/utils/toast";
+import { useSession } from "@/components/SessionContextProvider";
+import { useVendors } from "@/hooks/use-vendors";
+import { useAddRequest } from "@/hooks/use-requests";
+import { useAccountManagerProfiles, getFullName } from "@/hooks/use-profiles"; // Import useAccountManagerProfiles
 
 const itemSchema = z.object({
   productName: z.string().min(1, { message: "Product name is required." }),
@@ -45,7 +49,7 @@ const itemSchema = z.object({
 const formSchema = z.object({
   vendorId: z.string().min(1, { message: "Vendor is required." }),
   requesterId: z.string().min(1, { message: "Requester is required." }),
-  accountManagerId: z.string().min(1, { message: "Account Manager is required." }),
+  accountManagerId: z.string().uuid({ message: "Invalid manager ID." }).optional().or(z.literal("")), // Changed to UUID and optional
   items: z.array(itemSchema).min(1, { message: "At least one item is required." }),
   attachments: z.any().optional(),
   projectCodes: z.array(z.string()).optional(),
@@ -54,61 +58,81 @@ const formSchema = z.object({
 type RequestFormValues = z.infer<typeof formSchema>;
 
 const RequestForm: React.FC = () => {
+  const { session, profile } = useSession();
+  const { data: vendors, isLoading: isLoadingVendors } = useVendors();
+  const { data: accountManagers, isLoading: isLoadingAccountManagers } = useAccountManagerProfiles(); // Use new hook
+  const addRequestMutation = useAddRequest();
+
   const [autofillingIndex, setAutofillingIndex] = React.useState<number | null>(null);
+  const [matchingProducts, setMatchingProducts] = React.useState<ProductDetails[]>([]);
+  const [selectionIndex, setSelectionIndex] = React.useState<number | null>(null);
 
   const form = useForm<RequestFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       vendorId: "",
-      requesterId: "",
+      requesterId: session?.user?.id || "",
       accountManagerId: "",
       items: [{ productName: "", catalogNumber: "", quantity: 1, unitPrice: undefined, format: "", link: "", notes: "", brand: "" }],
       projectCodes: [],
     },
   });
 
-  const { fields, append, remove } = useFieldArray({
-    control: form.control,
-    name: "items",
-  });
+  // Update requesterId if session changes after initial render
+  React.useEffect(() => {
+    if (session?.user?.id) {
+      form.setValue("requesterId", session.user.id);
+    }
+  }, [session, form]);
 
-  const onSubmit = (data: RequestFormValues) => {
-    const newRequest = addRequest(data);
-    const selectedVendor = mockVendors.find(v => v.id === newRequest.vendorId)?.name;
-    const selectedRequester = mockUsers.find(u => u.id === newRequest.requesterId)?.name;
-    toast.success("Request submitted successfully!", {
-      description: `Vendor: ${selectedVendor || 'N/A'}, Requester: ${selectedRequester || 'N/A'}`,
-    });
-    form.reset();
+  const applyProductDetails = (index: number, data: ProductDetails) => {
+    form.setValue(`items.${index}.productName`, data.productName || '');
+    form.setValue(`items.${index}.brand`, data.brand || '');
+    form.setValue(`items.${index}.unitPrice`, data.unitPrice || undefined);
+    form.setValue(`items.${index}.format`, data.format || '');
+    form.setValue(`items.${index}.link`, data.link || '');
   };
 
   const handleFetchProductDetails = async (index: number) => {
     setAutofillingIndex(index);
-    const toastId = showLoading("Fetching product details...");
+    setSelectionIndex(null); // Clear any previous selection state
+    setMatchingProducts([]);
+    const toastId = showLoading("Searching product database...");
 
     try {
-      const catalogNumber = form.getValues(`items.${index}.catalogNumber`);
+      const catalogNumber = form.getValues(`items.${index}.catalogNumber`).trim().toLowerCase();
+      const brand = form.getValues(`items.${index}.brand`)?.trim().toLowerCase();
+
       if (!catalogNumber) {
         showError("Please enter a catalog number first.");
         return;
       }
 
       // Simulate network delay
-      await new Promise(resolve => setTimeout(resolve, 750));
+      await new Promise(resolve => setTimeout(resolve, 300));
 
-      const data = productDatabase[catalogNumber];
+      const matches = productDatabase.filter(p => {
+        const catMatch = p.catalogNumber.toLowerCase() === catalogNumber;
+        // If brand is provided, it must be included in the product's brand name (case-insensitive partial match)
+        const brandMatch = !brand || p.brand.toLowerCase().includes(brand);
+        return catMatch && brandMatch;
+      });
 
-      if (!data) {
+      if (matches.length === 0) {
         throw new Error(`Product with catalog number '${catalogNumber}' not found.`);
       }
 
-      form.setValue(`items.${index}.productName`, data.productName || '');
-      form.setValue(`items.${index}.brand`, data.brand || '');
-      form.setValue(`items.${index}.unitPrice`, data.unitPrice || undefined);
-      form.setValue(`items.${index}.format`, data.format || '');
-      form.setValue(`items.${index}.link`, data.link || '');
+      if (matches.length === 1) {
+        // Single match, autofill immediately
+        applyProductDetails(index, matches[0]);
+        showSuccess("Product details autofilled!");
+      } else {
+        // Multiple matches, prompt user for selection
+        setMatchingProducts(matches);
+        setSelectionIndex(index);
+        showSuccess(`${matches.length} matching products found. Please select one.`);
+      }
 
-      showSuccess("Product details autofilled!");
     } catch (error: any) {
       console.error("Error fetching product details:", error);
       showError(error.message || "Could not fetch product details.");
@@ -118,44 +142,70 @@ const RequestForm: React.FC = () => {
     }
   };
 
-  const requesters = mockUsers.filter(user => user.role === "Requester");
+  const handleProductSelection = (index: number, productId: string) => {
+    const selectedProduct = matchingProducts.find(p => p.id === productId);
+    if (selectedProduct) {
+      applyProductDetails(index, selectedProduct);
+      setSelectionIndex(null);
+      setMatchingProducts([]);
+      toast.success("Product selected and details applied.");
+    }
+  };
+
+  const onSubmit = async (data: RequestFormValues) => {
+    if (!session?.user?.id) {
+      showError("You must be logged in to submit a request.");
+      return;
+    }
+
+    const requestData = {
+      vendorId: data.vendorId,
+      requesterId: session.user.id,
+      accountManagerId: data.accountManagerId === "" ? null : data.accountManagerId, // Map "" to null for Supabase
+      notes: undefined, // Notes field is missing in formSchema/form, assuming it's not used here yet
+      projectCodes: data.projectCodes,
+      items: data.items,
+    };
+
+    await addRequestMutation.mutateAsync(requestData);
+    
+    // Reset form after successful submission
+    form.reset({
+      vendorId: "",
+      requesterId: session.user.id,
+      accountManagerId: "",
+      items: [{ productName: "", catalogNumber: "", quantity: 1, unitPrice: undefined, format: "", link: "", notes: "", brand: "" }],
+      projectCodes: [],
+    });
+  };
+
+  const requesterName = profile ? getFullName(profile) : 'Loading...';
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="requesterId"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Requester</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger><SelectValue placeholder="Select a requester" /></SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {requesters.map((user) => (
-                      <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <FormItem>
+            <FormLabel>Requester</FormLabel>
+            <FormControl>
+              <Input value={requesterName} readOnly disabled />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
           <FormField
             control={form.control}
             name="vendorId"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Vendor</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoadingVendors}>
                   <FormControl>
-                    <SelectTrigger><SelectValue placeholder="Select a vendor" /></SelectTrigger>
+                    <SelectTrigger>
+                      <SelectValue placeholder={isLoadingVendors ? "Loading vendors..." : "Select a vendor"} />
+                    </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {mockVendors.map((vendor) => (
+                    {vendors?.map((vendor) => (
                       <SelectItem key={vendor.id} value={vendor.id}>{vendor.name}</SelectItem>
                     ))}
                   </SelectContent>
@@ -171,13 +221,18 @@ const RequestForm: React.FC = () => {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Account Manager</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <Select
+                onValueChange={(value) => field.onChange(value === "unassigned" ? "" : value)}
+                value={field.value || "unassigned"} // Set default to "unassigned" if value is empty
+                disabled={isLoadingAccountManagers}
+              >
                 <FormControl>
-                  <SelectTrigger><SelectValue placeholder="Select an account manager" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder={isLoadingAccountManagers ? "Loading managers..." : "Select an account manager"} /></SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {mockAccountManagers.map((manager) => (
-                    <SelectItem key={manager.id} value={manager.id}>{manager.name}</SelectItem>
+                  <SelectItem value="unassigned">No Manager</SelectItem> {/* Changed value to "unassigned" */}
+                  {accountManagers?.map((manager) => (
+                    <SelectItem key={manager.id} value={manager.id}>{getFullName(manager)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -236,6 +291,26 @@ const RequestForm: React.FC = () => {
                     </FormItem>
                   )}
                 />
+                {selectionIndex === index && matchingProducts.length > 1 && (
+                  <FormItem className="md:col-span-2">
+                    <FormLabel>Select Matching Product</FormLabel>
+                    <Select onValueChange={(productId) => handleProductSelection(index, productId)}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder={`Select one of ${matchingProducts.length} matches...`} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {matchingProducts.map((product) => (
+                          <SelectItem key={product.id} value={product.id}>
+                            {product.productName} ({product.brand}) - ${product.unitPrice?.toFixed(2) || 'N/A'}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
                 <FormField
                   control={form.control}
                   name={`items.${index}.quantity`}
@@ -360,7 +435,9 @@ const RequestForm: React.FC = () => {
             </FormItem>
           )}
         />
-        <Button type="submit" className="w-full">Submit Request</Button>
+        <Button type="submit" className="w-full" disabled={addRequestMutation.isPending}>
+          {addRequestMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : "Submit Request"}
+        </Button>
       </form>
     </Form>
   );
