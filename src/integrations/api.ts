@@ -113,10 +113,12 @@ export const apiAddRequest = async (data: Omit<SupabaseRequest, "id" | "created_
 
 export const apiUpdateRequestStatus = async (
   id: string,
-  status: RequestStatus
+  status: RequestStatus,
+  quoteUrl: string | null = null,
+  poNumber: string | null = null
 ): Promise<SupabaseRequest> => {
   await simulateNetworkDelay();
-  return updateMockRequestStatus(id, status);
+  return updateMockRequestStatus(id, status, quoteUrl, poNumber);
 };
 
 export const apiUpdateRequestFile = async (

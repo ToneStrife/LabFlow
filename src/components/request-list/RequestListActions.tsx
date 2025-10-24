@@ -62,15 +62,27 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
       )}
 
       {request.status === "PO Requested" && (
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => onSendPORequest(request)}
-          title="Send PO Request to Account Manager"
-          disabled={isUpdatingStatus}
-        >
-          <Mail className="h-4 w-4 text-orange-600" />
-        </Button>
+        <>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => onSendPORequest(request)}
+            title="Send PO Request to Account Manager"
+            disabled={isUpdatingStatus}
+          >
+            <Mail className="h-4 w-4 text-orange-600" />
+          </Button>
+          {/* Restored Mark as Ordered button, which opens the confirmation dialog */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => onMarkAsOrdered(request)}
+            title="Mark as Ordered"
+            disabled={isUpdatingStatus}
+          >
+            <Package className="h-4 w-4 text-green-700" />
+          </Button>
+        </>
       )}
 
       {request.status === "Ordered" && (

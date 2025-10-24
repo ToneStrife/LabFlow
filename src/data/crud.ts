@@ -157,11 +157,23 @@ export const addMockRequest = async (data: Omit<SupabaseRequest, "id" | "created
   return { ...newRequest, items: newItems };
 };
 
-export const updateMockRequestStatus = async (id: string, status: RequestStatus): Promise<SupabaseRequest> => {
+export const updateMockRequestStatus = async (
+  id: string, 
+  status: RequestStatus,
+  quoteUrl: string | null = null,
+  poNumber: string | null = null
+): Promise<SupabaseRequest> => {
   await simulateNetworkDelay();
   const index = mockRequests.findIndex(req => req.id === id);
   if (index === -1) throw new Error("Request not found");
+  
   mockRequests[index].status = status;
+  if (quoteUrl !== undefined) {
+    mockRequests[index].quote_url = quoteUrl;
+  }
+  if (poNumber !== undefined) {
+    mockRequests[index].po_number = poNumber;
+  }
 
   return {
     ...mockRequests[index],
@@ -183,6 +195,7 @@ export const updateMockRequestFile = async (
     case "quote":
       mockRequests[index].quote_url = fileUrl;
       if (mockRequests[index].status === "Quote Requested") {
+        // If quote is uploaded, move to PO Requested state
         mockRequests[index].status = "PO Requested";
       }
       break;

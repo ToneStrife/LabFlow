@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import RequestListToolbar from "./request-list/RequestListToolbar";
 import RequestListTable from "./request-list/RequestListTable";
+import { toast } from "sonner";
 
 const RequestList: React.FC = () => {
   const navigate = useNavigate();
@@ -32,8 +33,9 @@ const RequestList: React.FC = () => {
   const [isApproveRequestDialogOpen, setIsApproveRequestDialogOpen] = React.useState(false);
   const [requestToApprove, setRequestToApprove] = React.useState<SupabaseRequest | null>(null);
 
+  // Restored Quote/PO Details Dialog state
   const [isQuoteAndPODetailsDialogOpen, setIsQuoteAndPODetailsDialogOpen] = React.useState(false);
-  const [quoteDetailsInput, setQuoteDetailsInput] = React.useState("");
+  const [quoteUrlInput, setQuoteUrlInput] = React.useState("");
   const [poNumberInput, setPoNumberInput] = React.useState("");
   const [currentRequestForQuoteAndPO, setCurrentRequestForQuoteAndPO] = React.useState<SupabaseRequest | null>(null);
 
@@ -65,14 +67,23 @@ const RequestList: React.FC = () => {
   };
 
   const handleSendPORequest = (request: SupabaseRequest) => {
+    if (!request.account_manager_id) {
+      toast.error("Cannot send PO request.", { description: "No account manager assigned to this request." });
+      return;
+    }
+    if (!request.quote_url) {
+      toast.error("Cannot send PO request.", { description: "Quote file/URL is missing." });
+      return;
+    }
+
     const managerName = getAccountManagerName(request.account_manager_id);
     const requesterName = getRequesterName(request.requester_id);
-    const attachments = request.quote_details ? [{ name: `Quote_Request_${request.id}.pdf`, url: request.quote_details }] : [];
+    const attachments = request.quote_url ? [{ name: `Quote_Request_${request.id}.pdf`, url: request.quote_url }] : [];
 
     setEmailInitialData({
       to: getAccountManagerEmail(request.account_manager_id),
       subject: `PO Request for Lab Order #${request.id}`,
-      body: `Dear ${managerName},\n\nWe have received a quote for lab order request #${request.id}.\nQuote Details: ${request.quote_details || "N/A"}\n\nPlease generate a Purchase Order (PO) for this request.\n\nThank you,\n${requesterName}`,
+      body: `Dear ${managerName},\n\nWe have received a quote for lab order request #${request.id}.\nQuote URL: ${request.quote_url || "N/A"}\n\nPlease generate a Purchase Order (PO) for this request.\n\nThank you,\n${requesterName}`,
       attachments,
     });
     setIsEmailDialogOpen(true);
@@ -105,37 +116,42 @@ const RequestList: React.FC = () => {
     }
   };
 
+  // --- Quote/PO Details Logic ---
   const openQuoteAndPODetailsDialog = (request: SupabaseRequest) => {
     setCurrentRequestForQuoteAndPO(request);
-    setQuoteDetailsInput(request.quote_details || "");
+    setQuoteUrlInput(request.quote_url || "");
     setPoNumberInput(request.po_number || "");
     setIsQuoteAndPODetailsDialogOpen(true);
   };
 
+  const handleSaveDetailsAndRequestPOEmail = async () => {
+    if (currentRequestForQuoteAndPO) {
+      // Update status to PO Requested and save details
+      const updatedRequest = await updateStatusMutation.mutateAsync({
+        id: currentRequestForQuoteAndPO.id,
+        status: "PO Requested",
+        quoteUrl: quoteUrlInput || null,
+        poNumber: poNumberInput || null,
+      });
+      
+      // Send PO Request Email
+      handleSendPORequest(updatedRequest);
+      setIsQuoteAndPODetailsDialogOpen(false);
+    }
+  };
+  
   const handleSaveDetailsOnly = async () => {
     if (currentRequestForQuoteAndPO) {
       await updateStatusMutation.mutateAsync({
         id: currentRequestForQuoteAndPO.id,
         status: "PO Requested",
-        quoteDetails: quoteDetailsInput,
+        quoteUrl: quoteUrlInput || null,
         poNumber: poNumberInput || null,
       });
       setIsQuoteAndPODetailsDialogOpen(false);
     }
   };
-
-  const handleSaveAndRequestPOEmail = async () => {
-    if (currentRequestForQuoteAndPO) {
-      await updateStatusMutation.mutateAsync({
-        id: currentRequestForQuoteAndPO.id,
-        status: "PO Requested",
-        quoteDetails: quoteDetailsInput,
-        poNumber: poNumberInput || null,
-      });
-      handleSendPORequest({ ...currentRequestForQuoteAndPO, quote_details: quoteDetailsInput, po_number: poNumberInput });
-      setIsQuoteAndPODetailsDialogOpen(false);
-    }
-  };
+  // --- End Quote/PO Details Logic ---
 
   const openOrderConfirmationDialog = (request: SupabaseRequest) => {
     setRequestToOrder(request);
@@ -156,13 +172,13 @@ const RequestList: React.FC = () => {
       const vendor = vendors?.find(v => v.id === requestToOrder.vendor_id);
       const requesterName = getRequesterName(requestToOrder.requester_id);
       const attachments = [];
-      if (requestToOrder.quote_details) attachments.push({ name: `Quote_Request_${requestToOrder.id}.pdf`, url: requestToOrder.quote_details });
-      if (requestToOrder.po_number) attachments.push({ name: `PO_${requestToOrder.po_number}.pdf`, url: `https://example.com/po/${requestToOrder.po_number}.pdf` });
+      if (requestToOrder.quote_url) attachments.push({ name: `Quote_Request_${requestToOrder.id}.pdf`, url: requestToOrder.quote_url });
+      if (requestToOrder.po_url) attachments.push({ name: `PO_${requestToOrder.po_number}.pdf`, url: requestToOrder.po_url || "" });
 
       setEmailInitialData({
         to: getVendorEmail(requestToOrder.vendor_id),
-        subject: `Official Order for Lab Order #${requestToOrder.id} (PO: ${requestToOrder.po_number || "N/A"})`,
-        body: `Dear ${vendor?.contact_person || "Vendor"},\n\nThis email confirms the official order for lab request #${requestToOrder.id}.\nPlease find the attached quote and Purchase Order for your reference.\n\nQuote Details: ${requestToOrder.quote_details || "N/A"}\nPO Number: ${requestToOrder.po_number || "N/A"}\n\nPlease proceed with the order.\n\nThank you,\n${requesterName}`,
+        subject: `Official Order - PO: ${requestToOrder.po_number || "N/A"}`,
+        body: `Dear ${vendor?.contact_person || "Vendor"},\n\nThis email confirms the official order for lab request #${requestToOrder.id}.\nPlease find the attached Purchase Order.\n\nThank you,\n${requesterName}`,
         attachments,
       });
       setIsOrderConfirmationDialogOpen(false);
@@ -188,7 +204,7 @@ const RequestList: React.FC = () => {
       vendorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       requesterName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       accountManagerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (request.quote_details && request.quote_details.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (request.quote_url && request.quote_url.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (request.po_number && request.po_number.toLowerCase().includes(searchTerm.toLowerCase()));
 
     const matchesStatus = filterStatus === "All" || request.status === filterStatus;
@@ -255,16 +271,17 @@ const RequestList: React.FC = () => {
         isSending={sendEmailMutation.isPending}
       />
 
+      {/* RESTORED: Quote/PO Details Dialog */}
       <Dialog open={isQuoteAndPODetailsDialogOpen} onOpenChange={setIsQuoteAndPODetailsDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Enter Quote Details & PO Number</DialogTitle>
-            <DialogDescription>Please provide the quote details and the Purchase Order Number.</DialogDescription>
+            <DialogDescription>Please provide the quote URL and the Purchase Order Number (if available).</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="quoteDetails" className="text-right">Quote</Label>
-              <Input id="quoteDetails" value={quoteDetailsInput} onChange={(e) => setQuoteDetailsInput(e.target.value)} className="col-span-3" placeholder="e.g., https://vendor.com/quote-123.pdf" />
+              <Label htmlFor="quoteUrl" className="text-right">Quote URL</Label>
+              <Input id="quoteUrl" value={quoteUrlInput} onChange={(e) => setQuoteUrlInput(e.target.value)} className="col-span-3" placeholder="e.g., https://vendor.com/quote-123.pdf" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="poNumber" className="text-right">PO Number</Label>
@@ -274,7 +291,9 @@ const RequestList: React.FC = () => {
           <DialogFooter className="flex flex-col sm:flex-row sm:justify-end sm:space-x-2">
             <Button variant="outline" onClick={() => setIsQuoteAndPODetailsDialogOpen(false)}>Cancel</Button>
             <Button variant="outline" onClick={handleSaveDetailsOnly} disabled={updateStatusMutation.isPending}>Save Details Only</Button>
-            <Button onClick={handleSaveAndRequestPOEmail} disabled={updateStatusMutation.isPending}>{updateStatusMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Save & Request PO (Email)"}</Button>
+            <Button onClick={handleSaveDetailsAndRequestPOEmail} disabled={updateStatusMutation.isPending || !currentRequestForQuoteAndPO?.account_manager_id}>
+              {updateStatusMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Save & Request PO (Email)"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

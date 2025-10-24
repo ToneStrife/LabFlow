@@ -63,13 +63,15 @@ export const useAddRequest = () => {
 interface UpdateRequestStatusData {
   id: string;
   status: RequestStatus;
+  quoteUrl?: string | null; // Nuevo campo
+  poNumber?: string | null; // Nuevo campo
 }
 
 export const useUpdateRequestStatus = () => {
   const queryClient = useQueryClient();
   return useMutation<SupabaseRequest, Error, UpdateRequestStatusData>({
-    mutationFn: async ({ id, status }) => {
-      const updatedRequest = await apiUpdateRequestStatus(id, status);
+    mutationFn: async ({ id, status, quoteUrl, poNumber }) => {
+      const updatedRequest = await apiUpdateRequestStatus(id, status, quoteUrl, poNumber);
 
       // If status changes to "Ordered", add items to inventory
       if (status === "Ordered" && updatedRequest.items) {
