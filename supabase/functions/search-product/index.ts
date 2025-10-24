@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
-import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from 'https://esm.sh/@google/generative-ai@0.15.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -36,13 +35,10 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Missing required field: catalogNumber' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
-    if (!geminiApiKey) {
-      return new Response(JSON.stringify({ error: 'Server configuration error: GEMINI_API_KEY is not set.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    const deepseekApiKey = Deno.env.get('DEEPSEEK_API_KEY');
+    if (!deepseekApiKey) {
+      return new Response(JSON.stringify({ error: 'Server configuration error: DEEPSEEK_API_KEY is not set.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
-
-    const genAI = new GoogleGenerativeAI(geminiApiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
 
     const systemInstruction = `
       Eres un especialista en la extracción de datos de productos de laboratorio. Tu única tarea es recibir una marca y un número de catálogo, buscar el producto en internet y devolver los detalles en un formato JSON estricto. Debes ser extremadamente preciso y priorizar las fuentes oficiales del fabricante.
@@ -65,31 +61,36 @@ serve(async (req) => {
       - NÚMERO DE CATÁLOGO: ${catalogNumber}
     `;
 
-    const result = await model.generateContent({
-      contents: [{ role: "user", parts: [{ text: userPrompt }] }],
-      systemInstruction: {
-        role: "system",
-        parts: [{ text: systemInstruction }],
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${deepseekApiKey}`,
+        "Content-Type": "application/json"
       },
-      generationConfig: {
-        responseMimeType: "application/json",
-      },
-      safetySettings: [
-        { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-        { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
-        { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
-        { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-      ],
+      body: JSON.stringify({
+        "model": "deepseek/deepseek-coder",
+        "response_format": { "type": "json_object" },
+        "messages": [
+          { "role": "system", "content": systemInstruction },
+          { "role": "user", "content": userPrompt }
+        ]
+      })
     });
 
-    const response = await result.response;
-    const rawResponse = response.text();
-    
+    if (!response.ok) {
+      const errorBody = await response.text();
+      console.error('Edge Function: OpenRouter API error:', errorBody);
+      return new Response(JSON.stringify({ error: `OpenRouter API error: ${response.statusText}` }), { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    const data = await response.json();
+    const rawResponse = data.choices[0].message.content;
+
     let aiResponse: any;
     try {
       aiResponse = JSON.parse(rawResponse);
     } catch (jsonError) {
-      console.error('Edge Function: Failed to parse Gemini JSON response:', jsonError, 'Raw Response:', rawResponse);
+      console.error('Edge Function: Failed to parse DeepSeek JSON response:', jsonError, 'Raw Response:', rawResponse);
       return new Response(JSON.stringify({ error: 'AI response could not be parsed.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
@@ -105,10 +106,10 @@ serve(async (req) => {
       notes: aiResponse.technical_notes,
       brand: brand,
       catalogNumber: catalogNumber,
-      source: "AI Search (Gemini 2.5 Pro)"
+      source: "AI Search (DeepSeek Coder)"
     };
 
-    console.log(`Edge Function: External search for catalog ${catalogNumber}, brand ${brand} found details.`);
+    console.log(`Edge Function: External search for catalog ${catalogNumber}, brand ${brand} found details via DeepSeek.`);
 
     return new Response(JSON.stringify({ products: productDetails }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
