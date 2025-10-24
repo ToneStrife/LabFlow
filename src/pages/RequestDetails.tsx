@@ -43,9 +43,6 @@ const RequestDetails: React.FC = () => {
   const [isApproveRequestDialogOpen, setIsApproveRequestDialogOpen] = React.useState(false);
   const [requestToApprove, setRequestToApprove] = React.useState<SupabaseRequest | null>(null);
 
-  const [isOrderConfirmationDialogOpen, setIsOrderConfirmationDialogOpen] = React.useState(false);
-  const [requestToOrder, setRequestToOrder] = React.useState<SupabaseRequest | null>(null);
-
   const [isUploadDialogOpen, setIsUploadDialogOpen] = React.useState(false);
   const [fileTypeToUpload, setFileTypeToUpload] = React.useState<FileType>("quote");
 
@@ -92,31 +89,6 @@ const RequestDetails: React.FC = () => {
     }
   };
 
-  const openOrderConfirmationDialog = (request: SupabaseRequest) => {
-    setRequestToOrder(request);
-    setIsOrderConfirmationDialogOpen(true);
-  };
-
-  const handleMarkAsOrderedAndSendEmail = async () => {
-    if (requestToOrder) {
-      await updateStatusMutation.mutateAsync({ id: requestToOrder.id, status: "Ordered" });
-      
-      const vendor = vendors?.find(v => v.id === requestToOrder.vendor_id);
-      const attachments = [];
-      if (requestToOrder.quote_url) attachments.push({ name: `Quote_Request_${requestToOrder.id}.pdf`, url: requestToOrder.quote_url });
-      if (requestToOrder.po_url) attachments.push({ name: `PO_${requestToOrder.po_number}.pdf`, url: requestToOrder.po_url });
-
-      setEmailInitialData({
-        to: getVendorEmail(requestToOrder.vendor_id),
-        subject: `Official Order - PO: ${requestToOrder.po_number || "N/A"}`,
-        body: `Dear ${vendor?.contact_person || "Vendor"},\n\nPlease find the attached Purchase Order.\n\nThank you,\n${getRequesterName(requestToOrder.requester_id)}`,
-        attachments,
-      });
-      setIsOrderConfirmationDialogOpen(false);
-      setIsEmailDialogOpen(true);
-    }
-  };
-
   const handleMarkAsReceived = async (request: SupabaseRequest) => {
     await updateStatusMutation.mutateAsync({ id: request.id, status: "Received" });
   };
@@ -124,6 +96,10 @@ const RequestDetails: React.FC = () => {
   const handleUploadClick = (fileType: FileType) => {
     setFileTypeToUpload(fileType);
     setIsUploadDialogOpen(true);
+  };
+
+  const handleUploadPOAndOrder = () => {
+    handleUploadClick("po");
   };
 
   const handleFileUpload = async (file: File, poNumber?: string) => {
@@ -136,6 +112,12 @@ const RequestDetails: React.FC = () => {
         fileUrl: mockFileUrl,
         poNumber: poNumber,
       });
+
+      // If we just uploaded a PO, automatically change status to Ordered
+      if (fileTypeToUpload === "po") {
+        await updateStatusMutation.mutateAsync({ id: request.id, status: "Ordered" });
+      }
+
       setIsUploadDialogOpen(false);
     }
   };
@@ -171,10 +153,10 @@ const RequestDetails: React.FC = () => {
 
       <RequestActions
         request={request}
-        isUpdatingStatus={updateStatusMutation.isPending}
+        isUpdatingStatus={updateStatusMutation.isPending || updateFileMutation.isPending}
         openApproveRequestDialog={openApproveRequestDialog}
         handleSendPORequest={handleSendPORequest}
-        openOrderConfirmationDialog={openOrderConfirmationDialog}
+        handleUploadPOAndOrder={handleUploadPOAndOrder}
         handleMarkAsReceived={handleMarkAsReceived}
       />
 
@@ -190,16 +172,6 @@ const RequestDetails: React.FC = () => {
       </Dialog>
 
       <EmailDialog isOpen={isEmailDialogOpen} onOpenChange={setIsEmailDialogOpen} initialData={emailInitialData} onSend={handleSendEmail} isSending={sendEmailMutation.isPending} />
-
-      <Dialog open={isOrderConfirmationDialogOpen} onOpenChange={setIsOrderConfirmationDialogOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Confirm Order</DialogTitle></DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => updateStatusMutation.mutate({ id: request.id, status: "Ordered" }).then(() => setIsOrderConfirmationDialogOpen(false))}>Mark as Ordered Only</Button>
-            <Button onClick={handleMarkAsOrderedAndSendEmail}>Mark as Ordered & Send Email</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       <FileUploadDialog
         isOpen={isUploadDialogOpen}

@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, Mail, Package, Receipt } from "lucide-react";
+import { CheckCircle, Mail, Package, Receipt, Upload } from "lucide-react";
 import { SupabaseRequest } from "@/data/types";
 
 interface RequestActionsProps {
@@ -10,7 +10,7 @@ interface RequestActionsProps {
   isUpdatingStatus: boolean;
   openApproveRequestDialog: (request: SupabaseRequest) => void;
   handleSendPORequest: (request: SupabaseRequest) => void;
-  openOrderConfirmationDialog: (request: SupabaseRequest) => void;
+  handleUploadPOAndOrder: (request: SupabaseRequest) => void;
   handleMarkAsReceived: (request: SupabaseRequest) => Promise<void>;
 }
 
@@ -19,7 +19,7 @@ const RequestActions: React.FC<RequestActionsProps> = ({
   isUpdatingStatus,
   openApproveRequestDialog,
   handleSendPORequest,
-  openOrderConfirmationDialog,
+  handleUploadPOAndOrder,
   handleMarkAsReceived,
 }) => {
   return (
@@ -38,11 +38,10 @@ const RequestActions: React.FC<RequestActionsProps> = ({
 
       {request.status === "PO Requested" && (
         <Button
-          onClick={() => openOrderConfirmationDialog(request)}
-          disabled={isUpdatingStatus || !request.po_url}
-          title={!request.po_url ? "A PO file is required to mark as ordered" : "Mark as Ordered"}
+          onClick={() => handleUploadPOAndOrder(request)}
+          disabled={isUpdatingStatus}
         >
-          <Package className="mr-2 h-4 w-4" /> Mark as Ordered
+          <Upload className="mr-2 h-4 w-4" /> Upload PO & Order
         </Button>
       )}
 
