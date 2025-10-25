@@ -46,18 +46,6 @@ const navItems: NavItem[] = [
     roles: ["Account Manager", "Admin"],
   },
   {
-    title: "Usuarios",
-    href: "/users",
-    icon: <UserCog className="mr-2 h-4 w-4" />,
-    roles: ["Admin"],
-  },
-  {
-    title: "Plantillas",
-    href: "/email-templates",
-    icon: <MailOpen className="mr-2 h-4 w-4" />,
-    roles: ["Admin"],
-  },
-  {
     title: "Admin",
     href: "/admin",
     icon: <SlidersHorizontal className="mr-2 h-4 w-4" />,
