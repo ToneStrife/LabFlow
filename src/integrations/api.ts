@@ -220,11 +220,16 @@ export const apiAddRequest = async (data: {
   projectCodes?: string[] | null;
   items: RequestItem[];
 }): Promise<SupabaseRequest> => {
+  // Aseguramos que los valores nulos o indefinidos se pasen como null
+  const accountManagerId = data.accountManagerId || null;
+  const notes = data.notes || null;
+  const projectCodes = data.projectCodes || null;
+
   const { data: newRequest, error } = await supabase.rpc('create_request_with_items', {
     vendor_id_in: data.vendorId,
-    account_manager_id_in: data.accountManagerId,
-    notes_in: data.notes,
-    project_codes_in: data.projectCodes,
+    account_manager_id_in: accountManagerId, // Aseguramos que sea string (UUID) o null
+    notes_in: notes,
+    project_codes_in: projectCodes,
     items_in: data.items,
   });
   if (error) throw error;
