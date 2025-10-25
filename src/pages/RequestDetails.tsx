@@ -17,9 +17,9 @@ import { useRequests, SupabaseRequest, useUpdateRequestStatus, useSendEmail, use
 import { useVendors } from "@/hooks/use-vendors";
 import { useAllProfiles, getFullName } from "@/hooks/use-profiles";
 import { useAccountManagers } from "@/hooks/use-account-managers";
-import { useProjects } from "@/hooks/use-projects"; // Importar useProjects
-import { useEmailTemplates } from "@/hooks/use-email-templates"; // Importar useEmailTemplates
-import { processEmailTemplate } from "@/utils/email-templating"; // Importar la utilidad de templating
+import { useProjects } from "@/hooks/use-projects";
+import { useEmailTemplates } from "@/hooks/use-email-templates";
+import { processEmailTemplate } from "@/utils/email-templating";
 import EmailDialog, { EmailFormValues } from "@/components/EmailDialog";
 
 // Import new modular components
@@ -30,18 +30,18 @@ import RequestFilesCard from "@/components/request-details/RequestFilesCard";
 import FileUploadDialog from "@/components/request-details/FileUploadDialog";
 import RequestMetadataForm from "@/components/request-details/RequestMetadataForm";
 import { toast } from "sonner";
-import { useSession } from "@/components/SessionContextProvider"; // Importar useSession
+import { useSession } from "@/components/SessionContextProvider";
 
 const RequestDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { session, profile } = useSession(); // Obtener la sesión y el perfil del usuario actual
+  const { profile } = useSession();
   const { data: requests, isLoading: isLoadingRequests } = useRequests();
   const { data: vendors, isLoading: isLoadingVendors } = useVendors();
   const { data: profiles, isLoading: isLoadingProfiles } = useAllProfiles();
   const { data: accountManagers, isLoading: isLoadingAccountManagers } = useAccountManagers();
-  const { data: projects, isLoading: isLoadingProjects } = useProjects(); // Usar el hook de proyectos
-  const { data: emailTemplates, isLoading: isLoadingEmailTemplates } = useEmailTemplates(); // Usar el hook de plantillas
+  const { data: projects, isLoading: isLoadingProjects } = useProjects();
+  const { data: emailTemplates, isLoading: isLoadingEmailTemplates } = useEmailTemplates();
   const updateStatusMutation = useUpdateRequestStatus();
   const updateFileMutation = useUpdateRequestFile();
   const updateMetadataMutation = useUpdateRequestMetadata();
@@ -64,14 +64,6 @@ const RequestDetails: React.FC = () => {
     if (!managerId) return "";
     const manager = accountManagers?.find(am => am.id === managerId);
     return manager?.email || "";
-  };
-
-  const getRequesterName = (requesterId: string) => getFullName(profiles?.find(p => p.id === requesterId));
-  
-  const getAccountManagerName = (managerId: string | null) => {
-    if (!managerId) return "N/A";
-    const manager = accountManagers?.find(am => am.id === managerId);
-    return manager ? `${manager.first_name} ${manager.last_name}` : "N/A";
   };
 
   const handleSendEmail = async (emailData: EmailFormValues) => {
@@ -158,42 +150,42 @@ const RequestDetails: React.FC = () => {
     setIsUploadDialogOpen(true);
   };
 
-  const handleUploadQuote = () => {
-    handleUploadClick("quote");
-  };
+  const handleUploadQuote = () => handleUploadClick("quote");
+  const handleUploadPOAndOrder = () => handleUploadClick("po");
 
-  const handleUploadPOAndOrder = () => {
-    handleUploadClick("po");
-  };
-
+  // REFACTOR: This function now orchestrates the upload and status update.
   const handleFileUpload = async (file: File, poNumber?: string) => {
-    if (request) {
-      // Llama a la API con el objeto File real
+    if (!request) return;
+
+    try {
+      // Step 1: Upload the file and get the URL back.
       const { fileUrl, poNumber: returnedPoNumber } = await updateFileMutation.mutateAsync({
         id: request.id,
         fileType: fileTypeToUpload,
-        file: file, // Pasa el objeto File
+        file: file,
         poNumber: poNumber,
       });
 
+      // Step 2: Update the request status with the new file URL.
       if (fileTypeToUpload === "po") {
         await updateStatusMutation.mutateAsync({ id: request.id, status: "Ordered", poNumber: returnedPoNumber });
-      }
-      
-      if (fileTypeToUpload === "quote") {
+      } else if (fileTypeToUpload === "quote") {
         await updateStatusMutation.mutateAsync({ id: request.id, status: "PO Requested", quoteUrl: fileUrl });
         
-        // Después de subir la cotización y cambiar el estado a PO Requested, enviar el correo de solicitud de PO
-        // Asegúrate de que el request esté actualizado con la nueva quote_url antes de enviar el correo
-        const updatedRequestWithQuote = { ...request, quote_url: fileUrl, status: "PO Requested" };
+        const updatedRequestWithQuote = { ...request, quote_url: fileUrl, status: "PO Requested" as const };
         if (updatedRequestWithQuote.account_manager_id) {
           handleSendPORequest(updatedRequestWithQuote);
         } else {
           toast.info("Cotización subida. Por favor, asigna un Gerente de Cuenta para solicitar un PO.");
         }
       }
+      // Note: 'slip' file type does not change status, but the file URL will be saved in a real DB.
+      // The mock data doesn't persist this well, but the flow is correct for a real backend.
 
       setIsUploadDialogOpen(false);
+    } catch (error) {
+      // Errors are already handled by the mutation's onError, but you could add more specific logic here if needed.
+      console.error("File upload orchestration failed:", error);
     }
   };
 
@@ -243,7 +235,6 @@ const RequestDetails: React.FC = () => {
       }
     });
   };
-
 
   if (isLoadingRequests || isLoadingVendors || isLoadingProfiles || isLoadingAccountManagers || isLoadingProjects || isLoadingEmailTemplates) {
     return <div className="container mx-auto py-8 flex justify-center items-center"><Loader2 className="h-8 w-8 animate-spin mr-2" /> Cargando Detalles de la Solicitud...</div>;

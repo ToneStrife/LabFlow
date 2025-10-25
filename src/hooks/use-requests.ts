@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { SupabaseRequest as MockSupabaseRequest, SupabaseRequestItem as MockSupabaseRequestItem, RequestItem, RequestStatus } from "@/data/mockData";
 import { toast } from "sonner";
-import { apiGetRequests, apiAddRequest, apiUpdateRequestStatus, apiDeleteRequest, apiAddInventoryItem, apiSendEmail, apiUpdateRequestFile, apiUpdateRequestMetadata } from "@/integrations/api"; // Importar apiUpdateRequestMetadata
+import { apiGetRequests, apiAddRequest, apiUpdateRequestStatus, apiDeleteRequest, apiAddInventoryItem, apiSendEmail, apiUpdateRequestFile, apiUpdateRequestMetadata } from "@/integrations/api";
 
 export interface SupabaseRequestItem extends MockSupabaseRequestItem {}
 export interface SupabaseRequest extends MockSupabaseRequest {}
@@ -63,8 +63,8 @@ export const useAddRequest = () => {
 interface UpdateRequestStatusData {
   id: string;
   status: RequestStatus;
-  quoteUrl?: string | null; // Nuevo campo
-  poNumber?: string | null; // Nuevo campo
+  quoteUrl?: string | null;
+  poNumber?: string | null;
 }
 
 export const useUpdateRequestStatus = () => {
@@ -73,7 +73,6 @@ export const useUpdateRequestStatus = () => {
     mutationFn: async ({ id, status, quoteUrl, poNumber }) => {
       const updatedRequest = await apiUpdateRequestStatus(id, status, quoteUrl, poNumber);
 
-      // If status changes to "Ordered", add items to inventory
       if (status === "Ordered" && updatedRequest.items) {
         for (const item of updatedRequest.items) {
           await apiAddInventoryItem({
@@ -91,7 +90,7 @@ export const useUpdateRequestStatus = () => {
     },
     onSuccess: (updatedRequest) => {
       queryClient.invalidateQueries({ queryKey: ["requests"] });
-      queryClient.invalidateQueries({ queryKey: ["inventory"] }); // Invalidate inventory cache
+      queryClient.invalidateQueries({ queryKey: ["inventory"] });
       toast.success(`Request ${updatedRequest.id} status updated to ${updatedRequest.status}!`);
     },
     onError: (error) => {
@@ -118,7 +117,7 @@ export const useUpdateRequestMetadata = () => {
     mutationFn: async ({ id, data }) => {
       return apiUpdateRequestMetadata(id, data);
     },
-    onSuccess: (updatedRequest) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["requests"] });
       toast.success(`Request metadata updated successfully!`);
     },
@@ -130,63 +129,25 @@ export const useUpdateRequestMetadata = () => {
   });
 };
 
-
 // Update Request File
 export type FileType = "quote" | "po" | "slip";
 interface UpdateRequestFileData {
   id: string;
   fileType: FileType;
-  file: File; // Cambiado de fileUrl: string a file: File
+  file: File;
   poNumber?: string | null;
 }
 
+// REFACTOR: This mutation now ONLY handles the file upload and returns the URL.
 export const useUpdateRequestFile = () => {
   const queryClient = useQueryClient();
-  return useMutation<SupabaseRequest, Error, UpdateRequestFileData>({
-    mutationFn: async ({ id, fileType, file, poNumber }) => { // Cambiado fileUrl a file
-      const { fileUrl: uploadedFileUrl, poNumber: returnedPoNumber } = await apiUpdateRequestFile(id, fileType, file, poNumber);
-      
-      // Actualizar el estado de la solicitud con la URL del archivo y el número de PO si aplica
-      let updatedRequest: SupabaseRequest;
-      if (fileType === "quote") {
-        updatedRequest = await apiUpdateRequestStatus(id, "PO Requested", uploadedFileUrl);
-      } else if (fileType === "po") {
-        updatedRequest = await apiUpdateRequestStatus(id, "Ordered", undefined, returnedPoNumber);
-      } else {
-        // Para 'slip' o cualquier otro tipo, solo actualiza la URL del archivo sin cambiar el estado
-        updatedRequest = await apiUpdateRequestMetadata(id, {
-          // Aquí necesitaríamos una forma de actualizar solo la URL del archivo en la solicitud
-          // Por ahora, simularemos una actualización de metadatos que no cambia el estado
-          // En una implementación real, esto podría ser una función API separada o un campo en updateRequestMetadata
-        });
-        // Para el mock, simplemente actualizamos el objeto request localmente para reflejar la URL
-        const currentRequests = queryClient.getQueryData<SupabaseRequest[]>(["requests"]);
-        if (currentRequests) {
-          const reqIndex = currentRequests.findIndex(r => r.id === id);
-          if (reqIndex !== -1) {
-            const reqToUpdate = { ...currentRequests[reqIndex] };
-            if (fileType === "slip") reqToUpdate.slip_url = uploadedFileUrl;
-            // ... otros tipos de archivo si se añaden
-            queryClient.setQueryData(["requests"], currentRequests.map(r => r.id === id ? reqToUpdate : r));
-            updatedRequest = reqToUpdate;
-          } else {
-            throw new Error("Request not found in cache after file upload.");
-          }
-        } else {
-          throw new Error("Requests data not found in cache.");
-        }
-      }
-      return updatedRequest;
+  return useMutation<{ fileUrl: string; poNumber: string | null }, Error, UpdateRequestFileData>({
+    mutationFn: async ({ id, fileType, file, poNumber }) => {
+      return apiUpdateRequestFile(id, fileType, file, poNumber);
     },
-    onSuccess: (updatedRequest, variables) => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["requests"] });
-      queryClient.invalidateQueries({ queryKey: ["inventory"] }); // Invalidate inventory if status changed to Ordered
       toast.success(`${variables.fileType.toUpperCase()} file uploaded successfully!`);
-      
-      // Si se subió una cotización, y hay un account manager, enviar el correo de solicitud de PO
-      if (variables.fileType === "quote" && updatedRequest.account_manager_id) {
-        // Esto se maneja en RequestDetails.tsx ahora, para tener acceso a las plantillas de correo
-      }
     },
     onError: (error, variables) => {
       toast.error(`Failed to upload ${variables.fileType.toUpperCase()} file.`, {
@@ -195,7 +156,6 @@ export const useUpdateRequestFile = () => {
     },
   });
 };
-
 
 // Delete Request
 export const useDeleteRequest = () => {
@@ -209,8 +169,8 @@ export const useDeleteRequest = () => {
       toast.success("Request deleted successfully!");
     },
     onError: (error) => {
-      toast.error("Failed to delete request.",
-        { description: error.message,
+      toast.error("Failed to delete request.", {
+        description: error.message,
       });
     },
   });
