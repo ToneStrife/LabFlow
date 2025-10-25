@@ -18,7 +18,6 @@ import {
   getMockRequests,
   addMockRequest,
   updateMockRequestStatus,
-  updateMockRequestFile,
   updateMockRequestMetadata,
   deleteMockRequest,
   getMockInventory,
@@ -249,14 +248,54 @@ export const apiUpdateRequestMetadata = async (
   return updateMockRequestMetadata(id, data);
 };
 
+// ACTUALIZADO: apiUpdateRequestFile para usar la función Edge
 export const apiUpdateRequestFile = async (
   id: string,
   fileType: "quote" | "po" | "slip",
-  fileUrl: string,
+  file: File, // Ahora acepta un objeto File real
   poNumber: string | null = null
-): Promise<SupabaseRequest> => {
-  await new Promise(resolve => setTimeout(resolve, 300)); // Simular retraso
-  return updateMockRequestFile(id, fileType, fileUrl, poNumber);
+): Promise<{ fileUrl: string; poNumber: string | null }> => {
+  // Asegurarse de que la sesión esté fresca antes de invocar la función Edge
+  const { data: { session }, error: refreshError } = await supabase.auth.refreshSession();
+  if (refreshError || !session) {
+    console.error("Error refreshing session before uploading file:", refreshError);
+    throw new Error("Failed to refresh session. Please log in again.");
+  }
+
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('fileType', fileType);
+  formData.append('requestId', id);
+  if (poNumber) {
+    formData.append('poNumber', poNumber);
+  }
+
+  const { data: edgeFunctionData, error } = await supabase.functions.invoke('upload-file', {
+    body: formData,
+    method: 'POST',
+    headers: {
+      // No Content-Type header needed for FormData, browser sets it automatically
+    },
+  });
+
+  if (error) {
+    console.error("Error invoking upload-file edge function:", error);
+    let errorMessage = 'Failed to upload file via Edge Function.';
+    if (edgeFunctionData && typeof edgeFunctionData === 'object' && 'error' in edgeFunctionData) {
+        errorMessage = (edgeFunctionData as any).error;
+    } else if (error.message) {
+        errorMessage = error.message;
+    } else if (typeof edgeFunctionData === 'string') {
+        errorMessage = edgeFunctionData;
+    }
+    if ((error as any).status) {
+        errorMessage = `(Status: ${(error as any).status}) ${errorMessage}`;
+    }
+    throw new Error(errorMessage);
+  }
+  
+  // La función Edge devuelve { fileUrl: string, poNumber: string | null }
+  return edgeFunctionData as { fileUrl: string; poNumber: string | null };
 };
 
 export const apiDeleteRequest = async (id: string): Promise<void> => {

@@ -70,7 +70,7 @@ const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
         <DialogHeader>
           <DialogTitle>{getTitle()}</DialogTitle>
           <DialogDescription>
-            Select a file to upload. This is a simulated upload.
+            Selecciona un archivo para subir.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">

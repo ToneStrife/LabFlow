@@ -168,24 +168,26 @@ const RequestDetails: React.FC = () => {
 
   const handleFileUpload = async (file: File, poNumber?: string) => {
     if (request) {
-      const mockFileUrl = `/uploads/${file.name}`;
-      
-      const updatedRequest = await updateFileMutation.mutateAsync({
+      // Llama a la API con el objeto File real
+      const { fileUrl, poNumber: returnedPoNumber } = await updateFileMutation.mutateAsync({
         id: request.id,
         fileType: fileTypeToUpload,
-        fileUrl: mockFileUrl,
+        file: file, // Pasa el objeto File
         poNumber: poNumber,
       });
 
       if (fileTypeToUpload === "po") {
-        await updateStatusMutation.mutateAsync({ id: request.id, status: "Ordered" });
+        await updateStatusMutation.mutateAsync({ id: request.id, status: "Ordered", poNumber: returnedPoNumber });
       }
       
       if (fileTypeToUpload === "quote") {
-        await updateStatusMutation.mutateAsync({ id: request.id, status: "PO Requested" });
+        await updateStatusMutation.mutateAsync({ id: request.id, status: "PO Requested", quoteUrl: fileUrl });
         
-        if (updatedRequest.account_manager_id) {
-          handleSendPORequest(updatedRequest);
+        // Después de subir la cotización y cambiar el estado a PO Requested, enviar el correo de solicitud de PO
+        // Asegúrate de que el request esté actualizado con la nueva quote_url antes de enviar el correo
+        const updatedRequestWithQuote = { ...request, quote_url: fileUrl, status: "PO Requested" };
+        if (updatedRequestWithQuote.account_manager_id) {
+          handleSendPORequest(updatedRequestWithQuote);
         } else {
           toast.info("Cotización subida. Por favor, asigna un Gerente de Cuenta para solicitar un PO.");
         }
