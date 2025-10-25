@@ -131,7 +131,15 @@ Deno.serve(async (req) => {
   }
 
   // 1️⃣ histórico
-  const { data: master } = await supabase.rpc("smart_master_lookup", { brand_q: brandQ, catalog_q: catalogQ }).catch(() => ({ data: null }));
+  let master = null;
+  try {
+    const { data } = await supabase.rpc("smart_master_lookup", { brand_q: brandQ, catalog_q: catalogQ });
+    master = data;
+  } catch (e) {
+    console.error("Error calling smart_master_lookup RPC:", e);
+    // master remains null
+  }
+  
   if (master && master.match && master.match.score >= 0.8) {
     const m = master.record;
     const result = {
