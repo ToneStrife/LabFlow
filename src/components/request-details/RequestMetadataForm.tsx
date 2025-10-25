@@ -25,7 +25,7 @@ import { useAccountManagers } from "@/hooks/use-account-managers";
 import { useProjects } from "@/hooks/use-projects";
 
 const metadataSchema = z.object({
-  accountManagerId: z.union([z.string().uuid(), z.literal("unassigned")]).optional(), // Updated schema
+  accountManagerId: z.union([z.string().uuid(), z.literal("unassigned")]).optional(),
   notes: z.string().optional(),
   projectCodes: z.array(z.string()).optional(),
 });
@@ -54,8 +54,17 @@ const RequestMetadataForm: React.FC<RequestMetadataFormProps> = ({ request, onSu
   });
 
   const handleSubmit = (data: MetadataFormValues) => {
-    console.log("Submitting request metadata with accountManagerId:", data.accountManagerId === 'unassigned' ? null : data.accountManagerId); // Debug log
-    onSubmit(data);
+    // **CORRECCIÓN CLAVE:** Asegurar que managerId sea null si es "unassigned" o vacío.
+    const managerId = (data.accountManagerId === 'unassigned' || !data.accountManagerId) ? null : data.accountManagerId;
+
+    const dataToSubmit = {
+      accountManagerId: managerId,
+      notes: data.notes,
+      projectCodes: data.projectCodes,
+    };
+
+    console.log("Submitting request metadata with accountManagerId (FINAL VALUE):", dataToSubmit.accountManagerId); // Debug log
+    onSubmit(dataToSubmit);
   };
 
   return (

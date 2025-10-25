@@ -57,7 +57,8 @@ const itemSchema = z.object({
 const formSchema = z.object({
   vendorId: z.string().min(1, { message: "El proveedor es obligatorio." }),
   requesterId: z.string().min(1, { message: "El ID del solicitante es obligatorio." }), 
-  accountManagerId: z.union([z.string().uuid(), z.literal("unassigned")]).optional(), // Updated schema
+  // Permitimos que sea string (UUID) o "unassigned" en el formulario
+  accountManagerId: z.union([z.string().uuid(), z.literal("unassigned")]).optional(), 
   items: z.array(itemSchema).min(1, { message: "Se requiere al menos un artículo." }),
   attachments: z.any().optional(),
   projectCodes: z.array(z.string()).optional(),
@@ -154,18 +155,19 @@ const RequestForm: React.FC = () => {
       return;
     }
 
-    const managerId = data.accountManagerId === 'unassigned' || !data.accountManagerId ? null : data.accountManagerId;
+    // **CORRECCIÓN CLAVE:** Asegurar que managerId sea null si es "unassigned" o vacío.
+    const managerId = (data.accountManagerId === 'unassigned' || !data.accountManagerId) ? null : data.accountManagerId;
 
     const requestData = {
       vendorId: data.vendorId,
       requesterId: session.user.id,
-      accountManagerId: managerId,
+      accountManagerId: managerId, // Esto ahora es string | null
       notes: null,
       projectCodes: data.projectCodes,
       items: data.items,
     };
 
-    console.log("Submitting new request with accountManagerId:", requestData.accountManagerId); // Debug log
+    console.log("Submitting new request with accountManagerId (FINAL VALUE):", requestData.accountManagerId); // Debug log
 
     await addRequestMutation.mutateAsync(requestData);
 
