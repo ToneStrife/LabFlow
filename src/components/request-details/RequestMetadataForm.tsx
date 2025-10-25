@@ -21,11 +21,15 @@ import { Badge } from "@/components/ui/badge";
 import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SupabaseRequest } from "@/hooks/use-requests";
-import { useAccountManagers } from "@/hooks/use-account-managers";
-import { useProjects } from "@/hooks/use-projects";
+import { getFullName, Profile } from "@/hooks/use-profiles"; // Todavía se usa para el nombre del requester
+import { useAccountManagers } from "@/hooks/use-account-managers"; // Usar el nuevo hook
+import { useProjects } from "@/hooks/use-projects"; // Usar el nuevo hook
 
 const metadataSchema = z.object({
-  accountManagerId: z.union([z.string().uuid(), z.literal("unassigned")]).optional(),
+  accountManagerId: z.union([
+    z.string().uuid({ message: "Invalid manager ID." }),
+    z.literal("unassigned"),
+  ]).optional(),
   notes: z.string().optional(),
   projectCodes: z.array(z.string()).optional(),
 });
@@ -34,13 +38,14 @@ type MetadataFormValues = z.infer<typeof metadataSchema>;
 
 interface RequestMetadataFormProps {
   request: SupabaseRequest;
+  profiles: Profile[]; // Se mantiene para el requester, pero no para Account Managers
   onSubmit: (data: MetadataFormValues) => Promise<void>;
   isSubmitting: boolean;
 }
 
 const RequestMetadataForm: React.FC<RequestMetadataFormProps> = ({ request, onSubmit, isSubmitting }) => {
-  const { data: accountManagers, isLoading: isLoadingManagers } = useAccountManagers();
-  const { data: projects, isLoading: isLoadingProjects } = useProjects();
+  const { data: accountManagers, isLoading: isLoadingManagers } = useAccountManagers(); // Usar el nuevo hook
+  const { data: projects, isLoading: isLoadingProjects } = useProjects(); // Usar el nuevo hook
 
   const defaultProjectCodes = request.project_codes || [];
 
@@ -54,17 +59,7 @@ const RequestMetadataForm: React.FC<RequestMetadataFormProps> = ({ request, onSu
   });
 
   const handleSubmit = (data: MetadataFormValues) => {
-    // **CORRECCIÓN CLAVE:** Asegurar que managerId sea null si es "unassigned" o vacío.
-    const managerId = (data.accountManagerId === 'unassigned' || !data.accountManagerId) ? null : data.accountManagerId;
-
-    const dataToSubmit = {
-      accountManagerId: managerId,
-      notes: data.notes,
-      projectCodes: data.projectCodes,
-    };
-
-    console.log("Submitting request metadata with accountManagerId (FINAL VALUE):", dataToSubmit.accountManagerId); // Debug log
-    onSubmit(dataToSubmit);
+    onSubmit(data);
   };
 
   return (
@@ -86,7 +81,7 @@ const RequestMetadataForm: React.FC<RequestMetadataFormProps> = ({ request, onSu
                   <SelectItem value="unassigned">No Manager</SelectItem>
                   {accountManagers?.map((manager) => (
                     <SelectItem key={manager.id} value={manager.id}>
-                      {manager.name}
+                      {`${manager.first_name} ${manager.last_name}`}
                     </SelectItem>
                   ))}
                 </SelectContent>

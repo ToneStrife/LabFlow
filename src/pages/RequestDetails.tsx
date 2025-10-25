@@ -9,18 +9,20 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
 
-import { useRequests, SupabaseRequest, useSendEmail, useUpdateRequestFile, FileType, useUpdateRequest } from "@/hooks/use-requests";
+import { useRequests, SupabaseRequest, useUpdateRequestStatus, useSendEmail, useUpdateRequestFile, useUpdateRequestMetadata, FileType } from "@/hooks/use-requests";
 import { useVendors } from "@/hooks/use-vendors";
-import { useAllProfiles } from "@/hooks/use-profiles";
+import { useAllProfiles, getFullName } from "@/hooks/use-profiles";
 import { useAccountManagers } from "@/hooks/use-account-managers";
 import { useProjects } from "@/hooks/use-projects";
 import { useEmailTemplates } from "@/hooks/use-email-templates";
 import { processEmailTemplate } from "@/utils/email-templating";
 import EmailDialog, { EmailFormValues } from "@/components/EmailDialog";
 
+// Import new modular components
 import RequestSummaryCard from "@/components/request-details/RequestSummaryCard";
 import RequestItemsTable from "@/components/request-details/RequestItemsTable";
 import RequestActions from "@/components/request-details/RequestActions";
@@ -40,9 +42,9 @@ const RequestDetails: React.FC = () => {
   const { data: accountManagers, isLoading: isLoadingAccountManagers } = useAccountManagers();
   const { data: projects, isLoading: isLoadingProjects } = useProjects();
   const { data: emailTemplates, isLoading: isLoadingEmailTemplates } = useEmailTemplates();
-  
-  const updateRequestMutation = useUpdateRequest();
+  const updateStatusMutation = useUpdateRequestStatus();
   const updateFileMutation = useUpdateRequestFile();
+  const updateMetadataMutation = useUpdateRequestMetadata();
   const sendEmailMutation = useSendEmail();
 
   const request = requests?.find(req => req.id === id);
@@ -70,17 +72,32 @@ const RequestDetails: React.FC = () => {
   };
 
   const handleSendPORequest = (request: SupabaseRequest) => {
-    if (!request.account_manager_id || !request.quote_url) {
-      toast.error("Cannot send PO request.", { description: "Account manager or quote file is missing." });
+    if (!request.account_manager_id) {
+      toast.error("No se puede enviar la solicitud de PO.", { description: "No hay un gerente de cuenta asignado a esta solicitud." });
       return;
     }
+    if (!request.quote_url) {
+      toast.error("No se puede enviar la solicitud de PO.", { description: "El archivo de cotización no está disponible." });
+      return;
+    }
+
     const poRequestTemplate = emailTemplates?.find(t => t.template_name === 'PO Request');
     if (!poRequestTemplate) {
-      toast.error("Email template 'PO Request' not found.");
+      toast.error("Plantilla de correo electrónico 'PO Request' no encontrada.");
       return;
     }
-    const context = { request, vendor: vendors?.find(v => v.id === request.vendor_id), requesterProfile: profiles?.find(p => p.id === request.requester_id), accountManager: accountManagers?.find(am => am.id === request.account_manager_id), projects, actorProfile: profile };
-    const attachments = [{ name: `Quote_Request_${request.id}.pdf`, url: request.quote_url }];
+
+    const context = {
+      request,
+      vendor: vendors?.find(v => v.id === request.vendor_id),
+      requesterProfile: profiles?.find(p => p.id === request.requester_id),
+      accountManager: accountManagers?.find(am => am.id === request.account_manager_id),
+      projects: projects,
+      actorProfile: profile,
+    };
+
+    const attachments = request.quote_url ? [{ name: `Quote_Request_${request.id}.pdf`, url: request.quote_url }] : [];
+
     setEmailInitialData({
       to: getAccountManagerEmail(request.account_manager_id),
       subject: processEmailTemplate(poRequestTemplate.subject_template, context),
@@ -97,13 +114,23 @@ const RequestDetails: React.FC = () => {
 
   const handleApproveAndRequestQuoteEmail = async () => {
     if (requestToApprove) {
-      await updateRequestMutation.mutateAsync({ id: requestToApprove.id, data: { status: "Quote Requested" } });
+      await updateStatusMutation.mutateAsync({ id: requestToApprove.id, status: "Quote Requested" });
+      
       const quoteTemplate = emailTemplates?.find(t => t.template_name === 'Quote Request');
       if (!quoteTemplate) {
-        toast.error("Email template 'Quote Request' not found.");
+        toast.error("Plantilla de correo electrónico 'Quote Request' no encontrada.");
         return;
       }
-      const context = { request: requestToApprove, vendor: vendors?.find(v => v.id === requestToApprove.vendor_id), requesterProfile: profiles?.find(p => p.id === requestToApprove.requester_id), accountManager: accountManagers?.find(am => am.id === requestToApprove.account_manager_id), projects, actorProfile: profile };
+
+      const context = {
+        request: requestToApprove,
+        vendor: vendors?.find(v => v.id === requestToApprove.vendor_id),
+        requesterProfile: profiles?.find(p => p.id === requestToApprove.requester_id),
+        accountManager: accountManagers?.find(am => am.id === requestToApprove.account_manager_id),
+        projects: projects,
+        actorProfile: profile,
+      };
+
       setEmailInitialData({
         to: getVendorEmail(requestToApprove.vendor_id),
         subject: processEmailTemplate(quoteTemplate.subject_template, context),
@@ -115,7 +142,7 @@ const RequestDetails: React.FC = () => {
   };
 
   const handleMarkAsReceived = async (request: SupabaseRequest) => {
-    await updateRequestMutation.mutateAsync({ id: request.id, data: { status: "Received" } });
+    await updateStatusMutation.mutateAsync({ id: request.id, status: "Received" });
   };
 
   const handleUploadClick = (fileType: FileType) => {
@@ -123,55 +150,70 @@ const RequestDetails: React.FC = () => {
     setIsUploadDialogOpen(true);
   };
 
+  const handleUploadQuote = () => handleUploadClick("quote");
+  const handleUploadPOAndOrder = () => handleUploadClick("po");
+
+  // REFACTOR: This function now orchestrates the upload and status update.
   const handleFileUpload = async (file: File, poNumber?: string) => {
     if (!request) return;
+
     try {
-      const { fileUrl } = await updateFileMutation.mutateAsync({
+      // Step 1: Upload the file and get the URL back.
+      const { fileUrl, poNumber: returnedPoNumber } = await updateFileMutation.mutateAsync({
         id: request.id,
         fileType: fileTypeToUpload,
         file: file,
         poNumber: poNumber,
       });
 
-      let updateData: Partial<SupabaseRequest> = {};
-      if (fileTypeToUpload === "quote") {
-        updateData = { status: "PO Requested", quote_url: fileUrl };
-      } else if (fileTypeToUpload === "po") {
-        updateData = { status: "Ordered", po_url: fileUrl, po_number: poNumber };
-      } else if (fileTypeToUpload === "slip") {
-        updateData = { slip_url: fileUrl };
-      }
-
-      await updateRequestMutation.mutateAsync({ id: request.id, data: updateData });
-
-      if (fileTypeToUpload === "quote") {
-        const updatedRequestWithQuote = { ...request, ...updateData };
+      // Step 2: Update the request status with the new file URL.
+      if (fileTypeToUpload === "po") {
+        await updateStatusMutation.mutateAsync({ id: request.id, status: "Ordered", poNumber: returnedPoNumber });
+      } else if (fileTypeToUpload === "quote") {
+        await updateStatusMutation.mutateAsync({ id: request.id, status: "PO Requested", quoteUrl: fileUrl });
+        
+        const updatedRequestWithQuote = { ...request, quote_url: fileUrl, status: "PO Requested" as const };
         if (updatedRequestWithQuote.account_manager_id) {
           handleSendPORequest(updatedRequestWithQuote);
         } else {
-          toast.info("Quote uploaded. Please assign an Account Manager to request a PO.");
+          toast.info("Cotización subida. Por favor, asigna un Gerente de Cuenta para solicitar un PO.");
         }
       }
+      // Note: 'slip' file type does not change status, but the file URL will be saved in a real DB.
+      // The mock data doesn't persist this well, but the flow is correct for a real backend.
+
       setIsUploadDialogOpen(false);
     } catch (error) {
+      // Errors are already handled by the mutation's onError, but you could add more specific logic here if needed.
       console.error("File upload orchestration failed:", error);
     }
   };
 
   const handleMarkAsOrderedAndSendEmail = (request: SupabaseRequest) => {
     if (!request.po_url) {
-      toast.error("Cannot send order email.", { description: "PO file is missing." });
+      toast.error("No se puede enviar el correo de pedido.", { description: "El archivo PO no está disponible. Por favor, sube el archivo PO primero." });
       return;
     }
+
     const orderConfirmationTemplate = emailTemplates?.find(t => t.template_name === 'Order Confirmation');
     if (!orderConfirmationTemplate) {
-      toast.error("Email template 'Order Confirmation' not found.");
+      toast.error("Plantilla de correo electrónico 'Order Confirmation' no encontrada.");
       return;
     }
-    const context = { request, vendor: vendors?.find(v => v.id === request.vendor_id), requesterProfile: profiles?.find(p => p.id === request.requester_id), accountManager: accountManagers?.find(am => am.id === request.account_manager_id), projects, actorProfile: profile };
+
+    const context = {
+      request,
+      vendor: vendors?.find(v => v.id === request.vendor_id),
+      requesterProfile: profiles?.find(p => p.id === request.requester_id),
+      accountManager: accountManagers?.find(am => am.id === request.account_manager_id),
+      projects: projects,
+      actorProfile: profile,
+    };
+    
     const attachments = [];
     if (request.quote_url) attachments.push({ name: `Quote_Request_${request.id}.pdf`, url: request.quote_url });
     if (request.po_url) attachments.push({ name: `PO_${request.po_number || request.id}.pdf`, url: request.po_url });
+
     setEmailInitialData({
       to: getVendorEmail(request.vendor_id),
       subject: processEmailTemplate(orderConfirmationTemplate.subject_template, context),
@@ -183,25 +225,26 @@ const RequestDetails: React.FC = () => {
 
   const handleUpdateMetadata = async (data: { accountManagerId?: string | null; notes?: string | null; projectCodes?: string[] | null; }) => {
     if (!request) return;
-    await updateRequestMutation.mutateAsync({
+    
+    await updateMetadataMutation.mutateAsync({
       id: request.id,
       data: {
-        account_manager_id: data.accountManagerId === 'unassigned' ? null : data.accountManagerId,
+        accountManagerId: data.accountManagerId === 'unassigned' ? null : data.accountManagerId,
         notes: data.notes,
-        project_codes: data.projectCodes,
+        projectCodes: data.projectCodes,
       }
     });
   };
 
   if (isLoadingRequests || isLoadingVendors || isLoadingProfiles || isLoadingAccountManagers || isLoadingProjects || isLoadingEmailTemplates) {
-    return <div className="container mx-auto py-8 flex justify-center items-center"><Loader2 className="h-8 w-8 animate-spin mr-2" /> Loading Request Details...</div>;
+    return <div className="container mx-auto py-8 flex justify-center items-center"><Loader2 className="h-8 w-8 animate-spin mr-2" /> Cargando Detalles de la Solicitud...</div>;
   }
 
   if (!request) {
     return (
       <div className="container mx-auto py-8 text-center">
-        <h1 className="text-3xl font-bold mb-4">Request Not Found</h1>
-        <Button onClick={() => navigate("/dashboard")} className="mt-6"><ArrowLeft className="mr-2 h-4 w-4" /> Back to Dashboard</Button>
+        <h1 className="text-3xl font-bold mb-4">Solicitud No Encontrada</h1>
+        <Button onClick={() => navigate("/dashboard")} className="mt-6"><ArrowLeft className="mr-2 h-4 w-4" /> Volver al Panel de Control</Button>
       </div>
     );
   }
@@ -210,7 +253,8 @@ const RequestDetails: React.FC = () => {
 
   return (
     <div className="container mx-auto py-8 space-y-6">
-      <Button variant="outline" onClick={() => navigate("/dashboard")}><ArrowLeft className="mr-2 h-4 w-4" /> Back to Dashboard</Button>
+      <Button variant="outline" onClick={() => navigate("/dashboard")}><ArrowLeft className="mr-2 h-4 w-4" /> Volver al Panel de Control</Button>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           <RequestSummaryCard request={request} vendor={vendor} profiles={profiles} />
@@ -220,35 +264,53 @@ const RequestDetails: React.FC = () => {
           <RequestFilesCard request={request} onUploadClick={handleUploadClick} />
         </div>
       </div>
+      
       <div className="mt-6">
-        <h2 className="text-2xl font-bold mb-4">Request Metadata</h2>
+        <h2 className="text-2xl font-bold mb-4">Metadatos de la Solicitud</h2>
         <RequestMetadataForm
           request={request}
+          profiles={profiles || []}
           onSubmit={handleUpdateMetadata}
-          isSubmitting={updateRequestMutation.isPending}
+          isSubmitting={updateMetadataMutation.isPending}
         />
       </div>
+
       <RequestActions
         request={request}
-        isUpdatingStatus={updateRequestMutation.isPending || updateFileMutation.isPending}
+        isUpdatingStatus={updateStatusMutation.isPending || updateFileMutation.isPending}
         openApproveRequestDialog={openApproveRequestDialog}
         handleSendPORequest={handleSendPORequest}
-        handleUploadQuote={() => handleUploadClick("quote")}
-        handleUploadPOAndOrder={() => handleUploadClick("po")}
+        handleUploadQuote={handleUploadQuote}
+        handleUploadPOAndOrder={handleUploadPOAndOrder}
         handleMarkAsReceived={handleMarkAsReceived}
         handleMarkAsOrderedAndSendEmail={handleMarkAsOrderedAndSendEmail}
       />
+
       <Dialog open={isApproveRequestDialogOpen} onOpenChange={setIsApproveRequestDialogOpen}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Approve Request</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Aprobar Solicitud</DialogTitle></DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => updateRequestMutation.mutate({ id: request!.id, data: { status: "Quote Requested" } }).then(() => setIsApproveRequestDialogOpen(false))}>Approve Only</Button>
-            <Button onClick={handleApproveAndRequestQuoteEmail}>Approve & Request Quote (Email)</Button>
+            <Button variant="outline" onClick={() => updateStatusMutation.mutate({ id: request!.id, status: "Quote Requested" }).then(() => setIsApproveRequestDialogOpen(false))}>Aprobar Solamente</Button>
+            <Button onClick={handleApproveAndRequestQuoteEmail}>Aprobar y Solicitar Cotización (Correo)</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <EmailDialog isOpen={isEmailDialogOpen} onOpenChange={setIsEmailDialogOpen} initialData={emailInitialData} onSend={handleSendEmail} isSending={sendEmailMutation.isPending} />
-      <FileUploadDialog isOpen={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen} onUpload={handleFileUpload} isUploading={updateFileMutation.isPending} fileType={fileTypeToUpload} />
+
+      <EmailDialog 
+        isOpen={isEmailDialogOpen} 
+        onOpenChange={setIsEmailDialogOpen} 
+        initialData={emailInitialData} 
+        onSend={handleSendEmail} 
+        isSending={sendEmailMutation.isPending} 
+      />
+
+      <FileUploadDialog
+        isOpen={isUploadDialogOpen}
+        onOpenChange={setIsUploadDialogOpen}
+        onUpload={handleFileUpload}
+        isUploading={updateFileMutation.isPending}
+        fileType={fileTypeToUpload}
+      />
     </div>
   );
 };

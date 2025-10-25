@@ -1,30 +1,36 @@
-import { supabase } from "./supabase/client";
+import { supabase } from "./supabase/client"; // Importar cliente de Supabase
 import {
   Profile,
   Vendor,
-  Project,
+  AccountManager, // Importar el nuevo tipo AccountManager
+  Project, // Importar el nuevo tipo Project
   SupabaseRequest,
   RequestItem,
+  RequestStatus,
   InventoryItem,
-  ProductDetails,
-  EmailTemplate,
-  AccountManager,
-  ShippingAddress,
-  BillingAddress,
+  MockEmail,
+  ProductDetails, // Importar ProductDetails para la búsqueda externa
+  EmailTemplate, // Importar el nuevo tipo EmailTemplate
 } from "@/data/types";
+
+// Mantener las importaciones de mock data para otras tablas hasta que se conviertan
+import {
+  getMockRequests,
+  addMockRequest,
+  updateMockRequestStatus,
+  updateMockRequestMetadata,
+  deleteMockRequest,
+  getMockInventory,
+  addMockInventoryItem,
+  updateMockInventoryItem,
+  deleteMockInventoryItem,
+  sendMockEmail,
+} from "@/data/crud";
+
 
 // --- API de Perfiles (Usuarios del sistema) ---
 export const apiGetProfiles = async (): Promise<Profile[]> => {
   const { data, error } = await supabase.from('profiles').select('*');
-  if (error) throw error;
-  return data;
-};
-
-export const apiGetAccountManagerProfiles = async (): Promise<Profile[]> => {
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('role', 'Account Manager');
   if (error) throw error;
   return data;
 };
@@ -35,18 +41,34 @@ export const apiUpdateProfile = async (id: string, data: Partial<Profile>): Prom
 };
 
 export const apiDeleteProfile = async (id: string): Promise<void> => {
+  // Asegurarse de que la sesión esté fresca antes de invocar la función Edge
   const { data: { session }, error: refreshError } = await supabase.auth.refreshSession();
   if (refreshError || !session) {
+    console.error("Error refreshing session before deleting user:", refreshError);
     throw new Error("Failed to refresh session. Please log in again.");
   }
-  const { error } = await supabase.functions.invoke('delete-user', {
+
+  const { data: edgeFunctionData, error } = await supabase.functions.invoke('delete-user', {
     body: JSON.stringify({ userIdToDelete: id }),
     method: 'POST',
   });
+
   if (error) {
-    const errorMessage = error.context?.error || error.message || 'Failed to delete user.';
+    console.error("Error invoking delete-user edge function:", error);
+    let errorMessage = 'Failed to delete user via Edge Function.';
+    if (edgeFunctionData && typeof edgeFunctionData === 'object' && 'error' in edgeFunctionData) {
+        errorMessage = (edgeFunctionData as any).error;
+    } else if (error.message) {
+        errorMessage = error.message;
+    } else if (typeof edgeFunctionData === 'string') {
+        errorMessage = edgeFunctionData;
+    }
+    if ((error as any).status) {
+        errorMessage = `(Status: ${(error as any).status}) ${errorMessage}`;
+    }
     throw new Error(errorMessage);
   }
+  return edgeFunctionData;
 };
 
 interface InviteUserData {
@@ -58,16 +80,39 @@ interface InviteUserData {
 
 export const apiInviteUser = async (data: InviteUserData): Promise<any> => {
   const { email, first_name, last_name, role } = data;
+  
   const { data: edgeFunctionData, error } = await supabase.functions.invoke('invite-user', {
     body: JSON.stringify({ email, first_name, last_name, role }),
     method: 'POST',
   });
+
   if (error) {
-    const errorMessage = error.context?.error || error.message || 'Failed to invite user.';
+    console.error("Error invoking invite-user edge function:", error);
+    console.error("Edge function raw response data (on error):", edgeFunctionData); // Log raw data
+
+    let errorMessage = 'Failed to invite user via Edge Function.';
+    
+    // Try to get a more specific error message from the edge function's response body
+    if (edgeFunctionData && typeof edgeFunctionData === 'object' && 'error' in edgeFunctionData) {
+        errorMessage = (edgeFunctionData as any).error;
+    } else if (typeof edgeFunctionData === 'string') {
+        // If the edge function returned a plain string error message
+        errorMessage = edgeFunctionData;
+    } else if (error.message) {
+        // Fallback to the generic error message from supabase.functions.invoke
+        errorMessage = error.message;
+    }
+
+    // Add status code if available from the invoke error object
+    if ((error as any).status) {
+        errorMessage = `(Status: ${(error as any).status}) ${errorMessage}`;
+    }
+    
     throw new Error(errorMessage);
   }
   return edgeFunctionData;
 };
+
 
 // --- API de Vendedores ---
 export const apiGetVendors = async (): Promise<Vendor[]> => {
@@ -90,6 +135,30 @@ export const apiUpdateVendor = async (id: string, data: Partial<Omit<Vendor, "id
 
 export const apiDeleteVendor = async (id: string): Promise<void> => {
   const { error } = await supabase.from('vendors').delete().eq('id', id);
+  if (error) throw error;
+};
+
+// --- API de Account Managers (Contactos, no usuarios del sistema) ---
+export const apiGetAccountManagers = async (): Promise<AccountManager[]> => {
+  const { data, error } = await supabase.from('account_managers').select('*');
+  if (error) throw error;
+  return data;
+};
+
+export const apiAddAccountManager = async (data: Omit<AccountManager, "id" | "created_at">): Promise<AccountManager> => {
+  const { data: newManager, error } = await supabase.from('account_managers').insert(data).select().single();
+  if (error) throw error;
+  return newManager;
+};
+
+export const apiUpdateAccountManager = async (id: string, data: Partial<Omit<AccountManager, "id" | "created_at">>): Promise<AccountManager> => {
+  const { data: updatedManager, error } = await supabase.from('account_managers').update(data).eq('id', id).select().single();
+  if (error) throw error;
+  return updatedManager;
+};
+
+export const apiDeleteAccountManager = async (id: string): Promise<void> => {
+  const { error } = await supabase.from('account_managers').delete().eq('id', id);
   if (error) throw error;
 };
 
@@ -117,153 +186,82 @@ export const apiDeleteProject = async (id: string): Promise<void> => {
   if (error) throw error;
 };
 
-// --- API de Account Managers ---
-export const apiGetAccountManagers = async (): Promise<AccountManager[]> => {
-  const { data, error } = await supabase.from('account_managers').select('*');
-  if (error) throw error;
-  return data;
-};
-
-export const apiAddAccountManager = async (data: Omit<AccountManager, "id" | "created_at">): Promise<AccountManager> => {
-  const { data: newManager, error } = await supabase.from('account_managers').insert(data).select().single();
-  if (error) throw error;
-  return newManager;
-};
-
-export const apiUpdateAccountManager = async (id: string, data: Partial<Omit<AccountManager, "id" | "created_at">>): Promise<AccountManager> => {
-  const { data: updatedManager, error } = await supabase.from('account_managers').update(data).eq('id', id).select().single();
-  if (error) throw error;
-  return updatedManager;
-};
-
-export const apiDeleteAccountManager = async (id: string): Promise<void> => {
-  const { error } = await supabase.from('account_managers').delete().eq('id', id);
-  if (error) throw error;
-};
-
-// --- API de Direcciones de Envío ---
-export const apiGetShippingAddresses = async (): Promise<ShippingAddress[]> => {
-  const { data, error } = await supabase.from('shipping_addresses').select('*');
-  if (error) throw error;
-  return data;
-};
-
-export const apiAddShippingAddress = async (data: Omit<ShippingAddress, "id" | "created_at">): Promise<ShippingAddress> => {
-  const { data: newAddress, error } = await supabase.from('shipping_addresses').insert(data).select().single();
-  if (error) throw error;
-  return newAddress;
-};
-
-export const apiUpdateShippingAddress = async (id: string, data: Partial<Omit<ShippingAddress, "id" | "created_at">>): Promise<ShippingAddress> => {
-  const { data: updatedAddress, error } = await supabase.from('shipping_addresses').update(data).eq('id', id).select().single();
-  if (error) throw error;
-  return updatedAddress;
-};
-
-export const apiDeleteShippingAddress = async (id: string): Promise<void> => {
-  const { error } = await supabase.from('shipping_addresses').delete().eq('id', id);
-  if (error) throw error;
-};
-
-// --- API de Direcciones de Facturación ---
-export const apiGetBillingAddresses = async (): Promise<BillingAddress[]> => {
-  const { data, error } = await supabase.from('billing_addresses').select('*');
-  if (error) throw error;
-  return data;
-};
-
-export const apiAddBillingAddress = async (data: Omit<BillingAddress, "id" | "created_at">): Promise<BillingAddress> => {
-  const { data: newAddress, error } = await supabase.from('billing_addresses').insert(data).select().single();
-  if (error) throw error;
-  return newAddress;
-};
-
-export const apiUpdateBillingAddress = async (id: string, data: Partial<Omit<BillingAddress, "id" | "created_at">>): Promise<BillingAddress> => {
-  const { data: updatedAddress, error } = await supabase.from('billing_addresses').update(data).eq('id', id).select().single();
-  if (error) throw error;
-  return updatedAddress;
-};
-
-export const apiDeleteBillingAddress = async (id: string): Promise<void> => {
-  const { error } = await supabase.from('billing_addresses').delete().eq('id', id);
-  if (error) throw error;
-};
-
-
-// --- API de Búsqueda Externa de Productos ---
+// --- API de Búsqueda Externa de Productos (Ahora invoca la Edge Function) ---
 export const apiSearchExternalProduct = async (catalogNumber: string, brand?: string): Promise<ProductDetails> => {
   const { data, error } = await supabase.functions.invoke('search-product', {
     body: JSON.stringify({ catalogNumber, brand }),
     method: 'POST',
   });
+
   if (error) {
-    const errorMessage = error.context?.error || error.message || 'Failed to search external product.';
+    console.error("Error invoking search-product edge function:", error);
+    let errorMessage = 'Failed to search external product via Edge Function.';
+    if (data && typeof data === 'object' && 'error' in data) {
+        errorMessage = (data as any).error;
+    } else if (error.message) {
+        errorMessage = error.message;
+    } else if (typeof data === 'string') {
+        errorMessage = data;
+    }
     throw new Error(errorMessage);
   }
+
+  // La Edge Function devuelve un objeto con una propiedad 'products'
   if (!data || !data.products) {
     throw new Error("AI did not return valid product details.");
   }
+  
   return data.products as ProductDetails;
 };
 
-// --- API de Solicitudes ---
+
+// --- API de Solicitudes (usando mock data por ahora) ---
 export const apiGetRequests = async (): Promise<SupabaseRequest[]> => {
-  const { data, error } = await supabase.from('requests').select('*, request_items(*)').order('created_at', { ascending: false });
-  if (error) throw error;
-  return data.map(r => ({ ...r, items: r.request_items }));
+  await new Promise(resolve => setTimeout(resolve, 300)); // Simular retraso
+  return getMockRequests();
 };
 
-export const apiAddRequest = async (data: {
-  vendorId: string;
-  accountManagerId: string | null;
-  notes?: string | null;
-  projectCodes?: string[] | null;
-  items: RequestItem[];
-}): Promise<SupabaseRequest> => {
-  // Aseguramos que los valores nulos o indefinidos se pasen como null
-  const accountManagerId = data.accountManagerId || null;
-  const notes = data.notes || null;
-  const projectCodes = data.projectCodes || null;
-
-  // **IMPORTANTE:** Pasamos accountManagerId como string | null, ya que la función RPC ahora espera TEXT.
-  const { data: newRequest, error } = await supabase.rpc('create_request_with_items', {
-    vendor_id_in: data.vendorId,
-    account_manager_id_in: accountManagerId, 
-    notes_in: notes,
-    project_codes_in: projectCodes,
-    items_in: data.items,
-  });
-  if (error) throw error;
-  return newRequest as SupabaseRequest;
+export const apiAddRequest = async (data: Omit<SupabaseRequest, "id" | "created_at" | "status" | "items" | "po_number" | "quote_url" | "po_url" | "slip_url"> & { items: RequestItem[] }): Promise<SupabaseRequest> => {
+  await new Promise(resolve => setTimeout(resolve, 300)); // Simular retraso
+  return addMockRequest(data);
 };
 
-export const apiUpdateRequest = async (id: string, data: Partial<SupabaseRequest>): Promise<SupabaseRequest> => {
-  const { data: updatedRequest, error } = await supabase
-    .from('requests')
-    .update(data)
-    .eq('id', id)
-    .select('*, request_items(*)')
-    .single();
-  if (error) throw error;
-  return { ...updatedRequest, items: updatedRequest.request_items };
+export const apiUpdateRequestStatus = async (
+  id: string,
+  status: RequestStatus,
+  quoteUrl: string | null = null,
+  poNumber: string | null = null
+): Promise<SupabaseRequest> => {
+  await new Promise(resolve => setTimeout(resolve, 300)); // Simular retraso
+  return updateMockRequestStatus(id, status, quoteUrl, poNumber);
 };
 
-export const apiDeleteRequest = async (id: string): Promise<void> => {
-  const { error } = await supabase.from('requests').delete().eq('id', id);
-  if (error) throw error;
+export const apiUpdateRequestMetadata = async (
+  id: string,
+  data: {
+    accountManagerId?: string | null;
+    notes?: string | null;
+    projectCodes?: string[] | null;
+  }
+): Promise<SupabaseRequest> => {
+  await new Promise(resolve => setTimeout(resolve, 300)); // Simular retraso
+  return updateMockRequestMetadata(id, data);
 };
 
-// --- API de Subida de Archivos ---
+// ACTUALIZADO: apiUpdateRequestFile para usar la función Edge
 export const apiUpdateRequestFile = async (
   id: string,
   fileType: "quote" | "po" | "slip",
-  file: File,
+  file: File, // Ahora acepta un objeto File real
   poNumber: string | null = null
 ): Promise<{ fileUrl: string; poNumber: string | null }> => {
+  // Asegurarse de que la sesión esté fresca antes de invocar la función Edge
   const { data: { session }, error: refreshError } = await supabase.auth.refreshSession();
   if (refreshError || !session) {
+    console.error("Error refreshing session before uploading file:", refreshError);
     throw new Error("Failed to refresh session. Please log in again.");
   }
+
   const formData = new FormData();
   formData.append('file', file);
   formData.append('fileType', fileType);
@@ -271,48 +269,62 @@ export const apiUpdateRequestFile = async (
   if (poNumber) {
     formData.append('poNumber', poNumber);
   }
+
   const { data: edgeFunctionData, error } = await supabase.functions.invoke('upload-file', {
     body: formData,
+    method: 'POST',
+    headers: {
+      // No Content-Type header needed for FormData, browser sets it automatically
+    },
   });
+
   if (error) {
-    const errorMessage = error.context?.error || error.message || 'Failed to upload file.';
+    console.error("Error invoking upload-file edge function:", error);
+    let errorMessage = 'Failed to upload file via Edge Function.';
+    if (edgeFunctionData && typeof edgeFunctionData === 'object' && 'error' in edgeFunctionData) {
+        errorMessage = (edgeFunctionData as any).error;
+    } else if (error.message) {
+        errorMessage = error.message;
+    } else if (typeof edgeFunctionData === 'string') {
+        errorMessage = edgeFunctionData;
+    }
+    if ((error as any).status) {
+        errorMessage = `(Status: ${(error as any).status}) ${errorMessage}`;
+    }
     throw new Error(errorMessage);
   }
+  
+  // La función Edge devuelve { fileUrl: string, poNumber: string | null }
   return edgeFunctionData as { fileUrl: string; poNumber: string | null };
 };
 
-// --- API de Inventario ---
+export const apiDeleteRequest = async (id: string): Promise<void> => {
+  await new Promise(resolve => setTimeout(resolve, 300)); // Simular retraso
+  return deleteMockRequest(id);
+};
+
+// --- API de Inventario (usando mock data por ahora) ---
 export const apiGetInventory = async (): Promise<InventoryItem[]> => {
-  const { data, error } = await supabase.from('inventory').select('*').order('last_updated', { ascending: false });
-  if (error) throw error;
-  return data;
+  await new Promise(resolve => setTimeout(resolve, 300)); // Simular retraso
+  return getMockInventory();
 };
 
 export const apiAddInventoryItem = async (data: Omit<InventoryItem, "id" | "added_at" | "last_updated">): Promise<InventoryItem> => {
-  const { data: newItem, error } = await supabase.rpc('add_or_update_inventory_item', {
-    product_name_in: data.product_name,
-    catalog_number_in: data.catalog_number,
-    brand_in: data.brand,
-    quantity_in: data.quantity,
-    unit_price_in: data.unit_price,
-    format_in: data.format,
-  }).single();
-  if (error) throw error;
-  return newItem;
+  await new Promise(resolve => setTimeout(resolve, 300)); // Simular retraso
+  return addMockInventoryItem(data);
 };
 
 export const apiUpdateInventoryItem = async (id: string, data: Partial<Omit<InventoryItem, "id" | "added_at">>): Promise<InventoryItem> => {
-  const { data: updatedItem, error } = await supabase.from('inventory').update({ ...data, last_updated: new Date().toISOString() }).eq('id', id).select().single();
-  if (error) throw error;
-  return updatedItem;
+  await new Promise(resolve => setTimeout(resolve, 300)); // Simular retraso
+  return updateMockInventoryItem(id, data);
 };
 
 export const apiDeleteInventoryItem = async (id: string): Promise<void> => {
-  const { error } = await supabase.from('inventory').delete().eq('id', id);
-  if (error) throw error;
+  await new Promise(resolve => setTimeout(resolve, 300)); // Simular retraso
+  return deleteMockInventoryItem(id);
 };
 
-// --- API de Envío de Correo Electrónico ---
+// --- API de Envío de Correo Electrónico (REAL) ---
 interface EmailData {
   to: string;
   subject: string;
@@ -321,13 +333,23 @@ interface EmailData {
 }
 
 export const apiSendEmail = async (email: EmailData): Promise<void> => {
-  const { error } = await supabase.functions.invoke('send-email', {
+  const { data, error } = await supabase.functions.invoke('send-email', {
     body: JSON.stringify(email),
+    method: 'POST',
   });
+
   if (error) {
-    const errorMessage = error.context?.error || error.message || 'Failed to send email.';
+    console.error("Error invoking send-email edge function:", error);
+    let errorMessage = 'Failed to send email via Edge Function.';
+    if (data && typeof data === 'object' && 'error' in data) {
+        errorMessage = (data as any).error;
+    } else if (error.message) {
+        errorMessage = error.message;
+    }
     throw new Error(errorMessage);
   }
+  
+  return data;
 };
 
 // --- API de Plantillas de Correo Electrónico ---

@@ -1,30 +1,39 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { AccountManager } from "@/data/types";
 import { toast } from "sonner";
 import { apiGetAccountManagers, apiAddAccountManager, apiUpdateAccountManager, apiDeleteAccountManager } from "@/integrations/api";
-import { AccountManager } from "@/data/types";
 
 // --- Fetch Hook ---
+const fetchAccountManagers = async (): Promise<AccountManager[]> => {
+  return apiGetAccountManagers();
+};
+
 export const useAccountManagers = () => {
   return useQuery<AccountManager[], Error>({
     queryKey: ["accountManagers"],
-    queryFn: apiGetAccountManagers,
+    queryFn: fetchAccountManagers,
   });
 };
 
 // --- Mutation Hooks ---
+
 interface AccountManagerFormData {
-  name: string;
-  email?: string;
+  first_name: string;
+  last_name: string;
+  email: string;
 }
 
+// Add Account Manager
 export const useAddAccountManager = () => {
   const queryClient = useQueryClient();
   return useMutation<AccountManager, Error, AccountManagerFormData>({
-    mutationFn: apiAddAccountManager,
+    mutationFn: async (data) => {
+      return apiAddAccountManager(data);
+    },
     onSuccess: (newManager) => {
       queryClient.invalidateQueries({ queryKey: ["accountManagers"] });
       toast.success("Account Manager added successfully!", {
-        description: newManager.name,
+        description: `${newManager.first_name} ${newManager.last_name}`,
       });
     },
     onError: (error) => {
@@ -35,10 +44,13 @@ export const useAddAccountManager = () => {
   });
 };
 
+// Update Account Manager
 export const useUpdateAccountManager = () => {
   const queryClient = useQueryClient();
-  return useMutation<AccountManager, Error, { id: string; data: AccountManagerFormData }>({
-    mutationFn: ({ id, data }) => apiUpdateAccountManager(id, data),
+  return useMutation<AccountManager, Error, { id: string; data: Partial<AccountManagerFormData> }>({
+    mutationFn: async ({ id, data }) => {
+      return apiUpdateAccountManager(id, data);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["accountManagers"] });
       toast.success("Account Manager updated successfully!");
@@ -51,10 +63,13 @@ export const useUpdateAccountManager = () => {
   });
 };
 
+// Delete Account Manager
 export const useDeleteAccountManager = () => {
   const queryClient = useQueryClient();
   return useMutation<void, Error, string>({
-    mutationFn: apiDeleteAccountManager,
+    mutationFn: async (id) => {
+      return apiDeleteAccountManager(id);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["accountManagers"] });
       toast.success("Account Manager deleted successfully!");

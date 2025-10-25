@@ -3,7 +3,7 @@
 import React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
+import * as z from "zod"; // Corregido: de '*s as z' a '* as z'
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -15,17 +15,18 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Loader2 } from "lucide-react";
-import { AccountManager } from "@/data/types";
+import { Profile } from "@/hooks/use-profiles";
 
-const formSchema = z.object({
-  name: z.string().min(1, { message: "Name is required." }),
-  email: z.string().email({ message: "Must be a valid email." }).optional().or(z.literal("")),
+const accountManagerFormSchema = z.object({
+  first_name: z.string().min(1, { message: "First name is required." }),
+  last_name: z.string().min(1, { message: "Last name is required." }),
+  email: z.string().email({ message: "Must be a valid email address." }).min(1, { message: "Email is required." }),
 });
 
-export type AccountManagerFormValues = z.infer<typeof formSchema>;
+export type AccountManagerFormValues = z.infer<typeof accountManagerFormSchema>;
 
 interface AccountManagerFormProps {
-  initialData?: AccountManager;
+  initialData?: Profile;
   onSubmit: (data: AccountManagerFormValues) => void;
   onCancel?: () => void;
   isSubmitting: boolean;
@@ -33,21 +34,46 @@ interface AccountManagerFormProps {
 
 const AccountManagerForm: React.FC<AccountManagerFormProps> = ({ initialData, onSubmit, onCancel, isSubmitting }) => {
   const form = useForm<AccountManagerFormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: initialData || { name: "", email: "" },
+    resolver: zodResolver(accountManagerFormSchema),
+    defaultValues: initialData ? {
+      first_name: initialData.first_name || "",
+      last_name: initialData.last_name || "",
+      email: initialData.email || "",
+    } : {
+      first_name: "",
+      last_name: "",
+      email: "",
+    },
   });
+
+  const handleSubmit = (data: AccountManagerFormValues) => {
+    onSubmit(data);
+  };
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
         <FormField
           control={form.control}
-          name="name"
+          name="first_name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Full Name</FormLabel>
+              <FormLabel>First Name</FormLabel>
               <FormControl>
-                <Input placeholder="e.g., John Smith" {...field} disabled={isSubmitting} />
+                <Input placeholder="e.g., John" {...field} disabled={isSubmitting} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="last_name"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Last Name</FormLabel>
+              <FormControl>
+                <Input placeholder="e.g., Doe" {...field} disabled={isSubmitting} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -58,9 +84,9 @@ const AccountManagerForm: React.FC<AccountManagerFormProps> = ({ initialData, on
           name="email"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Email (Optional)</FormLabel>
+              <FormLabel>Email</FormLabel>
               <FormControl>
-                <Input type="email" placeholder="e.g., john.smith@example.com" {...field} disabled={isSubmitting} />
+                <Input type="email" placeholder="e.g., john.doe@example.com" {...field} disabled={isSubmitting || !!initialData} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -78,7 +104,7 @@ const AccountManagerForm: React.FC<AccountManagerFormProps> = ({ initialData, on
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...
               </>
             ) : (
-              initialData ? "Save Changes" : "Add Manager"
+              initialData ? "Save Changes" : "Invite Manager"
             )}
           </Button>
         </div>

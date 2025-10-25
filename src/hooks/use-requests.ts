@@ -1,24 +1,20 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { SupabaseRequest as MockSupabaseRequest, SupabaseRequestItem as MockSupabaseRequestItem, RequestItem, RequestStatus } from "@/data/types";
+import { SupabaseRequest as MockSupabaseRequest, SupabaseRequestItem as MockSupabaseRequestItem, RequestItem, RequestStatus } from "@/data/mockData";
 import { toast } from "sonner";
-import { 
-  apiGetRequests, 
-  apiAddRequest, 
-  apiDeleteRequest, 
-  apiAddInventoryItem, 
-  apiSendEmail, 
-  apiUpdateRequestFile,
-  apiUpdateRequest
-} from "@/integrations/api";
+import { apiGetRequests, apiAddRequest, apiUpdateRequestStatus, apiDeleteRequest, apiAddInventoryItem, apiSendEmail, apiUpdateRequestFile, apiUpdateRequestMetadata } from "@/integrations/api";
 
 export interface SupabaseRequestItem extends MockSupabaseRequestItem {}
 export interface SupabaseRequest extends MockSupabaseRequest {}
 
 // --- Fetch Hook ---
+const fetchRequests = async (): Promise<SupabaseRequest[]> => {
+  return apiGetRequests();
+};
+
 export const useRequests = () => {
   return useQuery<SupabaseRequest[], Error>({
     queryKey: ["requests"],
-    queryFn: apiGetRequests,
+    queryFn: fetchRequests,
   });
 };
 
@@ -38,12 +34,15 @@ export const useAddRequest = () => {
   const queryClient = useQueryClient();
   return useMutation<SupabaseRequest, Error, AddRequestFormData>({
     mutationFn: async (data) => {
+      const { vendorId, requesterId, accountManagerId, notes, projectCodes, items } = data;
+
       return apiAddRequest({
-        vendorId: data.vendorId,
-        accountManagerId: data.accountManagerId,
-        notes: data.notes,
-        projectCodes: data.projectCodes,
-        items: data.items,
+        vendor_id: vendorId,
+        requester_id: requesterId,
+        account_manager_id: accountManagerId,
+        notes: notes || null,
+        project_codes: projectCodes || null,
+        items: items,
       });
     },
     onSuccess: (newRequest) => {
@@ -60,15 +59,21 @@ export const useAddRequest = () => {
   });
 };
 
-// Generic Update Request
-export const useUpdateRequest = () => {
-  const queryClient = useQueryClient();
-  return useMutation<SupabaseRequest, Error, { id: string; data: Partial<SupabaseRequest> }>({
-    mutationFn: async ({ id, data }) => {
-      const updatedRequest = await apiUpdateRequest(id, data);
+// Update Request Status
+interface UpdateRequestStatusData {
+  id: string;
+  status: RequestStatus;
+  quoteUrl?: string | null;
+  poNumber?: string | null;
+}
 
-      // If status is changing to "Ordered", add items to inventory
-      if (data.status === "Ordered" && updatedRequest.items) {
+export const useUpdateRequestStatus = () => {
+  const queryClient = useQueryClient();
+  return useMutation<SupabaseRequest, Error, UpdateRequestStatusData>({
+    mutationFn: async ({ id, status, quoteUrl, poNumber }) => {
+      const updatedRequest = await apiUpdateRequestStatus(id, status, quoteUrl, poNumber);
+
+      if (status === "Ordered" && updatedRequest.items) {
         for (const item of updatedRequest.items) {
           await apiAddInventoryItem({
             product_name: item.product_name,
@@ -79,17 +84,45 @@ export const useUpdateRequest = () => {
             format: item.format,
           });
         }
-        toast.info("Items from request have been added to inventory.");
+        toast.success("Items added to inventory!");
       }
       return updatedRequest;
     },
     onSuccess: (updatedRequest) => {
       queryClient.invalidateQueries({ queryKey: ["requests"] });
       queryClient.invalidateQueries({ queryKey: ["inventory"] });
-      toast.success(`Request ${updatedRequest.id} updated successfully!`);
+      toast.success(`Request ${updatedRequest.id} status updated to ${updatedRequest.status}!`);
     },
     onError: (error) => {
-      toast.error("Failed to update request.", {
+      toast.error("Failed to update request status.", {
+        description: error.message,
+      });
+    },
+  });
+};
+
+// Update Request Metadata
+interface UpdateRequestMetadataData {
+  id: string;
+  data: {
+    accountManagerId?: string | null;
+    notes?: string | null;
+    projectCodes?: string[] | null;
+  };
+}
+
+export const useUpdateRequestMetadata = () => {
+  const queryClient = useQueryClient();
+  return useMutation<SupabaseRequest, Error, UpdateRequestMetadataData>({
+    mutationFn: async ({ id, data }) => {
+      return apiUpdateRequestMetadata(id, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["requests"] });
+      toast.success(`Request metadata updated successfully!`);
+    },
+    onError: (error) => {
+      toast.error("Failed to update request metadata.", {
         description: error.message,
       });
     },
@@ -105,6 +138,7 @@ interface UpdateRequestFileData {
   poNumber?: string | null;
 }
 
+// REFACTOR: This mutation now ONLY handles the file upload and returns the URL.
 export const useUpdateRequestFile = () => {
   const queryClient = useQueryClient();
   return useMutation<{ fileUrl: string; poNumber: string | null }, Error, UpdateRequestFileData>({
@@ -127,7 +161,9 @@ export const useUpdateRequestFile = () => {
 export const useDeleteRequest = () => {
   const queryClient = useQueryClient();
   return useMutation<void, Error, string>({
-    mutationFn: apiDeleteRequest,
+    mutationFn: async (id) => {
+      return apiDeleteRequest(id);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["requests"] });
       toast.success("Request deleted successfully!");
@@ -150,7 +186,9 @@ interface SendEmailData {
 
 export const useSendEmail = () => {
   return useMutation<void, Error, SendEmailData>({
-    mutationFn: apiSendEmail,
+    mutationFn: async (emailData) => {
+      await apiSendEmail(emailData);
+    },
     onSuccess: () => {
       toast.success("Email sent successfully!");
     },

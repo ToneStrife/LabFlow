@@ -14,7 +14,8 @@ import { RequestStatus } from "@/data/types";
 import { SupabaseRequest } from "@/hooks/use-requests";
 import { Vendor } from "@/hooks/use-vendors";
 import { Profile, getFullName } from "@/hooks/use-profiles";
-import { useAccountManagers } from "@/hooks/use-account-managers";
+import { AccountManager } from "@/data/types"; // Importar el tipo AccountManager
+import { useAccountManagers } from "@/hooks/use-account-managers"; // Usar el nuevo hook
 import { format } from "date-fns";
 import RequestListActions from "./RequestListActions";
 
@@ -54,7 +55,7 @@ const RequestListTable: React.FC<RequestListTableProps> = ({
   profiles,
   ...actionProps
 }) => {
-  const { data: accountManagers } = useAccountManagers();
+  const { data: accountManagers } = useAccountManagers(); // Usar el nuevo hook
 
   const getRequesterName = (requesterId: string) => {
     const profile = profiles?.find(p => p.id === requesterId);
@@ -63,8 +64,8 @@ const RequestListTable: React.FC<RequestListTableProps> = ({
 
   const getAccountManagerName = (managerId: string | null) => {
     if (!managerId) return "N/A";
-    const manager = accountManagers?.find(am => am.id === managerId);
-    return manager?.name || "N/A";
+    const manager = accountManagers?.find(am => am.id === managerId); // Buscar en la nueva lista de Account Managers
+    return manager ? `${manager.first_name} ${manager.last_name}` : "N/A";
   };
 
   return (

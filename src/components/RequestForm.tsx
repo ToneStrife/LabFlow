@@ -28,9 +28,9 @@ import { useSession } from "@/components/SessionContextProvider";
 import { useVendors } from "@/hooks/use-vendors";
 import { useAddRequest } from "@/hooks/use-requests";
 import { useAccountManagers } from "@/hooks/use-account-managers";
-import { getFullName } from "@/hooks/use-profiles";
 import { useProjects } from "@/hooks/use-projects";
-import { apiSearchExternalProduct } from "@/integrations/api";
+import { getFullName } from "@/hooks/use-profiles";
+import { apiSearchExternalProduct } from "@/integrations/api"; // Importar la API de búsqueda externa (ahora simula la IA)
 
 const itemSchema = z.object({
   productName: z.string().min(1, { message: "El nombre del producto es obligatorio." }),
@@ -47,6 +47,7 @@ const itemSchema = z.object({
   link: z.string().url({ message: "Debe ser una URL válida." }).optional().or(z.literal("")),
   notes: z.string().optional(),
   brand: z.string().optional(),
+  // AI-enriched fields
   ai_enriched_product_name: z.string().optional(),
   ai_enriched_pack_size: z.string().optional(),
   ai_enriched_estimated_price: z.number().optional(),
@@ -57,7 +58,7 @@ const itemSchema = z.object({
 const formSchema = z.object({
   vendorId: z.string().min(1, { message: "El proveedor es obligatorio." }),
   requesterId: z.string().min(1, { message: "El ID del solicitante es obligatorio." }), 
-  accountManagerId: z.union([z.string().uuid(), z.literal("unassigned")]).optional(), 
+  accountManagerId: z.string().optional(), 
   items: z.array(itemSchema).min(1, { message: "Se requiere al menos un artículo." }),
   attachments: z.any().optional(),
   projectCodes: z.array(z.string()).optional(),
@@ -125,12 +126,14 @@ const RequestForm: React.FC = () => {
 
       const aiProductDetails: ProductDetails = await apiSearchExternalProduct(catalogNumber, brand);
 
+      // Auto-fill main form fields
       form.setValue(`items.${index}.productName`, aiProductDetails.productName || '');
       form.setValue(`items.${index}.format`, aiProductDetails.format || '');
       form.setValue(`items.${index}.unitPrice`, aiProductDetails.unitPrice || undefined);
       form.setValue(`items.${index}.link`, aiProductDetails.link || '');
       form.setValue(`items.${index}.notes`, aiProductDetails.notes || '');
       
+      // Store AI-enriched data separately
       form.setValue(`items.${index}.ai_enriched_product_name`, aiProductDetails.productName || undefined);
       form.setValue(`items.${index}.ai_enriched_pack_size`, aiProductDetails.format || undefined);
       form.setValue(`items.${index}.ai_enriched_estimated_price`, aiProductDetails.unitPrice || undefined);
@@ -154,13 +157,13 @@ const RequestForm: React.FC = () => {
       return;
     }
 
-    const managerId = (data.accountManagerId === 'unassigned' || !data.accountManagerId) ? null : data.accountManagerId;
+    const managerId = data.accountManagerId === 'unassigned' || !data.accountManagerId ? null : data.accountManagerId;
 
     const requestData = {
       vendorId: data.vendorId,
       requesterId: session.user.id,
       accountManagerId: managerId,
-      notes: null,
+      notes: undefined, // Notes are now part of itemSchema, not top-level
       projectCodes: data.projectCodes,
       items: data.items,
     };
@@ -240,7 +243,7 @@ const RequestForm: React.FC = () => {
                   <SelectContent>
                     <SelectItem value="unassigned">Sin Asignar</SelectItem>
                     {accountManagers?.map((manager) => (
-                      <SelectItem key={manager.id} value={manager.id}>{manager.name}</SelectItem>
+                      <SelectItem key={manager.id} value={manager.id}>{`${manager.first_name} ${manager.last_name}`}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

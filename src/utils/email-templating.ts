@@ -52,7 +52,7 @@ export const processEmailTemplate = (templateString: string, context: EmailTempl
   processedString = replacePlaceholder(processedString, 'vendor.email', vendor?.email);
 
   // Account Manager details
-  processedString = replacePlaceholder(processedString, 'account_manager.full_name', accountManager?.name);
+  processedString = replacePlaceholder(processedString, 'account_manager.full_name', accountManager ? `${accountManager.first_name} ${accountManager.last_name}` : null);
   processedString = replacePlaceholder(processedString, 'account_manager.email', accountManager?.email);
 
   // Project Codes

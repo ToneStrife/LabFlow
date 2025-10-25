@@ -3,7 +3,7 @@
 export type RequestStatus = "Pending" | "Quote Requested" | "PO Requested" | "Ordered" | "Received";
 
 export interface RequestItem {
-  id?: string;
+  id?: string; // ID is optional for new items before insertion
   productName: string;
   catalogNumber: string;
   quantity: number;
@@ -11,7 +11,9 @@ export interface RequestItem {
   format?: string;
   link?: string;
   notes?: string;
-  brand?: string;
+  brand?: string; // New field for brand
+
+  // AI-enriched fields
   ai_enriched_product_name?: string;
   ai_enriched_pack_size?: string;
   ai_enriched_estimated_price?: number;
@@ -40,42 +42,19 @@ export interface Vendor {
   brands: string[] | null;
 }
 
+export interface AccountManager {
+  id: string;
+  created_at: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+}
+
 export interface Project {
   id: string;
   created_at: string;
   name: string;
   code: string;
-}
-
-export interface AccountManager {
-  id: string;
-  created_at: string;
-  name: string;
-  email: string | null;
-}
-
-export interface ShippingAddress {
-  id: string;
-  created_at: string;
-  name: string;
-  address_line_1: string;
-  address_line_2: string | null;
-  city: string;
-  state: string;
-  zip_code: string;
-  country: string;
-}
-
-export interface BillingAddress {
-  id: string;
-  created_at: string;
-  name: string;
-  address_line_1: string;
-  address_line_2: string | null;
-  city: string;
-  state: string;
-  zip_code: string;
-  country: string;
 }
 
 export interface EmailTemplate {
@@ -103,11 +82,11 @@ export interface SupabaseRequest {
   id: string;
   created_at: string;
   vendor_id: string;
-  requester_id: string;
-  account_manager_id: string | null;
+  requester_id: string; // Still references auth.users.id via profiles
+  account_manager_id: string | null; // Now references public.account_managers.id
   status: RequestStatus;
   notes: string | null;
-  project_codes: string[] | null;
+  project_codes: string[] | null; // Still string[] but values are public.projects.id
   items: SupabaseRequestItem[] | null;
   po_number: string | null;
   quote_url: string | null;
@@ -123,7 +102,7 @@ export interface ProductDetails {
   format?: string;
   link?: string;
   brand: string;
-  source?: string;
+  source?: string; // Added source field
 }
 
 export interface InventoryItem {
