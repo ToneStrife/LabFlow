@@ -11,7 +11,8 @@ import RequestDetails from "./pages/RequestDetails";
 import Profile from "./pages/Profile";
 import Users from "./pages/Users";
 import Inventory from "./pages/Inventory"; 
-import EmailTemplates from "./pages/EmailTemplates"; // Importar la nueva página EmailTemplates
+import EmailTemplates from "./pages/EmailTemplates";
+import AdminSettings from "./pages/AdminSettings"; // Importar la nueva página
 import NotFound from "./pages/NotFound";
 import { SessionContextProvider, useSession } from "./components/SessionContextProvider";
 import React from "react";
@@ -66,7 +67,8 @@ const AppRoutes = () => {
         <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
         <Route path="/users" element={<PrivateRoute requiredRoles={["Admin"]}><Users /></PrivateRoute>} />
         <Route path="/inventory" element={<PrivateRoute requiredRoles={["Account Manager", "Admin"]}><Inventory /></PrivateRoute>} />
-        <Route path="/email-templates" element={<PrivateRoute requiredRoles={["Admin"]}><EmailTemplates /></PrivateRoute>} /> {/* Nueva ruta */}
+        <Route path="/email-templates" element={<PrivateRoute requiredRoles={["Admin"]}><EmailTemplates /></PrivateRoute>} />
+        <Route path="/admin" element={<PrivateRoute requiredRoles={["Admin"]}><AdminSettings /></PrivateRoute>} /> {/* Nueva ruta */}
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Layout>

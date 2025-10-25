@@ -3,7 +3,7 @@
 export type RequestStatus = "Pending" | "Quote Requested" | "PO Requested" | "Ordered" | "Received";
 
 export interface RequestItem {
-  id?: string; // ID is optional for new items before insertion
+  id?: string;
   productName: string;
   catalogNumber: string;
   quantity: number;
@@ -11,9 +11,7 @@ export interface RequestItem {
   format?: string;
   link?: string;
   notes?: string;
-  brand?: string; // New field for brand
-
-  // AI-enriched fields
+  brand?: string;
   ai_enriched_product_name?: string;
   ai_enriched_pack_size?: string;
   ai_enriched_estimated_price?: number;
@@ -49,6 +47,37 @@ export interface Project {
   code: string;
 }
 
+export interface AccountManager {
+  id: string;
+  created_at: string;
+  name: string;
+  email: string | null;
+}
+
+export interface ShippingAddress {
+  id: string;
+  created_at: string;
+  name: string;
+  address_line_1: string;
+  address_line_2: string | null;
+  city: string;
+  state: string;
+  zip_code: string;
+  country: string;
+}
+
+export interface BillingAddress {
+  id: string;
+  created_at: string;
+  name: string;
+  address_line_1: string;
+  address_line_2: string | null;
+  city: string;
+  state: string;
+  zip_code: string;
+  country: string;
+}
+
 export interface EmailTemplate {
   id: string;
   template_name: string;
@@ -74,11 +103,11 @@ export interface SupabaseRequest {
   id: string;
   created_at: string;
   vendor_id: string;
-  requester_id: string; 
-  account_manager_id: string | null; // References public.profiles.id
+  requester_id: string;
+  account_manager_id: string | null;
   status: RequestStatus;
   notes: string | null;
-  project_codes: string[] | null; 
+  project_codes: string[] | null;
   items: SupabaseRequestItem[] | null;
   po_number: string | null;
   quote_url: string | null;
@@ -94,7 +123,7 @@ export interface ProductDetails {
   format?: string;
   link?: string;
   brand: string;
-  source?: string; // Added source field
+  source?: string;
 }
 
 export interface InventoryItem {

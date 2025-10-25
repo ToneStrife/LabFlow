@@ -3,7 +3,7 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { Package, ShoppingCart, Users, User, Briefcase, UserCog, Warehouse, Loader2, MailOpen } from "lucide-react"; // Importar MailOpen
+import { Package, ShoppingCart, Users, User, Briefcase, UserCog, Warehouse, Loader2, MailOpen, SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSession } from "@/components/SessionContextProvider";
 import { Profile as UserProfileType } from "@/hooks/use-profiles";
@@ -40,22 +40,28 @@ const navItems: NavItem[] = [
     roles: ["Account Manager", "Admin"],
   },
   {
-    title: "Usuarios",
-    href: "/users",
-    icon: <UserCog className="mr-2 h-4 w-4" />,
-    roles: ["Admin"],
-  },
-  {
     title: "Inventario",
     href: "/inventory",
     icon: <Warehouse className="mr-2 h-4 w-4" />,
     roles: ["Account Manager", "Admin"],
   },
   {
-    title: "Plantillas", // Nuevo elemento de navegación
+    title: "Usuarios",
+    href: "/users",
+    icon: <UserCog className="mr-2 h-4 w-4" />,
+    roles: ["Admin"],
+  },
+  {
+    title: "Plantillas",
     href: "/email-templates",
     icon: <MailOpen className="mr-2 h-4 w-4" />,
-    roles: ["Admin"], // Solo visible para administradores
+    roles: ["Admin"],
+  },
+  {
+    title: "Admin",
+    href: "/admin",
+    icon: <SlidersHorizontal className="mr-2 h-4 w-4" />,
+    roles: ["Admin"],
   },
   {
     title: "Perfil",

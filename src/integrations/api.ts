@@ -8,6 +8,9 @@ import {
   InventoryItem,
   ProductDetails,
   EmailTemplate,
+  AccountManager,
+  ShippingAddress,
+  BillingAddress,
 } from "@/data/types";
 
 // --- API de Perfiles (Usuarios del sistema) ---
@@ -114,6 +117,79 @@ export const apiDeleteProject = async (id: string): Promise<void> => {
   const { error } = await supabase.from('projects').delete().eq('id', id);
   if (error) throw error;
 };
+
+// --- API de Account Managers ---
+export const apiGetAccountManagers = async (): Promise<AccountManager[]> => {
+  const { data, error } = await supabase.from('account_managers').select('*');
+  if (error) throw error;
+  return data;
+};
+
+export const apiAddAccountManager = async (data: Omit<AccountManager, "id" | "created_at">): Promise<AccountManager> => {
+  const { data: newManager, error } = await supabase.from('account_managers').insert(data).select().single();
+  if (error) throw error;
+  return newManager;
+};
+
+export const apiUpdateAccountManager = async (id: string, data: Partial<Omit<AccountManager, "id" | "created_at">>): Promise<AccountManager> => {
+  const { data: updatedManager, error } = await supabase.from('account_managers').update(data).eq('id', id).select().single();
+  if (error) throw error;
+  return updatedManager;
+};
+
+export const apiDeleteAccountManager = async (id: string): Promise<void> => {
+  const { error } = await supabase.from('account_managers').delete().eq('id', id);
+  if (error) throw error;
+};
+
+// --- API de Direcciones de Envío ---
+export const apiGetShippingAddresses = async (): Promise<ShippingAddress[]> => {
+  const { data, error } = await supabase.from('shipping_addresses').select('*');
+  if (error) throw error;
+  return data;
+};
+
+export const apiAddShippingAddress = async (data: Omit<ShippingAddress, "id" | "created_at">): Promise<ShippingAddress> => {
+  const { data: newAddress, error } = await supabase.from('shipping_addresses').insert(data).select().single();
+  if (error) throw error;
+  return newAddress;
+};
+
+export const apiUpdateShippingAddress = async (id: string, data: Partial<Omit<ShippingAddress, "id" | "created_at">>): Promise<ShippingAddress> => {
+  const { data: updatedAddress, error } = await supabase.from('shipping_addresses').update(data).eq('id', id).select().single();
+  if (error) throw error;
+  return updatedAddress;
+};
+
+export const apiDeleteShippingAddress = async (id: string): Promise<void> => {
+  const { error } = await supabase.from('shipping_addresses').delete().eq('id', id);
+  if (error) throw error;
+};
+
+// --- API de Direcciones de Facturación ---
+export const apiGetBillingAddresses = async (): Promise<BillingAddress[]> => {
+  const { data, error } = await supabase.from('billing_addresses').select('*');
+  if (error) throw error;
+  return data;
+};
+
+export const apiAddBillingAddress = async (data: Omit<BillingAddress, "id" | "created_at">): Promise<BillingAddress> => {
+  const { data: newAddress, error } = await supabase.from('billing_addresses').insert(data).select().single();
+  if (error) throw error;
+  return newAddress;
+};
+
+export const apiUpdateBillingAddress = async (id: string, data: Partial<Omit<BillingAddress, "id" | "created_at">>): Promise<BillingAddress> => {
+  const { data: updatedAddress, error } = await supabase.from('billing_addresses').update(data).eq('id', id).select().single();
+  if (error) throw error;
+  return updatedAddress;
+};
+
+export const apiDeleteBillingAddress = async (id: string): Promise<void> => {
+  const { error } = await supabase.from('billing_addresses').delete().eq('id', id);
+  if (error) throw error;
+};
+
 
 // --- API de Búsqueda Externa de Productos ---
 export const apiSearchExternalProduct = async (catalogNumber: string, brand?: string): Promise<ProductDetails> => {
