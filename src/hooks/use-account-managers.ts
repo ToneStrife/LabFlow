@@ -1,83 +1,75 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { AccountManager } from "@/data/types";
-import { toast } from "sonner";
-import { apiGetAccountManagers, apiAddAccountManager, apiUpdateAccountManager, apiDeleteAccountManager } from "@/integrations/api";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabase';
+import { toast } from 'sonner';
+import { AccountManager } from '@/data/types';
+import { AccountManagerFormValues } from '@/components/AccountManagerForm';
 
-// --- Fetch Hook ---
-const fetchAccountManagers = async (): Promise<AccountManager[]> => {
-  return apiGetAccountManagers();
-};
-
+// Hook to fetch all account managers
 export const useAccountManagers = () => {
   return useQuery<AccountManager[], Error>({
-    queryKey: ["accountManagers"],
-    queryFn: fetchAccountManagers,
+    queryKey: ['account_managers'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('account_managers').select('*');
+      if (error) throw new Error(error.message);
+      return data || [];
+    },
   });
 };
 
-// --- Mutation Hooks ---
-
-interface AccountManagerFormData {
-  first_name: string;
-  last_name: string;
-  email: string;
-}
-
-// Add Account Manager
+// Hook to add a new account manager
 export const useAddAccountManager = () => {
   const queryClient = useQueryClient();
-  return useMutation<AccountManager, Error, AccountManagerFormData>({
-    mutationFn: async (data) => {
-      return apiAddAccountManager(data);
+  return useMutation({
+    mutationFn: async (manager: AccountManagerFormValues) => {
+      const { data, error } = await supabase.from('account_managers').insert([manager]).select().single();
+      if (error) throw new Error(error.message);
+      return data;
     },
-    onSuccess: (newManager) => {
-      queryClient.invalidateQueries({ queryKey: ["accountManagers"] });
-      toast.success("Account Manager added successfully!", {
-        description: `${newManager.first_name} ${newManager.last_name}`,
-      });
+    onSuccess: () => {
+      toast.success('Account manager added successfully!');
+      queryClient.invalidateQueries({ queryKey: ['account_managers'] });
     },
     onError: (error) => {
-      toast.error("Failed to add Account Manager.", {
-        description: error.message,
-      });
+      toast.error('Failed to add account manager.', { description: error.message });
     },
   });
 };
 
-// Update Account Manager
+// Hook to update an account manager
 export const useUpdateAccountManager = () => {
   const queryClient = useQueryClient();
-  return useMutation<AccountManager, Error, { id: string; data: Partial<AccountManagerFormData> }>({
-    mutationFn: async ({ id, data }) => {
-      return apiUpdateAccountManager(id, data);
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: AccountManagerFormValues }) => {
+      const { data: updatedData, error } = await supabase.from('account_managers').update(data).eq('id', id).select().single();
+      if (error) throw new Error(error.message);
+      return updatedData;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["accountManagers"] });
-      toast.success("Account Manager updated successfully!");
+      toast.success('Account manager updated successfully!');
+      queryClient.invalidateQueries({ queryKey: ['account_managers'] });
     },
     onError: (error) => {
-      toast.error("Failed to update Account Manager.", {
-        description: error.message,
-      });
+      toast.error('Failed to update account manager.', { description: error.message });
     },
   });
 };
 
-// Delete Account Manager
+// Hook to delete an account manager
 export const useDeleteAccountManager = () => {
   const queryClient = useQueryClient();
-  return useMutation<void, Error, string>({
-    mutationFn: async (id) => {
-      return apiDeleteAccountManager(id);
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('account_managers').delete().eq('id', id);
+      if (error) {
+        throw new Error(`Failed to delete account manager: ${error.message}`);
+      }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["accountManagers"] });
-      toast.success("Account Manager deleted successfully!");
+      toast.success('Account manager deleted successfully!');
+      queryClient.invalidateQueries({ queryKey: ['account_managers'] });
     },
     onError: (error) => {
-      toast.error("Failed to delete Account Manager.", {
-        description: error.message,
-      });
+      toast.error(error.message);
     },
   });
 };

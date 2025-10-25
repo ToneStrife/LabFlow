@@ -1,83 +1,43 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { EmailTemplate } from "@/data/types";
-import { toast } from "sonner";
-import { apiGetEmailTemplates, apiAddEmailTemplate, apiUpdateEmailTemplate, apiDeleteEmailTemplate } from "@/integrations/api";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabase';
+import { toast } from 'sonner';
+import { EmailTemplate } from '@/data/types';
 
-// --- Fetch Hook ---
-const fetchEmailTemplates = async (): Promise<EmailTemplate[]> => {
-  return apiGetEmailTemplates();
-};
-
+// Hook to fetch all email templates
 export const useEmailTemplates = () => {
   return useQuery<EmailTemplate[], Error>({
-    queryKey: ["emailTemplates"],
-    queryFn: fetchEmailTemplates,
-  });
-};
-
-// --- Mutation Hooks ---
-
-interface EmailTemplateFormData {
-  template_name: string;
-  subject_template: string;
-  body_template: string;
-}
-
-// Add Email Template
-export const useAddEmailTemplate = () => {
-  const queryClient = useQueryClient();
-  return useMutation<EmailTemplate, Error, EmailTemplateFormData>({
-    mutationFn: async (data) => {
-      return apiAddEmailTemplate(data);
-    },
-    onSuccess: (newTemplate) => {
-      queryClient.invalidateQueries({ queryKey: ["emailTemplates"] });
-      toast.success("Plantilla de correo electrónico añadida con éxito!", {
-        description: `Plantilla: ${newTemplate.template_name}`,
-      });
-    },
-    onError: (error) => {
-      toast.error("Fallo al añadir la plantilla de correo electrónico.", {
-        description: error.message,
-      });
+    queryKey: ['email_templates'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('email_templates').select('*');
+      if (error) throw new Error(error.message);
+      return data || [];
     },
   });
 };
 
-// Update Email Template
+// Hook to update an email template
 export const useUpdateEmailTemplate = () => {
   const queryClient = useQueryClient();
-  return useMutation<EmailTemplate, Error, { id: string; data: Partial<EmailTemplateFormData> }>({
-    mutationFn: async ({ id, data }) => {
-      return apiUpdateEmailTemplate(id, data);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["emailTemplates"] });
-      toast.success("Plantilla de correo electrónico actualizada con éxito!");
-    },
-    onError: (error) => {
-      toast.error("Fallo al actualizar la plantilla de correo electrónico.", {
-        description: error.message,
-      });
-    },
-  });
-};
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<EmailTemplate> }) => {
+      const { data: updatedData, error } = await supabase
+        .from('email_templates')
+        .update(data)
+        .eq('id', id)
+        .select()
+        .single();
 
-// Delete Email Template
-export const useDeleteEmailTemplate = () => {
-  const queryClient = useQueryClient();
-  return useMutation<void, Error, string>({
-    mutationFn: async (id) => {
-      return apiDeleteEmailTemplate(id);
+      if (error) {
+        throw new Error(`Failed to update template: ${error.message}`);
+      }
+      return updatedData;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["emailTemplates"] });
-      toast.success("Plantilla de correo electrónico eliminada con éxito!");
+    onSuccess: (data) => {
+      toast.success(`Template "${data.template_name}" updated successfully!`);
+      queryClient.invalidateQueries({ queryKey: ['email_templates'] });
     },
     onError: (error) => {
-      toast.error("Fallo al eliminar la plantilla de correo electrónico.", {
-        description: error.message,
-      });
+      toast.error(error.message);
     },
   });
 };

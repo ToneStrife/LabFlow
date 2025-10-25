@@ -1,82 +1,75 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Project } from "@/data/types";
-import { toast } from "sonner";
-import { apiGetProjects, apiAddProject, apiUpdateProject, apiDeleteProject } from "@/integrations/api";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabase';
+import { toast } from 'sonner';
+import { Project } from '@/data/types';
+import { ProjectFormValues } from '@/components/ProjectForm';
 
-// --- Fetch Hook ---
-const fetchProjects = async (): Promise<Project[]> => {
-  return apiGetProjects();
-};
-
+// Hook to fetch all projects
 export const useProjects = () => {
   return useQuery<Project[], Error>({
-    queryKey: ["projects"],
-    queryFn: fetchProjects,
+    queryKey: ['projects'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('projects').select('*');
+      if (error) throw new Error(error.message);
+      return data || [];
+    },
   });
 };
 
-// --- Mutation Hooks ---
-
-interface ProjectFormData {
-  name: string;
-  code: string;
-}
-
-// Add Project
+// Hook to add a new project
 export const useAddProject = () => {
   const queryClient = useQueryClient();
-  return useMutation<Project, Error, ProjectFormData>({
-    mutationFn: async (data) => {
-      return apiAddProject(data);
+  return useMutation({
+    mutationFn: async (project: ProjectFormValues) => {
+      const { data, error } = await supabase.from('projects').insert([project]).select().single();
+      if (error) throw new Error(error.message);
+      return data;
     },
-    onSuccess: (newProject) => {
-      queryClient.invalidateQueries({ queryKey: ["projects"] });
-      toast.success("Project added successfully!", {
-        description: `${newProject.name} (${newProject.code})`,
-      });
+    onSuccess: () => {
+      toast.success('Project added successfully!');
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
     },
     onError: (error) => {
-      toast.error("Failed to add project.", {
-        description: error.message,
-      });
+      toast.error('Failed to add project.', { description: error.message });
     },
   });
 };
 
-// Update Project
+// Hook to update a project
 export const useUpdateProject = () => {
   const queryClient = useQueryClient();
-  return useMutation<Project, Error, { id: string; data: Partial<ProjectFormData> }>({
-    mutationFn: async ({ id, data }) => {
-      return apiUpdateProject(id, data);
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: ProjectFormValues }) => {
+      const { data: updatedData, error } = await supabase.from('projects').update(data).eq('id', id).select().single();
+      if (error) throw new Error(error.message);
+      return updatedData;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["projects"] });
-      toast.success("Project updated successfully!");
+      toast.success('Project updated successfully!');
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
     },
     onError: (error) => {
-      toast.error("Failed to update project.", {
-        description: error.message,
-      });
+      toast.error('Failed to update project.', { description: error.message });
     },
   });
 };
 
-// Delete Project
+// Hook to delete a project
 export const useDeleteProject = () => {
   const queryClient = useQueryClient();
-  return useMutation<void, Error, string>({
-    mutationFn: async (id) => {
-      return apiDeleteProject(id);
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('projects').delete().eq('id', id);
+      if (error) {
+        throw new Error(`Failed to delete project: ${error.message}`);
+      }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["projects"] });
-      toast.success("Project deleted successfully!");
+      toast.success('Project deleted successfully!');
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
     },
     onError: (error) => {
-      toast.error("Failed to delete project.", {
-        description: error.message,
-      });
+      toast.error(error.message);
     },
   });
 };
