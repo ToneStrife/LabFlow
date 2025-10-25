@@ -117,18 +117,27 @@ Deno.serve(async (req) => {
   }
 
   if (req.method !== "POST") return new Response("Use POST", { status: 405 });
+  
+  console.log('Edge Function: smart_lookup received request.');
   const { brand, catalog } = await req.json();
   const brandQ = (brand || "").trim();
   const catalogQ = (catalog || "").trim();
-  if (!catalogQ) return new Response("catalog required", { status: 400 });
+  console.log(`Edge Function: Searching for Brand: "${brandQ}", Catalog: "${catalogQ}"`);
+
+  if (!catalogQ) {
+    console.error('Edge Function: Catalog number is required.');
+    return new Response(JSON.stringify({ error: "Catalog number is required." }), { status: 400, headers: { "Content-Type": "application/json", 'Access-Control-Allow-Origin': '*' } });
+  }
 
   // 0️⃣ cache
   const cached = await supabase.from("items_cache")
     .select("result_json").eq("brand_q", brandQ).eq("catalog_q", catalogQ)
     .order("created_at", { ascending: false }).limit(1).maybeSingle();
   if (cached.data?.result_json) {
+    console.log('Edge Function: Cache hit!');
     return new Response(JSON.stringify(cached.data.result_json), { headers: { "Content-Type": "application/json", 'Access-Control-Allow-Origin': '*' } });
   }
+  console.log('Edge Function: Cache miss. Checking master data.');
 
   // 1️⃣ histórico
   let master = null;
@@ -136,11 +145,12 @@ Deno.serve(async (req) => {
     const { data } = await supabase.rpc("smart_master_lookup", { brand_q: brandQ, catalog_q: catalogQ });
     master = data;
   } catch (e) {
-    console.error("Error calling smart_master_lookup RPC:", e);
+    console.error("Edge Function: Error calling smart_master_lookup RPC:", e);
     // master remains null
   }
   
   if (master && master.match && master.match.score >= 0.8) {
+    console.log('Edge Function: Master data hit with score:', master.match.score);
     const m = master.record;
     const result = {
       marca: m.brand ?? null,
@@ -155,6 +165,7 @@ Deno.serve(async (req) => {
     await supabase.from("items_cache").insert({ brand_q: brandQ, catalog_q: catalogQ, result_json: result, source: "master" });
     return new Response(JSON.stringify(result), { headers: { "Content-Type": "application/json", 'Access-Control-Allow-Origin': '*' } });
   }
+  console.log('Edge Function: No strong master data hit. Proceeding to scraping.');
 
   // 2️⃣ scraping proveedores
   const urls = providerUrls(catalogQ);
@@ -165,11 +176,30 @@ Deno.serve(async (req) => {
     const { title, metaDesc, specs, body } = extractText(html);
     candidates.push({ url: u, title, metaDesc, specs, body });
   }
+  console.log(`Edge Function: Found ${candidates.length} candidates from scraping.`);
 
   // 3️⃣ Gemini 2.5 Flash
-  const llmJson = await geminiExtract(brandQ, catalogQ, candidates);
+  let llmJson: any = {};
+  try {
+    llmJson = await geminiExtract(brandQ, catalogQ, candidates);
+    console.log('Edge Function: Gemini extracted JSON:', JSON.stringify(llmJson));
+  } catch (e) {
+    console.error('Edge Function: Error during Gemini extraction:', e);
+    // llmJson remains {}
+  }
 
   // 4️⃣ cache + respuesta
+  // Check if Gemini returned meaningful data
+  if (!llmJson || !llmJson.nombre_producto) {
+    console.warn('Edge Function: Gemini did not return a product name. Returning error.');
+    await supabase.from("items_cache").insert({ brand_q: brandQ, catalog_q: catalogQ, result_json: llmJson, source: "web_failed" }); // Cache failure
+    return new Response(JSON.stringify({ error: "AI could not find reliable product details." }), {
+      status: 404, // Not Found
+      headers: { "Content-Type": "application/json", 'Access-Control-Allow-Origin': '*' }
+    });
+  }
+
   await supabase.from("items_cache").insert({ brand_q: brandQ, catalog_q: catalogQ, result_json: llmJson, source: "web" });
+  console.log('Edge Function: Successfully processed with Gemini and cached. Returning result.');
   return new Response(JSON.stringify(llmJson), { headers: { "Content-Type": "application/json", 'Access-Control-Allow-Origin': '*' } });
 });
