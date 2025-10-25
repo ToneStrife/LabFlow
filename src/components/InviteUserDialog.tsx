@@ -41,6 +41,7 @@ const InviteUserDialog: React.FC<InviteUserDialogProps> = ({ onSubmit, onCancel,
   });
 
   const handleSubmit = async (data: InviteUserFormValues) => {
+    console.log("Submitting invite user data:", data); // Added console.log
     await onSubmit(data);
     form.reset();
   };

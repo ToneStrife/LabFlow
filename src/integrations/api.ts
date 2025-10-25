@@ -71,18 +71,26 @@ export const apiInviteUser = async (data: InviteUserData): Promise<any> => {
 
   if (error) {
     console.error("Error invoking invite-user edge function:", error);
-    
+    console.error("Edge function raw response data (on error):", edgeFunctionData); // Log raw data
+
     let errorMessage = 'Failed to invite user via Edge Function.';
     
+    // Try to get a more specific error message from the edge function's response body
     if (edgeFunctionData && typeof edgeFunctionData === 'object' && 'error' in edgeFunctionData) {
         errorMessage = (edgeFunctionData as any).error;
-    } else if (error.message) {
-        errorMessage = error.message;
     } else if (typeof edgeFunctionData === 'string') {
+        // If the edge function returned a plain string error message
         errorMessage = edgeFunctionData;
+    } else if (error.message) {
+        // Fallback to the generic error message from supabase.functions.invoke
+        errorMessage = error.message;
+    }
+
+    // Add status code if available from the invoke error object
+    if ((error as any).status) {
+        errorMessage = `(Status: ${(error as any).status}) ${errorMessage}`;
     }
     
-    console.error("Edge function response data (on error):", edgeFunctionData);
     throw new Error(errorMessage);
   }
   return edgeFunctionData;
