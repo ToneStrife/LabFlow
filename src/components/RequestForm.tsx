@@ -126,9 +126,9 @@ const RequestForm: React.FC = () => {
         return;
       }
 
-      console.log(`RequestForm: Calling apiSearchExternalProduct for item ${index} with catalog: ${catalogNumber}, brand: ${brand}`); // <-- ADDED LOG
+      console.log(`RequestForm: Calling apiSearchExternalProduct for item ${index} with catalog: ${catalogNumber}, brand: ${brand}`);
       const aiProductDetails: ProductDetails = await apiSearchExternalProduct(catalogNumber, brand);
-      console.log("RequestForm: Received AI product details:", aiProductDetails); // <-- ADDED LOG
+      console.log("RequestForm: Received AI product details:", aiProductDetails);
 
       // Auto-fill main form fields
       form.setValue(`items.${index}.productName`, aiProductDetails.productName || '');
@@ -152,8 +152,9 @@ const RequestForm: React.FC = () => {
       showSuccess("¡Detalles del producto enriquecidos por IA!");
 
     } catch (error: any) {
-      console.error("RequestForm: Error enriching product details with AI:", error); // <-- ADDED LOG
-      showError(error.message || "Fallo al enriquecer los detalles del producto con IA.");
+      console.error("RequestForm: Error enriching product details with AI:", error);
+      console.error("RequestForm: Error message from API:", error.message); // Added explicit log for error message
+      showError(error.message || "Fallo al enriquecer los detalles del producto con IA."); // Ensure specific message is used
     } finally {
       dismissToast(toastId);
       setEnrichingIndex(null);
