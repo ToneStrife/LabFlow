@@ -69,6 +69,7 @@ function normCat(s: string) {
 async function geminiExtract(brandQ: string, catalogQ: string, candidates: Candidate[]) {
   const prompt = `
 Eres un extractor de fichas de producto de laboratorio.
+Tu objetivo es encontrar la información más precisa para el producto con el número de catálogo "${catalogQ}" (normalizado: "${normCat(catalogQ)}") y la marca "${brandQ}".
 Devuelve SOLO JSON válido con estas claves en español:
 {
   "marca": string|null,
@@ -79,17 +80,32 @@ Devuelve SOLO JSON válido con estas claves en español:
   "enlace_producto": string|null,
   "notas": string|null
 }
-Prioriza coincidencia exacta del número de catálogo "${catalogQ}".
-Si no hay datos claros, deja null.
+**Instrucciones clave:**
+1.  **Prioriza la coincidencia exacta del número de catálogo.** Si encuentras el número de catálogo en el texto, es muy probable que sea el producto correcto.
+2.  **Extrae el 'nombre_producto' completo y oficial.**
+3.  **'formato' debe ser el tamaño del paquete o la presentación.**
+4.  **'precio_unitario' debe ser solo el número, sin símbolos de moneda.**
+5.  **'enlace_producto' debe ser la URL directa a la página del producto.**
+6.  **'notas' debe ser un resumen conciso de la descripción o características técnicas.**
+7.  Si no hay datos claros o no estás seguro, deja el campo en \`null\`.
 `;
 
   const user = `
 marca buscada: "${brandQ}"
 numero_catalogo buscado: "${catalogQ}" (normalizado: "${normCat(catalogQ)}")
 
-Datos HTML resumidos:
-${JSON.stringify(candidates).slice(0, 12000)}
+Datos HTML resumidos de los candidatos encontrados:
+${candidates.map((c, i) => `
+--- Candidato ${i + 1} (URL: ${c.url}) ---
+Título: ${c.title || 'N/A'}
+Meta Descripción: ${c.metaDesc || 'N/A'}
+Especificaciones: ${JSON.stringify(c.specs) || 'N/A'}
+Cuerpo del texto (fragmento): ${c.body ? c.body.slice(0, 1000) + (c.body.length > 1000 ? '...' : '') : 'N/A'}
+`).join('\n')}
 `;
+
+  console.log('Edge Function: Sending to Gemini - Prompt:', prompt); // Nuevo log
+  console.log('Edge Function: Sending to Gemini - User Content:', user); // Nuevo log
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
@@ -101,6 +117,7 @@ ${JSON.stringify(candidates).slice(0, 12000)}
   const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   if (!r.ok) throw new Error(`Gemini HTTP ${r.status}`);
   const data = await r.json();
+  console.log('Edge Function: Raw Gemini API response:', JSON.stringify(data)); // Nuevo log
   const txt = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
   try { return JSON.parse(txt); } catch { return {}; }
 }
