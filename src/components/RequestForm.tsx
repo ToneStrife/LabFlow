@@ -163,7 +163,7 @@ const RequestForm: React.FC = () => {
       vendorId: data.vendorId,
       requesterId: session.user.id,
       accountManagerId: managerId,
-      notes: undefined, // Notes are now part of itemSchema, not top-level
+      notes: null, // Changed from undefined to null to match the database function signature
       projectCodes: data.projectCodes,
       items: data.items,
     };
