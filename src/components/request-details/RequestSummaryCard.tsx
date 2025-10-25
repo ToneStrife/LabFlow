@@ -6,11 +6,9 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { SupabaseRequest, RequestStatus } from "@/data/types";
 import { Vendor } from "@/hooks/use-vendors";
-import { Profile, getFullName } from "@/hooks/use-profiles";
-import { AccountManager } from "@/data/types"; // Importar el tipo AccountManager
-import { Project } from "@/data/types"; // Importar el tipo Project
-import { useAccountManagers } from "@/hooks/use-account-managers"; // Usar el nuevo hook
-import { useProjects } from "@/hooks/use-projects"; // Usar el nuevo hook
+import { Profile, getFullName, useAccountManagerProfiles } from "@/hooks/use-profiles";
+import { Project } from "@/data/types";
+import { useProjects } from "@/hooks/use-projects";
 import { format } from "date-fns";
 
 interface RequestSummaryCardProps {
@@ -37,8 +35,8 @@ const getStatusBadgeVariant = (status: RequestStatus) => {
 };
 
 const RequestSummaryCard: React.FC<RequestSummaryCardProps> = ({ request, vendor, profiles }) => {
-  const { data: accountManagers } = useAccountManagers(); // Usar el nuevo hook
-  const { data: projects } = useProjects(); // Usar el nuevo hook
+  const { data: accountManagers } = useAccountManagerProfiles();
+  const { data: projects } = useProjects();
 
   const getRequesterName = (requesterId: string) => {
     const profile = profiles?.find(p => p.id === requesterId);
@@ -47,15 +45,15 @@ const RequestSummaryCard: React.FC<RequestSummaryCardProps> = ({ request, vendor
 
   const getAccountManagerName = (managerId: string | null) => {
     if (!managerId) return "N/A";
-    const manager = accountManagers?.find(am => am.id === managerId); // Buscar en la nueva lista de Account Managers
-    return manager ? `${manager.first_name} ${manager.last_name}` : "N/A";
+    const manager = accountManagers?.find(am => am.id === managerId);
+    return getFullName(manager);
   };
 
   const requesterName = getRequesterName(request.requester_id);
   const accountManagerName = getAccountManagerName(request.account_manager_id);
 
   const projectCodesDisplay = request.project_codes?.map(projectId => {
-    const project = projects?.find(p => p.id === projectId); // Buscar en la nueva lista de Proyectos
+    const project = projects?.find(p => p.id === projectId);
     return project ? project.code : projectId;
   }).join(", ") || "N/A";
 

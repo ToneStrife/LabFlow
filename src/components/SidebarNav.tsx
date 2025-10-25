@@ -40,12 +40,6 @@ const navItems: NavItem[] = [
     roles: ["Account Manager", "Admin"],
   },
   {
-    title: "Cuentas",
-    href: "/accounts",
-    icon: <Briefcase className="mr-2 h-4 w-4" />,
-    roles: ["Admin"],
-  },
-  {
     title: "Usuarios",
     href: "/users",
     icon: <UserCog className="mr-2 h-4 w-4" />,

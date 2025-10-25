@@ -6,8 +6,7 @@ import { Loader2 } from "lucide-react";
 import { RequestStatus } from "@/data/types";
 import { useRequests, useSendEmail, SupabaseRequest, useUpdateRequest } from "@/hooks/use-requests";
 import { useVendors } from "@/hooks/use-vendors";
-import { useAllProfiles, getFullName } from "@/hooks/use-profiles";
-import { useAccountManagers } from "@/hooks/use-account-managers";
+import { useAllProfiles, getFullName, useAccountManagerProfiles } from "@/hooks/use-profiles";
 import { useProjects } from "@/hooks/use-projects";
 import { useEmailTemplates } from "@/hooks/use-email-templates";
 import { processEmailTemplate } from "@/utils/email-templating";
@@ -25,7 +24,7 @@ const RequestList: React.FC = () => {
   const { data: requests, isLoading: isLoadingRequests, error: requestsError } = useRequests();
   const { data: vendors, isLoading: isLoadingVendors } = useVendors();
   const { data: profiles, isLoading: isLoadingProfiles } = useAllProfiles();
-  const { data: accountManagers, isLoading: isLoadingAccountManagers } = useAccountManagers();
+  const { data: accountManagers, isLoading: isLoadingAccountManagers } = useAccountManagerProfiles();
   const { data: projects, isLoading: isLoadingProjects } = useProjects();
   const { data: emailTemplates, isLoading: isLoadingEmailTemplates } = useEmailTemplates();
   const updateRequestMutation = useUpdateRequest();
@@ -44,7 +43,7 @@ const RequestList: React.FC = () => {
   const getAccountManagerName = (managerId: string | null) => {
     if (!managerId) return "N/A";
     const manager = accountManagers?.find(am => am.id === managerId);
-    return manager ? `${manager.first_name} ${manager.last_name}` : "N/A";
+    return getFullName(manager);
   };
   const getVendorEmail = (vendorId: string) => vendors?.find(v => v.id === vendorId)?.email || "";
   const getAccountManagerEmail = (managerId: string | null) => accountManagers?.find(am => am.id === managerId)?.email || "";

@@ -14,8 +14,7 @@ import {
 
 import { useRequests, SupabaseRequest, useSendEmail, useUpdateRequestFile, FileType, useUpdateRequest } from "@/hooks/use-requests";
 import { useVendors } from "@/hooks/use-vendors";
-import { useAllProfiles } from "@/hooks/use-profiles";
-import { useAccountManagers } from "@/hooks/use-account-managers";
+import { useAllProfiles, useAccountManagerProfiles } from "@/hooks/use-profiles";
 import { useProjects } from "@/hooks/use-projects";
 import { useEmailTemplates } from "@/hooks/use-email-templates";
 import { processEmailTemplate } from "@/utils/email-templating";
@@ -37,7 +36,7 @@ const RequestDetails: React.FC = () => {
   const { data: requests, isLoading: isLoadingRequests } = useRequests();
   const { data: vendors, isLoading: isLoadingVendors } = useVendors();
   const { data: profiles, isLoading: isLoadingProfiles } = useAllProfiles();
-  const { data: accountManagers, isLoading: isLoadingAccountManagers } = useAccountManagers();
+  const { data: accountManagers, isLoading: isLoadingAccountManagers } = useAccountManagerProfiles();
   const { data: projects, isLoading: isLoadingProjects } = useProjects();
   const { data: emailTemplates, isLoading: isLoadingEmailTemplates } = useEmailTemplates();
   
@@ -224,7 +223,6 @@ const RequestDetails: React.FC = () => {
         <h2 className="text-2xl font-bold mb-4">Request Metadata</h2>
         <RequestMetadataForm
           request={request}
-          profiles={profiles || []}
           onSubmit={handleUpdateMetadata}
           isSubmitting={updateRequestMutation.isPending}
         />

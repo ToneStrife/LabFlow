@@ -2,7 +2,6 @@ import { supabase } from "./supabase/client";
 import {
   Profile,
   Vendor,
-  AccountManager,
   Project,
   SupabaseRequest,
   RequestItem,
@@ -14,6 +13,15 @@ import {
 // --- API de Perfiles (Usuarios del sistema) ---
 export const apiGetProfiles = async (): Promise<Profile[]> => {
   const { data, error } = await supabase.from('profiles').select('*');
+  if (error) throw error;
+  return data;
+};
+
+export const apiGetAccountManagerProfiles = async (): Promise<Profile[]> => {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('role', 'Account Manager');
   if (error) throw error;
   return data;
 };
@@ -80,30 +88,6 @@ export const apiUpdateVendor = async (id: string, data: Partial<Omit<Vendor, "id
 
 export const apiDeleteVendor = async (id: string): Promise<void> => {
   const { error } = await supabase.from('vendors').delete().eq('id', id);
-  if (error) throw error;
-};
-
-// --- API de Account Managers ---
-export const apiGetAccountManagers = async (): Promise<AccountManager[]> => {
-  const { data, error } = await supabase.from('account_managers').select('*');
-  if (error) throw error;
-  return data;
-};
-
-export const apiAddAccountManager = async (data: Omit<AccountManager, "id" | "created_at">): Promise<AccountManager> => {
-  const { data: newManager, error } = await supabase.from('account_managers').insert(data).select().single();
-  if (error) throw error;
-  return newManager;
-};
-
-export const apiUpdateAccountManager = async (id: string, data: Partial<Omit<AccountManager, "id" | "created_at">>): Promise<AccountManager> => {
-  const { data: updatedManager, error } = await supabase.from('account_managers').update(data).eq('id', id).select().single();
-  if (error) throw error;
-  return updatedManager;
-};
-
-export const apiDeleteAccountManager = async (id: string): Promise<void> => {
-  const { error } = await supabase.from('account_managers').delete().eq('id', id);
   if (error) throw error;
 };
 

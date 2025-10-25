@@ -21,9 +21,8 @@ import { Badge } from "@/components/ui/badge";
 import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SupabaseRequest } from "@/hooks/use-requests";
-import { getFullName, Profile } from "@/hooks/use-profiles"; // Todavía se usa para el nombre del requester
-import { useAccountManagers } from "@/hooks/use-account-managers"; // Usar el nuevo hook
-import { useProjects } from "@/hooks/use-projects"; // Usar el nuevo hook
+import { getFullName, Profile, useAccountManagerProfiles } from "@/hooks/use-profiles";
+import { useProjects } from "@/hooks/use-projects";
 
 const metadataSchema = z.object({
   accountManagerId: z.union([
@@ -38,14 +37,13 @@ type MetadataFormValues = z.infer<typeof metadataSchema>;
 
 interface RequestMetadataFormProps {
   request: SupabaseRequest;
-  profiles: Profile[]; // Se mantiene para el requester, pero no para Account Managers
   onSubmit: (data: MetadataFormValues) => Promise<void>;
   isSubmitting: boolean;
 }
 
 const RequestMetadataForm: React.FC<RequestMetadataFormProps> = ({ request, onSubmit, isSubmitting }) => {
-  const { data: accountManagers, isLoading: isLoadingManagers } = useAccountManagers(); // Usar el nuevo hook
-  const { data: projects, isLoading: isLoadingProjects } = useProjects(); // Usar el nuevo hook
+  const { data: accountManagers, isLoading: isLoadingManagers } = useAccountManagerProfiles();
+  const { data: projects, isLoading: isLoadingProjects } = useProjects();
 
   const defaultProjectCodes = request.project_codes || [];
 
@@ -81,7 +79,7 @@ const RequestMetadataForm: React.FC<RequestMetadataFormProps> = ({ request, onSu
                   <SelectItem value="unassigned">No Manager</SelectItem>
                   {accountManagers?.map((manager) => (
                     <SelectItem key={manager.id} value={manager.id}>
-                      {`${manager.first_name} ${manager.last_name}`}
+                      {getFullName(manager)}
                     </SelectItem>
                   ))}
                 </SelectContent>

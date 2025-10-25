@@ -42,14 +42,6 @@ export interface Vendor {
   brands: string[] | null;
 }
 
-export interface AccountManager {
-  id: string;
-  created_at: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-}
-
 export interface Project {
   id: string;
   created_at: string;
@@ -82,11 +74,11 @@ export interface SupabaseRequest {
   id: string;
   created_at: string;
   vendor_id: string;
-  requester_id: string; // Still references auth.users.id via profiles
-  account_manager_id: string | null; // Now references public.account_managers.id
+  requester_id: string; 
+  account_manager_id: string | null; // References public.profiles.id
   status: RequestStatus;
   notes: string | null;
-  project_codes: string[] | null; // Still string[] but values are public.projects.id
+  project_codes: string[] | null; 
   items: SupabaseRequestItem[] | null;
   po_number: string | null;
   quote_url: string | null;

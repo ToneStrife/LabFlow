@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Profile as MockProfile } from "@/data/mockData"; 
 import { toast } from "sonner";
-import { apiGetProfiles, apiUpdateProfile, apiDeleteProfile, apiInviteUser } from "@/integrations/api";
+import { apiGetProfiles, apiUpdateProfile, apiDeleteProfile, apiInviteUser, apiGetAccountManagerProfiles } from "@/integrations/api";
 
 export interface Profile extends MockProfile {}
 
@@ -17,16 +17,12 @@ export const useAllProfiles = () => {
   });
 };
 
-// useAccountManagerProfiles se ha eliminado y se reemplaza por useAccountManagers en src/hooks/use-account-managers.ts
-// export const useAccountManagerProfiles = () => {
-//   return useQuery<Profile[], Error>({
-//     queryKey: ["accountManagers"],
-//     queryFn: async () => {
-//       const profiles = await apiGetProfiles();
-//       return profiles.filter(profile => profile.role === "Account Manager");
-//     },
-//   });
-// };
+export const useAccountManagerProfiles = () => {
+  return useQuery<Profile[], Error>({
+    queryKey: ["accountManagerProfiles"],
+    queryFn: apiGetAccountManagerProfiles,
+  });
+};
 
 // --- Mutation Hooks for Profiles ---
 
@@ -52,7 +48,7 @@ export const useInviteUser = () => {
     },
     onSuccess: (invitedUser) => {
       queryClient.invalidateQueries({ queryKey: ["allProfiles"] });
-      queryClient.invalidateQueries({ queryKey: ["accountManagers"] });
+      queryClient.invalidateQueries({ queryKey: ["accountManagerProfiles"] });
       toast.success("Invitation sent successfully!", {
         description: `Email: ${invitedUser.user.email}`,
       });
@@ -75,7 +71,7 @@ export const useUpdateProfile = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["allProfiles"] });
-      queryClient.invalidateQueries({ queryKey: ["accountManagers"] });
+      queryClient.invalidateQueries({ queryKey: ["accountManagerProfiles"] });
       queryClient.invalidateQueries({ queryKey: ["session"] });
       toast.success("Profile updated successfully!");
     },
@@ -95,7 +91,7 @@ export const useDeleteProfile = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["allProfiles"] });
-      queryClient.invalidateQueries({ queryKey: ["accountManagers"] });
+      queryClient.invalidateQueries({ queryKey: ["accountManagerProfiles"] });
       toast.success("Profile deleted successfully!");
     },
     onError: (error) => {
