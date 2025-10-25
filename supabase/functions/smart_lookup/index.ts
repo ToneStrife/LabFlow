@@ -70,24 +70,35 @@ async function geminiExtract(brandQ: string, catalogQ: string, candidates: Candi
   const prompt = `
 Eres un extractor de fichas de producto de laboratorio.
 Tu objetivo es encontrar la información más precisa para el producto con el número de catálogo "${catalogQ}" (normalizado: "${normCat(catalogQ)}") y la marca "${brandQ}".
-Devuelve SOLO JSON válido con estas claves en español:
+
+**Instrucciones Clave:**
+1.  **Prioriza la fuente oficial:** Siempre intenta encontrar la página del producto en el sitio web oficial del fabricante.
+2.  **Sé preciso:** Extrae los datos exactamente como aparecen. No inventes información.
+3.  **Formato JSON estricto:** Tu respuesta DEBE ser únicamente un objeto JSON válido con el siguiente esquema. No incluyas texto antes o después del JSON.
+
+**Esquema JSON Requerido:**
 {
-  "marca": string|null,
-  "numero_catalogo": string|null,
-  "nombre_producto": string|null,
-  "formato": string|null,
-  "precio_unitario": number|null,
-  "enlace_producto": string|null,
-  "notas": string|null
+  "marca": "string | null",
+  "numero_catalogo": "string | null",
+  "nombre_producto": "string | null",
+  "formato": "string | null",
+  "precio_unitario": "number | null",
+  "enlace_producto": "string | null",
+  "notas": "string | null",
+  "confidence_score": "number (0.0 a 1.0)"
 }
-**Instrucciones clave:**
-1.  **Prioriza la coincidencia exacta del número de catálogo.** Si encuentras el número de catálogo en el texto, es muy probable que sea el producto correcto.
-2.  **Extrae el 'nombre_producto' completo y oficial.**
-3.  **'formato' debe ser el tamaño del paquete o la presentación.**
-4.  **'precio_unitario' debe ser solo el número, sin símbolos de moneda.**
-5.  **'enlace_producto' debe ser la URL directa a la página del producto.**
-6.  **'notas' debe ser un resumen conciso de la descripción o características técnicas.**
-7.  Si no hay datos claros o no estás seguro, deja el campo en \`null\`.
+
+**Definición de Campos:**
+- \`marca\`: La marca del producto.
+- \`numero_catalogo\`: El número de catálogo exacto.
+- \`nombre_producto\`: El nombre completo y oficial del producto.
+- \`formato\`: El formato o tamaño del empaque (ej: "500 mL", "100 µl", "25 reactions").
+- \`precio_unitario\`: El precio de lista. Solo el número, sin símbolos. Si encuentras un rango, usa el promedio.
+- \`enlace_producto\`: El enlace directo a la página del producto.
+- \`notas\`: Un resumen breve de notas técnicas o una descripción del producto.
+- \`confidence_score\`: Tu nivel de confianza (de 0.0 a 1.0) de que la información encontrada es correcta y pertenece al producto exacto solicitado. 1.0 es certeza absoluta.
+
+**Si no encuentras el producto o no estás seguro, devuelve un JSON con todos los campos en \`null\` y un \`confidence_score\` bajo (ej: 0.1).**
 `;
 
   const user = `
@@ -104,8 +115,8 @@ Cuerpo del texto (fragmento): ${c.body ? c.body.slice(0, 1000) + (c.body.length 
 `).join('\n')}
 `;
 
-  console.log('Edge Function: Sending to Gemini - Prompt:', prompt); // Nuevo log
-  console.log('Edge Function: Sending to Gemini - User Content:', user); // Nuevo log
+  console.log('Edge Function: Sending to Gemini - Prompt:', prompt);
+  console.log('Edge Function: Sending to Gemini - User Content:', user);
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
@@ -117,7 +128,7 @@ Cuerpo del texto (fragmento): ${c.body ? c.body.slice(0, 1000) + (c.body.length 
   const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   if (!r.ok) throw new Error(`Gemini HTTP ${r.status}`);
   const data = await r.json();
-  console.log('Edge Function: Raw Gemini API response:', JSON.stringify(data)); // Nuevo log
+  console.log('Edge Function: Raw Gemini API response:', JSON.stringify(data));
   const txt = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
   try { return JSON.parse(txt); } catch { return {}; }
 }
@@ -177,7 +188,8 @@ Deno.serve(async (req) => {
       precio_unitario: m.unit_price ?? null,
       enlace_producto: m.product_url ?? null,
       notas: m.notes ?? null,
-      _source: "master"
+      _source: "master",
+      confidence_score: 1.0 // Master data is highly confident
     };
     await supabase.from("items_cache").insert({ brand_q: brandQ, catalog_q: catalogQ, result_json: result, source: "master" });
     return new Response(JSON.stringify(result), { headers: { "Content-Type": "application/json", 'Access-Control-Allow-Origin': '*' } });
@@ -206,17 +218,20 @@ Deno.serve(async (req) => {
   }
 
   // 4️⃣ cache + respuesta
-  // Check if Gemini returned meaningful data
-  if (!llmJson || !llmJson.nombre_producto) {
-    console.warn('Edge Function: Gemini did not return a product name. Returning error.');
+  // Check if Gemini returned meaningful data and a sufficient confidence score
+  const confidence = llmJson.confidence_score || 0;
+  if (!llmJson || !llmJson.nombre_producto || confidence < 0.5) { // Require product name AND sufficient confidence
+    console.warn(`Edge Function: Gemini did not return a reliable product name (Confidence: ${confidence}). Returning error.`);
     await supabase.from("items_cache").insert({ brand_q: brandQ, catalog_q: catalogQ, result_json: llmJson, source: "web_failed" }); // Cache failure
-    return new Response(JSON.stringify({ error: "AI could not find reliable product details." }), {
+    return new Response(JSON.stringify({ error: `AI could not find reliable product details (Confidence: ${confidence.toFixed(1)}). Please verify inputs or enter details manually.` }), {
       status: 404, // Not Found
       headers: { "Content-Type": "application/json", 'Access-Control-Allow-Origin': '*' }
     });
   }
 
-  await supabase.from("items_cache").insert({ brand_q: brandQ, catalog_q: catalogQ, result_json: llmJson, source: "web" });
+  // Add source and confidence to the result before caching and returning
+  const resultWithSource = { ...llmJson, _source: "web" };
+  await supabase.from("items_cache").insert({ brand_q: brandQ, catalog_q: catalogQ, result_json: resultWithSource, source: "web" });
   console.log('Edge Function: Successfully processed with Gemini and cached. Returning result.');
-  return new Response(JSON.stringify(llmJson), { headers: { "Content-Type": "application/json", 'Access-Control-Allow-Origin': '*' } });
+  return new Response(JSON.stringify(resultWithSource), { headers: { "Content-Type": "application/json", 'Access-Control-Allow-Origin': '*' } });
 });
