@@ -1,16 +1,10 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
-import nodemailer from "https://esm.sh/nodemailer@6.9.13";
-import { Buffer } from "https://deno.land/std@0.159.0/node/buffer.ts";
+import { SmtpClient } from "https://deno.land/x/smtp@v0.7.0/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
-// Helper para convertir ArrayBuffer a Buffer
-const arrayBufferToBuffer = (buffer: ArrayBuffer) => {
-  return Buffer.from(buffer);
 };
 
 serve(async (req) => {
@@ -46,15 +40,13 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Missing required fields: to, subject, or body' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // 4. Crear el "transporter" de Nodemailer
-    const transporter = nodemailer.createTransport({
-      host: smtpHost,
+    // 4. Crear y conectar el cliente SMTP
+    const client = new SmtpClient();
+    await client.connectTLS({
+      hostname: smtpHost,
       port: Number(smtpPort),
-      secure: Number(smtpPort) === 465, // true for 465, false for other ports
-      auth: {
-        user: smtpUser,
-        pass: smtpPass,
-      },
+      username: smtpUser,
+      password: smtpPass,
     });
 
     // 5. Procesar los archivos adjuntos si existen
@@ -78,10 +70,10 @@ serve(async (req) => {
             continue;
           }
 
-          const fileBuffer = await fileBlob.arrayBuffer();
+          const fileArrayBuffer = await fileBlob.arrayBuffer();
           processedAttachments.push({
-            filename: attachment.name,
-            content: arrayBufferToBuffer(fileBuffer),
+            fileName: attachment.name,
+            content: new Uint8Array(fileArrayBuffer),
           });
         } catch (e) {
           console.error(`Error processing attachment ${attachment.name}:`, e);
@@ -89,21 +81,20 @@ serve(async (req) => {
       }
     }
 
-    // 6. Construir el payload del correo
-    const mailOptions = {
-      from: `LabFlow <${smtpUser}>`, // Enviar desde la dirección configurada
+    // 6. Enviar el correo
+    await client.send({
+      from: `LabFlow <${smtpUser}>`,
       to: to,
       subject: subject,
       html: body,
       attachments: processedAttachments.length > 0 ? processedAttachments : undefined,
-    };
+    });
 
-    // 7. Enviar el correo
-    const info = await transporter.sendMail(mailOptions);
+    await client.close();
 
-    console.log('Message sent: %s', info.messageId);
+    console.log('Message sent successfully via SMTP.');
 
-    return new Response(JSON.stringify({ messageId: info.messageId }), {
+    return new Response(JSON.stringify({ message: "Email sent successfully." }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     });
