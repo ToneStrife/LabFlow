@@ -122,10 +122,13 @@ const RequestForm: React.FC = () => {
 
       if (!catalogNumber) {
         showError("Por favor, ingresa el 'Número de Catálogo' para enriquecer con IA.");
+        dismissToast(toastId); // Ensure toast is dismissed
         return;
       }
 
+      console.log(`RequestForm: Calling apiSearchExternalProduct for item ${index} with catalog: ${catalogNumber}, brand: ${brand}`); // <-- ADDED LOG
       const aiProductDetails: ProductDetails = await apiSearchExternalProduct(catalogNumber, brand);
+      console.log("RequestForm: Received AI product details:", aiProductDetails); // <-- ADDED LOG
 
       // Auto-fill main form fields
       form.setValue(`items.${index}.productName`, aiProductDetails.productName || '');
@@ -149,7 +152,7 @@ const RequestForm: React.FC = () => {
       showSuccess("¡Detalles del producto enriquecidos por IA!");
 
     } catch (error: any) {
-      console.error("Error enriching product details with AI:", error);
+      console.error("RequestForm: Error enriching product details with AI:", error); // <-- ADDED LOG
       showError(error.message || "Fallo al enriquecer los detalles del producto con IA.");
     } finally {
       dismissToast(toastId);

@@ -188,13 +188,14 @@ export const apiDeleteProject = async (id: string): Promise<void> => {
 
 // --- API de Búsqueda Externa de Productos (Ahora invoca la Edge Function) ---
 export const apiSearchExternalProduct = async (catalogNumber: string, brand?: string): Promise<ProductDetails> => {
+  console.log(`API: Invoking smart_lookup for catalog: ${catalogNumber}, brand: ${brand}`);
   const { data, error } = await supabase.functions.invoke('smart_lookup', {
     body: JSON.stringify({ catalog: catalogNumber, brand: brand }),
     method: 'POST',
   });
 
   if (error) {
-    console.error("Error invoking smart_lookup edge function:", error);
+    console.error("API: Error invoking smart_lookup edge function:", error);
     let errorMessage = 'Failed to search external product via Edge Function.';
     if (data && typeof data === 'object' && 'error' in data) {
         errorMessage = (data as any).error;
@@ -203,8 +204,13 @@ export const apiSearchExternalProduct = async (catalogNumber: string, brand?: st
     } else if (typeof data === 'string') {
         errorMessage = data;
     }
+    if ((error as any).status) {
+        errorMessage = `(Status: ${(error as any).status}) ${errorMessage}`;
+    }
     throw new Error(errorMessage);
   }
+
+  console.log("API: Raw data received from smart_lookup:", data); // <-- ADDED LOG
 
   // La Edge Function devuelve un objeto con claves en español. Mapear a ProductDetails.
   const aiResponse = data as {
@@ -219,20 +225,23 @@ export const apiSearchExternalProduct = async (catalogNumber: string, brand?: st
   };
 
   if (!aiResponse || !aiResponse.nombre_producto) {
+    console.error("API: AI did not return valid product details (nombre_producto is null or missing). Raw AI response:", aiResponse); // <-- ADDED LOG
     throw new Error("AI did not return valid product details.");
   }
   
-  return {
-    id: aiResponse.numero_catalogo || 'unknown', // Usar catalogNumber como ID si no hay otro
+  const productDetails: ProductDetails = { // Explicitly type here
+    id: aiResponse.numero_catalogo || 'unknown',
     productName: aiResponse.nombre_producto,
     catalogNumber: aiResponse.numero_catalogo || catalogNumber,
     unitPrice: aiResponse.precio_unitario || undefined,
     format: aiResponse.formato || undefined,
     link: aiResponse.enlace_producto || undefined,
     brand: aiResponse.marca || brand || 'N/A',
-    notes: aiResponse.notas || undefined, // Añadir notas al ProductDetails
-    source: aiResponse._source || 'web', // Añadir la fuente
+    notes: aiResponse.notas || undefined,
+    source: aiResponse._source || 'web',
   };
+  console.log("API: Mapped ProductDetails:", productDetails); // <-- ADDED LOG
+  return productDetails;
 };
 
 
