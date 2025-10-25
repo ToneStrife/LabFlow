@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import nodemailer from "https://esm.sh/nodemailer@6.9.13";
 import { Buffer } from "https://deno.land/std@0.159.0/node/buffer.ts";
 
 const corsHeaders = {
@@ -7,9 +8,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Helper para convertir ArrayBuffer a Base64
-const arrayBufferToBase64 = (buffer: ArrayBuffer) => {
-  return Buffer.from(buffer).toString('base64');
+// Helper para convertir ArrayBuffer a Buffer
+const arrayBufferToBuffer = (buffer: ArrayBuffer) => {
+  return Buffer.from(buffer);
 };
 
 serve(async (req) => {
@@ -29,10 +30,14 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // 2. Obtener la clave de API de Resend de los secretos
-    const resendApiKey = Deno.env.get('RESEND_API_KEY');
-    if (!resendApiKey) {
-      throw new Error('RESEND_API_KEY is not set in Supabase secrets.');
+    // 2. Obtener las credenciales SMTP de los secretos de Supabase
+    const smtpHost = Deno.env.get('SMTP_HOST');
+    const smtpPort = Deno.env.get('SMTP_PORT');
+    const smtpUser = Deno.env.get('SMTP_USER');
+    const smtpPass = Deno.env.get('SMTP_PASS');
+
+    if (!smtpHost || !smtpPort || !smtpUser || !smtpPass) {
+      throw new Error('SMTP configuration is missing in Supabase secrets.');
     }
 
     // 3. Parsear el cuerpo de la solicitud
@@ -41,7 +46,18 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Missing required fields: to, subject, or body' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // 4. Procesar los archivos adjuntos si existen
+    // 4. Crear el "transporter" de Nodemailer
+    const transporter = nodemailer.createTransport({
+      host: smtpHost,
+      port: Number(smtpPort),
+      secure: Number(smtpPort) === 465, // true for 465, false for other ports
+      auth: {
+        user: smtpUser,
+        pass: smtpPass,
+      },
+    });
+
+    // 5. Procesar los archivos adjuntos si existen
     const processedAttachments = [];
     if (attachments && attachments.length > 0) {
       const supabaseAdmin = createClient(
@@ -51,27 +67,21 @@ serve(async (req) => {
 
       for (const attachment of attachments) {
         try {
-          // Extraer la ruta del archivo de la URL pública
           const url = new URL(attachment.url);
           const filePath = url.pathname.split('/LabFlow/')[1];
-
-          // Descargar el archivo del almacenamiento
           const { data: fileBlob, error: downloadError } = await supabaseAdmin.storage
             .from('LabFlow')
             .download(decodeURIComponent(filePath));
 
           if (downloadError) {
             console.error(`Failed to download attachment: ${attachment.name}`, downloadError);
-            continue; // Omitir este adjunto si la descarga falla
+            continue;
           }
 
-          // Convertir el archivo a base64
           const fileBuffer = await fileBlob.arrayBuffer();
-          const content = arrayBufferToBase64(fileBuffer);
-
           processedAttachments.push({
             filename: attachment.name,
-            content: content,
+            content: arrayBufferToBuffer(fileBuffer),
           });
         } catch (e) {
           console.error(`Error processing attachment ${attachment.name}:`, e);
@@ -79,34 +89,21 @@ serve(async (req) => {
       }
     }
 
-    // 5. Construir el payload de Resend
-    const resendPayload = {
-      from: 'LabFlow <onboarding@resend.dev>', // Resend requiere un dominio verificado. Usando su valor por defecto para pruebas.
+    // 6. Construir el payload del correo
+    const mailOptions = {
+      from: `LabFlow <${smtpUser}>`, // Enviar desde la dirección configurada
       to: to,
       subject: subject,
-      html: body, // Asumiendo que el cuerpo es HTML
+      html: body,
       attachments: processedAttachments.length > 0 ? processedAttachments : undefined,
     };
 
-    // 6. Enviar el correo a través de la API de Resend
-    const resendResponse = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${resendApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(resendPayload),
-    });
+    // 7. Enviar el correo
+    const info = await transporter.sendMail(mailOptions);
 
-    if (!resendResponse.ok) {
-      const errorBody = await resendResponse.json();
-      console.error('Resend API Error:', errorBody);
-      throw new Error(`Failed to send email: ${errorBody.message || 'Unknown error'}`);
-    }
+    console.log('Message sent: %s', info.messageId);
 
-    const data = await resendResponse.json();
-
-    return new Response(JSON.stringify(data), {
+    return new Response(JSON.stringify({ messageId: info.messageId }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     });
