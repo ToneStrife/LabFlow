@@ -42,16 +42,27 @@ export const apiUpdateProfile = async (id: string, data: Partial<Profile>): Prom
 };
 
 export const apiDeleteProfile = async (id: string): Promise<void> => {
-  const { error: authError } = await supabase.auth.admin.deleteUser(id);
-  if (authError) {
-    console.error("Error deleting user from auth.users:", authError);
-    throw authError;
+  const { data: edgeFunctionData, error } = await supabase.functions.invoke('delete-user', {
+    body: JSON.stringify({ userIdToDelete: id }),
+    method: 'POST',
+  });
+
+  if (error) {
+    console.error("Error invoking delete-user edge function:", error);
+    let errorMessage = 'Failed to delete user via Edge Function.';
+    if (edgeFunctionData && typeof edgeFunctionData === 'object' && 'error' in edgeFunctionData) {
+        errorMessage = (edgeFunctionData as any).error;
+    } else if (error.message) {
+        errorMessage = error.message;
+    } else if (typeof edgeFunctionData === 'string') {
+        errorMessage = edgeFunctionData;
+    }
+    if ((error as any).status) {
+        errorMessage = `(Status: ${(error as any).status}) ${errorMessage}`;
+    }
+    throw new Error(errorMessage);
   }
-  const { error: profileError } = await supabase.from('profiles').delete().eq('id', id);
-  if (profileError) {
-    console.error("Error deleting profile from public.profiles:", profileError);
-    throw profileError;
-  }
+  return edgeFunctionData;
 };
 
 interface InviteUserData {
