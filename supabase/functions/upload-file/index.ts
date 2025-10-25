@@ -7,6 +7,12 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
+// Función para limpiar el nombre del archivo
+const sanitizeFilename = (filename: string) => {
+  // Reemplaza espacios con guiones bajos y elimina caracteres que no sean alfanuméricos, puntos, guiones bajos o guiones.
+  return filename.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -50,9 +56,9 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Missing required fields or invalid file object: file, fileType, or requestId' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // Generar un nombre de archivo único y una ruta en el bucket
-    const fileExtension = file.name.split('.').pop();
-    const fileName = `${fileType}-${requestId}-${Date.now()}.${fileExtension}`;
+    // Generar un nombre de archivo único conservando el original
+    const sanitizedOriginalName = sanitizeFilename(file.name);
+    const fileName = `${Date.now()}_${sanitizedOriginalName}`;
     const filePath = `${user.id}/${requestId}/${fileName}`; // Organizar por user_id/request_id/file_name
 
     // Subir el archivo a Supabase Storage

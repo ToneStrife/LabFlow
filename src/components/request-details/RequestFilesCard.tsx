@@ -12,6 +12,21 @@ interface RequestFilesCardProps {
   onUploadClick: (fileType: FileType) => void;
 }
 
+const getFileNameFromUrl = (url: string): string => {
+  if (!url) return "File";
+  try {
+    const urlParts = url.split('/');
+    const encodedFileName = urlParts[urlParts.length - 1];
+    const decodedFileName = decodeURIComponent(encodedFileName);
+    // Eliminar el prefijo de timestamp (ej. "1678886400000_")
+    const nameWithoutPrefix = decodedFileName.substring(decodedFileName.indexOf('_') + 1);
+    return nameWithoutPrefix || "File"; // Fallback si algo sale mal
+  } catch (e) {
+    console.error("Could not parse filename from URL", e);
+    return "File";
+  }
+};
+
 const FileRow: React.FC<{ label: string; url: string | null; onUpload: () => void }> = ({ label, url, onUpload }) => (
   <div className="flex items-center justify-between p-2 rounded-md hover:bg-muted">
     <div className="flex items-center">
@@ -19,9 +34,9 @@ const FileRow: React.FC<{ label: string; url: string | null; onUpload: () => voi
       <span className="font-medium">{label}</span>
     </div>
     {url ? (
-      <a href={url} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline flex items-center">
+      <a href={url} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline flex items-center" title={getFileNameFromUrl(url)}>
         <Paperclip className="h-4 w-4 mr-1" />
-        View File
+        <span className="truncate max-w-[150px]">{getFileNameFromUrl(url)}</span>
       </a>
     ) : (
       <Button variant="outline" size="sm" onClick={onUpload}>
