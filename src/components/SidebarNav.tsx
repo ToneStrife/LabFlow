@@ -3,7 +3,7 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { Package, ShoppingCart, Users, User, Briefcase, UserCog, Warehouse, Loader2 } from "lucide-react";
+import { Package, ShoppingCart, Users, User, Briefcase, UserCog, Warehouse, Loader2, MailOpen } from "lucide-react"; // Importar MailOpen
 import { Button } from "@/components/ui/button";
 import { useSession } from "@/components/SessionContextProvider";
 import { Profile as UserProfileType } from "@/hooks/use-profiles";
@@ -56,6 +56,12 @@ const navItems: NavItem[] = [
     href: "/inventory",
     icon: <Warehouse className="mr-2 h-4 w-4" />,
     roles: ["Account Manager", "Admin"],
+  },
+  {
+    title: "Plantillas", // Nuevo elemento de navegación
+    href: "/email-templates",
+    icon: <MailOpen className="mr-2 h-4 w-4" />,
+    roles: ["Admin"], // Solo visible para administradores
   },
   {
     title: "Perfil",

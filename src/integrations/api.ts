@@ -10,6 +10,7 @@ import {
   InventoryItem,
   MockEmail,
   ProductDetails, // Importar ProductDetails para la búsqueda externa
+  EmailTemplate, // Importar el nuevo tipo EmailTemplate
 } from "@/data/types";
 
 // Mantener las importaciones de mock data para otras tablas hasta que se conviertan
@@ -269,4 +270,28 @@ interface EmailData {
 export const apiSendEmail = async (email: EmailData): Promise<void> => {
   await new Promise(resolve => setTimeout(resolve, 300)); // Simular retraso
   return sendMockEmail(email);
+};
+
+// --- API de Plantillas de Correo Electrónico ---
+export const apiGetEmailTemplates = async (): Promise<EmailTemplate[]> => {
+  const { data, error } = await supabase.from('email_templates').select('*');
+  if (error) throw error;
+  return data;
+};
+
+export const apiAddEmailTemplate = async (data: Omit<EmailTemplate, "id" | "created_at">): Promise<EmailTemplate> => {
+  const { data: newTemplate, error } = await supabase.from('email_templates').insert(data).select().single();
+  if (error) throw error;
+  return newTemplate;
+};
+
+export const apiUpdateEmailTemplate = async (id: string, data: Partial<Omit<EmailTemplate, "id" | "created_at">>): Promise<EmailTemplate> => {
+  const { data: updatedTemplate, error } = await supabase.from('email_templates').update(data).eq('id', id).select().single();
+  if (error) throw error;
+  return updatedTemplate;
+};
+
+export const apiDeleteEmailTemplate = async (id: string): Promise<void> => {
+  const { error } = await supabase.from('email_templates').delete().eq('id', id);
+  if (error) throw error;
 };

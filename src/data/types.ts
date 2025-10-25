@@ -57,6 +57,14 @@ export interface Project {
   code: string;
 }
 
+export interface EmailTemplate {
+  id: string;
+  template_name: string;
+  subject_template: string;
+  body_template: string;
+  created_at: string;
+}
+
 export interface SupabaseRequestItem {
   id: string;
   request_id: string;
