@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
-import { SmtpClient } from "https://deno.land/x/smtp@v0.7.0/mod.ts";
+import { encode } from "https://deno.land/std@0.208.0/encoding/base64.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -24,14 +24,12 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // 2. Obtener las credenciales SMTP de los secretos de Supabase
-    const smtpHost = Deno.env.get('SMTP_HOST');
-    const smtpPort = Deno.env.get('SMTP_PORT');
-    const smtpUser = Deno.env.get('SMTP_USER');
-    const smtpPass = Deno.env.get('SMTP_PASS');
+    // 2. Obtener la configuración de SendGrid de los secretos
+    const sendgridApiKey = Deno.env.get('SENDGRID_API_KEY');
+    const sendgridFromEmail = Deno.env.get('SENDGRID_FROM_EMAIL');
 
-    if (!smtpHost || !smtpPort || !smtpUser || !smtpPass) {
-      throw new Error('SMTP configuration is missing in Supabase secrets.');
+    if (!sendgridApiKey || !sendgridFromEmail) {
+      throw new Error('SendGrid configuration is missing in Supabase secrets (SENDGRID_API_KEY, SENDGRID_FROM_EMAIL).');
     }
 
     // 3. Parsear el cuerpo de la solicitud
@@ -40,16 +38,7 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Missing required fields: to, subject, or body' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // 4. Crear y conectar el cliente SMTP
-    const client = new SmtpClient();
-    await client.connectTLS({
-      hostname: smtpHost,
-      port: Number(smtpPort),
-      username: smtpUser,
-      password: smtpPass,
-    });
-
-    // 5. Procesar los archivos adjuntos si existen
+    // 4. Procesar los archivos adjuntos si existen
     const processedAttachments = [];
     if (attachments && attachments.length > 0) {
       const supabaseAdmin = createClient(
@@ -71,9 +60,13 @@ serve(async (req) => {
           }
 
           const fileArrayBuffer = await fileBlob.arrayBuffer();
+          const base64Content = encode(fileArrayBuffer);
+
           processedAttachments.push({
-            fileName: attachment.name,
-            content: new Uint8Array(fileArrayBuffer),
+            content: base64Content,
+            filename: attachment.name,
+            type: fileBlob.type,
+            disposition: 'attachment',
           });
         } catch (e) {
           console.error(`Error processing attachment ${attachment.name}:`, e);
@@ -81,18 +74,31 @@ serve(async (req) => {
       }
     }
 
-    // 6. Enviar el correo
-    await client.send({
-      from: `LabFlow <${smtpUser}>`,
-      to: to,
+    // 5. Construir el payload para la API de SendGrid
+    const emailData = {
+      personalizations: [{ to: [{ email: to }] }],
+      from: { email: sendgridFromEmail, name: "LabFlow" },
       subject: subject,
-      html: body,
+      content: [{ type: 'text/html', value: body }],
       attachments: processedAttachments.length > 0 ? processedAttachments : undefined,
+    };
+
+    // 6. Enviar la solicitud a la API de SendGrid
+    const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${sendgridApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(emailData),
     });
 
-    await client.close();
+    if (!response.ok) {
+      const errorBody = await response.text();
+      throw new Error(`SendGrid API error (${response.status}): ${errorBody}`);
+    }
 
-    console.log('Message sent successfully via SMTP.');
+    console.log('Email sent successfully via SendGrid.');
 
     return new Response(JSON.stringify({ message: "Email sent successfully." }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
