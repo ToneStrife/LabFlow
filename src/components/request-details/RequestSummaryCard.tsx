@@ -6,8 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { SupabaseRequest, RequestStatus } from "@/data/types";
 import { Vendor } from "@/hooks/use-vendors";
-import { Profile, getFullName, useAccountManagerProfiles } from "@/hooks/use-profiles";
-import { Project } from "@/data/types";
+import { Profile, getFullName } from "@/hooks/use-profiles";
+import { useAccountManagers } from "@/hooks/use-account-managers";
 import { useProjects } from "@/hooks/use-projects";
 import { format } from "date-fns";
 
@@ -35,7 +35,7 @@ const getStatusBadgeVariant = (status: RequestStatus) => {
 };
 
 const RequestSummaryCard: React.FC<RequestSummaryCardProps> = ({ request, vendor, profiles }) => {
-  const { data: accountManagers } = useAccountManagerProfiles();
+  const { data: accountManagers } = useAccountManagers();
   const { data: projects } = useProjects();
 
   const getRequesterName = (requesterId: string) => {
@@ -46,7 +46,7 @@ const RequestSummaryCard: React.FC<RequestSummaryCardProps> = ({ request, vendor
   const getAccountManagerName = (managerId: string | null) => {
     if (!managerId) return "N/A";
     const manager = accountManagers?.find(am => am.id === managerId);
-    return getFullName(manager);
+    return manager?.name || "N/A";
   };
 
   const requesterName = getRequesterName(request.requester_id);

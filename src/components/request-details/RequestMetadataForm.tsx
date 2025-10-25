@@ -21,7 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SupabaseRequest } from "@/hooks/use-requests";
-import { getFullName, Profile, useAccountManagerProfiles } from "@/hooks/use-profiles";
+import { useAccountManagers } from "@/hooks/use-account-managers";
 import { useProjects } from "@/hooks/use-projects";
 
 const metadataSchema = z.object({
@@ -42,7 +42,7 @@ interface RequestMetadataFormProps {
 }
 
 const RequestMetadataForm: React.FC<RequestMetadataFormProps> = ({ request, onSubmit, isSubmitting }) => {
-  const { data: accountManagers, isLoading: isLoadingManagers } = useAccountManagerProfiles();
+  const { data: accountManagers, isLoading: isLoadingManagers } = useAccountManagers();
   const { data: projects, isLoading: isLoadingProjects } = useProjects();
 
   const defaultProjectCodes = request.project_codes || [];
@@ -79,7 +79,7 @@ const RequestMetadataForm: React.FC<RequestMetadataFormProps> = ({ request, onSu
                   <SelectItem value="unassigned">No Manager</SelectItem>
                   {accountManagers?.map((manager) => (
                     <SelectItem key={manager.id} value={manager.id}>
-                      {getFullName(manager)}
+                      {manager.name}
                     </SelectItem>
                   ))}
                 </SelectContent>

@@ -13,7 +13,8 @@ import { Badge } from "@/components/ui/badge";
 import { RequestStatus } from "@/data/types";
 import { SupabaseRequest } from "@/hooks/use-requests";
 import { Vendor } from "@/hooks/use-vendors";
-import { Profile, getFullName, useAccountManagerProfiles } from "@/hooks/use-profiles";
+import { Profile, getFullName } from "@/hooks/use-profiles";
+import { useAccountManagers } from "@/hooks/use-account-managers";
 import { format } from "date-fns";
 import RequestListActions from "./RequestListActions";
 
@@ -53,7 +54,7 @@ const RequestListTable: React.FC<RequestListTableProps> = ({
   profiles,
   ...actionProps
 }) => {
-  const { data: accountManagers } = useAccountManagerProfiles();
+  const { data: accountManagers } = useAccountManagers();
 
   const getRequesterName = (requesterId: string) => {
     const profile = profiles?.find(p => p.id === requesterId);
@@ -63,7 +64,7 @@ const RequestListTable: React.FC<RequestListTableProps> = ({
   const getAccountManagerName = (managerId: string | null) => {
     if (!managerId) return "N/A";
     const manager = accountManagers?.find(am => am.id === managerId);
-    return getFullName(manager);
+    return manager?.name || "N/A";
   };
 
   return (

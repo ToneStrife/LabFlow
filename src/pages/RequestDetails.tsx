@@ -14,7 +14,8 @@ import {
 
 import { useRequests, SupabaseRequest, useSendEmail, useUpdateRequestFile, FileType, useUpdateRequest } from "@/hooks/use-requests";
 import { useVendors } from "@/hooks/use-vendors";
-import { useAllProfiles, useAccountManagerProfiles } from "@/hooks/use-profiles";
+import { useAllProfiles } from "@/hooks/use-profiles";
+import { useAccountManagers } from "@/hooks/use-account-managers";
 import { useProjects } from "@/hooks/use-projects";
 import { useEmailTemplates } from "@/hooks/use-email-templates";
 import { processEmailTemplate } from "@/utils/email-templating";
@@ -36,7 +37,7 @@ const RequestDetails: React.FC = () => {
   const { data: requests, isLoading: isLoadingRequests } = useRequests();
   const { data: vendors, isLoading: isLoadingVendors } = useVendors();
   const { data: profiles, isLoading: isLoadingProfiles } = useAllProfiles();
-  const { data: accountManagers, isLoading: isLoadingAccountManagers } = useAccountManagerProfiles();
+  const { data: accountManagers, isLoading: isLoadingAccountManagers } = useAccountManagers();
   const { data: projects, isLoading: isLoadingProjects } = useProjects();
   const { data: emailTemplates, isLoading: isLoadingEmailTemplates } = useEmailTemplates();
   
