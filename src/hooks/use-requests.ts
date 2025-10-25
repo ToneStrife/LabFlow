@@ -190,10 +190,10 @@ export const useSendEmail = () => {
       await apiSendEmail(emailData);
     },
     onSuccess: () => {
-      toast.success("Simulated email sent successfully!");
+      toast.success("Email sent successfully!");
     },
     onError: (error) => {
-      toast.error("Failed to send simulated email.", {
+      toast.error("Failed to send email.", {
         description: error.message,
       });
     },

@@ -14,9 +14,10 @@ interface EmailTemplateContext {
 
 const formatItemsList = (items: SupabaseRequestItem[] | null): string => {
   if (!items || items.length === 0) {
-    return "No items listed.";
+    return "<p>No items listed.</p>";
   }
-  return items.map(item => `- ${item.quantity}x ${item.product_name} (Catalog #: ${item.catalog_number})`).join("\n");
+  const listItems = items.map(item => `<li>${item.quantity}x <strong>${item.product_name}</strong> (Catalog #: ${item.catalog_number})</li>`).join("");
+  return `<ul>${listItems}</ul>`;
 };
 
 const replacePlaceholder = (template: string, placeholder: string, value: string | number | null | undefined): string => {
@@ -71,5 +72,15 @@ export const processEmailTemplate = (templateString: string, context: EmailTempl
   // CTA Button (simple placeholder for now, actual button would be HTML)
   processedString = processedString.replace(/{{cta_button}}/g, '[Call to Action Button]');
 
-  return processedString;
+  // After all replacements, convert newlines to <br> and wrap in a basic HTML structure
+  let processedHtml = processedString.replace(/\n/g, '<br />');
+
+  // A simple HTML wrapper
+  return `
+    <div style="font-family: sans-serif; line-height: 1.6;">
+      ${processedHtml}
+      <br /><br />
+      <p style="font-size: 0.8em; color: #888;">This is an automated message from the LabFlow system.</p>
+    </div>
+  `;
 };

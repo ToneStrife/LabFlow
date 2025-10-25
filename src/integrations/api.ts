@@ -324,7 +324,7 @@ export const apiDeleteInventoryItem = async (id: string): Promise<void> => {
   return deleteMockInventoryItem(id);
 };
 
-// --- API de Envío de Correo Electrónico (simulado) ---
+// --- API de Envío de Correo Electrónico (REAL) ---
 interface EmailData {
   to: string;
   subject: string;
@@ -333,8 +333,23 @@ interface EmailData {
 }
 
 export const apiSendEmail = async (email: EmailData): Promise<void> => {
-  await new Promise(resolve => setTimeout(resolve, 300)); // Simular retraso
-  return sendMockEmail(email);
+  const { data, error } = await supabase.functions.invoke('send-email', {
+    body: JSON.stringify(email),
+    method: 'POST',
+  });
+
+  if (error) {
+    console.error("Error invoking send-email edge function:", error);
+    let errorMessage = 'Failed to send email via Edge Function.';
+    if (data && typeof data === 'object' && 'error' in data) {
+        errorMessage = (data as any).error;
+    } else if (error.message) {
+        errorMessage = error.message;
+    }
+    throw new Error(errorMessage);
+  }
+  
+  return data;
 };
 
 // --- API de Plantillas de Correo Electrónico ---
