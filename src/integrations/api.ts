@@ -39,15 +39,14 @@ export const apiDeleteProfile = async (id: string): Promise<void> => {
   if (refreshError || !session) {
     throw new Error("Failed to refresh session. Please log in again.");
   }
-  const { data: edgeFunctionData, error } = await supabase.functions.invoke('delete-user', {
+  const { error } = await supabase.functions.invoke('delete-user', {
     body: JSON.stringify({ userIdToDelete: id }),
     method: 'POST',
   });
   if (error) {
-    let errorMessage = (edgeFunctionData as any)?.error || error.message || 'Failed to delete user.';
+    const errorMessage = error.context?.error || error.message || 'Failed to delete user.';
     throw new Error(errorMessage);
   }
-  return edgeFunctionData;
 };
 
 interface InviteUserData {
@@ -64,7 +63,7 @@ export const apiInviteUser = async (data: InviteUserData): Promise<any> => {
     method: 'POST',
   });
   if (error) {
-    let errorMessage = (edgeFunctionData as any)?.error || error.message || 'Failed to invite user.';
+    const errorMessage = error.context?.error || error.message || 'Failed to invite user.';
     throw new Error(errorMessage);
   }
   return edgeFunctionData;
@@ -198,7 +197,7 @@ export const apiSearchExternalProduct = async (catalogNumber: string, brand?: st
     method: 'POST',
   });
   if (error) {
-    let errorMessage = (data as any)?.error || error.message || 'Failed to search external product.';
+    const errorMessage = error.context?.error || error.message || 'Failed to search external product.';
     throw new Error(errorMessage);
   }
   if (!data || !data.products) {
@@ -270,7 +269,7 @@ export const apiUpdateRequestFile = async (
     body: formData,
   });
   if (error) {
-    let errorMessage = (edgeFunctionData as any)?.error || error.message || 'Failed to upload file.';
+    const errorMessage = error.context?.error || error.message || 'Failed to upload file.';
     throw new Error(errorMessage);
   }
   return edgeFunctionData as { fileUrl: string; poNumber: string | null };
@@ -316,14 +315,13 @@ interface EmailData {
 }
 
 export const apiSendEmail = async (email: EmailData): Promise<void> => {
-  const { data, error } = await supabase.functions.invoke('send-email', {
+  const { error } = await supabase.functions.invoke('send-email', {
     body: JSON.stringify(email),
   });
   if (error) {
-    let errorMessage = (data as any)?.error || error.message || 'Failed to send email.';
+    const errorMessage = error.context?.error || error.message || 'Failed to send email.';
     throw new Error(errorMessage);
   }
-  return data;
 };
 
 // --- API de Plantillas de Correo Electrónico ---
