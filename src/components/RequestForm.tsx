@@ -27,7 +27,8 @@ import { showError, showLoading, dismissToast, showSuccess } from "@/utils/toast
 import { useSession } from "@/components/SessionContextProvider";
 import { useVendors } from "@/hooks/use-vendors";
 import { useAddRequest } from "@/hooks/use-requests";
-import { useAccountManagerProfiles, getFullName } from "@/hooks/use-profiles";
+import { useAccountManagers } from "@/hooks/use-account-managers";
+import { getFullName } from "@/hooks/use-profiles";
 import { useProjects } from "@/hooks/use-projects";
 import { apiSearchExternalProduct } from "@/integrations/api";
 
@@ -67,7 +68,7 @@ type RequestFormValues = z.infer<typeof formSchema>;
 const RequestForm: React.FC = () => {
   const { session, profile } = useSession();
   const { data: vendors, isLoading: isLoadingVendors } = useVendors();
-  const { data: accountManagers, isLoading: isLoadingAccountManagers } = useAccountManagerProfiles();
+  const { data: accountManagers, isLoading: isLoadingAccountManagers } = useAccountManagers();
   const { data: projects, isLoading: isLoadingProjects } = useProjects();
   const addRequestMutation = useAddRequest();
 
@@ -239,7 +240,7 @@ const RequestForm: React.FC = () => {
                   <SelectContent>
                     <SelectItem value="unassigned">Sin Asignar</SelectItem>
                     {accountManagers?.map((manager) => (
-                      <SelectItem key={manager.id} value={manager.id}>{getFullName(manager)}</SelectItem>
+                      <SelectItem key={manager.id} value={manager.id}>{manager.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
