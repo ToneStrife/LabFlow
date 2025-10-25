@@ -47,7 +47,8 @@ const itemSchema = z.object({
   link: z.string().url({ message: "Debe ser una URL válida." }).optional().or(z.literal("")),
   notes: z.string().optional(),
   brand: z.string().optional(),
-  // AI-enriched fields
+  // AI-enriched fields (these will now be directly updated into the main fields)
+  // Keeping them as optional for now, but their values will be set by the AI.
   ai_enriched_product_name: z.string().optional(),
   ai_enriched_pack_size: z.string().optional(),
   ai_enriched_estimated_price: z.number().optional(),
@@ -119,8 +120,8 @@ const RequestForm: React.FC = () => {
       const catalogNumber = form.getValues(`items.${index}.catalogNumber`)?.trim();
       const brand = form.getValues(`items.${index}.brand`)?.trim();
 
-      if (!catalogNumber || !brand) {
-        showError("Por favor, ingresa tanto la 'Marca' como el 'Número de Catálogo' para enriquecer con IA.");
+      if (!catalogNumber) {
+        showError("Por favor, ingresa el 'Número de Catálogo' para enriquecer con IA.");
         return;
       }
 
@@ -131,9 +132,14 @@ const RequestForm: React.FC = () => {
       form.setValue(`items.${index}.format`, aiProductDetails.format || '');
       form.setValue(`items.${index}.unitPrice`, aiProductDetails.unitPrice || undefined);
       form.setValue(`items.${index}.link`, aiProductDetails.link || '');
-      form.setValue(`items.${index}.notes`, aiProductDetails.notes || '');
+      form.setValue(`items.${index}.brand`, aiProductDetails.brand || '');
       
-      // Store AI-enriched data separately
+      // Append AI notes to existing notes
+      const currentNotes = form.getValues(`items.${index}.notes`) || '';
+      const aiNotes = aiProductDetails.notes ? `\n[IA] ${aiProductDetails.notes}` : '';
+      form.setValue(`items.${index}.notes`, currentNotes + aiNotes);
+
+      // Store AI-enriched data separately for display as suggestions (if needed, otherwise can remove these fields)
       form.setValue(`items.${index}.ai_enriched_product_name`, aiProductDetails.productName || undefined);
       form.setValue(`items.${index}.ai_enriched_pack_size`, aiProductDetails.format || undefined);
       form.setValue(`items.${index}.ai_enriched_estimated_price`, aiProductDetails.unitPrice || undefined);
@@ -160,11 +166,11 @@ const RequestForm: React.FC = () => {
     const managerId = data.accountManagerId === 'unassigned' || !data.accountManagerId ? null : data.accountManagerId;
 
     const requestData = {
-      vendorId: data.vendorId,
-      requesterId: session.user.id,
-      accountManagerId: managerId,
+      vendor_id: data.vendorId,
+      requester_id: session.user.id,
+      account_manager_id: managerId,
       notes: undefined, // Notes are now part of itemSchema, not top-level
-      projectCodes: data.projectCodes,
+      project_codes: data.projectCodes,
       items: data.items,
     };
 
@@ -317,7 +323,7 @@ const RequestForm: React.FC = () => {
                   render={({ field: itemField }) => (
                     <FormItem>
                       <FormLabel>Marca</FormLabel>
-                      <FormControl><Input placeholder="ej. Invitrogen" {...itemField} /></FormControl>
+                      <FormControl><Input id="marca" placeholder="ej. Invitrogen" {...itemField} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -328,7 +334,7 @@ const RequestForm: React.FC = () => {
                   render={({ field: itemField }) => (
                     <FormItem>
                       <FormLabel>Número de Catálogo</FormLabel>
-                      <FormControl><Input placeholder="ej. 18265017" {...itemField} /></FormControl>
+                      <FormControl><Input id="catalogo" placeholder="ej. 18265017" {...itemField} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -337,10 +343,10 @@ const RequestForm: React.FC = () => {
                   <Button
                     type="button"
                     variant="outline"
+                    id="btn_enriquecer"
                     onClick={() => handleEnrichWithAI(index)}
                     disabled={
                       enrichingIndex === index ||
-                      !form.getValues(`items.${index}.brand`)?.trim() ||
                       !form.getValues(`items.${index}.catalogNumber`)?.trim()
                     }
                   >
@@ -361,7 +367,7 @@ const RequestForm: React.FC = () => {
                   render={({ field: itemField }) => (
                     <FormItem>
                       <FormLabel>Nombre del Producto</FormLabel>
-                      <FormControl><Input placeholder="ej. Células Competentes E. coli DH5a" {...itemField} /></FormControl>
+                      <FormControl><Input id="nombre_producto" placeholder="ej. Células Competentes E. coli DH5a" {...itemField} /></FormControl>
                       <FormMessage />
                       {form.watch(`items.${index}.ai_enriched_product_name`) && (
                         <p className="text-xs text-muted-foreground">Sugerencia IA: {form.watch(`items.${index}.ai_enriched_product_name`)}</p>
@@ -375,7 +381,7 @@ const RequestForm: React.FC = () => {
                   render={({ field: itemField }) => (
                     <FormItem>
                       <FormLabel>Cantidad</FormLabel>
-                      <FormControl><Input type="number" {...itemField} /></FormControl>
+                      <FormControl><Input id="cantidad" type="number" {...itemField} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -390,7 +396,7 @@ const RequestForm: React.FC = () => {
                     return (
                       <FormItem>
                         <FormLabel>Precio Unitario (Opcional)</FormLabel>
-                        <FormControl><Input type="number" step="0.01" placeholder="ej. 120.50" {...itemField} /></FormControl>
+                        <FormControl><Input id="precio_unitario" type="number" step="0.01" placeholder="ej. 120.50" {...itemField} /></FormControl>
                         <FormMessage />
                         {hasAiPrice && (
                           <p className="text-xs text-muted-foreground">Sugerencia IA: ${Number(aiPriceValue).toFixed(2)}</p>
@@ -405,7 +411,7 @@ const RequestForm: React.FC = () => {
                   render={({ field: itemField }) => (
                     <FormItem>
                       <FormLabel>Formato (Opcional)</FormLabel>
-                      <FormControl><Input placeholder="ej. 200pack 8cs of 25" {...itemField} /></FormControl>
+                      <FormControl><Input id="formato" placeholder="ej. 200pack 8cs of 25" {...itemField} /></FormControl>
                       <FormMessage />
                       {form.watch(`items.${index}.ai_enriched_pack_size`) && (
                         <p className="text-xs text-muted-foreground">Sugerencia IA: {form.watch(`items.${index}.ai_enriched_pack_size`)}</p>
@@ -419,7 +425,7 @@ const RequestForm: React.FC = () => {
                   render={({ field: itemField }) => (
                     <FormItem>
                       <FormLabel>Enlace del Producto (Opcional)</FormLabel>
-                      <FormControl><Input type="url" placeholder="ej. https://www.vendor.com/product" {...itemField} /></FormControl>
+                      <FormControl><Input id="enlace_producto" type="url" placeholder="ej. https://www.vendor.com/product" {...itemField} /></FormControl>
                       <FormMessage />
                       {form.watch(`items.${index}.ai_enriched_link`) && (
                         <p className="text-xs text-muted-foreground">Sugerencia IA: <a href={form.watch(`items.${index}.ai_enriched_link`)} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">Ver Enlace</a></p>
@@ -433,7 +439,7 @@ const RequestForm: React.FC = () => {
                   render={({ field: itemField }) => (
                     <FormItem className="md:col-span-2">
                       <FormLabel>Notas (Opcional)</FormLabel>
-                      <FormControl><Textarea placeholder="Cualquier requisito o detalle específico..." {...itemField} /></FormControl>
+                      <FormControl><Textarea id="notas" placeholder="Cualquier requisito o detalle específico..." {...itemField} /></FormControl>
                       <FormMessage />
                       {form.watch(`items.${index}.ai_enriched_notes`) && (
                         <p className="text-xs text-muted-foreground">Sugerencia IA: {form.watch(`items.${index}.ai_enriched_notes`)}</p>

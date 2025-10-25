@@ -188,13 +188,13 @@ export const apiDeleteProject = async (id: string): Promise<void> => {
 
 // --- API de Búsqueda Externa de Productos (Ahora invoca la Edge Function) ---
 export const apiSearchExternalProduct = async (catalogNumber: string, brand?: string): Promise<ProductDetails> => {
-  const { data, error } = await supabase.functions.invoke('search-product', {
-    body: JSON.stringify({ catalogNumber, brand }),
+  const { data, error } = await supabase.functions.invoke('smart_lookup', {
+    body: JSON.stringify({ catalog: catalogNumber, brand: brand }),
     method: 'POST',
   });
 
   if (error) {
-    console.error("Error invoking search-product edge function:", error);
+    console.error("Error invoking smart_lookup edge function:", error);
     let errorMessage = 'Failed to search external product via Edge Function.';
     if (data && typeof data === 'object' && 'error' in data) {
         errorMessage = (data as any).error;
@@ -206,12 +206,33 @@ export const apiSearchExternalProduct = async (catalogNumber: string, brand?: st
     throw new Error(errorMessage);
   }
 
-  // La Edge Function devuelve un objeto con una propiedad 'products'
-  if (!data || !data.products) {
+  // La Edge Function devuelve un objeto con claves en español. Mapear a ProductDetails.
+  const aiResponse = data as {
+    marca: string | null;
+    numero_catalogo: string | null;
+    nombre_producto: string | null;
+    formato: string | null;
+    precio_unitario: number | null;
+    enlace_producto: string | null;
+    notas: string | null;
+    _source?: string;
+  };
+
+  if (!aiResponse || !aiResponse.nombre_producto) {
     throw new Error("AI did not return valid product details.");
   }
   
-  return data.products as ProductDetails;
+  return {
+    id: aiResponse.numero_catalogo || 'unknown', // Usar catalogNumber como ID si no hay otro
+    productName: aiResponse.nombre_producto,
+    catalogNumber: aiResponse.numero_catalogo || catalogNumber,
+    unitPrice: aiResponse.precio_unitario || undefined,
+    format: aiResponse.formato || undefined,
+    link: aiResponse.enlace_producto || undefined,
+    brand: aiResponse.marca || brand || 'N/A',
+    notes: aiResponse.notas || undefined, // Añadir notas al ProductDetails
+    source: aiResponse._source || 'web', // Añadir la fuente
+  };
 };
 
 
