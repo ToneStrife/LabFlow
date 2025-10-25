@@ -44,8 +44,10 @@ serve(async (req) => {
     const requestId = formData.get('requestId') as string;
     const poNumber = formData.get('poNumber') as string | null;
 
-    if (!file || !fileType || !requestId) {
-      return new Response(JSON.stringify({ error: 'Missing required fields: file, fileType, or requestId' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    // Verificación mejorada para el archivo y su nombre
+    if (!file || typeof file.name === 'undefined' || !fileType || !requestId) {
+      console.error('Edge Function: Missing required fields or invalid file object:', { file: !!file, fileName: file?.name, fileType, requestId });
+      return new Response(JSON.stringify({ error: 'Missing required fields or invalid file object: file, fileType, or requestId' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     // Generar un nombre de archivo único y una ruta en el bucket
