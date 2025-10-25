@@ -27,8 +27,7 @@ import { showError, showLoading, dismissToast, showSuccess } from "@/utils/toast
 import { useSession } from "@/components/SessionContextProvider";
 import { useVendors } from "@/hooks/use-vendors";
 import { useAddRequest } from "@/hooks/use-requests";
-import { useAccountManagers } from "@/hooks/use-account-managers";
-import { getFullName } from "@/hooks/use-profiles";
+import { useAccountManagerProfiles, getFullName } from "@/hooks/use-profiles";
 import { useProjects } from "@/hooks/use-projects";
 import { apiSearchExternalProduct } from "@/integrations/api";
 
@@ -57,7 +56,6 @@ const itemSchema = z.object({
 const formSchema = z.object({
   vendorId: z.string().min(1, { message: "El proveedor es obligatorio." }),
   requesterId: z.string().min(1, { message: "El ID del solicitante es obligatorio." }), 
-  // Permitimos que sea string (UUID) o "unassigned" en el formulario
   accountManagerId: z.union([z.string().uuid(), z.literal("unassigned")]).optional(), 
   items: z.array(itemSchema).min(1, { message: "Se requiere al menos un artículo." }),
   attachments: z.any().optional(),
@@ -69,7 +67,7 @@ type RequestFormValues = z.infer<typeof formSchema>;
 const RequestForm: React.FC = () => {
   const { session, profile } = useSession();
   const { data: vendors, isLoading: isLoadingVendors } = useVendors();
-  const { data: accountManagers, isLoading: isLoadingAccountManagers } = useAccountManagers();
+  const { data: accountManagers, isLoading: isLoadingAccountManagers } = useAccountManagerProfiles();
   const { data: projects, isLoading: isLoadingProjects } = useProjects();
   const addRequestMutation = useAddRequest();
 
@@ -155,19 +153,16 @@ const RequestForm: React.FC = () => {
       return;
     }
 
-    // **CORRECCIÓN CLAVE:** Asegurar que managerId sea null si es "unassigned" o vacío.
     const managerId = (data.accountManagerId === 'unassigned' || !data.accountManagerId) ? null : data.accountManagerId;
 
     const requestData = {
       vendorId: data.vendorId,
       requesterId: session.user.id,
-      accountManagerId: managerId, // Esto ahora es string | null
+      accountManagerId: managerId,
       notes: null,
       projectCodes: data.projectCodes,
       items: data.items,
     };
-
-    console.log("Submitting new request with accountManagerId (FINAL VALUE):", requestData.accountManagerId); // Debug log
 
     await addRequestMutation.mutateAsync(requestData);
 
@@ -244,7 +239,7 @@ const RequestForm: React.FC = () => {
                   <SelectContent>
                     <SelectItem value="unassigned">Sin Asignar</SelectItem>
                     {accountManagers?.map((manager) => (
-                      <SelectItem key={manager.id} value={manager.id}>{manager.name}</SelectItem>
+                      <SelectItem key={manager.id} value={manager.id}>{getFullName(manager)}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
