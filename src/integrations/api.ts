@@ -225,9 +225,10 @@ export const apiAddRequest = async (data: {
   const notes = data.notes || null;
   const projectCodes = data.projectCodes || null;
 
+  // **IMPORTANTE:** Pasamos accountManagerId como string | null, ya que la función RPC ahora espera TEXT.
   const { data: newRequest, error } = await supabase.rpc('create_request_with_items', {
     vendor_id_in: data.vendorId,
-    account_manager_id_in: accountManagerId, // Aseguramos que sea string (UUID) o null
+    account_manager_id_in: accountManagerId, 
     notes_in: notes,
     project_codes_in: projectCodes,
     items_in: data.items,
