@@ -42,6 +42,13 @@ export const apiUpdateProfile = async (id: string, data: Partial<Profile>): Prom
 };
 
 export const apiDeleteProfile = async (id: string): Promise<void> => {
+  // Asegurarse de que la sesión esté fresca antes de invocar la función Edge
+  const { data: { session }, error: refreshError } = await supabase.auth.refreshSession();
+  if (refreshError || !session) {
+    console.error("Error refreshing session before deleting user:", refreshError);
+    throw new Error("Failed to refresh session. Please log in again.");
+  }
+
   const { data: edgeFunctionData, error } = await supabase.functions.invoke('delete-user', {
     body: JSON.stringify({ userIdToDelete: id }),
     method: 'POST',
