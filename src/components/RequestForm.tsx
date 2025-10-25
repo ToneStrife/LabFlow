@@ -27,7 +27,7 @@ import { showError, showLoading, dismissToast, showSuccess } from "@/utils/toast
 import { useSession } from "@/components/SessionContextProvider";
 import { useVendors } from "@/hooks/use-vendors";
 import { useAddRequest } from "@/hooks/use-requests";
-import { useAccountManagers } from "@/hooks/use-account-managers"; // Corrected hook
+import { useAccountManagers } from "@/hooks/use-account-managers";
 import { getFullName } from "@/hooks/use-profiles";
 import { useProjects } from "@/hooks/use-projects";
 import { apiSearchExternalProduct } from "@/integrations/api";
@@ -57,7 +57,7 @@ const itemSchema = z.object({
 const formSchema = z.object({
   vendorId: z.string().min(1, { message: "El proveedor es obligatorio." }),
   requesterId: z.string().min(1, { message: "El ID del solicitante es obligatorio." }), 
-  accountManagerId: z.string().optional(), 
+  accountManagerId: z.union([z.string().uuid(), z.literal("unassigned")]).optional(), // Updated schema
   items: z.array(itemSchema).min(1, { message: "Se requiere al menos un artículo." }),
   attachments: z.any().optional(),
   projectCodes: z.array(z.string()).optional(),
@@ -68,7 +68,7 @@ type RequestFormValues = z.infer<typeof formSchema>;
 const RequestForm: React.FC = () => {
   const { session, profile } = useSession();
   const { data: vendors, isLoading: isLoadingVendors } = useVendors();
-  const { data: accountManagers, isLoading: isLoadingAccountManagers } = useAccountManagers(); // Corrected hook
+  const { data: accountManagers, isLoading: isLoadingAccountManagers } = useAccountManagers();
   const { data: projects, isLoading: isLoadingProjects } = useProjects();
   const addRequestMutation = useAddRequest();
 
@@ -164,6 +164,8 @@ const RequestForm: React.FC = () => {
       projectCodes: data.projectCodes,
       items: data.items,
     };
+
+    console.log("Submitting new request with accountManagerId:", requestData.accountManagerId); // Debug log
 
     await addRequestMutation.mutateAsync(requestData);
 
