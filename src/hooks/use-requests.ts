@@ -136,19 +136,57 @@ export type FileType = "quote" | "po" | "slip";
 interface UpdateRequestFileData {
   id: string;
   fileType: FileType;
-  fileUrl: string;
+  file: File; // Cambiado de fileUrl: string a file: File
   poNumber?: string | null;
 }
 
 export const useUpdateRequestFile = () => {
   const queryClient = useQueryClient();
   return useMutation<SupabaseRequest, Error, UpdateRequestFileData>({
-    mutationFn: async ({ id, fileType, fileUrl, poNumber }) => {
-      return apiUpdateRequestFile(id, fileType, fileUrl, poNumber);
+    mutationFn: async ({ id, fileType, file, poNumber }) => { // Cambiado fileUrl a file
+      const { fileUrl: uploadedFileUrl, poNumber: returnedPoNumber } = await apiUpdateRequestFile(id, fileType, file, poNumber);
+      
+      // Actualizar el estado de la solicitud con la URL del archivo y el número de PO si aplica
+      let updatedRequest: SupabaseRequest;
+      if (fileType === "quote") {
+        updatedRequest = await apiUpdateRequestStatus(id, "PO Requested", uploadedFileUrl);
+      } else if (fileType === "po") {
+        updatedRequest = await apiUpdateRequestStatus(id, "Ordered", undefined, returnedPoNumber);
+      } else {
+        // Para 'slip' o cualquier otro tipo, solo actualiza la URL del archivo sin cambiar el estado
+        updatedRequest = await apiUpdateRequestMetadata(id, {
+          // Aquí necesitaríamos una forma de actualizar solo la URL del archivo en la solicitud
+          // Por ahora, simularemos una actualización de metadatos que no cambia el estado
+          // En una implementación real, esto podría ser una función API separada o un campo en updateRequestMetadata
+        });
+        // Para el mock, simplemente actualizamos el objeto request localmente para reflejar la URL
+        const currentRequests = queryClient.getQueryData<SupabaseRequest[]>(["requests"]);
+        if (currentRequests) {
+          const reqIndex = currentRequests.findIndex(r => r.id === id);
+          if (reqIndex !== -1) {
+            const reqToUpdate = { ...currentRequests[reqIndex] };
+            if (fileType === "slip") reqToUpdate.slip_url = uploadedFileUrl;
+            // ... otros tipos de archivo si se añaden
+            queryClient.setQueryData(["requests"], currentRequests.map(r => r.id === id ? reqToUpdate : r));
+            updatedRequest = reqToUpdate;
+          } else {
+            throw new Error("Request not found in cache after file upload.");
+          }
+        } else {
+          throw new Error("Requests data not found in cache.");
+        }
+      }
+      return updatedRequest;
     },
     onSuccess: (updatedRequest, variables) => {
       queryClient.invalidateQueries({ queryKey: ["requests"] });
+      queryClient.invalidateQueries({ queryKey: ["inventory"] }); // Invalidate inventory if status changed to Ordered
       toast.success(`${variables.fileType.toUpperCase()} file uploaded successfully!`);
+      
+      // Si se subió una cotización, y hay un account manager, enviar el correo de solicitud de PO
+      if (variables.fileType === "quote" && updatedRequest.account_manager_id) {
+        // Esto se maneja en RequestDetails.tsx ahora, para tener acceso a las plantillas de correo
+      }
     },
     onError: (error, variables) => {
       toast.error(`Failed to upload ${variables.fileType.toUpperCase()} file.`, {
