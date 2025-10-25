@@ -39,19 +39,27 @@ serve(async (req) => {
 
     // Parsear el FormData para obtener el archivo y los metadatos
     const formData = await req.formData();
-    const file = formData.get('file') as File;
+    const fileEntry = formData.get('file'); // Obtener como FormDataEntryValue
     const fileType = formData.get('fileType') as string; // 'quote', 'po', 'slip'
     const requestId = formData.get('requestId') as string;
     const poNumber = formData.get('poNumber') as string | null;
 
-    // Verificación mejorada para el archivo y su nombre
-    if (!file || typeof file.name === 'undefined' || !fileType || !requestId) {
-      console.error('Edge Function: Missing required fields or invalid file object:', { file: !!file, fileName: file?.name, fileType, requestId });
+    // Validar fileEntry y otros campos de forma más robusta
+    if (!fileEntry || !(fileEntry instanceof File) || !fileEntry.name || fileEntry.name.length === 0 || !fileType || !requestId) {
+      console.error('Edge Function: Missing required fields or invalid file object:', { fileEntry: !!fileEntry, fileName: (fileEntry instanceof File) ? fileEntry.name : 'Not a File instance', fileType, requestId });
       return new Response(JSON.stringify({ error: 'Missing required fields or invalid file object: file, fileType, or requestId' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
+    const file = fileEntry as File; // Ahora estamos seguros de que es un File con un nombre válido
+
     // Generar un nombre de archivo único y una ruta en el bucket
     const fileExtension = file.name.split('.').pop();
+    if (!fileExtension) {
+        console.warn('Edge Function: File has no extension, assigning default. Filename:', file.name);
+        // Si no hay extensión, podemos asignar una por defecto o manejarlo como un error.
+        // Por ahora, lo manejaremos como un error para asegurar la consistencia.
+        return new Response(JSON.stringify({ error: 'Invalid file name: could not determine file extension.' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
     const fileName = `${fileType}-${requestId}-${Date.now()}.${fileExtension}`;
     const filePath = `${user.id}/${requestId}/${fileName}`; // Organizar por user_id/request_id/file_name
 
