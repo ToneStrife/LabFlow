@@ -1,8 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Asegúrate de que estas variables de entorno estén definidas en tu archivo .env
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.REACT_APP_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.REACT_APP_SUPABASE_ANON_KEY;
+// Accede a las variables de entorno usando import.meta.env para entornos de navegador (Vite).
+// Se mantienen los nombres de variables de entorno (NEXT_PUBLIC_ o REACT_APP_) por compatibilidad.
+const supabaseUrl = import.meta.env.NEXT_PUBLIC_SUPABASE_URL || import.meta.env.REACT_APP_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || import.meta.env.REACT_APP_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase URL or Anon Key environment variables.');
