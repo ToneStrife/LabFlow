@@ -44,12 +44,12 @@ serve(async (req) => {
 
     // Prompt para la IA (Traducido y ajustado para búsqueda en español)
     const systemInstruction = `
-      Eres un asistente de IA experto en la búsqueda y extracción de información de productos científicos y de laboratorio. Tu tarea es encontrar información precisa sobre un producto basándote en su marca y número de catálogo.
+      Eres un asistente de IA altamente especializado en la extracción de datos de productos de laboratorio. Tu única tarea es encontrar información precisa sobre un producto basándote en una MARCA y NÚMERO DE CATÁLOGO exactos.
 
-      **Instrucciones Clave:**
-      1.  **Prioriza la fuente oficial:** Siempre intenta encontrar la página del producto en el sitio web oficial del fabricante.
-      2.  **Sé preciso:** Extrae los datos exactamente como aparecen. No inventes información.
-      3.  **Formato JSON estricto:** Tu respuesta DEBE ser únicamente un objeto JSON válido con el siguiente esquema. No incluyas texto antes o después del JSON.
+      **Instrucciones Críticas (Debes seguirlas al pie de la letra):**
+      1.  **COINCIDENCIA EXACTA O NADA:** Tu objetivo principal es encontrar la página del producto en el sitio web oficial del fabricante que coincida EXACTAMENTE con la MARCA y el NÚMERO DE CATÁLOGO proporcionados.
+      2.  **NO ADIVINES:** Si no encuentras una coincidencia exacta, NO debes proporcionar información de un producto similar, aunque el número de catálogo sea parecido. NO inventes información.
+      3.  **FORMATO JSON ESTRICTO:** Tu respuesta DEBE ser únicamente un objeto JSON válido con el siguiente esquema. No incluyas texto, explicaciones ni markdown antes o después del JSON.
 
       **Esquema JSON Requerido:**
       {
@@ -64,18 +64,27 @@ serve(async (req) => {
       **Definición de Campos:**
       - \`product_name\`: El nombre completo y oficial del producto.
       - \`pack_size\`: El formato o tamaño del empaque (ej: "500 mL", "100 µl", "25 reactions").
-      - \`estimated_price\`: El precio de lista en la moneda que encuentres. Solo el número, sin símbolos. Si encuentras un rango, usa el promedio.
-      - \`product_url\`: El enlace directo a la página del producto.
-      - \`technical_notes\`: Un resumen breve de notas técnicas o una descripción del producto.
-      - \`confidence_score\`: Tu nivel de confianza (de 0.0 a 1.0) de que la información encontrada es correcta y pertenece al producto exacto solicitado. 1.0 es certeza absoluta.
+      - \`estimated_price\`: El precio de lista en la moneda que encuentres. Solo el número, sin símbolos.
+      - \`product_url\`: El enlace directo y funcional a la página del producto.
+      - \`technical_notes\`: Un resumen muy breve de la descripción o notas técnicas del producto.
+      - \`confidence_score\`: Tu nivel de confianza (de 0.0 a 1.0) de que la información encontrada es 100% correcta para el producto exacto solicitado. 1.0 es certeza absoluta.
 
-      **Si no encuentras el producto o no estás seguro, devuelve un JSON con todos los campos en \`null\` y un \`confidence_score\` bajo (ej: 0.1).**
+      **CASO DE FALLO (MUY IMPORTANTE):**
+      Si no puedes encontrar una página oficial del producto con una coincidencia EXACTA para la marca y el número de catálogo, o si tienes la más mínima duda, DEBES devolver este JSON exacto:
+      {
+        "product_name": null,
+        "pack_size": null,
+        "estimated_price": null,
+        "product_url": null,
+        "technical_notes": null,
+        "confidence_score": 0.1
+      }
     `;
 
     const userPrompt = `
-      Busca y extrae la información más precisa y oficial para el siguiente producto. Si encuentras la información, asegúrate de que el 'confidence_score' sea alto (0.8 o más).
-      - MARCA: ${brand}
-      - NÚMERO DE CATÁLOGO: ${catalogNumber}
+      Busca y extrae la información para el siguiente producto. Sigue las instrucciones críticas al pie de la letra.
+      - MARCA: "${brand}"
+      - NÚMERO DE CATÁLOGO: "${catalogNumber}"
     `;
 
     const combinedPrompt = `${systemInstruction}\n\n${userPrompt}`;
@@ -125,9 +134,9 @@ serve(async (req) => {
 
     // Lógica de error mejorada
     const confidence = aiResponse.confidence_score || 0;
-    if (!aiResponse || !aiResponse.product_name || confidence < 0.5) {
+    if (!aiResponse || !aiResponse.product_name || confidence < 0.7) { // Aumentado el umbral de confianza
       const brandDisplay = brand || "N/A";
-      const errorMsg = `La IA no pudo encontrar información fiable (Confianza: ${confidence.toFixed(1)}) para el Número de Catálogo: '${catalogNumber}' y Marca: '${brandDisplay}'. Por favor, verifica las entradas o ingresa los detalles manualmente.`;
+      const errorMsg = `La IA no pudo encontrar información fiable (Confianza: ${confidence.toFixed(2)}) para el Número de Catálogo: '${catalogNumber}' y Marca: '${brandDisplay}'. Por favor, verifica las entradas o ingresa los detalles manualmente.`;
       return new Response(JSON.stringify({ error: errorMsg }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
@@ -139,7 +148,7 @@ serve(async (req) => {
       notes: aiResponse.technical_notes,
       brand: brand,
       catalogNumber: catalogNumber,
-      source: `Búsqueda IA (Google Gemini 2.5 Flash) | Confianza: ${confidence.toFixed(1)}`
+      source: `Búsqueda IA (Google Gemini 2.5 Flash) | Confianza: ${confidence.toFixed(2)}`
     };
 
     return new Response(JSON.stringify({ products: productDetails }), {
