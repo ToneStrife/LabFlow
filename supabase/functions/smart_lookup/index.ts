@@ -202,7 +202,13 @@ Deno.serve(async (req) => {
   }
 
   // 1) histórico
-  const { data: master } = await supabase.rpc("smart_master_lookup", { brand_q: brandQ, catalog_q: catalogQ }).catch(() => ({ data: null }));
+  // CORRECCIÓN: Usar el patrón { data, error } para manejar errores de RPC de forma segura.
+  const { data: master, error: masterError } = await supabase.rpc("smart_master_lookup", { brand_q: brandQ, catalog_q: catalogQ });
+  
+  if (masterError) {
+    console.error("Error fetching master data:", masterError);
+  }
+  
   if (master && master.match && master.match.score >= 0.8) {
     const m = master.record;
     const result = {
