@@ -63,6 +63,7 @@ const formSchema = z.object({
   items: z.array(itemSchema).min(1, { message: "Se requiere al menos un artículo." }),
   attachments: z.any().optional(),
   projectCodes: z.array(z.string()).optional(),
+  notes: z.string().optional(),
 });
 
 type RequestFormValues = z.infer<typeof formSchema>;
@@ -98,6 +99,7 @@ const RequestForm: React.FC = () => {
         ai_enriched_notes: undefined,
       }],
       projectCodes: [],
+      notes: "",
     },
   });
 
@@ -169,16 +171,14 @@ const RequestForm: React.FC = () => {
 
     const managerId = data.accountManagerId === 'unassigned' || !data.accountManagerId ? null : data.accountManagerId;
 
-    const requestData = {
-      vendor_id: data.vendorId,
-      requester_id: session.user.id,
-      account_manager_id: managerId,
-      notes: undefined,
-      project_codes: data.projectCodes,
+    await addRequestMutation.mutateAsync({
+      vendorId: data.vendorId,
+      requesterId: session.user.id,
+      accountManagerId: managerId,
+      notes: data.notes,
+      projectCodes: data.projectCodes,
       items: data.items,
-    };
-
-    await addRequestMutation.mutateAsync(requestData);
+    });
 
     form.reset({
       vendorId: "",
@@ -200,6 +200,7 @@ const RequestForm: React.FC = () => {
         ai_enriched_notes: undefined,
       }],
       projectCodes: [],
+      notes: "",
     });
   };
 
@@ -310,6 +311,22 @@ const RequestForm: React.FC = () => {
             )}
           />
         </div>
+        <FormField
+          control={form.control}
+          name="notes"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Notas Generales de la Solicitud (Opcional)</FormLabel>
+              <FormControl>
+                <Textarea
+                  placeholder="Cualquier detalle general sobre esta solicitud..."
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
         <h2 className="text-xl font-semibold">Artículos</h2>
         <div className="space-y-6">
           {fields.map((field, index) => (
