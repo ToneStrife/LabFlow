@@ -20,7 +20,7 @@ import { useAccountManagers } from "@/hooks/use-account-managers";
 import { useProjects } from "@/hooks/use-projects";
 import { useEmailTemplates } from "@/hooks/use-email-templates";
 import { useShippingAddresses, useBillingAddresses } from "@/hooks/use-addresses";
-import { processEmailTemplate, processTextTemplate } from "@/utils/email-templating"; // Importar processTextTemplate
+import { processEmailTemplate, processTextTemplate, processPlainTextTemplate } from "@/utils/email-templating"; // Importar processPlainTextTemplate
 import EmailDialog, { EmailFormValues } from "@/components/EmailDialog";
 
 // Import new modular components
@@ -114,8 +114,8 @@ const RequestDetails: React.FC = () => {
 
     setEmailInitialData({
       to: getAccountManagerEmail(request.account_manager_id),
-      subject: processTextTemplate(poRequestTemplate.subject_template, context), // Usar processTextTemplate
-      body: processEmailTemplate(poRequestTemplate.body_template, context),
+      subject: processTextTemplate(poRequestTemplate.subject_template, context),
+      body: processPlainTextTemplate(poRequestTemplate.body_template, context), // Usar PlainText para el cuerpo editable
       attachments,
     });
     setIsEmailDialogOpen(true);
@@ -156,8 +156,8 @@ const RequestDetails: React.FC = () => {
 
       setEmailInitialData({
         to: getVendorEmail(requestToApprove.vendor_id),
-        subject: processTextTemplate(quoteTemplate.subject_template, context), // Usar processTextTemplate
-        body: processEmailTemplate(quoteTemplate.body_template, context),
+        subject: processTextTemplate(quoteTemplate.subject_template, context),
+        body: processPlainTextTemplate(quoteTemplate.body_template, context), // Usar PlainText para el cuerpo editable
       });
       setIsApproveRequestDialogOpen(false);
       setIsEmailDialogOpen(true);
@@ -242,8 +242,8 @@ const RequestDetails: React.FC = () => {
 
     setEmailInitialData({
       to: getVendorEmail(request.vendor_id),
-      subject: processTextTemplate(orderConfirmationTemplate.subject_template, context), // Usar processTextTemplate
-      body: processEmailTemplate(orderConfirmationTemplate.body_template, context),
+      subject: processTextTemplate(orderConfirmationTemplate.subject_template, context),
+      body: processPlainTextTemplate(orderConfirmationTemplate.body_template, context), // Usar PlainText para el cuerpo editable
       attachments,
     });
     setIsEmailDialogOpen(true);

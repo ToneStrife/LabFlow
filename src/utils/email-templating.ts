@@ -14,12 +14,19 @@ interface EmailTemplateContext {
   order?: { itemName: string; id: string }; // For specific order items
 }
 
-const formatItemsList = (items: SupabaseRequestItem[] | null): string => {
+const formatItemsListHtml = (items: SupabaseRequestItem[] | null): string => {
   if (!items || items.length === 0) {
     return "<p>No items listed.</p>";
   }
   const listItems = items.map(item => `<li>${item.quantity}x <strong>${item.product_name}</strong> (Catalog #: ${item.catalog_number})</li>`).join("");
   return `<ul>${listItems}</ul>`;
+};
+
+const formatItemsListPlainText = (items: SupabaseRequestItem[] | null): string => {
+  if (!items || items.length === 0) {
+    return "No items listed.";
+  }
+  return items.map(item => `- ${item.quantity}x ${item.product_name} (Catalog #: ${item.catalog_number})`).join("\n");
 };
 
 const formatAddressHtml = (address: Address | undefined): string => {
@@ -31,6 +38,18 @@ const formatAddressHtml = (address: Address | undefined): string => {
     <p style="margin: 0;">${address.city}, ${address.state} ${address.zip_code}</p>
     <p style="margin: 0;">${address.country}</p>
   `;
+};
+
+const formatAddressPlainText = (address: Address | undefined): string => {
+  if (!address) return "N/A";
+  let lines = [
+    address.name,
+    address.address_line_1,
+    address.address_line_2,
+    `${address.city}, ${address.state} ${address.zip_code}`,
+    address.country,
+  ].filter(line => line && line.trim() !== '');
+  return lines.join('\n');
 };
 
 const replacePlaceholder = (template: string, placeholder: string, value: string | number | null | undefined): string => {
@@ -83,6 +102,61 @@ export const processTextTemplate = (templateString: string, context: EmailTempla
   return processedString.replace(/<[^>]*>?/gm, '').trim();
 };
 
+// Función auxiliar para procesar plantillas de texto plano (cuerpo)
+export const processPlainTextTemplate = (templateString: string, context: EmailTemplateContext): string => {
+  let processedString = templateString;
+  const { request, vendor, requesterProfile, accountManager, projects, actorProfile, shippingAddress, billingAddress, message, order } = context;
+
+  // General request details
+  processedString = replacePlaceholder(processedString, 'request.id', request.id);
+  processedString = replacePlaceholder(processedString, 'request.status', request.status);
+  processedString = replacePlaceholder(processedString, 'request.notes', request.notes);
+  processedString = replacePlaceholder(processedString, 'request.quote_url', request.quote_url);
+  processedString = replacePlaceholder(processedString, 'request.po_number', request.po_number);
+  processedString = replacePlaceholder(processedString, 'request.po_url', request.po_url);
+  processedString = replacePlaceholder(processedString, 'request.slip_url', request.slip_url);
+
+  // Requester details
+  processedString = replacePlaceholder(processedString, 'requester.full_name', getFullName(requesterProfile));
+  processedString = replacePlaceholder(processedString, 'requester.email', requesterProfile?.email);
+
+  // Vendor details
+  processedString = replacePlaceholder(processedString, 'vendor.name', vendor?.name);
+  processedString = replacePlaceholder(processedString, 'vendor.contact_person', vendor?.contact_person);
+  processedString = replacePlaceholder(processedString, 'vendor.email', vendor?.email);
+
+  // Account Manager details
+  processedString = replacePlaceholder(processedString, 'account_manager.full_name', accountManager ? `${accountManager.first_name} ${accountManager.last_name}` : null);
+  processedString = replacePlaceholder(processedString, 'account_manager.email', accountManager?.email);
+
+  // Project Codes
+  const projectCodesDisplay = request.project_codes?.map(projectId => {
+    const project = projects?.find(p => p.id === projectId);
+    return project ? project.code : projectId;
+  }).join(", ");
+  processedString = replacePlaceholder(processedString, 'request.project_codes', projectCodesDisplay);
+
+  // Address details (Plain text formatting)
+  processedString = processedString.replace(/{{shipping_address}}/g, formatAddressPlainText(shippingAddress));
+  processedString = processedString.replace(/{{billing_address}}/g, formatAddressPlainText(billingAddress));
+
+  // Special placeholders
+  processedString = processedString.replace(/{{items_list}}/g, formatItemsListPlainText(request.items));
+  processedString = replacePlaceholder(processedString, 'message', message);
+  processedString = replacePlaceholder(processedString, 'actor.full_name', getFullName(actorProfile));
+  processedString = replacePlaceholder(processedString, 'order.itemName', order?.itemName);
+  processedString = replacePlaceholder(processedString, 'order.id', order?.id);
+
+  // CTA Button (simple placeholder for now)
+  processedString = processedString.replace(/{{cta_button}}/g, '[Call to Action Link]');
+
+  // Remove any remaining HTML tags and clean up excessive newlines
+  return processedString
+    .replace(/<[^>]*>?/gm, '') // Remove all HTML tags
+    .replace(/\n\s*\n/g, '\n\n') // Collapse multiple empty lines
+    .trim();
+};
+
 
 // Función principal para procesar plantillas de correo electrónico (cuerpo HTML)
 export const processEmailTemplate = (templateString: string, context: EmailTemplateContext): string => {
@@ -123,7 +197,7 @@ export const processEmailTemplate = (templateString: string, context: EmailTempl
   processedString = processedString.replace(/{{billing_address}}/g, formatAddressHtml(billingAddress));
 
   // Special placeholders
-  processedString = processedString.replace(/{{items_list}}/g, formatItemsList(request.items));
+  processedString = processedString.replace(/{{items_list}}/g, formatItemsListHtml(request.items));
   processedString = replacePlaceholder(processedString, 'message', message);
   processedString = replacePlaceholder(processedString, 'actor.full_name', getFullName(actorProfile));
   processedString = replacePlaceholder(processedString, 'order.itemName', order?.itemName);
