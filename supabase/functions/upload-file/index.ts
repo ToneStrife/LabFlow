@@ -37,7 +37,7 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Unauthorized: Invalid session' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // Crear un cliente con rol de servicio para interactuar con Storage de forma segura
+    // Crear un cliente con rol de servicio para interactuar con Storage y DB de forma segura
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -65,12 +65,29 @@ serve(async (req) => {
     let filePath: string | null = null;
 
     if (file && file.size > 0) {
-        // Si hay un archivo, proceder con la subida a Storage
-        const sanitizedOriginalName = sanitizeFilename(file.name);
-        const fileName = `${Date.now()}_${sanitizedOriginalName}`;
-        filePath = `${user.id}/${requestId}/${fileName}`; // Organizar por user_id/request_id/file_name
+        // 2. Obtener el request_number de la base de datos
+        const { data: requestData, error: requestError } = await supabaseAdmin
+            .from('requests')
+            .select('request_number')
+            .eq('id', requestId)
+            .single();
 
-        // Subir el archivo a Supabase Storage
+        if (requestError) {
+            console.error('Edge Function: Error fetching request number:', requestError);
+            // Continuar con un nombre de archivo genérico si falla la búsqueda
+        }
+
+        const requestNumber = requestData?.request_number || requestId.substring(0, 8);
+        
+        // 3. Generar el nuevo nombre de archivo
+        const originalExtension = file.name.split('.').pop() || 'pdf';
+        const baseFileName = `${requestNumber}-${fileType.charAt(0).toUpperCase() + fileType.slice(1)}-${Date.now()}`;
+        const fileName = `${sanitizeFilename(baseFileName)}.${originalExtension}`;
+        
+        // Organizar por user_id/request_id/file_name
+        filePath = `${user.id}/${requestId}/${fileName}`; 
+
+        // 4. Subir el archivo a Supabase Storage
         const { error: uploadError } = await supabaseAdmin.storage
             .from('LabFlow') // Usar el nombre del bucket 'LabFlow'
             .upload(filePath, file, {
