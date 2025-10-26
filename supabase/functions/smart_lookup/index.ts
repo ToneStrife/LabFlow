@@ -1,5 +1,5 @@
 // deno-lint-ignore-file no-explicit-any
-// Supabase Edge Function: smart_lookup con Gemini 2.5 Flash
+// Supabase Edge Function: smart_lookup con Gemini 2.5 Flash + DDG HTML + preparse
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import * as cheerio from "https://esm.sh/cheerio@1.0.0-rc.12";
@@ -10,26 +10,38 @@ const supabase = createClient(
 );
 
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY")!;
-const GEMINI_MODEL = "gemini-2.5-flash"; // ✅ modelo actualizado
+const GEMINI_MODEL = "gemini-2.5-flash";
 
-type Candidate = { url: string; title?: string; metaDesc?: string; specs?: any; body?: string };
+type Candidate = {
+  url: string;
+  title?: string;
+  metaDesc?: string;
+  specs?: Record<string,string>;
+  body?: string;
+  skus?: string[];
+  prices?: string[];
+  sizes?: string[];
+};
 
-function providerUrls(catalog: string) {
-  const c = encodeURIComponent(catalog);
-  return [
-    `https://www.sigmaaldrich.com/ES/en/search/${c}?focus=products`,
-    `https://www.thermofisher.com/search/results?query=${c}`,
-    `https://es.vwr.com/store/search?searchBy=PartNumber&searchTerm=${c}`,
-    `https://www.abcam.com/search?Keywords=${c}`,
-    `https://www.biolegend.com/en-us/search-results?keywords=${c}`,
-    `https://www.qiagen.com/es/search?q=${c}`,
-    `https://www.jacksonimmuno.com/search?keywords=${c}`
-  ];
+const VENDOR_DOMAINS = [
+  "sigmaaldrich.com","milliporesigma.com","merckmillipore.com",
+  "thermofisher.com","fishersci.com","fishersci.es",
+  "vwr.com","es.vwr.com","avantorsciences.com",
+  "abcam.com","biolegend.com","qiagen.com","jacksonimmuno.com"
+];
+
+function normCat(s: string) {
+  return (s || "").toUpperCase().replace(/[\s\-_\.]/g, "");
 }
 
 async function fetchHtml(u: string): Promise<string | null> {
   try {
-    const r = await fetch(u, { headers: { "User-Agent": "Mozilla/5.0" } });
+    const r = await fetch(u, {
+      headers: {
+        "User-Agent": "Mozilla/5.0",
+        "Accept-Language": "es-ES,es;q=0.9,en;q=0.8"
+      }
+    });
     if (!r.ok) return null;
     return await r.text();
   } catch {
@@ -37,11 +49,56 @@ async function fetchHtml(u: string): Promise<string | null> {
   }
 }
 
-function extractText(html: string) {
+/** 1) Buscar en DDG HTML enlaces reales de proveedores */
+async function ddgLinks(brandQ: string, catalogQ: string, limit = 6): Promise<string[]> {
+  const qNorm = `${brandQ} ${catalogQ}`.trim();
+  const siteFilter = VENDOR_DOMAINS.map(d => `site:${d}`).join(" OR ");
+  const url = `https://duckduckgo.com/html/?q=${encodeURIComponent(`"${qNorm}" ${siteFilter}`)}`;
+
+  const html = await fetchHtml(url);
+  if (!html) return [];
+  const $ = cheerio.load(html);
+  const links: string[] = [];
+  $(".result__a").each((_, a) => {
+    const href = $(a).attr("href");
+    if (!href) return;
+    try {
+      const u = new URL(href);
+      if (VENDOR_DOMAINS.some(d => u.hostname.includes(d))) {
+        links.push(href);
+      }
+    } catch {/* ignore */}
+  });
+
+  // Si salen pocos, añade búsqueda solo por catálogo
+  if (links.length < 3) {
+    const url2 = `https://duckduckgo.com/html/?q=${encodeURIComponent(`"${catalogQ}" ${siteFilter}`)}`;
+    const html2 = await fetchHtml(url2);
+    if (html2) {
+      const $2 = cheerio.load(html2);
+      $2(".result__a").each((_, a) => {
+        const href = $2(a).attr("href");
+        if (!href) return;
+        try {
+          const u = new URL(href);
+          if (VENDOR_DOMAINS.some(d => u.hostname.includes(d))) {
+            links.push(href);
+          }
+        } catch {}
+      });
+    }
+  }
+  // dedupe y corta
+  return Array.from(new Set(links)).slice(0, limit);
+}
+
+/** 2) Extraer texto + señales (SKU, precio, tamaños) */
+function extractFromHtml(html: string): Omit<Candidate,"url"> {
   const $ = cheerio.load(html);
   const title = ($("meta[property='og:title']").attr("content") || $("title").text() || "").trim();
   const metaDesc = ($("meta[name='description']").attr("content") || "").trim();
-  const specs: Record<string, string> = {};
+
+  const specs: Record<string,string> = {};
   $("table, dl").each((_, el) => {
     const t = cheerio.load($(el).html() || "");
     t("tr").each((__, tr) => {
@@ -58,127 +115,95 @@ function extractText(html: string) {
       if (k && v) specs[k] = v;
     });
   });
-  const body = $("body").text().replace(/\s+/g, " ").slice(0, 6000);
-  return { title, metaDesc, specs, body };
+
+  const bodyText = $("body").text().replace(/\s+/g, " ");
+  // Regex útiles: SKUs, precios, tamaños
+  const skus = Array.from(bodyText.matchAll(/\b([A-Z0-9]{3,}[-\._]?[A-Z0-9]{2,})\b/g)).slice(0,30).map(m=>m[1]);
+  const prices = Array.from(bodyText.matchAll(/([€$]\s?\d{1,4}(?:[.,]\d{2})?)/g)).slice(0,30).map(m=>m[1]);
+  const sizes  = Array.from(bodyText.matchAll(/\b(\d+(?:[.,]\d+)?\s?(?:µl|ul|ml|l|mg|g|kg|pack|pcs|units|vial(?:es)?))\b/ig)).slice(0,30).map(m=>m[1]);
+
+  const body = bodyText.slice(0, 8000);
+  return { title, metaDesc, specs, body, skus, prices, sizes };
 }
 
-function normCat(s: string) {
-  return (s || "").toUpperCase().replace(/[\s\-_\.]/g, "");
-}
-
+/** 3) Gemini con prompt robusto y ejemplo */
 async function geminiExtract(brandQ: string, catalogQ: string, candidates: Candidate[]) {
-  const prompt = `
-Eres un extractor de fichas de producto de laboratorio.
-Tu objetivo es encontrar la información más precisa para el producto con el número de catálogo "${catalogQ}" (normalizado: "${normCat(catalogQ)}") y la marca "${brandQ}".
+  const catNorm = normCat(catalogQ);
 
-**Instrucciones Clave:**
-1.  **Prioriza la fuente oficial:** Siempre intenta encontrar la página del producto en el sitio web oficial del fabricante.
-2.  **Sé preciso:** Extrae los datos exactamente como aparecen. No inventes información.
-3.  **Formato JSON estricto:** Tu respuesta DEBE ser únicamente un objeto JSON válido con el siguiente esquema. No incluyas texto antes o después del JSON.
-
-**Esquema JSON Requerido:**
+  const system = `
+Eres un extractor de fichas de producto de laboratorio para autocompletar formularios.
+Solo respondes JSON válido con las claves:
 {
-  "marca": "string | null",
-  "numero_catalogo": "string | null",
-  "nombre_producto": "string | null",
-  "formato": "string | null",
-  "precio_unitario": "number | null",
-  "enlace_producto": "string | null",
-  "notas": "string | null",
-  "confidence_score": "number (0.0 a 1.0)"
+  "marca": string|null,
+  "numero_catalogo": string|null,
+  "nombre_producto": string|null,
+  "formato": string|null,
+  "precio_unitario": number|null,
+  "enlace_producto": string|null,
+  "notas": string|null,
+  "confidence_score": number (0.0 a 1.0) // Incluido para validación
 }
-
-**Definición de Campos:**
-- \`marca\`: La marca del producto.
-- \`numero_catalogo\`: El número de catálogo exacto.
-- \`nombre_producto\`: El nombre completo y oficial del producto.
-- \`formato\`: El formato o tamaño del empaque (ej: "500 mL", "100 µl", "25 reactions").
-- \`precio_unitario\`: El precio de lista. Solo el número, sin símbolos. Si encuentras un rango, usa el promedio.
-- \`enlace_producto\`: El enlace directo a la página del producto.
-- \`notas\`: Un resumen breve de notas técnicas o una descripción del producto.
-- \`confidence_score\`: Tu nivel de confianza (de 0.0 a 1.0) de que la información encontrada es correcta y pertenece al producto exacto solicitado. 1.0 es certeza absoluta.
-
-**Si no encuentras el producto o no estás seguro, devuelve un JSON con todos los campos en \`null\` y un \`confidence_score\` bajo (ej: 0.1).**
+Reglas:
+- El "numero_catalogo" DEVUELTO DEBE CONTENER "${catNorm}" (ignora alternativas que no lo contengan).
+- Prioriza candidatos cuyo dominio sea del fabricante o distribuidor y cuyo título/specs contengan el catálogo.
+- Extrae "formato" a partir de tamaños/packaging si es inequívoco (ej. "1 mg", "500 µl", "200 pack").
+- "precio_unitario": si ves un precio claro (símbolo y número), devuelve solo el número con punto decimal (ej. 120.50); si hay varios, el más cercano al SKU.
+- Si falta información, usa null. Nunca inventes.
+- Establece "confidence_score" en 0.9 o más si el SKU coincide y se encuentra el nombre del producto.
+Ejemplo de salida:
+{"marca":"Invitrogen","numero_catalogo":"18265017","nombre_producto":"E. coli DH5α Competent Cells","formato":"20×50 µl","precio_unitario":120.5,"enlace_producto":"https://...","notas":null, "confidence_score": 0.95}
 `;
 
   const user = `
-marca buscada: "${brandQ}"
-numero_catalogo buscado: "${catalogQ}" (normalizado: "${normCat(catalogQ)}")
+Consulta:
+- Marca buscada: "${brandQ}"
+- Nº catálogo buscado: "${catalogQ}" (normalizado: "${catNorm}")
 
-Datos HTML resumidos de los candidatos encontrados:
-${candidates.map((c, i) => `
---- Candidato ${i + 1} (URL: ${c.url}) ---
-Título: ${c.title || 'N/A'}
-Meta Descripción: ${c.metaDesc || 'N/A'}
-Especificaciones: ${JSON.stringify(c.specs) || 'N/A'}
-Cuerpo del texto (fragmento): ${c.body ? c.body.slice(0, 1000) + (c.body.length > 1000 ? '...' : '') : 'N/A'}
-`).join('\n')}
+Candidatos (titulo/meta/specs/cuerpo + señales regex):
+${JSON.stringify(candidates).slice(0, 16000)}
 `;
 
-  console.log('Edge Function: Sending to Gemini - Prompt:', prompt);
-  console.log('Edge Function: Sending to Gemini - User Content:', user);
-
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
-
   const body = {
-    contents: [{ role: "user", parts: [{ text: prompt + "\n" + user }] }],
+    contents: [{ role: "user", parts: [{ text: system + "\n" + user }] }],
     generationConfig: { temperature: 0, responseMimeType: "application/json" }
   };
-
   const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   if (!r.ok) throw new Error(`Gemini HTTP ${r.status}`);
   const data = await r.json();
-  console.log('Edge Function: Raw Gemini API response:', JSON.stringify(data));
   const txt = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
   try { return JSON.parse(txt); } catch { return {}; }
 }
 
 Deno.serve(async (req) => {
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  };
+
   if (req.method === 'OPTIONS') {
-    return new Response(null, {
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      },
-    });
+    return new Response(null, { headers: corsHeaders });
   }
 
-  if (req.method !== "POST") return new Response("Use POST", { status: 405 });
+  if (req.method !== "POST") return new Response("Use POST", { status: 405, headers: corsHeaders });
   
-  console.log('Edge Function: smart_lookup received request.');
   const { brand, catalog } = await req.json();
   const brandQ = (brand || "").trim();
   const catalogQ = (catalog || "").trim();
-  console.log(`Edge Function: Searching for Brand: "${brandQ}", Catalog: "${catalogQ}"`);
+  if (!catalogQ) return new Response(JSON.stringify({ error: "Catalog number is required." }), { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } });
 
-  if (!catalogQ) {
-    console.error('Edge Function: Catalog number is required.');
-    return new Response(JSON.stringify({ error: "Catalog number is required." }), { status: 400, headers: { "Content-Type": "application/json", 'Access-Control-Allow-Origin': '*' } });
-  }
-
-  // 0️⃣ cache
+  // 0) cache
   const cached = await supabase.from("items_cache")
     .select("result_json").eq("brand_q", brandQ).eq("catalog_q", catalogQ)
     .order("created_at", { ascending: false }).limit(1).maybeSingle();
   if (cached.data?.result_json) {
-    console.log('Edge Function: Cache hit!');
-    return new Response(JSON.stringify(cached.data.result_json), { headers: { "Content-Type": "application/json", 'Access-Control-Allow-Origin': '*' } });
+    return new Response(JSON.stringify(cached.data.result_json), { headers: { "Content-Type": "application/json", ...corsHeaders } });
   }
-  console.log('Edge Function: Cache miss. Checking master data.');
 
-  // 1️⃣ histórico
-  let master = null;
-  try {
-    const { data } = await supabase.rpc("smart_master_lookup", { brand_q: brandQ, catalog_q: catalogQ });
-    master = data;
-  } catch (e) {
-    console.error("Edge Function: Error calling smart_master_lookup RPC:", e);
-    // master remains null
-  }
-  
+  // 1) histórico
+  const { data: master } = await supabase.rpc("smart_master_lookup", { brand_q: brandQ, catalog_q: catalogQ }).catch(() => ({ data: null }));
   if (master && master.match && master.match.score >= 0.8) {
-    console.log('Edge Function: Master data hit with score:', master.match.score);
     const m = master.record;
     const result = {
       marca: m.brand ?? null,
@@ -192,46 +217,71 @@ Deno.serve(async (req) => {
       confidence_score: 1.0 // Master data is highly confident
     };
     await supabase.from("items_cache").insert({ brand_q: brandQ, catalog_q: catalogQ, result_json: result, source: "master" });
-    return new Response(JSON.stringify(result), { headers: { "Content-Type": "application/json", 'Access-Control-Allow-Origin': '*' } });
+    return new Response(JSON.stringify(result), { headers: { "Content-Type": "application/json", ...corsHeaders } });
   }
-  console.log('Edge Function: No strong master data hit. Proceeding to scraping.');
 
-  // 2️⃣ scraping proveedores
-  const urls = providerUrls(catalogQ);
+  // 2) búsqueda DDG + scrape de páginas reales
+  const links = await ddgLinks(brandQ, catalogQ, 8);
   const candidates: Candidate[] = [];
-  for (const u of urls) {
+  for (const u of links) {
     const html = await fetchHtml(u);
     if (!html) continue;
-    const { title, metaDesc, specs, body } = extractText(html);
-    candidates.push({ url: u, title, metaDesc, specs, body });
-  }
-  console.log(`Edge Function: Found ${candidates.length} candidates from scraping.`);
-
-  // 3️⃣ Gemini 2.5 Flash
-  let llmJson: any = {};
-  try {
-    llmJson = await geminiExtract(brandQ, catalogQ, candidates);
-    console.log('Edge Function: Gemini extracted JSON:', JSON.stringify(llmJson));
-  } catch (e) {
-    console.error('Edge Function: Error during Gemini extraction:', e);
-    // llmJson remains {}
+    const base = extractFromHtml(html);
+    candidates.push({ url: u, ...base });
   }
 
-  // 4️⃣ cache + respuesta
-  // Check if Gemini returned meaningful data and a sufficient confidence score
-  const confidence = llmJson.confidence_score || 0;
-  if (!llmJson || !llmJson.nombre_producto || confidence < 0.5) { // Require product name AND sufficient confidence
-    console.warn(`Edge Function: Gemini did not return a reliable product name (Confidence: ${confidence}). Returning error.`);
-    await supabase.from("items_cache").insert({ brand_q: brandQ, catalog_q: catalogQ, result_json: llmJson, source: "web_failed" }); // Cache failure
-    return new Response(JSON.stringify({ error: `AI could not find reliable product details (Confidence: ${confidence.toFixed(1)}). Please verify inputs or enter details manually.` }), {
-      status: 404, // Not Found
-      headers: { "Content-Type": "application/json", 'Access-Control-Allow-Origin': '*' }
+  // si seguimos sin señal, último recurso: páginas de búsqueda de proveedores
+  if (candidates.length === 0) {
+    const fallbacks = [
+      `https://www.sigmaaldrich.com/ES/en/search/${encodeURIComponent(catalogQ)}?focus=products`,
+      `https://www.thermofisher.com/search/results?query=${encodeURIComponent(catalogQ)}`
+    ];
+    for (const u of fallbacks) {
+      const html = await fetchHtml(u);
+      if (!html) continue;
+      const base = extractFromHtml(html);
+      candidates.push({ url: u, ...base });
+    }
+  }
+
+  // 3) Gemini
+  const llmJson = await geminiExtract(brandQ, catalogQ, candidates);
+
+  // 4) valida que el numero_catalogo contenga el catálogo normalizado
+  const ok =
+    typeof llmJson?.numero_catalogo === "string" &&
+    normCat(llmJson.numero_catalogo).includes(normCat(catalogQ));
+
+  let finalJson;
+  if (ok) {
+    finalJson = {
+      ...llmJson,
+      _source: candidates.length ? "web" : "empty",
+      // Si el LLM devolvió un score, úsalo. Si no, usa 0.9 ya que pasó la validación de SKU.
+      confidence_score: llmJson.confidence_score || 0.9 
+    };
+  } else {
+    finalJson = {
+      marca: null, numero_catalogo: null, nombre_producto: null,
+      formato: null, precio_unitario: null, enlace_producto: null,
+      notas: "No se pudo confirmar el SKU solicitado con las fuentes públicas.",
+      _source: candidates.length ? "web_failed" : "empty",
+      confidence_score: 0.1
+    };
+  }
+
+  await supabase.from("items_cache").insert({
+    brand_q: brandQ, catalog_q: catalogQ,
+    result_json: finalJson, source: finalJson._source
+  });
+
+  // Si el resultado no es OK, devolvemos 404 para que el cliente lo maneje como un error de búsqueda.
+  if (!ok) {
+    return new Response(JSON.stringify({ error: finalJson.notas }), {
+      status: 404,
+      headers: { "Content-Type": "application/json", ...corsHeaders }
     });
   }
 
-  // Add source and confidence to the result before caching and returning
-  const resultWithSource = { ...llmJson, _source: "web" };
-  await supabase.from("items_cache").insert({ brand_q: brandQ, catalog_q: catalogQ, result_json: resultWithSource, source: "web" });
-  console.log('Edge Function: Successfully processed with Gemini and cached. Returning result.');
-  return new Response(JSON.stringify(resultWithSource), { headers: { "Content-Type": "application/json", 'Access-Control-Allow-Origin': '*' } });
+  return new Response(JSON.stringify(finalJson), { headers: { "Content-Type": "application/json", ...corsHeaders } });
 });

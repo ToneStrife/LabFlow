@@ -221,12 +221,13 @@ export const apiSearchExternalProduct = async (catalogNumber: string, brand?: st
     precio_unitario: number | null;
     enlace_producto: string | null;
     notas: string | null;
+    confidence_score: number | null; // Incluido el score de confianza
     _source?: string;
   };
 
   if (!aiResponse || !aiResponse.nombre_producto) {
     console.error("API: AI did not return valid product details (nombre_producto is null or missing). Raw AI response:", aiResponse); // <-- ADDED LOG
-    throw new Error("AI did not return valid product details.");
+    throw new Error(aiResponse.notas || "AI did not return valid product details.");
   }
   
   const productDetails: ProductDetails = { // Explicitly type here
