@@ -16,14 +16,31 @@ interface RequestFilesCardProps {
 const getFileNameFromPath = (filePath: string): string => {
   if (!filePath) return "File";
   try {
-    // La ruta del archivo es la última parte después del request_id
+    // 1. Obtener el nombre de archivo codificado (última parte de la ruta)
     const pathParts = filePath.split('/');
     const encodedFileName = pathParts[pathParts.length - 1];
     const decodedFileName = decodeURIComponent(encodedFileName);
     
-    // Eliminar el prefijo de timestamp (ej. "1678886400000_")
-    const nameWithoutPrefix = decodedFileName.substring(decodedFileName.indexOf('_') + 1);
-    return nameWithoutPrefix || decodedFileName || "File"; // Fallback si algo sale mal
+    // 2. Intentar eliminar el prefijo de timestamp (ej. 2024-001-Quote-1721937600000.pdf)
+    // El formato es: [RequestNumber]-[FileType]-[Timestamp].[ext]
+    // Buscamos el último guion (-) que precede a un número largo (timestamp)
+    
+    const parts = decodedFileName.split('-');
+    if (parts.length >= 3) {
+      const timestampPart = parts[parts.length - 1];
+      // Si la última parte contiene un punto (extensión) y la penúltima es un número largo (timestamp)
+      if (timestampPart.includes('.') && !isNaN(Number(parts[parts.length - 2]))) {
+        // Reconstruir el nombre sin el timestamp y la extensión
+        const extension = timestampPart.split('.').pop();
+        const nameWithoutTimestamp = parts.slice(0, parts.length - 2).join('-');
+        
+        // El nombre legible es [RequestNumber]-[FileType].[ext]
+        return `${nameWithoutTimestamp}.${extension}`;
+      }
+    }
+    
+    // Fallback si el formato no coincide o si es el formato antiguo
+    return decodedFileName.substring(decodedFileName.indexOf('_') + 1) || decodedFileName || "File";
   } catch (e) {
     console.error("Could not parse filename from path", e);
     return "File";

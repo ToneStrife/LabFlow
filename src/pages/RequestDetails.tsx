@@ -38,6 +38,24 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAggregatedReceivedItems } from "@/hooks/use-packing-slips"; // Importar hook de recepción
 import { generateSignedUrl } from "@/utils/supabase-storage"; // Importar utilidad de URL firmada
 
+// Función auxiliar para obtener el nombre de archivo legible (copiada de RequestFilesCard.tsx)
+const getFileNameFromPath = (filePath: string): string => {
+  if (!filePath) return "File";
+  try {
+    const pathParts = filePath.split('/');
+    const encodedFileName = pathParts[pathParts.length - 1];
+    const decodedFileName = decodeURIComponent(encodedFileName);
+    
+    // Eliminar el prefijo de timestamp (ej. "1678886400000_")
+    const nameWithoutPrefix = decodedFileName.substring(decodedFileName.indexOf('_') + 1);
+    return nameWithoutPrefix || decodedFileName || "File"; // Fallback si algo sale mal
+  } catch (e) {
+    console.error("Could not parse filename from path", e);
+    return "File";
+  }
+};
+
+
 const RequestDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -120,16 +138,18 @@ const RequestDetails: React.FC = () => {
     let attachmentsForSend = [];
     
     if (request.quote_url) {
+      const fileName = getFileNameFromPath(request.quote_url); // Usar el nombre de archivo real
+      
       // 1. Generar URL firmada para el diálogo (visualización)
       const signedUrl = await generateSignedUrl(request.quote_url);
       if (signedUrl) {
-        attachmentsForDialog.push({ name: `Quote_Request_${request.id}.pdf`, url: signedUrl });
+        attachmentsForDialog.push({ name: fileName, url: signedUrl });
       } else {
         toast.warning("Could not generate signed URL for quote file. Attachment link in dialog may be broken.");
       }
       
       // 2. Usar la ruta de almacenamiento original para el envío (Edge Function)
-      attachmentsForSend.push({ name: `Quote_Request_${request.id}.pdf`, url: request.quote_url });
+      attachmentsForSend.push({ name: fileName, url: request.quote_url });
     }
 
     setEmailInitialData({
@@ -273,16 +293,18 @@ const RequestDetails: React.FC = () => {
     
     // Generar URL firmada para Quote (para el diálogo)
     if (request.quote_url) {
+      const fileName = getFileNameFromPath(request.quote_url);
       const signedUrl = await generateSignedUrl(request.quote_url);
-      if (signedUrl) attachmentsForDialog.push({ name: `Quote_Request_${request.id}.pdf`, url: signedUrl });
-      attachmentsForSend.push({ name: `Quote_Request_${request.id}.pdf`, url: request.quote_url });
+      if (signedUrl) attachmentsForDialog.push({ name: fileName, url: signedUrl });
+      attachmentsForSend.push({ name: fileName, url: request.quote_url });
     }
     
     // Generar URL firmada para PO (para el diálogo)
     if (request.po_url) {
+      const fileName = getFileNameFromPath(request.po_url);
       const signedUrl = await generateSignedUrl(request.po_url);
-      if (signedUrl) attachmentsForDialog.push({ name: `PO_${request.po_number || request.id}.pdf`, url: signedUrl });
-      attachmentsForSend.push({ name: `PO_${request.po_number || request.id}.pdf`, url: request.po_url });
+      if (signedUrl) attachmentsForDialog.push({ name: fileName, url: signedUrl });
+      attachmentsForSend.push({ name: fileName, url: request.po_url });
     }
 
     setEmailInitialData({
