@@ -49,8 +49,8 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
         </Button>
       )}
 
-      {/* Quote Requested: Redirect to details to upload file */}
-      {request.status === "Quote Requested" && (
+      {/* Quote Requested: Redirect to details to upload file, ONLY if quote is missing */}
+      {request.status === "Quote Requested" && !request.quote_url && (
         <Button
           variant="ghost"
           size="icon"
@@ -61,11 +61,24 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
           <FileText className="h-4 w-4 text-blue-600" />
         </Button>
       )}
+      
+      {/* Quote Requested: If quote is present, show action to send PO Request (if manager is assigned) */}
+      {request.status === "Quote Requested" && request.quote_url && request.account_manager_id && (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => onSendPORequest(request)}
+          title="Send PO Request to Account Manager"
+          disabled={isUpdatingStatus}
+        >
+          <Mail className="h-4 w-4 text-orange-600" />
+        </Button>
+      )}
 
       {request.status === "PO Requested" && (
         <>
-          {/* Send PO Request Email (Orange envelope) */}
-          <Button
+          {/* Send PO Request Email (Orange envelope) - This is usually done automatically after quote upload, but kept as manual option */}
+          {/* <Button
             variant="ghost"
             size="icon"
             onClick={() => onSendPORequest(request)}
@@ -73,7 +86,7 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
             disabled={isUpdatingStatus}
           >
             <Mail className="h-4 w-4 text-orange-600" />
-          </Button>
+          </Button> */}
           {/* Mark as Ordered: Redirect to details to upload PO file */}
           <Button
             variant="ghost"
