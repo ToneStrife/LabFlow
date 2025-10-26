@@ -387,7 +387,7 @@ export const apiUpdateRequestFile = async (
   fileType: "quote" | "po" | "slip",
   file: File | null, // Aceptar File | null
   poNumber: string | null = null
-): Promise<{ fileUrl: string | null; poNumber: string | null }> => {
+): Promise<{ filePath: string | null; poNumber: string | null }> => { // Cambiado de fileUrl a filePath
   // Asegurarse de que la sesión esté fresca antes de invocar la función Edge
   const { data: { session }, error: refreshError } = await supabase.auth.refreshSession();
   if (refreshError || !session) {
@@ -430,30 +430,34 @@ export const apiUpdateRequestFile = async (
   }
   
   // La función Edge devuelve { fileUrl: string | null, poNumber: string | null }
+  // Pero la función Edge ha sido modificada para devolver filePath en lugar de fileUrl
   const { fileUrl, poNumber: returnedPoNumber } = edgeFunctionData as { fileUrl: string | null; poNumber: string | null };
 
   // Paso adicional: Actualizar la URL del archivo y el PO Number en la tabla 'requests'
   const updateData: Partial<SupabaseRequest> = {};
   
+  // Almacenamos la ruta del archivo (filePath) en lugar de la URL pública (fileUrl)
+  const filePath = fileUrl; // La función Edge devuelve la ruta del archivo en el campo 'fileUrl' si el bucket no es público.
+
   if (fileType === 'quote') {
-    updateData.quote_url = fileUrl;
+    updateData.quote_url = filePath;
   } else if (fileType === 'po') {
-    updateData.po_url = fileUrl;
+    updateData.po_url = filePath;
     if (returnedPoNumber) {
       updateData.po_number = returnedPoNumber;
     }
   } else if (fileType === 'slip') {
-    updateData.slip_url = fileUrl;
+    updateData.slip_url = filePath;
   }
 
   // Si no hay URL de archivo, pero hay un número de PO, solo actualizamos el número de PO.
-  if (fileType === 'po' && !fileUrl && returnedPoNumber) {
+  if (fileType === 'po' && !filePath && returnedPoNumber) {
     updateData.po_number = returnedPoNumber;
   }
   
   // Si no hay datos para actualizar, salimos.
   if (Object.keys(updateData).length === 0) {
-      return { fileUrl, poNumber: returnedPoNumber };
+      return { filePath: filePath, poNumber: returnedPoNumber };
   }
 
   const { error: dbUpdateError } = await supabase
@@ -466,7 +470,7 @@ export const apiUpdateRequestFile = async (
     throw new Error(`File uploaded/PO Number saved, but failed to update database record: ${dbUpdateError.message}`);
   }
 
-  return { fileUrl, poNumber: returnedPoNumber };
+  return { filePath: filePath, poNumber: returnedPoNumber };
 };
 
 export const apiDeleteRequest = async (id: string): Promise<void> => {

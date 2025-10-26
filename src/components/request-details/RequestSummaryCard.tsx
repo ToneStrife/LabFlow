@@ -14,7 +14,8 @@ import { useProjects } from "@/hooks/use-projects"; // Usar el nuevo hook
 import { useShippingAddresses, useBillingAddresses } from "@/hooks/use-addresses"; // Importar hooks de direcciones
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
-import { Edit } from "lucide-react";
+import { Edit, Loader2 } from "lucide-react";
+import { generateSignedUrl } from "@/utils/supabase-storage"; // Importar utilidad
 
 interface RequestSummaryCardProps {
   request: SupabaseRequest;
@@ -59,6 +60,7 @@ const RequestSummaryCard: React.FC<RequestSummaryCardProps> = ({ request, vendor
   const { data: projects } = useProjects(); // Usar el nuevo hook
   const { data: shippingAddresses } = useShippingAddresses();
   const { data: billingAddresses } = useBillingAddresses();
+  const [isGeneratingQuoteUrl, setIsGeneratingQuoteUrl] = React.useState(false);
 
   const getRequesterName = (requesterId: string) => {
     const profile = profiles?.find(p => p.id === requesterId);
@@ -69,6 +71,17 @@ const RequestSummaryCard: React.FC<RequestSummaryCardProps> = ({ request, vendor
     if (!managerId) return "N/A";
     const manager = accountManagers?.find(am => am.id === managerId); // Buscar en la nueva lista de Account Managers
     return manager ? `${manager.first_name} ${manager.last_name}` : "N/A";
+  };
+
+  const handleViewQuote = async () => {
+    if (!request.quote_url) return;
+    setIsGeneratingQuoteUrl(true);
+    const signedUrl = await generateSignedUrl(request.quote_url);
+    setIsGeneratingQuoteUrl(false);
+
+    if (signedUrl) {
+      window.open(signedUrl, '_blank');
+    }
   };
 
   const requesterName = getRequesterName(request.requester_id);
@@ -139,9 +152,19 @@ const RequestSummaryCard: React.FC<RequestSummaryCardProps> = ({ request, vendor
             <p className="text-sm text-muted-foreground">Quote Details</p>
             <p className="font-medium">
               {request.quote_url ? (
-                <a href={request.quote_url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
-                  View Quote
-                </a>
+                <Button 
+                  variant="link" 
+                  size="sm" 
+                  onClick={handleViewQuote} 
+                  disabled={isGeneratingQuoteUrl}
+                  className="p-0 h-auto text-blue-500"
+                >
+                  {isGeneratingQuoteUrl ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                  ) : (
+                    "View Quote"
+                  )}
+                </Button>
               ) : "N/A"}
             </p>
           </div>

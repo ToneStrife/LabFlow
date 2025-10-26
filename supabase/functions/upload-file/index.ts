@@ -62,16 +62,16 @@ serve(async (req) => {
         return new Response(JSON.stringify({ error: 'PO Number is required for PO updates.' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    let fileUrl: string | null = null;
+    let filePath: string | null = null;
 
     if (file && file.size > 0) {
         // Si hay un archivo, proceder con la subida a Storage
         const sanitizedOriginalName = sanitizeFilename(file.name);
         const fileName = `${Date.now()}_${sanitizedOriginalName}`;
-        const filePath = `${user.id}/${requestId}/${fileName}`; // Organizar por user_id/request_id/file_name
+        filePath = `${user.id}/${requestId}/${fileName}`; // Organizar por user_id/request_id/file_name
 
         // Subir el archivo a Supabase Storage
-        const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
+        const { error: uploadError } = await supabaseAdmin.storage
             .from('LabFlow') // Usar el nombre del bucket 'LabFlow'
             .upload(filePath, file, {
                 cacheControl: '3600',
@@ -87,27 +87,14 @@ serve(async (req) => {
             });
         }
 
-        // Obtener la URL pública del archivo
-        const { data: publicUrlData } = supabaseAdmin.storage
-            .from('LabFlow')
-            .getPublicUrl(filePath);
-
-        if (!publicUrlData || !publicUrlData.publicUrl) {
-            console.error('Edge Function: Failed to get public URL for file:', filePath);
-            return new Response(JSON.stringify({ error: 'Failed to get public URL for the uploaded file.' }), {
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-                status: 500,
-            });
-        }
-        fileUrl = publicUrlData.publicUrl;
-        console.log('Edge Function: File uploaded successfully:', fileUrl);
+        console.log('Edge Function: File uploaded successfully. Path:', filePath);
     } else if (fileType !== 'po' && fileType !== 'slip') {
         // Si no hay archivo y no es PO/Slip, es un error (Quote es obligatorio)
         return new Response(JSON.stringify({ error: `${fileType} file is required.` }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
     
-    // Devolver la URL (puede ser null si no se subió archivo) y el número de PO
-    return new Response(JSON.stringify({ fileUrl: fileUrl, poNumber: poNumber }), {
+    // Devolver la RUTA del archivo (filePath) y el número de PO
+    return new Response(JSON.stringify({ filePath: filePath, poNumber: poNumber }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     });

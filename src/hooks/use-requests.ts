@@ -167,10 +167,10 @@ interface UpdateRequestFileData {
   poNumber?: string | null;
 }
 
-// REFACTOR: This mutation now ONLY handles the file upload and returns the URL.
+// REFACTOR: This mutation now ONLY handles the file upload and returns the file path.
 export const useUpdateRequestFile = () => {
   const queryClient = useQueryClient();
-  return useMutation<{ fileUrl: string | null; poNumber: string | null }, Error, UpdateRequestFileData>({
+  return useMutation<{ filePath: string | null; poNumber: string | null }, Error, UpdateRequestFileData>({
     mutationFn: async ({ id, fileType, file, poNumber }) => {
       return apiUpdateRequestFile(id, fileType, file, poNumber);
     },
@@ -178,7 +178,7 @@ export const useUpdateRequestFile = () => {
       queryClient.invalidateQueries({ queryKey: ["requests"] });
       
       let message = `${variables.fileType.toUpperCase()} details saved successfully!`;
-      if (data.fileUrl) {
+      if (data.filePath) {
         message = `${variables.fileType.toUpperCase()} file uploaded successfully!`;
       } else if (variables.fileType === 'po' && data.poNumber) {
         message = `PO Number ${data.poNumber} saved successfully!`;
