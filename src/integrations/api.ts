@@ -186,27 +186,54 @@ export const apiDeleteProject = async (id: string): Promise<void> => {
   if (error) throw error;
 };
 
-// --- API de Búsqueda Externa de Productos (Ahora usa la función Edge 'search-product') ---
+// --- API de Búsqueda de Productos (Lógica Híbrida) ---
 export const apiSearchExternalProduct = async (catalogNumber: string, brand?: string): Promise<ProductDetails> => {
-  console.log(`API: Invoking 'search-product' edge function for catalog: ${catalogNumber}, brand: ${brand}`);
+  // Paso 1: Intentar la búsqueda interna primero
+  try {
+    const { data: internalData, error: internalError } = await supabase.rpc('smart_lookup_mock', {
+      brand_q: brand || '',
+      catalog_q: catalogNumber,
+    });
 
+    if (internalError) {
+      console.warn("API: Error en la búsqueda interna (RPC), se procederá a la búsqueda externa.", internalError);
+    } else if (internalData && internalData.record && internalData.match.score > 0.5) {
+      console.log("API: Coincidencia encontrada en el historial interno.", internalData);
+      const record = internalData.record;
+      return {
+        id: record.catalog_number || catalogNumber,
+        productName: record.product_name,
+        catalogNumber: record.catalog_number || catalogNumber,
+        unitPrice: record.unit_price,
+        format: record.format,
+        link: record.link,
+        brand: record.brand,
+        notes: record.notes,
+        source: `Historial Interno (Confianza: ${internalData.match.score.toFixed(2)})`,
+      };
+    }
+  } catch (rpcError) {
+    console.warn("API: Excepción en la búsqueda interna (RPC), se procederá a la búsqueda externa.", rpcError);
+  }
+
+  // Paso 2: Si la búsqueda interna falla o no es concluyente, recurrir a la búsqueda externa con IA
+  console.log(`API: No se encontró coincidencia interna. Invocando 'search-product' para catalog: ${catalogNumber}, brand: ${brand}`);
   const { data, error } = await supabase.functions.invoke('search-product', {
     body: JSON.stringify({ catalogNumber, brand: brand || '' }),
     method: 'POST',
   });
 
   if (error) {
-    console.error("API: Error invoking 'search-product' edge function:", error);
-    const errorMessage = data?.error || error.message || "Failed to search for product.";
+    console.error("API: Error al invocar la función 'search-product':", error);
+    const errorMessage = data?.error || error.message || "Fallo al buscar el producto.";
     throw new Error(errorMessage);
   }
 
   if (!data || !data.products) {
-    throw new Error("No reliable product information found online.");
+    throw new Error("No se encontró información fiable del producto online.");
   }
 
   const result = data.products;
-
   const productDetails: ProductDetails = {
     id: result.catalogNumber || catalogNumber,
     productName: result.productName,
@@ -219,7 +246,7 @@ export const apiSearchExternalProduct = async (catalogNumber: string, brand?: st
     source: result.source,
   };
 
-  console.log("API: Mapped ProductDetails from 'search-product' edge function:", productDetails);
+  console.log("API: Detalles del producto mapeados desde la función 'search-product':", productDetails);
   return productDetails;
 };
 
