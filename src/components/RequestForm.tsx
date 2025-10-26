@@ -30,7 +30,8 @@ import { useAddRequest } from "@/hooks/use-requests";
 import { useAccountManagers } from "@/hooks/use-account-managers";
 import { useProjects } from "@/hooks/use-projects";
 import { getFullName } from "@/hooks/use-profiles";
-import { apiSearchExternalProduct } from "@/integrations/api"; // Importar la API de búsqueda externa (ahora simula la IA)
+import { apiSearchExternalProduct } from "@/integrations/api";
+import { debounce } from "lodash-es"; // Importar debounce
 
 const itemSchema = z.object({
   productName: z.string().min(1, { message: "El nombre del producto es obligatorio." }),
@@ -48,7 +49,6 @@ const itemSchema = z.object({
   notes: z.string().optional(),
   brand: z.string().optional(),
   // AI-enriched fields (these will now be directly updated into the main fields)
-  // Keeping them as optional for now, but their values will be set by the AI.
   ai_enriched_product_name: z.string().optional(),
   ai_enriched_pack_size: z.string().optional(),
   ai_enriched_estimated_price: z.number().optional(),
@@ -112,54 +112,69 @@ const RequestForm: React.FC = () => {
     name: "items",
   });
 
-  const handleEnrichWithAI = async (index: number) => {
+  const handleAutofill = async (index: number, catalogNumber: string, brand: string) => {
+    if (!catalogNumber) return;
+
     setEnrichingIndex(index);
-    const toastId = showLoading("La IA está buscando detalles del producto...");
+    const toastId = showLoading("Buscando detalles del producto en el historial...");
 
     try {
-      const catalogNumber = form.getValues(`items.${index}.catalogNumber`)?.trim();
-      const brand = form.getValues(`items.${index}.brand`)?.trim();
-
-      if (!catalogNumber) {
-        showError("Por favor, ingresa el 'Número de Catálogo' para enriquecer con IA.");
-        dismissToast(toastId); // Ensure toast is dismissed
-        return;
-      }
-
       console.log(`RequestForm: Calling apiSearchExternalProduct for item ${index} with catalog: ${catalogNumber}, brand: ${brand}`);
-      const aiProductDetails: ProductDetails = await apiSearchExternalProduct(catalogNumber, brand);
-      console.log("RequestForm: Received AI product details:", aiProductDetails);
+      const productDetails: ProductDetails = await apiSearchExternalProduct(catalogNumber, brand);
+      console.log("RequestForm: Received product details:", productDetails);
 
       // Auto-fill main form fields
-      form.setValue(`items.${index}.productName`, aiProductDetails.productName || '');
-      form.setValue(`items.${index}.format`, aiProductDetails.format || '');
-      form.setValue(`items.${index}.unitPrice`, aiProductDetails.unitPrice || undefined);
-      form.setValue(`items.${index}.link`, aiProductDetails.link || '');
-      form.setValue(`items.${index}.brand`, aiProductDetails.brand || '');
+      form.setValue(`items.${index}.productName`, productDetails.productName || '');
+      form.setValue(`items.${index}.format`, productDetails.format || '');
+      form.setValue(`items.${index}.unitPrice`, productDetails.unitPrice || undefined);
+      form.setValue(`items.${index}.link`, productDetails.link || '');
+      form.setValue(`items.${index}.brand`, productDetails.brand || '');
       
-      // Append AI notes to existing notes
+      // Append notes
       const currentNotes = form.getValues(`items.${index}.notes`) || '';
-      const aiNotes = aiProductDetails.notes ? `\n[IA] ${aiProductDetails.notes}` : '';
-      form.setValue(`items.${index}.notes`, currentNotes + aiNotes);
+      const newNotes = productDetails.notes ? `\n[Historial] ${productDetails.notes}` : '';
+      form.setValue(`items.${index}.notes`, currentNotes + newNotes);
 
-      // Store AI-enriched data separately for display as suggestions (if needed, otherwise can remove these fields)
-      form.setValue(`items.${index}.ai_enriched_product_name`, aiProductDetails.productName || undefined);
-      form.setValue(`items.${index}.ai_enriched_pack_size`, aiProductDetails.format || undefined);
-      form.setValue(`items.${index}.ai_enriched_estimated_price`, aiProductDetails.unitPrice || undefined);
-      form.setValue(`items.${index}.ai_enriched_link`, aiProductDetails.link || undefined);
-      form.setValue(`items.${index}.ai_enriched_notes`, aiProductDetails.notes || undefined);
-
-      showSuccess("¡Detalles del producto enriquecidos por IA!");
+      showSuccess("¡Detalles del producto autocompletados desde el historial!");
 
     } catch (error: any) {
-      console.error("RequestForm: Error enriching product details with AI:", error);
-      console.error("RequestForm: Error message from API:", error.message); // Added explicit log for error message
-      showError(error.message || "Fallo al enriquecer los detalles del producto con IA."); // Ensure specific message is used
+      // Solo mostrar error si el usuario no estaba ya escribiendo
+      if (enrichingIndex === index) {
+        showError(error.message || "Fallo al buscar detalles del producto.");
+      }
     } finally {
       dismissToast(toastId);
       setEnrichingIndex(null);
     }
   };
+
+  // Debounced function for automatic search
+  const debouncedAutofill = React.useCallback(
+    debounce((index: number, catalogNumber: string, brand: string) => {
+      if (catalogNumber.length > 3) {
+        handleAutofill(index, catalogNumber, brand);
+      }
+    }, 800),
+    []
+  );
+
+  // Watch fields for automatic search trigger
+  const watchFields = form.watch(fields.map((_, index) => [`items.${index}.catalogNumber`, `items.${index}.brand`]).flat());
+
+  React.useEffect(() => {
+    fields.forEach((field, index) => {
+      const catalogNumber = form.getValues(`items.${index}.catalogNumber`)?.trim() || '';
+      const brand = form.getValues(`items.${index}.brand`)?.trim() || '';
+      
+      // Si ambos campos tienen contenido, disparamos el debounce
+      if (catalogNumber.length > 0 || brand.length > 0) {
+        debouncedAutofill(index, catalogNumber, brand);
+      }
+    });
+    // Cleanup function to cancel any pending debounced calls when the component unmounts or fields change
+    return () => debouncedAutofill.cancel();
+  }, [watchFields, fields, debouncedAutofill, form]);
+
 
   const onSubmit = async (data: RequestFormValues) => {
     if (!session?.user?.id) {
@@ -343,28 +358,12 @@ const RequestForm: React.FC = () => {
                     </FormItem>
                   )}
                 />
-                <div className="md:col-span-2 flex justify-end">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    id="btn_enriquecer"
-                    onClick={() => handleEnrichWithAI(index)}
-                    disabled={
-                      enrichingIndex === index ||
-                      !form.getValues(`items.${index}.catalogNumber`)?.trim()
-                    }
-                  >
-                    {enrichingIndex === index ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Enriqueciendo...
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="mr-2 h-4 w-4 text-purple-600" /> Enriquecer con IA
-                      </>
-                    )}
-                  </Button>
-                </div>
+                {/* Eliminamos el botón de enriquecer ya que ahora es automático */}
+                {enrichingIndex === index && (
+                  <div className="md:col-span-2 flex justify-end">
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" /> Buscando...
+                  </div>
+                )}
                 <FormField
                   control={form.control}
                   name={`items.${index}.productName`}
@@ -374,7 +373,7 @@ const RequestForm: React.FC = () => {
                       <FormControl><Input id="nombre_producto" placeholder="ej. Células Competentes E. coli DH5a" {...itemField} /></FormControl>
                       <FormMessage />
                       {form.watch(`items.${index}.ai_enriched_product_name`) && (
-                        <p className="text-xs text-muted-foreground">Sugerencia IA: {form.watch(`items.${index}.ai_enriched_product_name`)}</p>
+                        <p className="text-xs text-muted-foreground">Sugerencia Historial: {form.watch(`items.${index}.ai_enriched_product_name`)}</p>
                       )}
                     </FormItem>
                   )}
@@ -403,7 +402,7 @@ const RequestForm: React.FC = () => {
                         <FormControl><Input id="precio_unitario" type="number" step="0.01" placeholder="ej. 120.50" {...itemField} /></FormControl>
                         <FormMessage />
                         {hasAiPrice && (
-                          <p className="text-xs text-muted-foreground">Sugerencia IA: ${Number(aiPriceValue).toFixed(2)}</p>
+                          <p className="text-xs text-muted-foreground">Sugerencia Historial: ${Number(aiPriceValue).toFixed(2)}</p>
                         )}
                       </FormItem>
                     );
@@ -418,7 +417,7 @@ const RequestForm: React.FC = () => {
                       <FormControl><Input id="formato" placeholder="ej. 200pack 8cs of 25" {...itemField} /></FormControl>
                       <FormMessage />
                       {form.watch(`items.${index}.ai_enriched_pack_size`) && (
-                        <p className="text-xs text-muted-foreground">Sugerencia IA: {form.watch(`items.${index}.ai_enriched_pack_size`)}</p>
+                        <p className="text-xs text-muted-foreground">Sugerencia Historial: {form.watch(`items.${index}.ai_enriched_pack_size`)}</p>
                       )}
                     </FormItem>
                   )}
@@ -432,7 +431,7 @@ const RequestForm: React.FC = () => {
                       <FormControl><Input id="enlace_producto" type="url" placeholder="ej. https://www.vendor.com/product" {...itemField} /></FormControl>
                       <FormMessage />
                       {form.watch(`items.${index}.ai_enriched_link`) && (
-                        <p className="text-xs text-muted-foreground">Sugerencia IA: <a href={form.watch(`items.${index}.ai_enriched_link`)} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">Ver Enlace</a></p>
+                        <p className="text-xs text-muted-foreground">Sugerencia Historial: <a href={form.watch(`items.${index}.ai_enriched_link`)} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">Ver Enlace</a></p>
                       )}
                     </FormItem>
                   )}
@@ -446,7 +445,7 @@ const RequestForm: React.FC = () => {
                       <FormControl><Textarea id="notas" placeholder="Cualquier requisito o detalle específico..." {...itemField} /></FormControl>
                       <FormMessage />
                       {form.watch(`items.${index}.ai_enriched_notes`) && (
-                        <p className="text-xs text-muted-foreground">Sugerencia IA: {form.watch(`items.${index}.ai_enriched_notes`)}</p>
+                        <p className="text-xs text-muted-foreground">Sugerencia Historial: {form.watch(`items.${index}.ai_enriched_notes`)}</p>
                       )}
                     </FormItem>
                   )}
