@@ -25,14 +25,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Paperclip } from "lucide-react";
 import { Badge } from "@/components/ui/badge"; // Importación añadida
 
+const attachmentSchema = z.object({
+  name: z.string(),
+  url: z.string(), // Esta URL puede ser la ruta de almacenamiento o la URL firmada
+});
+
 const emailFormSchema = z.object({
   to: z.string().email({ message: "Must be a valid email address." }),
   subject: z.string().min(1, { message: "Subject is required." }),
   body: z.string().min(1, { message: "Email body cannot be empty." }),
-  attachments: z.array(z.object({
-    name: z.string(),
-    url: z.string().url(),
-  })).optional(),
+  attachments: z.array(attachmentSchema).optional(), // Adjuntos para mostrar en el diálogo (usando URL firmada)
+  attachmentsForSend: z.array(attachmentSchema).optional(), // Adjuntos para enviar (usando ruta de almacenamiento)
 });
 
 export type EmailFormValues = z.infer<typeof emailFormSchema>;
@@ -59,17 +62,28 @@ const EmailDialog: React.FC<EmailDialogProps> = ({
       subject: initialData.subject || "",
       body: initialData.body || "",
       attachments: initialData.attachments || [],
+      attachmentsForSend: initialData.attachmentsForSend || [],
     },
     values: { // Use values to ensure form updates when initialData changes
       to: initialData.to || "",
       subject: initialData.subject || "",
       body: initialData.body || "",
       attachments: initialData.attachments || [],
+      attachmentsForSend: initialData.attachmentsForSend || [],
     },
   });
 
   const handleSubmit = async (data: EmailFormValues) => {
-    await onSend(data);
+    // Si attachmentsForSend existe, lo usamos para el envío real, ya que contiene las rutas de almacenamiento.
+    // Si no existe, usamos attachments (comportamiento por defecto).
+    const dataToSend = {
+      ...data,
+      attachments: data.attachmentsForSend && data.attachmentsForSend.length > 0 
+        ? data.attachmentsForSend 
+        : data.attachments,
+    };
+    
+    await onSend(dataToSend);
     form.reset(); // Reset form after sending
   };
 
@@ -131,8 +145,9 @@ const EmailDialog: React.FC<EmailDialogProps> = ({
             />
             {form.watch("attachments") && form.watch("attachments")!.length > 0 && (
               <div className="space-y-2">
-                <FormLabel>Attachments</FormLabel>
+                <FormLabel>Attachments (Click to preview)</FormLabel>
                 <div className="flex flex-wrap gap-2">
+                  {/* Usamos 'attachments' aquí porque contiene las URL firmadas para la vista previa */}
                   {form.watch("attachments")!.map((attachment, index) => (
                     <Badge key={index} variant="secondary" className="flex items-center gap-1">
                       <Paperclip className="h-3 w-3" />

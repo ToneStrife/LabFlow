@@ -218,7 +218,8 @@ interface SendEmailData {
   to: string;
   subject: string;
   body: string;
-  attachments?: { name: string; url: string }[];
+  // La URL aquí debe ser la RUTA DE ALMACENAMIENTO (storage path) para que la función Edge pueda descargarla.
+  attachments?: { name: string; url: string }[]; 
 }
 
 export const useSendEmail = () => {

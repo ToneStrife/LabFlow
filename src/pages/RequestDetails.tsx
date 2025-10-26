@@ -115,22 +115,29 @@ const RequestDetails: React.FC = () => {
       billingAddress: billingAddresses?.find(a => a.id === request.billing_address_id),
     };
 
-    // Generar URL firmada para el adjunto
-    let attachments = [];
+    // Generar URL firmada para el adjunto (SOLO para mostrar en el diálogo)
+    let attachmentsForDialog = [];
+    let attachmentsForSend = [];
+    
     if (request.quote_url) {
+      // 1. Generar URL firmada para el diálogo (visualización)
       const signedUrl = await generateSignedUrl(request.quote_url);
       if (signedUrl) {
-        attachments.push({ name: `Quote_Request_${request.id}.pdf`, url: signedUrl });
+        attachmentsForDialog.push({ name: `Quote_Request_${request.id}.pdf`, url: signedUrl });
       } else {
-        toast.warning("Could not generate signed URL for quote file. Sending email without attachment link.");
+        toast.warning("Could not generate signed URL for quote file. Attachment link in dialog may be broken.");
       }
+      
+      // 2. Usar la ruta de almacenamiento original para el envío (Edge Function)
+      attachmentsForSend.push({ name: `Quote_Request_${request.id}.pdf`, url: request.quote_url });
     }
 
     setEmailInitialData({
       to: getAccountManagerEmail(request.account_manager_id),
       subject: processTextTemplate(poRequestTemplate.subject_template, context),
       body: processPlainTextTemplate(poRequestTemplate.body_template, context), // Usar PlainText para el cuerpo editable
-      attachments,
+      attachments: attachmentsForDialog, // Usar URL firmada para el diálogo
+      attachmentsForSend: attachmentsForSend, // Guardar la ruta original para el envío real
     });
     setIsEmailDialogOpen(true);
   };
@@ -168,8 +175,7 @@ const RequestDetails: React.FC = () => {
         billingAddress: billingAddresses?.find(a => a.id === requestToApprove.billing_address_id),
       };
 
-      // No necesitamos generar URL firmada aquí, ya que no hay adjuntos en este estado.
-      // El correo de Quote Request es para el VENDOR, no para el AM.
+      // No hay adjuntos en este correo, solo se envía al vendor.
       
       setEmailInitialData({
         to: getVendorEmail(requestToApprove.vendor_id),
@@ -262,25 +268,29 @@ const RequestDetails: React.FC = () => {
       billingAddress: billingAddresses?.find(a => a.id === request.billing_address_id),
     };
     
-    const attachments = [];
+    let attachmentsForDialog = [];
+    let attachmentsForSend = [];
     
-    // Generar URL firmada para Quote
+    // Generar URL firmada para Quote (para el diálogo)
     if (request.quote_url) {
       const signedUrl = await generateSignedUrl(request.quote_url);
-      if (signedUrl) attachments.push({ name: `Quote_Request_${request.id}.pdf`, url: signedUrl });
+      if (signedUrl) attachmentsForDialog.push({ name: `Quote_Request_${request.id}.pdf`, url: signedUrl });
+      attachmentsForSend.push({ name: `Quote_Request_${request.id}.pdf`, url: request.quote_url });
     }
     
-    // Generar URL firmada para PO
+    // Generar URL firmada para PO (para el diálogo)
     if (request.po_url) {
       const signedUrl = await generateSignedUrl(request.po_url);
-      if (signedUrl) attachments.push({ name: `PO_${request.po_number || request.id}.pdf`, url: signedUrl });
+      if (signedUrl) attachmentsForDialog.push({ name: `PO_${request.po_number || request.id}.pdf`, url: signedUrl });
+      attachmentsForSend.push({ name: `PO_${request.po_number || request.id}.pdf`, url: request.po_url });
     }
 
     setEmailInitialData({
       to: getVendorEmail(request.vendor_id),
       subject: processTextTemplate(orderConfirmationTemplate.subject_template, context),
       body: processPlainTextTemplate(orderConfirmationTemplate.body_template, context), // Usar PlainText para el cuerpo editable
-      attachments,
+      attachments: attachmentsForDialog,
+      attachmentsForSend: attachmentsForSend, // Guardar la ruta original para el envío real
     });
     setIsEmailDialogOpen(true);
   };

@@ -63,7 +63,15 @@ const RequestList: React.FC = () => {
   };
 
   const handleSendEmail = async (emailData: EmailFormValues) => {
-    await sendEmailMutation.mutateAsync(emailData);
+    // Usar los adjuntos de la propiedad 'attachmentsForSend' si existen, si no, usar 'attachments'
+    const attachmentsToSend = (emailData as any).attachmentsForSend || emailData.attachments;
+    
+    await sendEmailMutation.mutateAsync({
+      to: emailData.to,
+      subject: emailData.subject,
+      body: emailData.body,
+      attachments: attachmentsToSend,
+    });
     setIsEmailDialogOpen(false);
   };
 
@@ -93,22 +101,29 @@ const RequestList: React.FC = () => {
       // Nota: Las direcciones de envío/facturación no están disponibles en la lista, pero el templating las manejará como N/A si se usan.
     };
 
-    // Generar URL firmada para el adjunto
-    let attachments = [];
+    // Preparar adjuntos:
+    let attachmentsForDialog = [];
+    let attachmentsForSend = [];
+    
     if (request.quote_url) {
+      // 1. Generar URL firmada para el diálogo (visualización)
       const signedUrl = await generateSignedUrl(request.quote_url);
       if (signedUrl) {
-        attachments.push({ name: `Quote_Request_${request.id}.pdf`, url: signedUrl });
+        attachmentsForDialog.push({ name: `Quote_Request_${request.id}.pdf`, url: signedUrl });
       } else {
-        toast.warning("Could not generate signed URL for quote file. Sending email without attachment link.");
+        toast.warning("Could not generate signed URL for quote file. Attachment link in dialog may be broken.");
       }
+      
+      // 2. Usar la ruta de almacenamiento original para el envío (Edge Function)
+      attachmentsForSend.push({ name: `Quote_Request_${request.id}.pdf`, url: request.quote_url });
     }
 
     setEmailInitialData({
       to: getAccountManagerEmail(request.account_manager_id),
       subject: processTextTemplate(poRequestTemplate.subject_template, context),
       body: processPlainTextTemplate(poRequestTemplate.body_template, context),
-      attachments,
+      attachments: attachmentsForDialog, // Usar URL firmada para el diálogo
+      attachmentsForSend: attachmentsForSend, // Usar ruta original para el envío
     });
     setIsEmailDialogOpen(true);
   };
