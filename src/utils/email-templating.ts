@@ -42,6 +42,49 @@ const replacePlaceholder = (template: string, placeholder: string, value: string
   });
 };
 
+// Función auxiliar para procesar plantillas de texto plano (como el asunto)
+export const processTextTemplate = (templateString: string, context: EmailTemplateContext): string => {
+  let processedString = templateString;
+  const { request, vendor, requesterProfile, accountManager, projects, actorProfile, message, order } = context;
+
+  // General request details
+  processedString = replacePlaceholder(processedString, 'request.id', request.id);
+  processedString = replacePlaceholder(processedString, 'request.status', request.status);
+  processedString = replacePlaceholder(processedString, 'request.notes', request.notes);
+  processedString = replacePlaceholder(processedString, 'request.po_number', request.po_number);
+
+  // Requester details
+  processedString = replacePlaceholder(processedString, 'requester.full_name', getFullName(requesterProfile));
+  processedString = replacePlaceholder(processedString, 'requester.email', requesterProfile?.email);
+
+  // Vendor details
+  processedString = replacePlaceholder(processedString, 'vendor.name', vendor?.name);
+  processedString = replacePlaceholder(processedString, 'vendor.contact_person', vendor?.contact_person);
+  processedString = replacePlaceholder(processedString, 'vendor.email', vendor?.email);
+
+  // Account Manager details
+  processedString = replacePlaceholder(processedString, 'account_manager.full_name', accountManager ? `${accountManager.first_name} ${accountManager.last_name}` : null);
+  processedString = replacePlaceholder(processedString, 'account_manager.email', accountManager?.email);
+
+  // Project Codes
+  const projectCodesDisplay = request.project_codes?.map(projectId => {
+    const project = projects?.find(p => p.id === projectId);
+    return project ? project.code : projectId;
+  }).join(", ");
+  processedString = replacePlaceholder(processedString, 'request.project_codes', projectCodesDisplay);
+
+  // Special placeholders
+  processedString = replacePlaceholder(processedString, 'message', message);
+  processedString = replacePlaceholder(processedString, 'actor.full_name', getFullName(actorProfile));
+  processedString = replacePlaceholder(processedString, 'order.itemName', order?.itemName);
+  processedString = replacePlaceholder(processedString, 'order.id', order?.id);
+
+  // Limpiar cualquier salto de línea o etiqueta HTML residual que pueda haber quedado
+  return processedString.replace(/<[^>]*>?/gm, '').trim();
+};
+
+
+// Función principal para procesar plantillas de correo electrónico (cuerpo HTML)
 export const processEmailTemplate = (templateString: string, context: EmailTemplateContext): string => {
   let processedString = templateString;
   const { request, vendor, requesterProfile, accountManager, projects, actorProfile, shippingAddress, billingAddress, message, order } = context;

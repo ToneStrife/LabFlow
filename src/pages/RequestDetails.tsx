@@ -20,7 +20,7 @@ import { useAccountManagers } from "@/hooks/use-account-managers";
 import { useProjects } from "@/hooks/use-projects";
 import { useEmailTemplates } from "@/hooks/use-email-templates";
 import { useShippingAddresses, useBillingAddresses } from "@/hooks/use-addresses";
-import { processEmailTemplate } from "@/utils/email-templating";
+import { processEmailTemplate, processTextTemplate } from "@/utils/email-templating"; // Importar processTextTemplate
 import EmailDialog, { EmailFormValues } from "@/components/EmailDialog";
 
 // Import new modular components
@@ -110,7 +110,7 @@ const RequestDetails: React.FC = () => {
 
     setEmailInitialData({
       to: getAccountManagerEmail(request.account_manager_id),
-      subject: processEmailTemplate(poRequestTemplate.subject_template, context),
+      subject: processTextTemplate(poRequestTemplate.subject_template, context), // Usar processTextTemplate
       body: processEmailTemplate(poRequestTemplate.body_template, context),
       attachments,
     });
@@ -120,6 +120,13 @@ const RequestDetails: React.FC = () => {
   const openApproveRequestDialog = (request: SupabaseRequest) => {
     setRequestToApprove(request);
     setIsApproveRequestDialogOpen(true);
+  };
+
+  const handleApproveOnly = async () => {
+    if (requestToApprove) {
+      await updateStatusMutation.mutateAsync({ id: requestToApprove.id, status: "Quote Requested" });
+      setIsApproveRequestDialogOpen(false);
+    }
   };
 
   const handleApproveAndRequestQuoteEmail = async () => {
@@ -145,7 +152,7 @@ const RequestDetails: React.FC = () => {
 
       setEmailInitialData({
         to: getVendorEmail(requestToApprove.vendor_id),
-        subject: processEmailTemplate(quoteTemplate.subject_template, context),
+        subject: processTextTemplate(quoteTemplate.subject_template, context), // Usar processTextTemplate
         body: processEmailTemplate(quoteTemplate.body_template, context),
       });
       setIsApproveRequestDialogOpen(false);
@@ -231,7 +238,7 @@ const RequestDetails: React.FC = () => {
 
     setEmailInitialData({
       to: getVendorEmail(request.vendor_id),
-      subject: processEmailTemplate(orderConfirmationTemplate.subject_template, context),
+      subject: processTextTemplate(orderConfirmationTemplate.subject_template, context), // Usar processTextTemplate
       body: processEmailTemplate(orderConfirmationTemplate.body_template, context),
       attachments,
     });
@@ -363,9 +370,10 @@ const RequestDetails: React.FC = () => {
       <Dialog open={isApproveRequestDialogOpen} onOpenChange={setIsApproveRequestDialogOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>Aprobar Solicitud</DialogTitle></DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => updateStatusMutation.mutate({ id: request!.id, status: "Quote Requested" }).then(() => setIsApproveRequestDialogOpen(false))}>Aprobar Solamente</Button>
-            <Button onClick={handleApproveAndRequestQuoteEmail}>Aprobar y Solicitar Cotización (Correo)</Button>
+          <DialogDescription>Elige cómo proceder con esta solicitud.</DialogDescription>
+          <DialogFooter className="flex flex-col sm:flex-row sm:justify-end sm:space-x-2">
+            <Button variant="outline" onClick={handleApproveOnly} disabled={updateStatusMutation.isPending}>Aprobar Solamente</Button>
+            <Button onClick={handleApproveAndRequestQuoteEmail} disabled={updateStatusMutation.isPending}>Aprobar y Solicitar Cotización (Correo)</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
