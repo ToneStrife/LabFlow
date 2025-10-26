@@ -50,7 +50,7 @@ const InventoryTable: React.FC<InventoryTableProps> = ({ items, onEdit, onDelete
                 <TableCell>{item.brand || "N/A"}</TableCell>
                 <TableCell>{item.catalog_number}</TableCell>
                 <TableCell>{item.quantity}</TableCell>
-                <TableCell>{item.unit_price ? `$${Number(item.unit_price).toFixed(2)}` : "N/A"}</TableCell>
+                <TableCell>{item.unit_price ? `€${Number(item.unit_price).toFixed(2)}` : "N/A"}</TableCell>
                 <TableCell>{item.format || "N/A"}</TableCell>
                 <TableCell>{format(new Date(item.added_at), 'yyyy-MM-dd')}</TableCell>
                 <TableCell className="text-right">

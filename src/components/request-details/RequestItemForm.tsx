@@ -117,7 +117,7 @@ const RequestItemForm: React.FC<RequestItemFormProps> = ({ initialData, onSubmit
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Precio Unitario (Opcional)</FormLabel>
-                <FormControl><Input type="number" step="0.01" {...field} value={field.value === null ? "" : field.value} onChange={(e) => field.onChange(e.target.value === "" ? null : Number(e.target.value))} disabled={isSubmitting} /></FormControl>
+                <FormControl><Input type="number" step="0.01" placeholder="ej. 120.50 €" {...field} value={field.value === null ? "" : field.value} onChange={(e) => field.onChange(e.target.value === "" ? null : Number(e.target.value))} disabled={isSubmitting} /></FormControl>
                 <FormMessage />
               </FormItem>
             )}

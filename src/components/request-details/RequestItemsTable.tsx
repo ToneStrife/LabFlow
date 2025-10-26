@@ -83,7 +83,7 @@ const RequestItemsTable: React.FC<RequestItemsTableProps> = ({ items, isEditable
                 <TableCell>{item.brand || "N/A"}</TableCell>
                 <TableCell>{item.catalog_number || "N/A"}</TableCell>
                 <TableCell>{item.quantity}</TableCell>
-                <TableCell>{item.unit_price ? `$${Number(item.unit_price).toFixed(2)}` : "N/A"}</TableCell>
+                <TableCell>{item.unit_price ? `€${Number(item.unit_price).toFixed(2)}` : "N/A"}</TableCell>
                 <TableCell>{item.format || "N/A"}</TableCell>
                 <TableCell>
                   {item.link ? (

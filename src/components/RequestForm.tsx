@@ -26,10 +26,10 @@ import { RequestItem } from "@/data/types";
 import { showError } from "@/utils/toast";
 import { useSession } from "@/components/SessionContextProvider";
 import { useVendors } from "@/hooks/use-vendors";
-import { useAddRequest } from "@/hooks/use-requests";
+import { useAddRequest, useUpdateRequestFile } from "@/hooks/use-requests"; // Importar useUpdateRequestFile
 import { useAccountManagers } from "@/hooks/use-account-managers";
 import { useProjects } from "@/hooks/use-projects";
-import { useShippingAddresses, useBillingAddresses } from "@/hooks/use-addresses"; // Importar hooks de direcciones
+import { useShippingAddresses, useBillingAddresses } from "@/hooks/use-addresses";
 import { getFullName } from "@/hooks/use-profiles";
 
 const itemSchema = z.object({
@@ -53,10 +53,10 @@ const formSchema = z.object({
   vendorId: z.string().min(1, { message: "El proveedor es obligatorio." }),
   requesterId: z.string().min(1, { message: "El ID del solicitante es obligatorio." }), 
   accountManagerId: z.string().optional(), 
-  shippingAddressId: z.string().min(1, { message: "La dirección de envío es obligatoria." }), // Nuevo campo
-  billingAddressId: z.string().min(1, { message: "La dirección de facturación es obligatoria." }), // Nuevo campo
+  shippingAddressId: z.string().min(1, { message: "La dirección de envío es obligatoria." }),
+  billingAddressId: z.string().min(1, { message: "La dirección de facturación es obligatoria." }),
   items: z.array(itemSchema).min(1, { message: "Se requiere al menos un artículo." }),
-  attachments: z.any().optional(),
+  quoteFile: z.any().optional(), // Nuevo campo para el archivo de cotización
   projectCodes: z.array(z.string()).optional(),
   notes: z.string().optional(),
 });
@@ -68,9 +68,10 @@ const RequestForm: React.FC = () => {
   const { data: vendors, isLoading: isLoadingVendors } = useVendors();
   const { data: accountManagers, isLoading: isLoadingAccountManagers } = useAccountManagers();
   const { data: projects, isLoading: isLoadingProjects } = useProjects();
-  const { data: shippingAddresses, isLoading: isLoadingShippingAddresses } = useShippingAddresses(); // Nuevo hook
-  const { data: billingAddresses, isLoading: isLoadingBillingAddresses } = useBillingAddresses(); // Nuevo hook
+  const { data: shippingAddresses, isLoading: isLoadingShippingAddresses } = useShippingAddresses();
+  const { data: billingAddresses, isLoading: isLoadingBillingAddresses } = useBillingAddresses();
   const addRequestMutation = useAddRequest();
+  const updateFileMutation = useUpdateRequestFile(); // Para subir el archivo de cotización
 
   const form = useForm<RequestFormValues>({
     resolver: zodResolver(formSchema),
@@ -78,8 +79,8 @@ const RequestForm: React.FC = () => {
       vendorId: "",
       requesterId: session?.user?.id || "",
       accountManagerId: "unassigned",
-      shippingAddressId: "", // Inicializar
-      billingAddressId: "", // Inicializar
+      shippingAddressId: "",
+      billingAddressId: "",
       items: [{ 
         productName: "", 
         catalogNumber: "", 
@@ -90,6 +91,7 @@ const RequestForm: React.FC = () => {
         notes: "", 
         brand: "",
       }],
+      quoteFile: undefined,
       projectCodes: [],
       notes: "",
     },
@@ -127,8 +129,9 @@ const RequestForm: React.FC = () => {
     }
 
     const managerId = data.accountManagerId === 'unassigned' || !data.accountManagerId ? null : data.accountManagerId;
-
-    // Mapear los ítems para que coincidan con la interfaz RequestItem
+    const quoteFile = data.quoteFile?.[0] || null;
+    
+    // 1. Crear la solicitud (inicialmente en estado Pending)
     const itemsToSubmit: RequestItem[] = data.items.map(item => ({
       productName: item.productName,
       catalogNumber: item.catalogNumber,
@@ -140,22 +143,58 @@ const RequestForm: React.FC = () => {
       brand: item.brand,
     }));
 
-    await addRequestMutation.mutateAsync({
+    const newRequest = await addRequestMutation.mutateAsync({
       vendorId: data.vendorId,
       requesterId: session.user.id,
       accountManagerId: managerId,
-      shippingAddressId: data.shippingAddressId, // Nuevo campo
-      billingAddressId: data.billingAddressId, // Nuevo campo
+      shippingAddressId: data.shippingAddressId,
+      billingAddressId: data.billingAddressId,
       notes: data.notes,
       projectCodes: data.projectCodes,
       items: itemsToSubmit,
     });
+    
+    // 2. Si hay un archivo de cotización, subirlo y actualizar el estado a 'Quote Requested'
+    if (quoteFile) {
+      try {
+        const { filePath } = await updateFileMutation.mutateAsync({
+          id: newRequest.id,
+          fileType: "quote",
+          file: quoteFile,
+        });
+        
+        // Actualizar el estado de la solicitud a 'Quote Requested'
+        // Esto se hace automáticamente dentro de apiUpdateRequestFile si fileType es 'quote'
+        // Pero si queremos asegurarnos de que el estado se actualice inmediatamente después de la subida:
+        // Nota: apiUpdateRequestFile ya actualiza la DB con la URL del archivo.
+        // Aquí solo necesitamos actualizar el estado si la subida fue exitosa.
+        if (filePath) {
+            // Llamamos a updateStatusMutation para cambiar el estado a Quote Requested
+            // Esto es redundante si apiUpdateRequestFile ya lo hace, pero lo mantenemos explícito
+            // para asegurar que el estado se refleje correctamente.
+            // Sin embargo, revisando la lógica de RequestDetails, la subida de quote cambia el estado a PO Requested.
+            // Para la creación, el requisito es que vaya a Cotización Solicitada.
+            
+            // Si se sube un archivo al crear, el estado debe ser 'Quote Requested'.
+            // La función RPC crea la solicitud en 'Pending'. La actualizamos aquí.
+            await updateStatusMutation.mutateAsync({ 
+                id: newRequest.id, 
+                status: "Quote Requested", 
+                quoteUrl: filePath 
+            });
+            toast.success("Cotización adjunta. Solicitud marcada como 'Cotización Solicitada'.");
+        }
+      } catch (error) {
+        showError("La solicitud fue creada, pero falló la subida del archivo de cotización.");
+        console.error("Error uploading quote file on request creation:", error);
+      }
+    }
 
     // Restablecer el formulario, manteniendo los valores predeterminados de dirección si existen
     form.reset({
       vendorId: "",
       requesterId: session.user.id,
-      accountManagerId: "unassigned",
+      accountManagerId: shippingAddresses?.[0]?.id || "",
       shippingAddressId: shippingAddresses?.[0]?.id || "",
       billingAddressId: billingAddresses?.[0]?.id || "",
       items: [{ 
@@ -168,6 +207,7 @@ const RequestForm: React.FC = () => {
         notes: "", 
         brand: "",
       }],
+      quoteFile: undefined,
       projectCodes: [],
       notes: "",
     });
@@ -175,6 +215,7 @@ const RequestForm: React.FC = () => {
 
   const requesterName = profile ? getFullName(profile) : 'Cargando...';
   const isLoadingAddresses = isLoadingShippingAddresses || isLoadingBillingAddresses;
+  const isSubmitting = addRequestMutation.isPending || updateFileMutation.isPending;
 
   return (
     <Form {...form}>
@@ -193,7 +234,7 @@ const RequestForm: React.FC = () => {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Proveedor</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingVendors}>
+                <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingVendors || isSubmitting}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder={isLoadingVendors ? "Cargando proveedores..." : "Selecciona un proveedor"} />
@@ -218,7 +259,7 @@ const RequestForm: React.FC = () => {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Dirección de Envío</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingAddresses}>
+                <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingAddresses || isSubmitting}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder={isLoadingAddresses ? "Cargando direcciones..." : "Selecciona dirección de envío"} />
@@ -240,7 +281,7 @@ const RequestForm: React.FC = () => {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Dirección de Facturación</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingAddresses}>
+                <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingAddresses || isSubmitting}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder={isLoadingAddresses ? "Cargando direcciones..." : "Selecciona dirección de facturación"} />
@@ -265,7 +306,7 @@ const RequestForm: React.FC = () => {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Gerente de Cuenta (Opcional)</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value || "unassigned"} disabled={isLoadingAccountManagers}>
+                <Select onValueChange={field.onChange} value={field.value || "unassigned"} disabled={isLoadingAccountManagers || isSubmitting}>
                   <FormControl>
                     <SelectTrigger><SelectValue placeholder={isLoadingAccountManagers ? "Cargando gerentes..." : "Selecciona un gerente de cuenta"} /></SelectTrigger>
                   </FormControl>
@@ -289,7 +330,7 @@ const RequestForm: React.FC = () => {
                 <Popover>
                   <PopoverTrigger asChild>
                     <FormControl>
-                      <Button variant="outline" role="combobox" className={cn("w-full justify-between", !field.value || field.value.length === 0 && "text-muted-foreground")} disabled={isLoadingProjects}>
+                      <Button variant="outline" role="combobox" className={cn("w-full justify-between", !field.value || field.value.length === 0 && "text-muted-foreground")} disabled={isLoadingProjects || isSubmitting}>
                         {field.value && field.value.length > 0 ? (
                           <div className="flex flex-wrap gap-1">
                             {field.value.map((projectId) => {
@@ -329,6 +370,21 @@ const RequestForm: React.FC = () => {
             )}
           />
         </div>
+        
+        <h2 className="text-xl font-semibold mt-8 mb-4">Archivos Adjuntos (Opcional)</h2>
+        <FormField
+          control={form.control}
+          name="quoteFile"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Adjuntar Cotización (Si ya la tienes)</FormLabel>
+              <FormControl><Input type="file" onChange={(e) => field.onChange(e.target.files)} disabled={isSubmitting} /></FormControl>
+              <FormMessage />
+              <p className="text-sm text-muted-foreground">Si adjuntas una cotización, la solicitud se creará directamente en estado "Cotización Solicitada".</p>
+            </FormItem>
+          )}
+        />
+        
         <FormField
           control={form.control}
           name="notes"
@@ -410,7 +466,7 @@ const RequestForm: React.FC = () => {
                     return (
                       <FormItem>
                         <FormLabel>Precio Unitario (Opcional)</FormLabel>
-                        <FormControl><Input type="number" step="0.01" placeholder="ej. 120.50" {...itemField} /></FormControl>
+                        <FormControl><Input type="number" step="0.01" placeholder="ej. 120.50 €" {...itemField} /></FormControl>
                         <FormMessage />
                       </FormItem>
                     );
@@ -467,21 +523,9 @@ const RequestForm: React.FC = () => {
         })} className="w-full">
           <PlusCircle className="mr-2 h-4 w-4" /> Añadir Otro Artículo
         </Button>
-        <h2 className="text-xl font-semibold mt-8 mb-4">Archivos Adjuntos (Opcional)</h2>
-        <FormField
-          control={form.control}
-          name="attachments"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Subir Archivos (ej. Cotizaciones, PDFs)</FormLabel>
-              <FormControl><Input type="file" multiple onChange={(e) => field.onChange(e.target.files)} /></FormControl>
-              <FormMessage />
-              <p className="text-sm text-muted-foreground">Nota: La subida de archivos requiere un backend para almacenar los archivos. Esto es un marcador de posición.</p>
-            </FormItem>
-          )}
-        />
-        <Button type="submit" className="w-full" disabled={addRequestMutation.isPending}>
-          {addRequestMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : "Enviar Solicitud"}
+        
+        <Button type="submit" className="w-full" disabled={isSubmitting}>
+          {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : "Enviar Solicitud"}
         </Button>
       </form>
     </Form>

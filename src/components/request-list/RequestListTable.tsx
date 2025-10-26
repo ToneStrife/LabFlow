@@ -128,7 +128,7 @@ const RequestListTable: React.FC<RequestListTableProps> = ({
                     <Badge variant={getStatusBadgeVariant(request.status)}>
                       {request.status === "Pending" && "Pendiente"}
                       {request.status === "Quote Requested" && "Cotización Solicitada"}
-                      {request.status === "PO Requested" && "PO Solicitado"}
+                      {request.status === "PO Requested" && "PO Solicitado (Cómprame)"}
                       {request.status === "Ordered" && "Pedido"}
                       {request.status === "Received" && "Recibido"}
                     </Badge>

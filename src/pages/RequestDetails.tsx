@@ -1,3 +1,4 @@
+'PO Solicitado (Cómprame)'.">
 "use client";
 
 import React from "react";
@@ -171,41 +172,49 @@ const RequestDetails: React.FC = () => {
 
   const handleApproveOnly = async () => {
     if (requestToApprove) {
-      await updateStatusMutation.mutateAsync({ id: requestToApprove.id, status: "Quote Requested" });
+      // Si ya hay cotización, aprobar significa pasar a PO Requested (Cómprame)
+      const nextStatus = requestToApprove.quote_url ? "PO Requested" : "Quote Requested";
+      await updateStatusMutation.mutateAsync({ id: requestToApprove.id, status: nextStatus });
       setIsApproveRequestDialogOpen(false);
     }
   };
 
   const handleApproveAndRequestQuoteEmail = async () => {
     if (requestToApprove) {
-      await updateStatusMutation.mutateAsync({ id: requestToApprove.id, status: "Quote Requested" });
+      // Si ya hay cotización, aprobar significa pasar a PO Requested (Cómprame)
+      const nextStatus = requestToApprove.quote_url ? "PO Requested" : "Quote Requested";
+      await updateStatusMutation.mutateAsync({ id: requestToApprove.id, status: nextStatus });
       
-      const quoteTemplate = emailTemplates?.find(t => t.template_name === 'Quote Request');
-      if (!quoteTemplate) {
-        toast.error("Plantilla de correo electrónico 'Quote Request' no encontrada. Por favor, crea una en el panel de Admin.");
-        return;
+      // Si el estado es Quote Requested, enviamos el correo al vendor.
+      if (nextStatus === "Quote Requested") {
+        const quoteTemplate = emailTemplates?.find(t => t.template_name === 'Quote Request');
+        if (!quoteTemplate) {
+          toast.error("Plantilla de correo electrónico 'Quote Request' no encontrada. Por favor, crea una en el panel de Admin.");
+          return;
+        }
+
+        const context = {
+          request: requestToApprove,
+          vendor: vendors?.find(v => v.id === requestToApprove.vendor_id),
+          requesterProfile: profiles?.find(p => p.id === requestToApprove.requester_id),
+          accountManager: accountManagers?.find(am => am.id === requestToApprove.account_manager_id),
+          projects: projects,
+          actorProfile: profile,
+          shippingAddress: shippingAddresses?.find(a => a.id === requestToApprove.shipping_address_id),
+          billingAddress: billingAddresses?.find(a => a.id === requestToApprove.billing_address_id),
+        };
+        
+        setEmailInitialData({
+          to: getVendorEmail(requestToApprove.vendor_id),
+          subject: processTextTemplate(quoteTemplate.subject_template, context),
+          body: processPlainTextTemplate(quoteTemplate.body_template, context),
+        });
+        setIsApproveRequestDialogOpen(false);
+        setIsEmailDialogOpen(true);
+      } else {
+        // Si pasa a PO Requested, simplemente cerramos el diálogo.
+        setIsApproveRequestDialogOpen(false);
       }
-
-      const context = {
-        request: requestToApprove,
-        vendor: vendors?.find(v => v.id === requestToApprove.vendor_id),
-        requesterProfile: profiles?.find(p => p.id === requestToApprove.requester_id),
-        accountManager: accountManagers?.find(am => am.id === requestToApprove.account_manager_id),
-        projects: projects,
-        actorProfile: profile,
-        shippingAddress: shippingAddresses?.find(a => a.id === requestToApprove.shipping_address_id),
-        billingAddress: billingAddresses?.find(a => a.id === requestToApprove.billing_address_id),
-      };
-
-      // No hay adjuntos en este correo, solo se envía al vendor.
-      
-      setEmailInitialData({
-        to: getVendorEmail(requestToApprove.vendor_id),
-        subject: processTextTemplate(quoteTemplate.subject_template, context),
-        body: processPlainTextTemplate(quoteTemplate.body_template, context), // Usar PlainText para el cuerpo editable
-      });
-      setIsApproveRequestDialogOpen(false);
-      setIsEmailDialogOpen(true);
     }
   };
 
@@ -239,13 +248,8 @@ const RequestDetails: React.FC = () => {
       });
 
       // Step 2: Update the request status based on file type
-      if (fileTypeToUpload === "po") {
-        // If PO Number was successfully saved, mark as Ordered
-        if (returnedPoNumber && request.status === "PO Requested") {
-             await updateStatusMutation.mutateAsync({ id: request.id, status: "Ordered", poNumber: returnedPoNumber, quoteUrl: request.quote_url });
-        }
-      } else if (fileTypeToUpload === "quote" && filePath) {
-        // Quote upload is mandatory and changes status to PO Requested
+      if (fileTypeToUpload === "quote" && filePath) {
+        // Si se sube una cotización, el estado pasa a PO Requested (Cómprame)
         await updateStatusMutation.mutateAsync({ id: request.id, status: "PO Requested", quoteUrl: filePath });
         
         // Crear una versión actualizada de la solicitud para el contexto del correo electrónico
@@ -253,10 +257,14 @@ const RequestDetails: React.FC = () => {
         
         // Si hay un gerente de cuenta asignado, enviar el correo de solicitud de PO
         if (updatedRequestWithQuote.account_manager_id) {
-          // Llamar a handleSendPORequest con la solicitud actualizada
           handleSendPORequest(updatedRequestWithQuote);
         } else {
           toast.info("Cotización subida. Por favor, asigna un Gerente de Cuenta para solicitar un PO.");
+        }
+      } else if (fileTypeToUpload === "po") {
+        // Si PO Number fue guardado exitosamente, marcar como Ordered
+        if (returnedPoNumber && request.status === "PO Requested") {
+             await updateStatusMutation.mutateAsync({ id: request.id, status: "Ordered", poNumber: returnedPoNumber, quoteUrl: request.quote_url });
         }
       }
       // Note: 'slip' file type does not change status.
@@ -407,6 +415,12 @@ const RequestDetails: React.FC = () => {
 
   const vendor = vendors?.find(v => v.id === request.vendor_id);
   const displayRequestNumber = request.request_number || `#${request.id.substring(0, 8)}`;
+  
+  // Determinar el texto del botón de aprobación
+  const approveButtonText = request.quote_url ? "Aprobar y Solicitar PO (Cómprame)" : "Aprobar y Solicitar Cotización (Correo)";
+  const approveDialogTitle = request.quote_url ? "Aprobar Solicitud y Generar PO" : "Aprobar Solicitud";
+  const approveOnlyText = request.quote_url ? "Aprobar Solamente (a PO Solicitado)" : "Aprobar Solamente (a Cotización Solicitada)";
+
 
   return (
     <div className="max-w-7xl mx-auto py-8 space-y-6">
@@ -493,11 +507,13 @@ const RequestDetails: React.FC = () => {
       {/* Diálogo de Aprobación (existente) */}
       <Dialog open={isApproveRequestDialogOpen} onOpenChange={setIsApproveRequestDialogOpen}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Aprobar Solicitud</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{approveDialogTitle}</DialogTitle></DialogHeader>
           <DialogDescription>Elige cómo proceder con esta solicitud.</DialogDescription>
           <DialogFooter className="flex flex-col sm:flex-row sm:justify-end sm:space-x-2">
-            <Button variant="outline" onClick={handleApproveOnly} disabled={updateStatusMutation.isPending}>Aprobar Solamente</Button>
-            <Button onClick={handleApproveAndRequestQuoteEmail} disabled={updateStatusMutation.isPending}>Aprobar y Solicitar Cotización (Correo)</Button>
+            <Button variant="outline" onClick={handleApproveOnly} disabled={updateStatusMutation.isPending}>{approveOnlyText}</Button>
+            <Button onClick={handleApproveAndRequestQuoteEmail} disabled={updateStatusMutation.isPending}>
+              {approveButtonText}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -521,7 +537,7 @@ const RequestDetails: React.FC = () => {
                   <SelectItem key={status} value={status}>
                     {status === "Pending" && "Pendiente"}
                     {status === "Quote Requested" && "Cotización Solicitada"}
-                    {status === "PO Requested" && "PO Solicitado"}
+                    {status === "PO Requested" && "PO Solicitado (Cómprame)"}
                     {status === "Ordered" && "Pedido"}
                     {status === "Received" && "Recibido"}
                   </SelectItem>

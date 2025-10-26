@@ -127,7 +127,7 @@ const InventoryForm: React.FC<InventoryFormProps> = ({ initialData, onSubmit, on
             <FormItem>
               <FormLabel>Precio Unitario (Opcional)</FormLabel>
               <FormControl>
-                <Input type="number" step="0.01" placeholder="ej. 120.50" {...field} disabled={isSubmitting} value={field.value === null ? "" : field.value} onChange={(e) => field.onChange(e.target.value === "" ? null : Number(e.target.value))} />
+                <Input type="number" step="0.01" placeholder="ej. 120.50 €" {...field} disabled={isSubmitting} value={field.value === null ? "" : field.value} onChange={(e) => field.onChange(e.target.value === "" ? null : Number(e.target.value))} />
               </FormControl>
               <FormMessage />
             </FormItem>

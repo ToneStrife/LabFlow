@@ -71,6 +71,13 @@ const availablePlaceholders = [
   "{{shipping_address}}", "{{billing_address}}", // Nuevos placeholders de dirección
 ];
 
+// Mapeo de nombres de plantillas para la UI
+const templateNameMap: Record<string, string> = {
+  'Quote Request': 'Solicitud de Cotización',
+  'PO Request': 'Solicitud de PO (Cómprame)',
+  'Order Confirmation': 'Confirmación de Pedido',
+};
+
 // --- Main Admin Page Component ---
 const AdminPage = () => {
   // --- Hooks for Account Managers ---
@@ -393,7 +400,13 @@ const AdminPage = () => {
             <CardContent className="space-y-6">
               <Select value={selectedTemplateId} onValueChange={handleTemplateChange}>
                 <SelectTrigger className="w-full md:w-[300px]"><SelectValue placeholder="Selecciona una plantilla" /></SelectTrigger>
-                <SelectContent>{templates?.map((t) => <SelectItem key={t.id} value={t.id}>{t.template_name}</SelectItem>)}</SelectContent>
+                <SelectContent>
+                  {templates?.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {templateNameMap[t.template_name] || t.template_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
               </Select>
               {currentTemplate && (
                 <Form {...emailTemplateForm}>
