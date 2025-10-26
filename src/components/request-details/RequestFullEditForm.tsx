@@ -29,11 +29,11 @@ import { useShippingAddresses, useBillingAddresses } from "@/hooks/use-addresses
 import { getFullName, Profile } from "@/hooks/use-profiles";
 
 const fullEditSchema = z.object({
-  vendorId: z.string().min(1, { message: "Vendor is required." }),
-  shippingAddressId: z.string().min(1, { message: "Shipping address is required." }),
-  billingAddressId: z.string().min(1, { message: "Billing address is required." }),
+  vendorId: z.string().min(1, { message: "El proveedor es obligatorio." }),
+  shippingAddressId: z.string().min(1, { message: "La dirección de envío es obligatoria." }),
+  billingAddressId: z.string().min(1, { message: "La dirección de facturación es obligatoria." }),
   accountManagerId: z.union([
-    z.string().uuid({ message: "Invalid manager ID." }),
+    z.string().uuid({ message: "ID de gerente no válido." }),
     z.literal("unassigned"),
   ]).optional(),
   notes: z.string().optional(),
@@ -90,7 +90,7 @@ const RequestFullEditForm: React.FC<RequestFullEditFormProps> = ({ request, prof
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormItem>
-            <FormLabel>Requester</FormLabel>
+            <FormLabel>Solicitante</FormLabel>
             <FormControl>
               <Input value={getFullName(requesterProfile)} readOnly disabled />
             </FormControl>
@@ -100,11 +100,11 @@ const RequestFullEditForm: React.FC<RequestFullEditFormProps> = ({ request, prof
             name="vendorId"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Vendor</FormLabel>
+                <FormLabel>Proveedor</FormLabel>
                 <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingVendors || isSubmitting}>
                   <FormControl>
                     <SelectTrigger>
-                      <SelectValue placeholder={isLoadingVendors ? "Loading vendors..." : "Select a vendor"} />
+                      <SelectValue placeholder={isLoadingVendors ? "Cargando proveedores..." : "Selecciona un proveedor"} />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
@@ -125,11 +125,11 @@ const RequestFullEditForm: React.FC<RequestFullEditFormProps> = ({ request, prof
             name="shippingAddressId"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Shipping Address</FormLabel>
+                <FormLabel>Dirección de Envío</FormLabel>
                 <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingShippingAddresses || isSubmitting}>
                   <FormControl>
                     <SelectTrigger>
-                      <SelectValue placeholder={isLoadingShippingAddresses ? "Loading addresses..." : "Select shipping address"} />
+                      <SelectValue placeholder={isLoadingShippingAddresses ? "Cargando direcciones..." : "Selecciona dirección de envío"} />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
@@ -147,11 +147,11 @@ const RequestFullEditForm: React.FC<RequestFullEditFormProps> = ({ request, prof
             name="billingAddressId"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Billing Address</FormLabel>
+                <FormLabel>Dirección de Facturación</FormLabel>
                 <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingBillingAddresses || isSubmitting}>
                   <FormControl>
                     <SelectTrigger>
-                      <SelectValue placeholder={isLoadingBillingAddresses ? "Loading addresses..." : "Select billing address"} />
+                      <SelectValue placeholder={isLoadingBillingAddresses ? "Cargando direcciones..." : "Selecciona dirección de facturación"} />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
@@ -172,13 +172,13 @@ const RequestFullEditForm: React.FC<RequestFullEditFormProps> = ({ request, prof
             name="accountManagerId"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Assigned Account Manager</FormLabel>
+                <FormLabel>Gerente de Cuenta Asignado</FormLabel>
                 <Select onValueChange={field.onChange} value={field.value || "unassigned"} disabled={isLoadingManagers || isSubmitting}>
                   <FormControl>
-                    <SelectTrigger><SelectValue placeholder={isLoadingManagers ? "Loading managers..." : "Select an account manager"} /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder={isLoadingManagers ? "Cargando gerentes..." : "Selecciona un gerente de cuenta"} /></SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="unassigned">No Manager</SelectItem>
+                    <SelectItem value="unassigned">Sin Gerente</SelectItem>
                     {accountManagers?.map((manager) => (
                       <SelectItem key={manager.id} value={manager.id}>
                         {`${manager.first_name} ${manager.last_name}`}
@@ -195,7 +195,7 @@ const RequestFullEditForm: React.FC<RequestFullEditFormProps> = ({ request, prof
             name="projectCodes"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Project Codes</FormLabel>
+                <FormLabel>Códigos de Proyecto</FormLabel>
                 <Popover>
                   <PopoverTrigger asChild>
                     <FormControl>
@@ -207,15 +207,15 @@ const RequestFullEditForm: React.FC<RequestFullEditFormProps> = ({ request, prof
                               return project ? <Badge key={projectId} variant="secondary">{project.code}</Badge> : null;
                             })}
                           </div>
-                        ) : "Select projects..."}
+                        ) : "Seleccionar proyectos..."}
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </FormControl>
                   </PopoverTrigger>
                   <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                     <Command>
-                      <CommandInput placeholder="Search projects..." />
-                      <CommandEmpty>No project found.</CommandEmpty>
+                      <CommandInput placeholder="Buscar proyectos..." />
+                      <CommandEmpty>No se encontró ningún proyecto.</CommandEmpty>
                       <CommandGroup>
                         {projects?.map((project) => (
                           <CommandItem value={project.name} key={project.id} onSelect={() => {
@@ -244,9 +244,9 @@ const RequestFullEditForm: React.FC<RequestFullEditFormProps> = ({ request, prof
           name="notes"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Notes</FormLabel>
+              <FormLabel>Notas</FormLabel>
               <FormControl>
-                <Textarea placeholder="Any specific details about this request..." {...field} disabled={isSubmitting} />
+                <Textarea placeholder="Cualquier detalle específico sobre esta solicitud..." {...field} disabled={isSubmitting} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -256,10 +256,10 @@ const RequestFullEditForm: React.FC<RequestFullEditFormProps> = ({ request, prof
           <Button type="submit" disabled={isSubmitting || isLoading}>
             {isSubmitting ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando...
               </>
             ) : (
-              "Save All Changes"
+              "Guardar Todos los Cambios"
             )}
           </Button>
         </div>

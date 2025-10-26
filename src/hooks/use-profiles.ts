@@ -53,12 +53,12 @@ export const useInviteUser = () => {
     onSuccess: (invitedUser) => {
       queryClient.invalidateQueries({ queryKey: ["allProfiles"] });
       queryClient.invalidateQueries({ queryKey: ["accountManagers"] });
-      toast.success("Invitation sent successfully!", {
+      toast.success("Invitación enviada exitosamente!", {
         description: `Email: ${invitedUser.user.email}`,
       });
     },
     onError: (error) => {
-      toast.error("Failed to send invitation.", {
+      toast.error("Fallo al enviar la invitación.", {
         description: error.message,
       });
     },
@@ -77,10 +77,10 @@ export const useUpdateProfile = () => {
       queryClient.invalidateQueries({ queryKey: ["allProfiles"] });
       queryClient.invalidateQueries({ queryKey: ["accountManagers"] });
       queryClient.invalidateQueries({ queryKey: ["session"] });
-      toast.success("Profile updated successfully!");
+      toast.success("Perfil actualizado exitosamente!");
     },
     onError: (error) => {
-      toast.error("Failed to update profile.", {
+      toast.error("Fallo al actualizar el perfil.", {
         description: error.message,
       });
     },
@@ -96,10 +96,10 @@ export const useDeleteProfile = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["allProfiles"] });
       queryClient.invalidateQueries({ queryKey: ["accountManagers"] });
-      toast.success("Profile deleted successfully!");
+      toast.success("Perfil eliminado exitosamente!");
     },
     onError: (error) => {
-      toast.error("Failed to delete profile.", {
+      toast.error("Fallo al eliminar el perfil.", {
         description: error.message,
       });
     },

@@ -51,12 +51,12 @@ export const useAddRequest = () => {
     },
     onSuccess: (newRequest) => {
       queryClient.invalidateQueries({ queryKey: ["requests"] });
-      toast.success("Request submitted successfully!", {
-        description: `Request ID: ${newRequest.id}`,
+      toast.success("Solicitud enviada exitosamente!", {
+        description: `ID de Solicitud: ${newRequest.id}`,
       });
     },
     onError: (error) => {
-      toast.error("Failed to submit request.", {
+      toast.error("Fallo al enviar la solicitud.", {
         description: error.message,
       });
     },
@@ -87,10 +87,10 @@ export const useUpdateRequestStatus = () => {
     onSuccess: (updatedRequest) => {
       queryClient.invalidateQueries({ queryKey: ["requests"] });
       queryClient.invalidateQueries({ queryKey: ["inventory"] });
-      toast.success(`Request ${updatedRequest.id} status updated to ${updatedRequest.status}!`);
+      toast.success(`Estado de la Solicitud ${updatedRequest.id} actualizado a ${updatedRequest.status}!`);
     },
     onError: (error) => {
-      toast.error("Failed to update request status.", {
+      toast.error("Fallo al actualizar el estado de la solicitud.", {
         description: error.message,
       });
     },
@@ -119,10 +119,10 @@ export const useUpdateFullRequest = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["requests"] });
-      toast.success(`Request details updated successfully!`);
+      toast.success(`Detalles de la solicitud actualizados exitosamente!`);
     },
     onError: (error) => {
-      toast.error("Failed to update request details.", {
+      toast.error("Fallo al actualizar los detalles de la solicitud.", {
         description: error.message,
       });
     },
@@ -148,10 +148,10 @@ export const useUpdateRequestMetadata = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["requests"] });
-      toast.success(`Request metadata updated successfully!`);
+      toast.success(`Metadatos de la solicitud actualizados exitosamente!`);
     },
     onError: (error) => {
-      toast.error("Failed to update request metadata.", {
+      toast.error("Fallo al actualizar los metadatos de la solicitud.", {
         description: error.message,
       });
     },
@@ -177,17 +177,17 @@ export const useUpdateRequestFile = () => {
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["requests"] });
       
-      let message = `${variables.fileType.toUpperCase()} details saved successfully!`;
+      let message = `${variables.fileType.toUpperCase()} detalles guardados exitosamente!`;
       if (data.filePath) {
-        message = `${variables.fileType.toUpperCase()} file uploaded successfully!`;
+        message = `${variables.fileType.toUpperCase()} archivo subido exitosamente!`;
       } else if (variables.fileType === 'po' && data.poNumber) {
-        message = `PO Number ${data.poNumber} saved successfully!`;
+        message = `Número de PO ${data.poNumber} guardado exitosamente!`;
       }
 
       toast.success(message);
     },
     onError: (error, variables) => {
-      toast.error(`Failed to save ${variables.fileType.toUpperCase()} details.`, {
+      toast.error(`Fallo al guardar los detalles de ${variables.fileType.toUpperCase()}.`, {
         description: error.message,
       });
     },
@@ -203,10 +203,10 @@ export const useDeleteRequest = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["requests"] });
-      toast.success("Request deleted successfully!");
+      toast.success("Solicitud eliminada exitosamente!");
     },
     onError: (error) => {
-      toast.error("Failed to delete request.", {
+      toast.error("Fallo al eliminar la solicitud.", {
         description: error.message,
       });
     },
@@ -225,12 +225,12 @@ export const useRevertRequestReception = () => {
       queryClient.invalidateQueries({ queryKey: ["inventory"] });
       queryClient.invalidateQueries({ queryKey: ["packingSlips", requestId] });
       queryClient.invalidateQueries({ queryKey: ["aggregatedReceivedItems", requestId] });
-      toast.success("Reception reverted successfully!", {
-        description: "Items removed from inventory and status set to Ordered.",
+      toast.success("Reversión de recepción exitosa!", {
+        description: "Artículos eliminados del inventario y estado establecido a Pedido.",
       });
     },
     onError: (error) => {
-      toast.error("Failed to revert reception.", {
+      toast.error("Fallo al revertir la recepción.", {
         description: error.message,
       });
     },
@@ -253,10 +253,10 @@ export const useSendEmail = () => {
       await apiSendEmail(emailData);
     },
     onSuccess: () => {
-      toast.success("Email sent successfully!");
+      toast.success("Correo enviado exitosamente!");
     },
     onError: (error) => {
-      toast.error("Failed to send email.", {
+      toast.error("Fallo al enviar correo.", {
         description: error.message,
       });
     },

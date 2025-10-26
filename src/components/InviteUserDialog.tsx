@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Loader2 } from "lucide-react";
 
 const inviteUserFormSchema = z.object({
-  email: z.string().email({ message: "Must be a valid email address." }).min(1, { message: "Email is required." }),
+  email: z.string().email({ message: "Debe ser una dirección de correo válida." }).min(1, { message: "El email es obligatorio." }),
   first_name: z.string().optional(),
   last_name: z.string().optional(),
 });
@@ -56,7 +56,7 @@ const InviteUserDialog: React.FC<InviteUserDialogProps> = ({ onSubmit, onCancel,
             <FormItem>
               <FormLabel>Email</FormLabel>
               <FormControl>
-                <Input type="email" placeholder="e.g., user@example.com" {...field} disabled={isSubmitting} />
+                <Input type="email" placeholder="ej. usuario@ejemplo.com" {...field} disabled={isSubmitting} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -67,9 +67,9 @@ const InviteUserDialog: React.FC<InviteUserDialogProps> = ({ onSubmit, onCancel,
           name="first_name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>First Name (Optional)</FormLabel>
+              <FormLabel>Nombre (Opcional)</FormLabel>
               <FormControl>
-                <Input placeholder="e.g., Jane" {...field} disabled={isSubmitting} />
+                <Input placeholder="ej. Jane" {...field} disabled={isSubmitting} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -80,9 +80,9 @@ const InviteUserDialog: React.FC<InviteUserDialogProps> = ({ onSubmit, onCancel,
           name="last_name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Last Name (Optional)</FormLabel>
+              <FormLabel>Apellido (Opcional)</FormLabel>
               <FormControl>
-                <Input placeholder="e.g., Doe" {...field} disabled={isSubmitting} />
+                <Input placeholder="ej. Doe" {...field} disabled={isSubmitting} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -90,15 +90,15 @@ const InviteUserDialog: React.FC<InviteUserDialogProps> = ({ onSubmit, onCancel,
         />
         <div className="flex justify-end space-x-2 pt-4">
           <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
-            Cancel
+            Cancelar
           </Button>
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Sending...
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Enviando...
               </>
             ) : (
-              "Send Invitation"
+              "Enviar Invitación"
             )}
           </Button>
         </div>

@@ -41,10 +41,10 @@ const getFileNameFromPath = (filePath: string): string => {
     }
     
     // Fallback si el formato no coincide o si es el formato antiguo
-    return decodedFileName.substring(decodedFileName.indexOf('_') + 1) || decodedFileName || "File";
+    return decodedFileName.substring(decodedFileName.indexOf('_') + 1) || decodedFileName || "Archivo";
   } catch (e) {
     console.error("Could not parse filename from path", e);
-    return "File";
+    return "Archivo";
   }
 };
 
@@ -89,14 +89,14 @@ const FileRow: React.FC<{ label: string; filePath: string | null; onUpload: () =
             </Button>
             
             {/* Botón de Reemplazar/Subir como icono */}
-            <Button variant="outline" size="icon" onClick={onUpload} title="Replace File" className="h-8 w-8 flex-shrink-0">
+            <Button variant="outline" size="icon" onClick={onUpload} title="Reemplazar Archivo" className="h-8 w-8 flex-shrink-0">
               <Upload className="h-4 w-4" />
             </Button>
           </>
         ) : (
-          <Button variant="outline" size="sm" onClick={onUpload} title="Upload File" className="h-8 px-3 text-sm">
+          <Button variant="outline" size="sm" onClick={onUpload} title="Subir Archivo" className="h-8 px-3 text-sm">
             <Upload className="h-4 w-4 mr-2" />
-            Upload
+            Subir
           </Button>
         )}
       </div>
@@ -108,12 +108,12 @@ const RequestFilesCard: React.FC<RequestFilesCardProps> = ({ request, onUploadCl
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Attached Files</CardTitle>
+        <CardTitle>Archivos Adjuntos</CardTitle>
       </CardHeader>
       <CardContent className="space-y-0 p-0">
-        <FileRow label="Quote" filePath={request.quote_url} onUpload={() => onUploadClick("quote")} />
-        <FileRow label="Purchase Order" filePath={request.po_url} onUpload={() => onUploadClick("po")} />
-        <FileRow label="Packing Slip" filePath={request.slip_url} onUpload={() => onUploadClick("slip")} />
+        <FileRow label="Cotización" filePath={request.quote_url} onUpload={() => onUploadClick("quote")} />
+        <FileRow label="Orden de Compra (PO)" filePath={request.po_url} onUpload={() => onUploadClick("po")} />
+        <FileRow label="Albarán" filePath={request.slip_url} onUpload={() => onUploadClick("slip")} />
       </CardContent>
     </Card>
   );

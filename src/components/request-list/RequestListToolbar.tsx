@@ -21,22 +21,22 @@ const RequestListToolbar: React.FC<RequestListToolbarProps> = ({
   return (
     <div className="flex flex-col sm:flex-row gap-4">
       <Input
-        placeholder="Search requests (product, catalog, brand, vendor, requester, manager, quote, PO)..."
+        placeholder="Buscar solicitudes (producto, catálogo, marca, proveedor, solicitante, gerente, cotización, PO)..."
         value={searchTerm}
         onChange={(e) => onSearchChange(e.target.value)}
         className="flex-1"
       />
       <Select value={filterStatus} onValueChange={onStatusChange}>
         <SelectTrigger className="w-full sm:w-[180px]">
-          <SelectValue placeholder="Filter by Status" />
+          <SelectValue placeholder="Filtrar por Estado" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="All">All Statuses</SelectItem>
-          <SelectItem value="Pending">Pending</SelectItem>
-          <SelectItem value="Quote Requested">Quote Requested</SelectItem>
-          <SelectItem value="PO Requested">PO Requested</SelectItem>
-          <SelectItem value="Ordered">Ordered</SelectItem>
-          <SelectItem value="Received">Received</SelectItem>
+          <SelectItem value="All">Todos los Estados</SelectItem>
+          <SelectItem value="Pending">Pendiente</SelectItem>
+          <SelectItem value="Quote Requested">Cotización Solicitada</SelectItem>
+          <SelectItem value="PO Requested">PO Solicitado</SelectItem>
+          <SelectItem value="Ordered">Pedido</SelectItem>
+          <SelectItem value="Received">Recibido</SelectItem>
         </SelectContent>
       </Select>
     </div>

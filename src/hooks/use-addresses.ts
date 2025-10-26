@@ -35,6 +35,7 @@ export const useBillingAddresses = () => {
 const createAddressMutations = (tableName: 'shipping_addresses' | 'billing_addresses', queryKey: 'shippingAddresses' | 'billingAddresses') => {
   const useAddAddress = () => {
     const queryClient = useQueryClient();
+    const typeName = tableName === 'shipping_addresses' ? 'Dirección de Envío' : 'Dirección de Facturación';
     return useMutation({
       mutationFn: async (address: AddressFormValues) => {
         const { data, error } = await supabase.from(tableName).insert([address]).select().single();
@@ -42,17 +43,18 @@ const createAddressMutations = (tableName: 'shipping_addresses' | 'billing_addre
         return data;
       },
       onSuccess: () => {
-        toast.success(`New ${tableName.replace('_', ' ')} added successfully!`);
+        toast.success(`${typeName} añadida exitosamente!`);
         queryClient.invalidateQueries({ queryKey: [queryKey] });
       },
       onError: (error) => {
-        toast.error(`Failed to add ${tableName.replace('_', ' ')}.`, { description: error.message });
+        toast.error(`Fallo al añadir ${typeName.toLowerCase()}.`, { description: error.message });
       },
     });
   };
 
   const useUpdateAddress = () => {
     const queryClient = useQueryClient();
+    const typeName = tableName === 'shipping_addresses' ? 'Dirección de Envío' : 'Dirección de Facturación';
     return useMutation({
       mutationFn: async ({ id, data }: { id: string; data: AddressFormValues }) => {
         const { data: updatedData, error } = await supabase.from(tableName).update(data).eq('id', id).select().single();
@@ -60,26 +62,27 @@ const createAddressMutations = (tableName: 'shipping_addresses' | 'billing_addre
         return updatedData;
       },
       onSuccess: () => {
-        toast.success(`${tableName.replace('_', ' ')} updated successfully!`);
+        toast.success(`${typeName} actualizada exitosamente!`);
         queryClient.invalidateQueries({ queryKey: [queryKey] });
       },
       onError: (error) => {
-        toast.error(`Failed to update ${tableName.replace('_', ' ')}.`, { description: error.message });
+        toast.error(`Fallo al actualizar ${typeName.toLowerCase()}.`, { description: error.message });
       },
     });
   };
 
   const useDeleteAddress = () => {
     const queryClient = useQueryClient();
+    const typeName = tableName === 'shipping_addresses' ? 'Dirección de Envío' : 'Dirección de Facturación';
     return useMutation({
       mutationFn: async (id: string) => {
         const { error } = await supabase.from(tableName).delete().eq('id', id);
         if (error) {
-          throw new Error(`Failed to delete ${tableName.replace('_', ' ')}: ${error.message}`);
+          throw new Error(`Fallo al eliminar ${typeName.toLowerCase()}: ${error.message}`);
         }
       },
       onSuccess: () => {
-        toast.success(`${tableName.replace('_', ' ')} deleted successfully!`);
+        toast.success(`${typeName} eliminada exitosamente!`);
         queryClient.invalidateQueries({ queryKey: [queryKey] });
       },
       onError: (error) => {

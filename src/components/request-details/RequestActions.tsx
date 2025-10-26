@@ -30,7 +30,7 @@ const RequestActions: React.FC<RequestActionsProps> = ({
     <div className="flex flex-col space-y-2"> {/* Cambiado a columna vertical */}
       {request.status === "Pending" && (
         <Button onClick={() => openApproveRequestDialog(request)} disabled={isUpdatingStatus}>
-          <CheckCircle className="mr-2 h-4 w-4" /> Approve Request
+          <CheckCircle className="mr-2 h-4 w-4" /> Aprobar Solicitud
         </Button>
       )}
 
@@ -39,11 +39,11 @@ const RequestActions: React.FC<RequestActionsProps> = ({
         <>
           {!request.quote_url ? (
             <Button onClick={handleUploadQuote} disabled={isUpdatingStatus}>
-              <Upload className="mr-2 h-4 w-4" /> Upload Quote
+              <Upload className="mr-2 h-4 w-4" /> Subir Cotización
             </Button>
           ) : (
             <Button onClick={() => handleSendPORequest(request)} disabled={isUpdatingStatus} variant="outline">
-              <Mail className="mr-2 h-4 w-4" /> Request PO (Email)
+              <Mail className="mr-2 h-4 w-4" /> Solicitar PO (Correo)
             </Button>
           )}
         </>
@@ -55,7 +55,7 @@ const RequestActions: React.FC<RequestActionsProps> = ({
           onClick={() => handleUploadPOAndOrder(request)}
           disabled={isUpdatingStatus}
         >
-          <Upload className="mr-2 h-4 w-4" /> Upload PO & Mark as Ordered
+          <Upload className="mr-2 h-4 w-4" /> Subir PO y Marcar como Pedido
         </Button>
       )}
 
@@ -64,11 +64,11 @@ const RequestActions: React.FC<RequestActionsProps> = ({
         <>
           {request.po_url && (
             <Button onClick={() => handleMarkAsOrderedAndSendEmail(request)} disabled={isUpdatingStatus} variant="outline">
-              <Mail className="mr-2 h-4 w-4" /> Send Order Email
+              <Mail className="mr-2 h-4 w-4" /> Enviar Correo de Pedido
             </Button>
           )}
           <Button onClick={() => handleMarkAsReceived(request)} disabled={isUpdatingStatus}>
-            <Receipt className="mr-2 h-4 w-4" /> Receive Items
+            <Receipt className="mr-2 h-4 w-4" /> Recibir Artículos
           </Button>
         </>
       )}

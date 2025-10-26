@@ -32,7 +32,7 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
         variant="ghost"
         size="icon"
         onClick={() => onViewDetails(request.id)}
-        title="View Details"
+        title="Ver Detalles"
       >
         <Eye className="h-4 w-4" />
       </Button>
@@ -42,7 +42,7 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
           variant="ghost"
           size="icon"
           onClick={() => onApprove(request)}
-          title="Approve Request"
+          title="Aprobar Solicitud"
           disabled={isUpdatingStatus}
         >
           <CheckCircle className="h-4 w-4 text-green-600" />
@@ -55,7 +55,7 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
           variant="ghost"
           size="icon"
           onClick={() => onEnterQuoteDetails(request)}
-          title="Upload Quote File"
+          title="Subir Archivo de Cotización"
           disabled={isUpdatingStatus}
         >
           <FileText className="h-4 w-4 text-blue-600" />
@@ -68,7 +68,7 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
           variant="ghost"
           size="icon"
           onClick={() => onSendPORequest(request)}
-          title="Send PO Request to Account Manager"
+          title="Enviar Solicitud de PO al Gerente de Cuenta"
           disabled={isUpdatingStatus}
         >
           <Mail className="h-4 w-4 text-orange-600" />
@@ -82,7 +82,7 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
             variant="ghost"
             size="icon"
             onClick={() => onMarkAsOrdered(request)}
-            title="Upload PO & Mark as Ordered"
+            title="Subir PO y Marcar como Pedido"
             disabled={isUpdatingStatus}
           >
             <Package className="h-4 w-4 text-green-700" />
@@ -95,7 +95,7 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
           variant="ghost"
           size="icon"
           onClick={() => onMarkAsReceived(request)} // Pasa el request completo
-          title="Mark as Received"
+          title="Marcar como Recibido"
           disabled={isUpdatingStatus}
         >
           <Receipt className="h-4 w-4 text-purple-600" />

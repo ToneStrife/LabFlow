@@ -18,13 +18,13 @@ import { Loader2 } from "lucide-react";
 import { Address } from "@/data/types";
 
 const addressFormSchema = z.object({
-  name: z.string().min(1, { message: "Address name is required." }),
-  address_line_1: z.string().min(1, { message: "Address Line 1 is required." }),
+  name: z.string().min(1, { message: "El nombre de la dirección es obligatorio." }),
+  address_line_1: z.string().min(1, { message: "La Línea de Dirección 1 es obligatoria." }),
   address_line_2: z.string().optional().nullable(),
-  city: z.string().min(1, { message: "City is required." }),
-  state: z.string().min(1, { message: "State/Province is required." }),
-  zip_code: z.string().min(1, { message: "Zip Code is required." }),
-  country: z.string().min(1, { message: "Country is required." }),
+  city: z.string().min(1, { message: "La Ciudad es obligatoria." }),
+  state: z.string().min(1, { message: "El Estado/Provincia es obligatorio." }),
+  zip_code: z.string().min(1, { message: "El Código Postal es obligatorio." }),
+  country: z.string().min(1, { message: "El País es obligatorio." }),
   cif: z.string().optional().nullable(), // Nuevo campo CIF
 });
 
@@ -73,7 +73,7 @@ const AddressForm: React.FC<AddressFormProps> = ({ initialData, onSubmit, onCanc
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Address Name (e.g., Main Lab, Warehouse)</FormLabel>
+              <FormLabel>Nombre de la Dirección (ej. Laboratorio Principal, Almacén)</FormLabel>
               <FormControl><Input {...field} disabled={isSubmitting} /></FormControl>
               <FormMessage />
             </FormItem>
@@ -84,7 +84,7 @@ const AddressForm: React.FC<AddressFormProps> = ({ initialData, onSubmit, onCanc
           name="cif"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>CIF / VAT ID (Optional)</FormLabel>
+              <FormLabel>CIF / ID de IVA (Opcional)</FormLabel>
               <FormControl><Input {...field} disabled={isSubmitting} value={field.value || ""} onChange={(e) => field.onChange(e.target.value || null)} /></FormControl>
               <FormMessage />
             </FormItem>
@@ -95,7 +95,7 @@ const AddressForm: React.FC<AddressFormProps> = ({ initialData, onSubmit, onCanc
           name="address_line_1"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Address Line 1</FormLabel>
+              <FormLabel>Línea de Dirección 1</FormLabel>
               <FormControl><Input {...field} disabled={isSubmitting} /></FormControl>
               <FormMessage />
             </FormItem>
@@ -106,7 +106,7 @@ const AddressForm: React.FC<AddressFormProps> = ({ initialData, onSubmit, onCanc
           name="address_line_2"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Address Line 2 (Optional)</FormLabel>
+              <FormLabel>Línea de Dirección 2 (Opcional)</FormLabel>
               <FormControl><Input {...field} disabled={isSubmitting} value={field.value || ""} onChange={(e) => field.onChange(e.target.value || null)} /></FormControl>
               <FormMessage />
             </FormItem>
@@ -118,7 +118,7 @@ const AddressForm: React.FC<AddressFormProps> = ({ initialData, onSubmit, onCanc
             name="city"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>City</FormLabel>
+                <FormLabel>Ciudad</FormLabel>
                 <FormControl><Input {...field} disabled={isSubmitting} /></FormControl>
                 <FormMessage />
               </FormItem>
@@ -129,7 +129,7 @@ const AddressForm: React.FC<AddressFormProps> = ({ initialData, onSubmit, onCanc
             name="state"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>State/Province</FormLabel>
+                <FormLabel>Estado/Provincia</FormLabel>
                 <FormControl><Input {...field} disabled={isSubmitting} /></FormControl>
                 <FormMessage />
               </FormItem>
@@ -142,7 +142,7 @@ const AddressForm: React.FC<AddressFormProps> = ({ initialData, onSubmit, onCanc
             name="zip_code"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Zip Code</FormLabel>
+                <FormLabel>Código Postal</FormLabel>
                 <FormControl><Input {...field} disabled={isSubmitting} /></FormControl>
                 <FormMessage />
               </FormItem>
@@ -153,7 +153,7 @@ const AddressForm: React.FC<AddressFormProps> = ({ initialData, onSubmit, onCanc
             name="country"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Country</FormLabel>
+                <FormLabel>País</FormLabel>
                 <FormControl><Input {...field} disabled={isSubmitting} /></FormControl>
                 <FormMessage />
               </FormItem>
@@ -163,16 +163,16 @@ const AddressForm: React.FC<AddressFormProps> = ({ initialData, onSubmit, onCanc
         <div className="flex justify-end space-x-2 pt-4">
           {onCancel && (
             <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
-              Cancel
+              Cancelar
             </Button>
           )}
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando...
               </>
             ) : (
-              initialData ? "Save Changes" : "Add Address"
+              initialData ? "Guardar Cambios" : "Añadir Dirección"
             )}
           </Button>
         </div>

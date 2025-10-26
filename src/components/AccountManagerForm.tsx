@@ -18,9 +18,9 @@ import { Loader2 } from "lucide-react";
 import { Profile } from "@/hooks/use-profiles";
 
 const accountManagerFormSchema = z.object({
-  first_name: z.string().min(1, { message: "First name is required." }),
-  last_name: z.string().min(1, { message: "Last name is required." }),
-  email: z.string().email({ message: "Must be a valid email address." }).min(1, { message: "Email is required." }),
+  first_name: z.string().min(1, { message: "El nombre es obligatorio." }),
+  last_name: z.string().min(1, { message: "El apellido es obligatorio." }),
+  email: z.string().email({ message: "Debe ser una dirección de correo válida." }).min(1, { message: "El email es obligatorio." }),
 });
 
 export type AccountManagerFormValues = z.infer<typeof accountManagerFormSchema>;
@@ -58,9 +58,9 @@ const AccountManagerForm: React.FC<AccountManagerFormProps> = ({ initialData, on
           name="first_name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>First Name</FormLabel>
+              <FormLabel>Nombre</FormLabel>
               <FormControl>
-                <Input placeholder="e.g., John" {...field} disabled={isSubmitting} />
+                <Input placeholder="ej. John" {...field} disabled={isSubmitting} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -71,9 +71,9 @@ const AccountManagerForm: React.FC<AccountManagerFormProps> = ({ initialData, on
           name="last_name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Last Name</FormLabel>
+              <FormLabel>Apellido</FormLabel>
               <FormControl>
-                <Input placeholder="e.g., Doe" {...field} disabled={isSubmitting} />
+                <Input placeholder="ej. Doe" {...field} disabled={isSubmitting} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -86,7 +86,7 @@ const AccountManagerForm: React.FC<AccountManagerFormProps> = ({ initialData, on
             <FormItem>
               <FormLabel>Email</FormLabel>
               <FormControl>
-                <Input type="email" placeholder="e.g., john.doe@example.com" {...field} disabled={isSubmitting || !!initialData} />
+                <Input type="email" placeholder="ej. john.doe@ejemplo.com" {...field} disabled={isSubmitting || !!initialData} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -95,16 +95,16 @@ const AccountManagerForm: React.FC<AccountManagerFormProps> = ({ initialData, on
         <div className="flex justify-end space-x-2 pt-4">
           {onCancel && (
             <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
-              Cancel
+              Cancelar
             </Button>
           )}
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando...
               </>
             ) : (
-              initialData ? "Save Changes" : "Invite Manager"
+              initialData ? "Guardar Cambios" : "Añadir Gerente"
             )}
           </Button>
         </div>

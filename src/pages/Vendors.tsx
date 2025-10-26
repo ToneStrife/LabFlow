@@ -50,14 +50,14 @@ const Vendors = () => {
   };
 
   const openEditDialog = (vendor: Vendor) => {
-    setEditingVendor({ ...vendor, brands: vendor.brands.join(", ") });
+    setEditingVendor({ ...vendor, brands: vendor.brands?.join(", ") || "" });
     setIsEditVendorDialogOpen(true);
   };
 
   if (isLoading) {
     return (
       <div className="container mx-auto py-8 flex justify-center items-center">
-        <Loader2 className="h-8 w-8 animate-spin mr-2" /> Loading Vendors...
+        <Loader2 className="h-8 w-8 animate-spin mr-2" /> Cargando Proveedores...
       </div>
     );
   }
@@ -65,7 +65,7 @@ const Vendors = () => {
   if (error) {
     return (
       <div className="container mx-auto py-8 text-red-600">
-        Error loading vendors: {error.message}
+        Error al cargar proveedores: {error.message}
       </div>
     );
   }
@@ -73,16 +73,16 @@ const Vendors = () => {
   return (
     <div className="container mx-auto py-8">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Vendor Directory</h1>
+        <h1 className="text-3xl font-bold">Directorio de Proveedores</h1>
         <Dialog open={isAddVendorDialogOpen} onOpenChange={setIsAddVendorDialogOpen}>
           <DialogTrigger asChild>
             <Button>
-              <PlusCircle className="mr-2 h-4 w-4" /> Add New Vendor
+              <PlusCircle className="mr-2 h-4 w-4" /> Añadir Nuevo Proveedor
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
-              <DialogTitle>Add New Vendor</DialogTitle>
+              <DialogTitle>Añadir Nuevo Proveedor</DialogTitle>
             </DialogHeader>
             <VendorForm
               onSubmit={handleAddVendor}
@@ -93,7 +93,7 @@ const Vendors = () => {
         </Dialog>
       </div>
       <p className="text-lg text-muted-foreground mb-8">
-        This page allows account managers to view and manage vendor information.
+        Esta página permite a los gerentes de cuenta ver y gestionar la información de los proveedores.
       </p>
       <VendorTable
         vendors={vendors || []}
@@ -105,11 +105,11 @@ const Vendors = () => {
       <Dialog open={isEditVendorDialogOpen} onOpenChange={setIsEditVendorDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Edit Vendor</DialogTitle>
+            <DialogTitle>Editar Proveedor</DialogTitle>
           </DialogHeader>
           {editingVendor && (
             <VendorForm
-              initialData={editingVendor}
+              initialData={{ ...editingVendor, brands: editingVendor.brands?.join(", ") || "" }}
               onSubmit={(data) => handleEditVendor(editingVendor.id, data)}
               onCancel={() => setIsEditVendorDialogOpen(false)}
               isSubmitting={updateVendorMutation.isPending}

@@ -25,17 +25,16 @@ const AccountManagerTable: React.FC<AccountManagerTableProps> = ({ managers, onE
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Name</TableHead>
+            <TableHead>Nombre</TableHead>
             <TableHead>Email</TableHead>
-            {/* <TableHead>Role</TableHead> // El rol ya no es relevante para los Account Managers como contactos */}
-            <TableHead className="text-right">Actions</TableHead>
+            <TableHead className="text-right">Acciones</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {managers.length === 0 ? (
             <TableRow>
               <TableCell colSpan={3} className="h-24 text-center text-muted-foreground">
-                No account managers found.
+                No se encontraron gerentes de cuenta.
               </TableCell>
             </TableRow>
           ) : (
@@ -43,14 +42,13 @@ const AccountManagerTable: React.FC<AccountManagerTableProps> = ({ managers, onE
               <TableRow key={manager.id}>
                 <TableCell className="font-medium">{`${manager.first_name} ${manager.last_name}`}</TableCell>
                 <TableCell>{manager.email || "N/A"}</TableCell>
-                {/* <TableCell>{manager.role}</TableCell> */}
                 <TableCell className="text-right">
                   <Button
                     variant="ghost"
                     size="icon"
                     onClick={() => onEdit(manager)}
                     className="mr-2"
-                    title="Edit Manager"
+                    title="Editar Gerente"
                   >
                     <Edit className="h-4 w-4" />
                   </Button>
@@ -58,7 +56,7 @@ const AccountManagerTable: React.FC<AccountManagerTableProps> = ({ managers, onE
                     variant="destructive"
                     size="icon"
                     onClick={() => onDelete(manager.id)}
-                    title="Delete Manager"
+                    title="Eliminar Gerente"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>

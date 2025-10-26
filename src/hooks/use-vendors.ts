@@ -26,11 +26,11 @@ export const useAddVendor = () => {
       return data;
     },
     onSuccess: () => {
-      toast.success('Vendor added successfully!');
+      toast.success('Proveedor añadido exitosamente!');
       queryClient.invalidateQueries({ queryKey: ['vendors'] });
     },
     onError: (error) => {
-      toast.error('Failed to add vendor.', { description: error.message });
+      toast.error('Fallo al añadir proveedor.', { description: error.message });
     },
   });
 };
@@ -45,11 +45,11 @@ export const useUpdateVendor = () => {
       return updatedData;
     },
     onSuccess: () => {
-      toast.success('Vendor updated successfully!');
+      toast.success('Proveedor actualizado exitosamente!');
       queryClient.invalidateQueries({ queryKey: ['vendors'] });
     },
     onError: (error) => {
-      toast.error('Failed to update vendor.', { description: error.message });
+      toast.error('Fallo al actualizar proveedor.', { description: error.message });
     },
   });
 };
@@ -61,11 +61,11 @@ export const useDeleteVendor = () => {
     mutationFn: async (id: string) => {
       const { error } = await supabase.from('vendors').delete().eq('id', id);
       if (error) {
-        throw new Error(`Failed to delete vendor: ${error.message}`);
+        throw new Error(`Fallo al eliminar proveedor: ${error.message}`);
       }
     },
     onSuccess: () => {
-      toast.success('Vendor deleted successfully!');
+      toast.success('Proveedor eliminado exitosamente!');
       queryClient.invalidateQueries({ queryKey: ['vendors'] });
     },
     onError: (error) => {

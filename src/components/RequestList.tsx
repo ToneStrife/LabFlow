@@ -25,7 +25,7 @@ import ReceiveItemsDialog from "@/components/ReceiveItemsDialog"; // Importar el
 
 // Función auxiliar para obtener el nombre de archivo legible (copiada de RequestFilesCard.tsx)
 const getFileNameFromPath = (filePath: string): string => {
-  if (!filePath) return "File";
+  if (!filePath) return "Archivo";
   try {
     const pathParts = filePath.split('/');
     const encodedFileName = pathParts[pathParts.length - 1];
@@ -33,10 +33,10 @@ const getFileNameFromPath = (filePath: string): string => {
     
     // Eliminar el prefijo de timestamp (ej. "1678886400000_")
     const nameWithoutPrefix = decodedFileName.substring(decodedFileName.indexOf('_') + 1);
-    return nameWithoutPrefix || decodedFileName || "File"; // Fallback si algo sale mal
+    return nameWithoutPrefix || decodedFileName || "Archivo"; // Fallback si algo sale mal
   } catch (e) {
     console.error("Could not parse filename from path", e);
-    return "File";
+    return "Archivo";
   }
 };
 
@@ -132,7 +132,7 @@ const RequestList: React.FC = () => {
       if (signedUrl) {
         attachmentsForDialog.push({ name: fileName, url: signedUrl });
       } else {
-        toast.warning("Could not generate signed URL for quote file. Attachment link in dialog may be broken.");
+        toast.warning("No se pudo generar la URL firmada para el archivo de cotización. El enlace adjunto en el diálogo podría estar roto.");
       }
       
       // 2. Usar la ruta de almacenamiento original para el envío (Edge Function)
@@ -164,7 +164,7 @@ const RequestList: React.FC = () => {
   // CORREGIDO: Manejador para abrir el diálogo de recepción
   const handleMarkAsReceived = (request: SupabaseRequest) => {
     if (!request.items || request.items.length === 0) {
-      toast.error("Cannot receive items.", { description: "The request has no items." });
+      toast.error("No se pueden recibir artículos.", { description: "La solicitud no tiene artículos." });
       return;
     }
     setRequestToReceive(request);
@@ -196,13 +196,13 @@ const RequestList: React.FC = () => {
   if (isLoadingRequests || isLoadingVendors || isLoadingProfiles || isLoadingAccountManagers || isLoadingProjects || isLoadingEmailTemplates) {
     return (
       <div className="flex justify-center items-center h-40">
-        <Loader2 className="h-6 w-6 animate-spin mr-2" /> Loading Requests...
+        <Loader2 className="h-6 w-6 animate-spin mr-2" /> Cargando Solicitudes...
       </div>
     );
   }
 
   if (requestsError) {
-    return <div className="text-red-500">Error loading requests: {requestsError.message}</div>;
+    return <div className="text-red-500">Error al cargar solicitudes: {requestsError.message}</div>;
   }
 
   return (

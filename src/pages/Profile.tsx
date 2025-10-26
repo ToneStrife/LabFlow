@@ -31,7 +31,7 @@ const Profile: React.FC = () => {
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!session?.user?.id) {
-      toast.error("User not logged in.");
+      toast.error("Usuario no autenticado.");
       return;
     }
     // Solo actualizar first_name, last_name y role en la tabla de perfiles
@@ -54,7 +54,7 @@ const Profile: React.FC = () => {
   if (loading) {
     return (
       <div className="container mx-auto py-8 flex justify-center items-center">
-        <Loader2 className="h-8 w-8 animate-spin mr-2" /> Loading Profile...
+        <Loader2 className="h-8 w-8 animate-spin mr-2" /> Cargando Perfil...
       </div>
     );
   }
@@ -62,9 +62,9 @@ const Profile: React.FC = () => {
   if (!session) {
     return (
       <div className="container mx-auto py-8 text-center">
-        <h1 className="text-3xl font-bold mb-4">Not Logged In</h1>
-        <p className="text-lg text-muted-foreground">Please log in to view your profile.</p>
-        <Button onClick={() => navigate("/login")} className="mt-4">Go to Login</Button>
+        <h1 className="text-3xl font-bold mb-4">No Has Iniciado Sesión</h1>
+        <p className="text-lg text-muted-foreground">Por favor, inicia sesión para ver tu perfil.</p>
+        <Button onClick={() => navigate("/login")} className="mt-4">Ir a Iniciar Sesión</Button>
       </div>
     );
   }
@@ -73,7 +73,7 @@ const Profile: React.FC = () => {
     <div className="container mx-auto py-8">
       <Card className="max-w-lg mx-auto">
         <CardHeader>
-          <CardTitle className="text-2xl font-bold">Your Profile</CardTitle>
+          <CardTitle className="text-2xl font-bold">Tu Perfil</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           <form onSubmit={handleUpdateProfile} className="space-y-4">
@@ -82,7 +82,7 @@ const Profile: React.FC = () => {
               <Input id="email" type="email" value={session.user.email} disabled />
             </div>
             <div>
-              <Label htmlFor="firstName">First Name</Label>
+              <Label htmlFor="firstName">Nombre</Label>
               <Input
                 id="firstName"
                 value={firstName}
@@ -91,7 +91,7 @@ const Profile: React.FC = () => {
               />
             </div>
             <div>
-              <Label htmlFor="lastName">Last Name</Label>
+              <Label htmlFor="lastName">Apellido</Label>
               <Input
                 id="lastName"
                 value={lastName}
@@ -100,21 +100,21 @@ const Profile: React.FC = () => {
               />
             </div>
             <div>
-              <Label htmlFor="role">Role</Label>
+              <Label htmlFor="role">Rol</Label>
               <Input id="role" value={role} disabled />
             </div>
             <Button type="submit" className="w-full" disabled={updateProfileMutation.isPending}>
               {updateProfileMutation.isPending ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando...
                 </>
               ) : (
-                "Update Profile"
+                "Actualizar Perfil"
               )}
             </Button>
           </form>
           <Button variant="outline" onClick={handleLogout} className="w-full mt-4">
-            Log Out
+            Cerrar Sesión
           </Button>
         </CardContent>
       </Card>

@@ -26,21 +26,21 @@ const InventoryTable: React.FC<InventoryTableProps> = ({ items, onEdit, onDelete
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Product Name</TableHead>
-            <TableHead>Brand</TableHead>
-            <TableHead>Catalog #</TableHead>
-            <TableHead>Quantity</TableHead>
-            <TableHead>Unit Price</TableHead>
-            <TableHead>Format</TableHead>
-            <TableHead>Added At</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
+            <TableHead>Nombre del Producto</TableHead>
+            <TableHead>Marca</TableHead>
+            <TableHead>Catálogo #</TableHead>
+            <TableHead>Cantidad</TableHead>
+            <TableHead>Precio Unitario</TableHead>
+            <TableHead>Formato</TableHead>
+            <TableHead>Añadido el</TableHead>
+            <TableHead className="text-right">Acciones</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {items.length === 0 ? (
             <TableRow>
               <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
-                No inventory items found.
+                No se encontraron artículos en el inventario.
               </TableCell>
             </TableRow>
           ) : (
@@ -59,7 +59,7 @@ const InventoryTable: React.FC<InventoryTableProps> = ({ items, onEdit, onDelete
                     size="icon"
                     onClick={() => onEdit(item)}
                     className="mr-2"
-                    title="Edit Item"
+                    title="Editar Artículo"
                   >
                     <Edit className="h-4 w-4" />
                   </Button>
@@ -67,7 +67,7 @@ const InventoryTable: React.FC<InventoryTableProps> = ({ items, onEdit, onDelete
                     variant="destructive"
                     size="icon"
                     onClick={() => onDelete(item.id)}
-                    title="Delete Item"
+                    title="Eliminar Artículo"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>

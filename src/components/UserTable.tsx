@@ -45,17 +45,17 @@ const UserTable: React.FC<UserTableProps> = ({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Name</TableHead>
+            <TableHead>Nombre</TableHead>
             <TableHead>Email</TableHead>
-            <TableHead>Role</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
+            <TableHead>Rol</TableHead>
+            <TableHead className="text-right">Acciones</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {users.length === 0 ? (
             <TableRow>
               <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
-                No users found.
+                No se encontraron usuarios.
               </TableCell>
             </TableRow>
           ) : (
@@ -70,7 +70,7 @@ const UserTable: React.FC<UserTableProps> = ({
                     disabled={user.id === currentUserId || isUpdatingRole} // No permitir cambiar el rol del propio usuario o si ya se está actualizando
                   >
                     <SelectTrigger className="w-[180px]">
-                      <SelectValue placeholder="Select role" />
+                      <SelectValue placeholder="Seleccionar rol" />
                     </SelectTrigger>
                     <SelectContent>
                       {availableRoles.map((role) => (
@@ -86,7 +86,7 @@ const UserTable: React.FC<UserTableProps> = ({
                     variant="destructive"
                     size="icon"
                     onClick={() => onDelete(user.id)}
-                    title="Delete User"
+                    title="Eliminar Usuario"
                     disabled={user.id === currentUserId || isDeletingUser} // No permitir eliminar el propio usuario o si ya se está eliminando
                   >
                     {isDeletingUser && user.id === currentUserId ? ( // Mostrar loader solo si es el usuario que se está eliminando

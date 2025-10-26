@@ -68,7 +68,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             </Sheet>
           )}
           
-          <h1 className="text-xl font-semibold text-gray-700 dark:text-gray-300 hidden sm:block">Gestión de Pedidos de Laboratorio</h1>
+          <h1 className="text-xl font-semibold text-gray-700 dark:text-gray-300 hidden sm:block">Gestión de Solicitudes de Laboratorio</h1>
 
           {/* User Profile Dropdown */}
           <DropdownMenu>
@@ -92,13 +92,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               <DropdownMenuItem onClick={() => handleLinkClick()}>
                 <Link to="/profile" className="flex items-center w-full">
                   <User className="mr-2 h-4 w-4" />
-                  Profile
+                  Perfil
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={logout}>
                 <LogOut className="mr-2 h-4 w-4" />
-                Log out
+                Cerrar Sesión
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

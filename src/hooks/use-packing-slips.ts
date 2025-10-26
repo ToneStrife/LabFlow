@@ -85,7 +85,7 @@ export const useReceiveItems = () => {
       const { requestId, slipNumber, slipFile, items } = data;
       const receivedBy = session?.user?.id;
 
-      if (!receivedBy) throw new Error("User must be logged in to receive items.");
+      if (!receivedBy) throw new Error("El usuario debe iniciar sesión para recibir artículos.");
 
       // --- SOLUCIÓN AL ERROR DE UNICIDAD ---
       // Si slipNumber está vacío, generamos uno basado en el timestamp para evitar colisiones.
@@ -111,7 +111,7 @@ export const useReceiveItems = () => {
 
         if (uploadError) {
           console.error("Error uploading slip file:", uploadError);
-          throw new Error(`Failed to upload slip file: ${uploadError.message}`);
+          throw new Error(`Fallo al subir el archivo de albarán: ${uploadError.message}`);
         }
         
         // La función Edge devuelve { filePath: string | null, poNumber: string | null }
@@ -130,7 +130,7 @@ export const useReceiveItems = () => {
         .select()
         .single();
 
-      if (slipError) throw new Error(`Failed to create packing slip: ${slipError.message}`);
+      if (slipError) throw new Error(`Fallo al crear el albarán: ${slipError.message}`);
 
       const slipId = newSlip.id;
 
@@ -145,7 +145,7 @@ export const useReceiveItems = () => {
         .from('received_items')
         .insert(receivedItemInserts);
 
-      if (receivedItemsError) throw new Error(`Failed to insert received items: ${receivedItemsError.message}`);
+      if (receivedItemsError) throw new Error(`Fallo al insertar artículos recibidos: ${receivedItemsError.message}`);
 
       // 4. Actualizar el Inventario (usando RPC para manejar la lógica de upsert)
       for (const item of items) {
@@ -158,7 +158,7 @@ export const useReceiveItems = () => {
             unit_price_in: item.itemDetails.unit_price,
             format_in: item.itemDetails.format,
           });
-          if (inventoryError) throw new Error(`Failed to update inventory for ${item.itemDetails.product_name}: ${inventoryError.message}`);
+          if (inventoryError) throw new Error(`Fallo al actualizar el inventario para ${item.itemDetails.product_name}: ${inventoryError.message}`);
         }
       }
 
@@ -175,7 +175,7 @@ export const useReceiveItems = () => {
         .eq('id', requestId)
         .single();
 
-      if (requestError) throw new Error(`Failed to fetch request details for status check: ${requestError.message}`);
+      if (requestError) throw new Error(`Fallo al obtener detalles de la solicitud para la verificación de estado: ${requestError.message}`);
 
       // Obtener el total recibido agregado (usando la misma lógica que el hook de fetch)
       const { data: aggregatedReceived, error: aggError } = await supabase
@@ -187,7 +187,7 @@ export const useReceiveItems = () => {
         `)
         .eq('slip_id.request_id', requestId);
 
-      if (aggError) throw new Error(`Failed to fetch aggregated received items for status check: ${aggError.message}`);
+      if (aggError) throw new Error(`Fallo al obtener artículos recibidos agregados para la verificación de estado: ${aggError.message}`);
 
       const aggregation = (aggregatedReceived as any[]).reduce((acc, item) => {
         const itemId = item.request_item_id;
@@ -212,7 +212,7 @@ export const useReceiveItems = () => {
           console.error("Error updating request status to Received:", statusUpdateError);
           // No lanzamos un error fatal, solo registramos.
         } else {
-          toast.info(`Request ${requestId} is now fully received! Status updated.`);
+          toast.info(`Solicitud ${requestId} recibida completamente! Estado actualizado.`);
         }
       }
 
@@ -226,12 +226,12 @@ export const useReceiveItems = () => {
       return newSlip;
     },
     onSuccess: (newSlip) => {
-      toast.success(`Items received successfully!`, {
-        description: `Packing Slip #${newSlip.slip_number} recorded.`,
+      toast.success(`Artículos recibidos exitosamente!`, {
+        description: `Albarán #${newSlip.slip_number} registrado.`,
       });
     },
     onError: (error) => {
-      toast.error("Failed to record item reception.", {
+      toast.error("Fallo al registrar la recepción del artículo.", {
         description: error.message,
       });
     },

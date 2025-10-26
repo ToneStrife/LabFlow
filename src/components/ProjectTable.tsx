@@ -25,16 +25,16 @@ const ProjectTable: React.FC<ProjectTableProps> = ({ projects, onEdit, onDelete 
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Project Name</TableHead>
-            <TableHead>Project Code</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
+            <TableHead>Nombre del Proyecto</TableHead>
+            <TableHead>Código del Proyecto</TableHead>
+            <TableHead className="text-right">Acciones</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {projects.length === 0 ? (
             <TableRow>
               <TableCell colSpan={3} className="h-24 text-center text-muted-foreground">
-                No projects found.
+                No se encontraron proyectos.
               </TableCell>
             </TableRow>
           ) : (
@@ -48,7 +48,7 @@ const ProjectTable: React.FC<ProjectTableProps> = ({ projects, onEdit, onDelete 
                     size="icon"
                     onClick={() => onEdit(project)}
                     className="mr-2"
-                    title="Edit Project"
+                    title="Editar Proyecto"
                   >
                     <Edit className="h-4 w-4" />
                   </Button>
@@ -56,7 +56,7 @@ const ProjectTable: React.FC<ProjectTableProps> = ({ projects, onEdit, onDelete 
                     variant="destructive"
                     size="icon"
                     onClick={() => onDelete(project.id)}
-                    title="Delete Project"
+                    title="Eliminar Proyecto"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>

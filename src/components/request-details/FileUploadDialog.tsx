@@ -55,7 +55,7 @@ const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
     
     if (isPoUpload) {
       if (!poNumber.trim()) {
-        toast.error("PO Number is required.", { description: "Please enter a Purchase Order number." });
+        toast.error("El número de PO es obligatorio.", { description: "Por favor, introduce un número de Orden de Compra." });
         return;
       }
       // Si es PO, enviamos el archivo (puede ser null) y el número de PO (obligatorio)
@@ -64,21 +64,21 @@ const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
       // Si no es PO, el archivo es obligatorio
       await onUpload(selectedFile);
     } else {
-      toast.error("File is required.", { description: "Please select a file to upload." });
+      toast.error("El archivo es obligatorio.", { description: "Por favor, selecciona un archivo para subir." });
       return;
     }
   };
 
   const getTitle = () => {
     switch (fileType) {
-      case "quote": return "Upload Quote File (Required)";
-      case "po": return "Upload Purchase Order File (Optional)";
-      case "slip": return "Upload Packing Slip (Optional)";
-      default: return "Upload File";
+      case "quote": return "Subir Archivo de Cotización (Obligatorio)";
+      case "po": return "Subir Archivo de Orden de Compra (Opcional)";
+      case "slip": return "Subir Albarán (Opcional)";
+      default: return "Subir Archivo";
     }
   };
   
-  const isSubmitDisabled = isUploading || (fileType !== 'po' && !selectedFile);
+  const isSubmitDisabled = isUploading || (fileType !== 'po' && fileType !== 'slip' && !selectedFile);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -94,21 +94,21 @@ const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
           {fileType === "po" && (
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="poNumber" className="text-right">
-                PO Number <span className="text-red-500">*</span>
+                Número de PO <span className="text-red-500">*</span>
               </Label>
               <Input
                 id="poNumber"
                 value={poNumber}
                 onChange={(e) => setPoNumber(e.target.value)}
                 className="col-span-3"
-                placeholder="e.g., PO-12345"
+                placeholder="ej. PO-12345"
                 disabled={isUploading}
               />
             </div>
           )}
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="file" className="text-right">
-              File {fileType === 'po' || fileType === 'slip' ? "(Optional)" : "(Required)"}
+              Archivo {fileType === 'po' || fileType === 'slip' ? "(Opcional)" : "(Obligatorio)"}
             </Label>
             <Input
               id="file"
@@ -121,15 +121,15 @@ const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isUploading}>
-            Cancel
+            Cancelar
           </Button>
           <Button onClick={handleSubmit} disabled={isSubmitDisabled}>
             {isUploading ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Uploading...
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Subiendo...
               </>
             ) : (
-              fileType === 'po' ? "Save PO Details" : "Upload"
+              fileType === 'po' ? "Guardar Detalles de PO" : "Subir"
             )}
           </Button>
         </DialogFooter>

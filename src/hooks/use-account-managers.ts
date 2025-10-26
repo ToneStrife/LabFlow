@@ -26,11 +26,11 @@ export const useAddAccountManager = () => {
       return data;
     },
     onSuccess: () => {
-      toast.success('Account manager added successfully!');
+      toast.success('Gerente de cuenta añadido exitosamente!');
       queryClient.invalidateQueries({ queryKey: ['account_managers'] });
     },
     onError: (error) => {
-      toast.error('Failed to add account manager.', { description: error.message });
+      toast.error('Fallo al añadir gerente de cuenta.', { description: error.message });
     },
   });
 };
@@ -45,11 +45,11 @@ export const useUpdateAccountManager = () => {
       return updatedData;
     },
     onSuccess: () => {
-      toast.success('Account manager updated successfully!');
+      toast.success('Gerente de cuenta actualizado exitosamente!');
       queryClient.invalidateQueries({ queryKey: ['account_managers'] });
     },
     onError: (error) => {
-      toast.error('Failed to update account manager.', { description: error.message });
+      toast.error('Fallo al actualizar gerente de cuenta.', { description: error.message });
     },
   });
 };
@@ -61,11 +61,11 @@ export const useDeleteAccountManager = () => {
     mutationFn: async (id: string) => {
       const { error } = await supabase.from('account_managers').delete().eq('id', id);
       if (error) {
-        throw new Error(`Failed to delete account manager: ${error.message}`);
+        throw new Error(`Fallo al eliminar gerente de cuenta: ${error.message}`);
       }
     },
     onSuccess: () => {
-      toast.success('Account manager deleted successfully!');
+      toast.success('Gerente de cuenta eliminado exitosamente!');
       queryClient.invalidateQueries({ queryKey: ['account_managers'] });
     },
     onError: (error) => {

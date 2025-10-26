@@ -19,19 +19,19 @@ import { Loader2 } from "lucide-react";
 import { SupabaseRequestItem } from "@/data/types";
 
 const itemEditSchema = z.object({
-  product_name: z.string().min(1, { message: "Product name is required." }),
-  catalog_number: z.string().min(1, { message: "Catalog number is required." }),
+  product_name: z.string().min(1, { message: "El nombre del producto es obligatorio." }),
+  catalog_number: z.string().min(1, { message: "El número de catálogo es obligatorio." }),
   brand: z.string().optional().nullable(),
   quantity: z.preprocess(
     (val) => Number(val),
-    z.number().min(1, { message: "Quantity must be at least 1." })
+    z.number().min(1, { message: "La cantidad debe ser al menos 1." })
   ),
   unit_price: z.preprocess(
     (val) => (val === null || val === "" ? null : Number(val)),
-    z.number().min(0, { message: "Unit price cannot be negative." }).nullable().optional()
+    z.number().min(0, { message: "El precio unitario no puede ser negativo." }).nullable().optional()
   ),
   format: z.string().optional().nullable(),
-  link: z.string().url({ message: "Must be a valid URL." }).optional().or(z.literal("")).nullable(),
+  link: z.string().url({ message: "Debe ser una URL válida." }).optional().or(z.literal("")).nullable(),
   notes: z.string().optional().nullable(),
 });
 
@@ -72,7 +72,7 @@ const RequestItemForm: React.FC<RequestItemFormProps> = ({ initialData, onSubmit
             name="product_name"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Product Name</FormLabel>
+                <FormLabel>Nombre del Producto</FormLabel>
                 <FormControl><Input {...field} disabled={isSubmitting} /></FormControl>
                 <FormMessage />
               </FormItem>
@@ -83,7 +83,7 @@ const RequestItemForm: React.FC<RequestItemFormProps> = ({ initialData, onSubmit
             name="catalog_number"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Catalog Number</FormLabel>
+                <FormLabel>Número de Catálogo</FormLabel>
                 <FormControl><Input {...field} disabled={isSubmitting} /></FormControl>
                 <FormMessage />
               </FormItem>
@@ -94,7 +94,7 @@ const RequestItemForm: React.FC<RequestItemFormProps> = ({ initialData, onSubmit
             name="brand"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Brand (Optional)</FormLabel>
+                <FormLabel>Marca (Opcional)</FormLabel>
                 <FormControl><Input {...field} disabled={isSubmitting} value={field.value || ""} onChange={(e) => field.onChange(e.target.value || null)} /></FormControl>
                 <FormMessage />
               </FormItem>
@@ -105,7 +105,7 @@ const RequestItemForm: React.FC<RequestItemFormProps> = ({ initialData, onSubmit
             name="quantity"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Quantity</FormLabel>
+                <FormLabel>Cantidad</FormLabel>
                 <FormControl><Input type="number" {...field} onChange={(e) => field.onChange(e.target.value)} disabled={isSubmitting} /></FormControl>
                 <FormMessage />
               </FormItem>
@@ -116,7 +116,7 @@ const RequestItemForm: React.FC<RequestItemFormProps> = ({ initialData, onSubmit
             name="unit_price"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Unit Price (Optional)</FormLabel>
+                <FormLabel>Precio Unitario (Opcional)</FormLabel>
                 <FormControl><Input type="number" step="0.01" {...field} value={field.value === null ? "" : field.value} onChange={(e) => field.onChange(e.target.value === "" ? null : Number(e.target.value))} disabled={isSubmitting} /></FormControl>
                 <FormMessage />
               </FormItem>
@@ -127,7 +127,7 @@ const RequestItemForm: React.FC<RequestItemFormProps> = ({ initialData, onSubmit
             name="format"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Format (Optional)</FormLabel>
+                <FormLabel>Formato (Opcional)</FormLabel>
                 <FormControl><Input {...field} disabled={isSubmitting} value={field.value || ""} onChange={(e) => field.onChange(e.target.value || null)} /></FormControl>
                 <FormMessage />
               </FormItem>
@@ -138,7 +138,7 @@ const RequestItemForm: React.FC<RequestItemFormProps> = ({ initialData, onSubmit
             name="link"
             render={({ field }) => (
               <FormItem className="md:col-span-2">
-                <FormLabel>Product Link (Optional)</FormLabel>
+                <FormLabel>Enlace del Producto (Opcional)</FormLabel>
                 <FormControl><Input type="url" {...field} disabled={isSubmitting} value={field.value || ""} onChange={(e) => field.onChange(e.target.value || null)} /></FormControl>
                 <FormMessage />
               </FormItem>
@@ -150,7 +150,7 @@ const RequestItemForm: React.FC<RequestItemFormProps> = ({ initialData, onSubmit
           name="notes"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Notes (Optional)</FormLabel>
+              <FormLabel>Notas (Opcional)</FormLabel>
               <FormControl><Textarea {...field} disabled={isSubmitting} value={field.value || ""} onChange={(e) => field.onChange(e.target.value || null)} /></FormControl>
               <FormMessage />
             </FormItem>
@@ -158,15 +158,15 @@ const RequestItemForm: React.FC<RequestItemFormProps> = ({ initialData, onSubmit
         />
         <div className="flex justify-end space-x-2 pt-4">
           <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
-            Cancel
+            Cancelar
           </Button>
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando...
               </>
             ) : (
-              "Save Item Changes"
+              "Guardar Cambios del Artículo"
             )}
           </Button>
         </div>

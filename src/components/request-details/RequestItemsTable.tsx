@@ -44,7 +44,7 @@ const RequestItemsTable: React.FC<RequestItemsTableProps> = ({ items, isEditable
 
   const handleDeleteItem = async (itemId: string) => {
     if (items && items.length <= 1) {
-      toast.error("Cannot delete the last item.", { description: "A request must have at least one item. Consider deleting the entire request instead." });
+      toast.error("No se puede eliminar el último artículo.", { description: "Una solicitud debe tener al menos un artículo. Considere eliminar la solicitud completa en su lugar." });
       return;
     }
     await deleteItemMutation.mutateAsync(itemId);
@@ -53,7 +53,7 @@ const RequestItemsTable: React.FC<RequestItemsTableProps> = ({ items, isEditable
   if (!items || items.length === 0) {
     return (
       <div className="text-muted-foreground text-center py-4">
-        No items found for this request.
+        No se encontraron artículos para esta solicitud.
       </div>
     );
   }
@@ -61,19 +61,19 @@ const RequestItemsTable: React.FC<RequestItemsTableProps> = ({ items, isEditable
   return (
     <>
       <Separator />
-      <h2 className="text-xl font-semibold mb-4">Requested Items</h2>
+      <h2 className="text-xl font-semibold mb-4">Artículos Solicitados</h2>
       <div className="rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Product Name</TableHead>
-              <TableHead>Brand</TableHead>
-              <TableHead>Catalog #</TableHead>
-              <TableHead>Quantity</TableHead>
-              <TableHead>Unit Price</TableHead>
-              <TableHead>Format</TableHead>
-              <TableHead>Link</TableHead>
-              {isEditable && <TableHead className="text-right">Actions</TableHead>}
+              <TableHead>Nombre del Producto</TableHead>
+              <TableHead>Marca</TableHead>
+              <TableHead>Catálogo #</TableHead>
+              <TableHead>Cantidad</TableHead>
+              <TableHead>Precio Unitario</TableHead>
+              <TableHead>Formato</TableHead>
+              <TableHead>Enlace</TableHead>
+              {isEditable && <TableHead className="text-right">Acciones</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -88,7 +88,7 @@ const RequestItemsTable: React.FC<RequestItemsTableProps> = ({ items, isEditable
                 <TableCell>
                   {item.link ? (
                     <a href={item.link} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
-                      View Product
+                      Ver Producto
                     </a>
                   ) : (
                     "N/A"
@@ -101,7 +101,7 @@ const RequestItemsTable: React.FC<RequestItemsTableProps> = ({ items, isEditable
                       size="icon"
                       onClick={() => handleEditItem(item)}
                       className="mr-2"
-                      title="Edit Item"
+                      title="Editar Artículo"
                       disabled={updateItemMutation.isPending || deleteItemMutation.isPending}
                     >
                       <Edit className="h-4 w-4" />
@@ -110,7 +110,7 @@ const RequestItemsTable: React.FC<RequestItemsTableProps> = ({ items, isEditable
                       variant="destructive"
                       size="icon"
                       onClick={() => handleDeleteItem(item.id)}
-                      title="Delete Item"
+                      title="Eliminar Artículo"
                       disabled={updateItemMutation.isPending || deleteItemMutation.isPending}
                     >
                       {deleteItemMutation.isPending && deleteItemMutation.variables === item.id ? (
@@ -131,7 +131,7 @@ const RequestItemsTable: React.FC<RequestItemsTableProps> = ({ items, isEditable
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
-            <DialogTitle>Edit Request Item</DialogTitle>
+            <DialogTitle>Editar Artículo de Solicitud</DialogTitle>
           </DialogHeader>
           {editingItem && (
             <RequestItemForm

@@ -18,9 +18,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Loader2 } from "lucide-react"; // Import Loader2
 
 const vendorFormSchema = z.object({
-  name: z.string().min(1, { message: "Vendor name is required." }),
+  name: z.string().min(1, { message: "El nombre del proveedor es obligatorio." }),
   contactPerson: z.string().optional().nullable(),
-  email: z.string().email({ message: "Must be a valid email address." }).optional().or(z.literal("")).nullable(),
+  email: z.string().email({ message: "Debe ser una dirección de correo válida." }).optional().or(z.literal("")).nullable(),
   phone: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
   brands: z.string().optional().nullable(), // Permitir null
@@ -69,9 +69,9 @@ const VendorForm: React.FC<VendorFormProps> = ({ initialData, onSubmit, onCancel
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Vendor Name</FormLabel>
+              <FormLabel>Nombre del Proveedor</FormLabel>
               <FormControl>
-                <Input placeholder="e.g., Thermo Fisher Scientific" {...field} disabled={isSubmitting} />
+                <Input placeholder="ej. Thermo Fisher Scientific" {...field} disabled={isSubmitting} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -82,10 +82,10 @@ const VendorForm: React.FC<VendorFormProps> = ({ initialData, onSubmit, onCancel
           name="contactPerson"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Contact Person (Optional)</FormLabel>
+              <FormLabel>Persona de Contacto (Opcional)</FormLabel>
               <FormControl>
                 <Input 
-                  placeholder="e.g., Jane Doe" 
+                  placeholder="ej. Jane Doe" 
                   {...field} 
                   disabled={isSubmitting} 
                   value={field.value || ""} 
@@ -101,11 +101,11 @@ const VendorForm: React.FC<VendorFormProps> = ({ initialData, onSubmit, onCancel
           name="email"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Email (Optional)</FormLabel>
+              <FormLabel>Email (Opcional)</FormLabel>
               <FormControl>
                 <Input 
                   type="email" 
-                  placeholder="e.g., jane.doe@example.com" 
+                  placeholder="ej. jane.doe@example.com" 
                   {...field} 
                   disabled={isSubmitting} 
                   value={field.value || ""} 
@@ -121,10 +121,10 @@ const VendorForm: React.FC<VendorFormProps> = ({ initialData, onSubmit, onCancel
           name="phone"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Phone (Optional)</FormLabel>
+              <FormLabel>Teléfono (Opcional)</FormLabel>
               <FormControl>
                 <Input 
-                  placeholder="e.g., 1-800-123-4567" 
+                  placeholder="ej. 1-800-123-4567" 
                   {...field} 
                   disabled={isSubmitting} 
                   value={field.value || ""} 
@@ -140,10 +140,10 @@ const VendorForm: React.FC<VendorFormProps> = ({ initialData, onSubmit, onCancel
           name="brands"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Brands (Optional)</FormLabel>
+              <FormLabel>Marcas (Opcional)</FormLabel>
               <FormControl>
                 <Textarea
-                  placeholder="e.g., Invitrogen, Applied Biosystems, Gibco (comma-separated)"
+                  placeholder="ej. Invitrogen, Applied Biosystems, Gibco (separadas por comas)"
                   {...field}
                   disabled={isSubmitting}
                   value={field.value || ""} 
@@ -159,10 +159,10 @@ const VendorForm: React.FC<VendorFormProps> = ({ initialData, onSubmit, onCancel
           name="notes"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Notes (Optional)</FormLabel>
+              <FormLabel>Notas (Opcional)</FormLabel>
               <FormControl>
                 <Textarea 
-                  placeholder="Any specific details about this vendor..." 
+                  placeholder="Cualquier detalle específico sobre este proveedor..." 
                   {...field} 
                   disabled={isSubmitting} 
                   value={field.value || ""} 
@@ -176,16 +176,16 @@ const VendorForm: React.FC<VendorFormProps> = ({ initialData, onSubmit, onCancel
         <div className="flex justify-end space-x-2 pt-4">
           {onCancel && (
             <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
-              Cancel
+              Cancelar
             </Button>
           )}
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando...
               </>
             ) : (
-              initialData ? "Save Changes" : "Add Vendor"
+              initialData ? "Guardar Cambios" : "Añadir Proveedor"
             )}
           </Button>
         </div>

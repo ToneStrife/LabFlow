@@ -26,11 +26,11 @@ export const useAddProject = () => {
       return data;
     },
     onSuccess: () => {
-      toast.success('Project added successfully!');
+      toast.success('Proyecto añadido exitosamente!');
       queryClient.invalidateQueries({ queryKey: ['projects'] });
     },
     onError: (error) => {
-      toast.error('Failed to add project.', { description: error.message });
+      toast.error('Fallo al añadir proyecto.', { description: error.message });
     },
   });
 };
@@ -45,11 +45,11 @@ export const useUpdateProject = () => {
       return updatedData;
     },
     onSuccess: () => {
-      toast.success('Project updated successfully!');
+      toast.success('Proyecto actualizado exitosamente!');
       queryClient.invalidateQueries({ queryKey: ['projects'] });
     },
     onError: (error) => {
-      toast.error('Failed to update project.', { description: error.message });
+      toast.error('Fallo al actualizar proyecto.', { description: error.message });
     },
   });
 };
@@ -61,11 +61,11 @@ export const useDeleteProject = () => {
     mutationFn: async (id: string) => {
       const { error } = await supabase.from('projects').delete().eq('id', id);
       if (error) {
-        throw new Error(`Failed to delete project: ${error.message}`);
+        throw new Error(`Fallo al eliminar proyecto: ${error.message}`);
       }
     },
     onSuccess: () => {
-      toast.success('Project deleted successfully!');
+      toast.success('Proyecto eliminado exitosamente!');
       queryClient.invalidateQueries({ queryKey: ['projects'] });
     },
     onError: (error) => {

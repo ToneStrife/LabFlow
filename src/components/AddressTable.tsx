@@ -25,19 +25,19 @@ const AddressTable: React.FC<AddressTableProps> = ({ addresses, onEdit, onDelete
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Name</TableHead>
-            <TableHead>Address Line 1</TableHead>
-            <TableHead>City, State, Zip</TableHead>
-            <TableHead>Country</TableHead>
-            <TableHead>CIF / VAT ID</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
+            <TableHead>Nombre</TableHead>
+            <TableHead>Línea de Dirección 1</TableHead>
+            <TableHead>Ciudad, Estado, CP</TableHead>
+            <TableHead>País</TableHead>
+            <TableHead>CIF / ID de IVA</TableHead>
+            <TableHead className="text-right">Acciones</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {addresses.length === 0 ? (
             <TableRow>
               <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
-                No addresses found.
+                No se encontraron direcciones.
               </TableCell>
             </TableRow>
           ) : (
@@ -54,7 +54,7 @@ const AddressTable: React.FC<AddressTableProps> = ({ addresses, onEdit, onDelete
                     size="icon"
                     onClick={() => onEdit(address)}
                     className="mr-2"
-                    title="Edit Address"
+                    title="Editar Dirección"
                   >
                     <Edit className="h-4 w-4" />
                   </Button>
@@ -62,7 +62,7 @@ const AddressTable: React.FC<AddressTableProps> = ({ addresses, onEdit, onDelete
                     variant="destructive"
                     size="icon"
                     onClick={() => onDelete(address.id)}
-                    title="Delete Address"
+                    title="Eliminar Dirección"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>

@@ -35,7 +35,7 @@ const receivedItemSchema = z.object({
   quantityPreviouslyReceived: z.number(),
   quantityReceived: z.preprocess(
     (val) => Number(val),
-    z.number().min(0, { message: "Quantity must be non-negative." })
+    z.number().min(0, { message: "La cantidad debe ser no negativa." })
   ),
 });
 
@@ -109,7 +109,7 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
         
         const totalReceived = item.quantityPreviouslyReceived + item.quantityReceived;
         if (totalReceived > item.quantityOrdered) {
-          toast.error(`Error: Quantity received for ${item.productName} exceeds quantity ordered.`);
+          toast.error(`Error: La cantidad recibida para ${item.productName} excede la cantidad pedida.`);
           throw new Error("Quantity received exceeds quantity ordered.");
         }
 
@@ -121,7 +121,7 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
       });
 
     if (itemsToReceive.length === 0) {
-      toast.error("Please specify at least one item quantity greater than zero to receive.");
+      toast.error("Por favor, especifica al menos una cantidad de artículo mayor a cero para recibir.");
       return;
     }
 
@@ -151,7 +151,7 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
   
   const handleReceiveAllAndSubmit = () => {
     if (allItemsFullyReceived) {
-      toast.info("All items are already fully received.");
+      toast.info("Todos los artículos ya han sido recibidos completamente.");
       return;
     }
     
@@ -170,7 +170,7 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
     const quantityRemaining = item.quantityOrdered - item.quantityPreviouslyReceived;
     if (quantityRemaining > 0) {
       form.setValue(`items.${index}.quantityReceived`, quantityRemaining, { shouldDirty: true });
-      toast.info(`Received remaining ${quantityRemaining} units of ${item.productName}.`);
+      toast.info(`Recibidas ${quantityRemaining} unidades restantes de ${item.productName}.`);
     }
   };
 
@@ -179,7 +179,7 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
       <Dialog open={isOpen} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-[800px]">
           <div className="flex justify-center items-center h-40">
-            <Loader2 className="h-6 w-6 animate-spin mr-2" /> Loading received status...
+            <Loader2 className="h-6 w-6 animate-spin mr-2" /> Cargando estado de recepción...
           </div>
         </DialogContent>
       </Dialog>
@@ -193,9 +193,9 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[800px]">
         <DialogHeader>
-          <DialogTitle>Receive Items & Record Packing Slip</DialogTitle>
+          <DialogTitle>Recibir Artículos y Registrar Albarán</DialogTitle>
           <DialogDescription>
-            Enter the packing slip details and the quantity received for each item.
+            Introduce los detalles del albarán y la cantidad recibida para cada artículo.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -206,9 +206,9 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
                 name="slipNumber"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Packing Slip Number (Optional)</FormLabel>
+                    <FormLabel>Número de Albarán (Opcional)</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., SLIP-12345" {...field} disabled={isSubmitting} />
+                      <Input placeholder="ej. SLIP-12345" {...field} disabled={isSubmitting} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -219,7 +219,7 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
                 name="slipFile"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Upload Slip File (Optional)</FormLabel>
+                    <FormLabel>Subir Archivo de Albarán (Opcional)</FormLabel>
                     <FormControl>
                       <Input type="file" onChange={(e) => field.onChange(e.target.files)} disabled={isSubmitting} capture="camera" />
                     </FormControl>
@@ -230,7 +230,7 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
             </div>
 
             <div className="space-y-4 max-h-[400px] overflow-y-auto p-2 border rounded-md">
-              <h3 className="text-lg font-semibold mb-4">Items to Receive</h3>
+              <h3 className="text-lg font-semibold mb-4">Artículos a Recibir</h3>
               
               {fields.map((item, index) => {
                 const quantityOrdered = form.watch(`items.${index}.quantityOrdered`);
@@ -243,10 +243,10 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
                   <div key={item.id} className="grid grid-cols-1 sm:grid-cols-5 gap-4 items-center border-b pb-3 last:border-b-0">
                     <div className="sm:col-span-2">
                       <p className="font-medium truncate" title={item.productName}>{item.productName}</p>
-                      <p className="text-xs text-muted-foreground">Ordered: {quantityOrdered} | Received: {quantityPreviouslyReceived}</p>
+                      <p className="text-xs text-muted-foreground">Pedido: {quantityOrdered} | Recibido: {quantityPreviouslyReceived}</p>
                     </div>
                     <div className="sm:col-span-1">
-                      <p className="text-sm text-muted-foreground">Remaining:</p>
+                      <p className="text-sm text-muted-foreground">Restante:</p>
                       <p className={`font-bold ${isFullyReceived ? 'text-green-600' : 'text-orange-600'}`}>{quantityRemaining}</p>
                     </div>
                     <FormField
@@ -255,7 +255,7 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
                       render={({ field: quantityField }) => (
                         <FormItem className="sm:col-span-2 flex items-end space-y-0 gap-2">
                           <div className="flex-1">
-                            <FormLabel>Quantity to Receive</FormLabel>
+                            <FormLabel>Cantidad a Recibir</FormLabel>
                             <FormControl>
                               <Input 
                                 type="number" 
@@ -281,7 +281,7 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
                               size="icon"
                               onClick={() => handleReceiveRemaining(index)}
                               disabled={isSubmitting || currentQuantityReceived === quantityRemaining}
-                              title="Receive Remaining Quantity"
+                              title="Recibir Cantidad Restante"
                             >
                               <CheckSquare className="h-4 w-4" />
                             </Button>
@@ -296,7 +296,7 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
 
             <DialogFooter className="flex flex-col sm:flex-row sm:justify-end sm:space-x-2 pt-4">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
-                Cancel
+                Cancelar
               </Button>
               <Button 
                 type="button" 
@@ -306,21 +306,21 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
               >
                 {isSubmitting ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Recording All...
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Registrando Todo...
                   </>
                 ) : (
                   <>
-                    <CheckCheck className="mr-2 h-4 w-4" /> Receive All & Record
+                    <CheckCheck className="mr-2 h-4 w-4" /> Recibir Todo y Registrar
                   </>
                 )}
               </Button>
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Recording...
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Registrando...
                   </>
                 ) : (
-                  "Record Reception"
+                  "Registrar Recepción"
                 )}
               </Button>
             </DialogFooter>

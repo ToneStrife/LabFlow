@@ -27,7 +27,7 @@ import { useProjects } from "@/hooks/use-projects";
 
 const metadataSchema = z.object({
   accountManagerId: z.union([
-    z.string().uuid({ message: "Invalid manager ID." }),
+    z.string().uuid({ message: "ID de gerente no válido." }),
     z.literal("unassigned"),
   ]).optional(),
   notes: z.string().optional(),
@@ -75,15 +75,15 @@ const RequestMetadataForm: React.FC<RequestMetadataFormProps> = ({ request, onSu
           name="accountManagerId"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Assigned Account Manager</FormLabel>
+              <FormLabel>Gerente de Cuenta Asignado</FormLabel>
               <Select onValueChange={field.onChange} value={field.value || "unassigned"} disabled={isLoadingManagers || isSubmitting}>
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder={isLoadingManagers ? "Loading managers..." : "Select an account manager"} />
+                    <SelectValue placeholder={isLoadingManagers ? "Cargando gerentes..." : "Selecciona un gerente de cuenta"} />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="unassigned">No Manager</SelectItem>
+                  <SelectItem value="unassigned">Sin Gerente</SelectItem>
                   {accountManagers?.map((manager) => (
                     <SelectItem key={manager.id} value={manager.id}>
                       {`${manager.first_name} ${manager.last_name}`}
@@ -100,7 +100,7 @@ const RequestMetadataForm: React.FC<RequestMetadataFormProps> = ({ request, onSu
           name="projectCodes"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Project Codes</FormLabel>
+              <FormLabel>Códigos de Proyecto</FormLabel>
               <Popover>
                 <PopoverTrigger asChild>
                   <FormControl>
@@ -112,15 +112,15 @@ const RequestMetadataForm: React.FC<RequestMetadataFormProps> = ({ request, onSu
                             return project ? <Badge key={projectId} variant="secondary">{project.code}</Badge> : null;
                           })}
                         </div>
-                      ) : "Select projects..."}
+                      ) : "Seleccionar proyectos..."}
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </FormControl>
                 </PopoverTrigger>
                 <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                   <Command>
-                    <CommandInput placeholder="Search projects..." />
-                    <CommandEmpty>No project found.</CommandEmpty>
+                    <CommandInput placeholder="Buscar proyectos..." />
+                    <CommandEmpty>No se encontró ningún proyecto.</CommandEmpty>
                     <CommandGroup>
                       {projects?.map((project) => (
                         <CommandItem value={project.name} key={project.id} onSelect={() => {
@@ -148,9 +148,9 @@ const RequestMetadataForm: React.FC<RequestMetadataFormProps> = ({ request, onSu
           name="notes"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Notes</FormLabel>
+              <FormLabel>Notas</FormLabel>
               <FormControl>
-                <Textarea placeholder="Any specific details about this request..." {...field} disabled={isSubmitting} />
+                <Textarea placeholder="Cualquier detalle específico sobre esta solicitud..." {...field} disabled={isSubmitting} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -160,10 +160,10 @@ const RequestMetadataForm: React.FC<RequestMetadataFormProps> = ({ request, onSu
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando...
               </>
             ) : (
-              "Update Details"
+              "Actualizar Detalles"
             )}
           </Button>
         </div>

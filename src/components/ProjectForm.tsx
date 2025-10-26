@@ -18,8 +18,8 @@ import { Loader2 } from "lucide-react";
 import { Project } from "@/hooks/use-projects";
 
 const projectFormSchema = z.object({
-  name: z.string().min(1, { message: "Project name is required." }),
-  code: z.string().min(1, { message: "Project code is required." }),
+  name: z.string().min(1, { message: "El nombre del proyecto es obligatorio." }),
+  code: z.string().min(1, { message: "El código del proyecto es obligatorio." }),
 });
 
 export type ProjectFormValues = z.infer<typeof projectFormSchema>;
@@ -55,9 +55,9 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ initialData, onSubmit, onCanc
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Project Name</FormLabel>
+              <FormLabel>Nombre del Proyecto</FormLabel>
               <FormControl>
-                <Input placeholder="e.g., New Drug Discovery" {...field} disabled={isSubmitting} />
+                <Input placeholder="ej. Descubrimiento de Nuevo Fármaco" {...field} disabled={isSubmitting} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -68,9 +68,9 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ initialData, onSubmit, onCanc
           name="code"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Project Code</FormLabel>
+              <FormLabel>Código del Proyecto</FormLabel>
               <FormControl>
-                <Input placeholder="e.g., ND-001" {...field} disabled={isSubmitting || !!initialData} />
+                <Input placeholder="ej. ND-001" {...field} disabled={isSubmitting || !!initialData} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -79,16 +79,16 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ initialData, onSubmit, onCanc
         <div className="flex justify-end space-x-2 pt-4">
           {onCancel && (
             <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
-              Cancel
+              Cancelar
             </Button>
           )}
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando...
               </>
             ) : (
-              initialData ? "Save Changes" : "Add Project"
+              initialData ? "Guardar Cambios" : "Añadir Proyecto"
             )}
           </Button>
         </div>

@@ -31,9 +31,9 @@ const attachmentSchema = z.object({
 });
 
 const emailFormSchema = z.object({
-  to: z.string().email({ message: "Must be a valid email address." }),
-  subject: z.string().min(1, { message: "Subject is required." }),
-  body: z.string().min(1, { message: "Email body cannot be empty." }),
+  to: z.string().email({ message: "Debe ser una dirección de correo válida." }),
+  subject: z.string().min(1, { message: "El asunto es obligatorio." }),
+  body: z.string().min(1, { message: "El cuerpo del correo no puede estar vacío." }),
   attachments: z.array(attachmentSchema).optional(), // Adjuntos para mostrar en el diálogo (usando URL firmada)
   attachmentsForSend: z.array(attachmentSchema).optional(), // Adjuntos para enviar (usando ruta de almacenamiento)
 });
@@ -97,9 +97,9 @@ const EmailDialog: React.FC<EmailDialogProps> = ({
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>Compose Email</DialogTitle>
+          <DialogTitle>Redactar Correo Electrónico</DialogTitle>
           <DialogDescription>
-            This is a simulated email system. The email content will be logged to the console.
+            Este es un sistema de correo simulado. El contenido del correo se registrará en la consola.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -109,7 +109,7 @@ const EmailDialog: React.FC<EmailDialogProps> = ({
               name="to"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>To</FormLabel>
+                  <FormLabel>Para</FormLabel>
                   <FormControl>
                     <Input type="email" {...field} disabled={isSending} />
                   </FormControl>
@@ -122,7 +122,7 @@ const EmailDialog: React.FC<EmailDialogProps> = ({
               name="subject"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Subject</FormLabel>
+                  <FormLabel>Asunto</FormLabel>
                   <FormControl>
                     <Input {...field} disabled={isSending} />
                   </FormControl>
@@ -135,7 +135,7 @@ const EmailDialog: React.FC<EmailDialogProps> = ({
               name="body"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Body</FormLabel>
+                  <FormLabel>Cuerpo</FormLabel>
                   <FormControl>
                     <Textarea rows={8} {...field} disabled={isSending} />
                   </FormControl>
@@ -145,7 +145,7 @@ const EmailDialog: React.FC<EmailDialogProps> = ({
             />
             {form.watch("attachments") && form.watch("attachments")!.length > 0 && (
               <div className="space-y-2">
-                <FormLabel>Attachments (Click to preview)</FormLabel>
+                <FormLabel>Adjuntos (Clic para previsualizar)</FormLabel>
                 <div className="flex flex-wrap gap-2">
                   {/* Usamos 'attachments' aquí porque contiene las URL firmadas para la vista previa */}
                   {form.watch("attachments")!.map((attachment, index) => (
@@ -161,15 +161,15 @@ const EmailDialog: React.FC<EmailDialogProps> = ({
             )}
             <div className="flex justify-end space-x-2 pt-4">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSending}>
-                Cancel
+                Cancelar
               </Button>
               <Button type="submit" disabled={isSending}>
                 {isSending ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Sending...
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Enviando...
                   </>
                 ) : (
-                  "Send Email"
+                  "Enviar Correo"
                 )}
               </Button>
             </div>

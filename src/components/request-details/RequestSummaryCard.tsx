@@ -103,12 +103,12 @@ const RequestSummaryCard: React.FC<RequestSummaryCardProps> = ({ request, vendor
     <Card>
       <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
         <CardTitle className="text-2xl font-bold">
-          Request {displayRequestNumber} from: {vendor?.name || "N/A"}
+          Solicitud {displayRequestNumber} de: {vendor?.name || "N/A"}
         </CardTitle>
         <div className="flex items-center space-x-2">
           <Badge variant={getStatusBadgeVariant(request.status)}>{request.status}</Badge>
           {isEditable && (
-            <Button variant="outline" size="icon" onClick={onEditDetails} title="Edit Request Details">
+            <Button variant="outline" size="icon" onClick={onEditDetails} title="Editar Detalles de la Solicitud">
               <Edit className="h-4 w-4" />
             </Button>
           )}
@@ -117,15 +117,15 @@ const RequestSummaryCard: React.FC<RequestSummaryCardProps> = ({ request, vendor
       <CardContent className="space-y-6 pt-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <p className="text-sm text-muted-foreground">Requester</p>
+            <p className="text-sm text-muted-foreground">Solicitante</p>
             <p className="font-medium">{requesterName}</p>
           </div>
           <div>
-            <p className="text-sm text-muted-foreground">Account Manager</p>
+            <p className="text-sm text-muted-foreground">Gerente de Cuenta</p>
             <p className="font-medium">{accountManagerName}</p>
           </div>
           <div>
-            <p className="text-sm text-muted-foreground">Project Codes</p>
+            <p className="text-sm text-muted-foreground">Códigos de Proyecto</p>
             <p className="font-medium">{projectCodesDisplay}</p>
           </div>
         </div>
@@ -134,11 +134,11 @@ const RequestSummaryCard: React.FC<RequestSummaryCardProps> = ({ request, vendor
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <p className="text-sm text-muted-foreground mb-1">Shipping Address</p>
+            <p className="text-sm text-muted-foreground mb-1">Dirección de Envío</p>
             {formatAddress(shippingAddress)}
           </div>
           <div>
-            <p className="text-sm text-muted-foreground mb-1">Billing Address</p>
+            <p className="text-sm text-muted-foreground mb-1">Dirección de Facturación</p>
             {formatAddress(billingAddress)}
           </div>
         </div>
@@ -147,11 +147,11 @@ const RequestSummaryCard: React.FC<RequestSummaryCardProps> = ({ request, vendor
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <p className="text-sm text-muted-foreground">Date Submitted</p>
+            <p className="text-sm text-muted-foreground">Fecha de Envío</p>
             <p className="font-medium">{dateSubmitted}</p>
           </div>
           <div>
-            <p className="text-sm text-muted-foreground">Quote Details</p>
+            <p className="text-sm text-muted-foreground">Detalles de Cotización</p>
             <p className="font-medium">
               {request.quote_url ? (
                 <Button 
@@ -164,14 +164,14 @@ const RequestSummaryCard: React.FC<RequestSummaryCardProps> = ({ request, vendor
                   {isGeneratingQuoteUrl ? (
                     <Loader2 className="h-4 w-4 animate-spin mr-1" />
                   ) : (
-                    "View Quote"
+                    "Ver Cotización"
                   )}
                 </Button>
               ) : "N/A"}
             </p>
           </div>
           <div>
-            <p className="text-sm text-muted-foreground">PO Number</p>
+            <p className="text-sm text-muted-foreground">Número de PO</p>
             <p className="font-medium">{request.po_number || "N/A"}</p>
           </div>
         </div>
@@ -180,7 +180,7 @@ const RequestSummaryCard: React.FC<RequestSummaryCardProps> = ({ request, vendor
           <>
             <Separator />
             <div>
-              <p className="text-sm text-muted-foreground mb-1">Notes</p>
+              <p className="text-sm text-muted-foreground mb-1">Notas</p>
               <p className="text-sm italic text-gray-700">{request.notes}</p>
             </div>
           </>

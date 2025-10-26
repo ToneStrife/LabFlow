@@ -37,12 +37,12 @@ export const useAddInventoryItem = () => {
     },
     onSuccess: (newItem) => {
       queryClient.invalidateQueries({ queryKey: ["inventory"] });
-      toast.success("Inventory updated!", {
-        description: `Added/Updated: ${newItem.product_name} (Qty: ${newItem.quantity})`,
+      toast.success("Inventario actualizado!", {
+        description: `Añadido/Actualizado: ${newItem.product_name} (Cant: ${newItem.quantity})`,
       });
     },
     onError: (error) => {
-      toast.error("Failed to add/update inventory item.", {
+      toast.error("Fallo al añadir/actualizar el artículo de inventario.", {
         description: error.message,
       });
     },
@@ -58,10 +58,10 @@ export const useUpdateInventoryItem = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["inventory"] });
-      toast.success("Inventory item updated successfully!");
+      toast.success("Artículo de inventario actualizado exitosamente!");
     },
     onError: (error) => {
-      toast.error("Failed to update inventory item.", {
+      toast.error("Fallo al actualizar el artículo de inventario.", {
         description: error.message,
       });
     },
@@ -77,10 +77,10 @@ export const useDeleteInventoryItem = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["inventory"] });
-      toast.success("Inventory item deleted successfully!");
+      toast.success("Artículo de inventario eliminado exitosamente!");
     },
     onError: (error) => {
-      toast.error("Failed to delete inventory item.", {
+      toast.error("Fallo al eliminar el artículo de inventario.", {
         description: error.message,
       });
     },

@@ -25,19 +25,19 @@ const VendorTable: React.FC<VendorTableProps> = ({ vendors, onEdit, onDelete }) 
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Vendor Name</TableHead>
-            <TableHead>Contact Person</TableHead>
+            <TableHead>Nombre del Proveedor</TableHead>
+            <TableHead>Persona de Contacto</TableHead>
             <TableHead>Email</TableHead>
-            <TableHead>Phone</TableHead>
-            <TableHead>Brands</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
+            <TableHead>Teléfono</TableHead>
+            <TableHead>Marcas</TableHead>
+            <TableHead className="text-right">Acciones</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {vendors.length === 0 ? (
             <TableRow>
               <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
-                No vendors found.
+                No se encontraron proveedores.
               </TableCell>
             </TableRow>
           ) : (
@@ -54,7 +54,7 @@ const VendorTable: React.FC<VendorTableProps> = ({ vendors, onEdit, onDelete }) 
                     size="icon"
                     onClick={() => onEdit(vendor)}
                     className="mr-2"
-                    title="Edit Vendor"
+                    title="Editar Proveedor"
                   >
                     <Edit className="h-4 w-4" />
                   </Button>
@@ -62,7 +62,7 @@ const VendorTable: React.FC<VendorTableProps> = ({ vendors, onEdit, onDelete }) 
                     variant="destructive"
                     size="icon"
                     onClick={() => onDelete(vendor.id)}
-                    title="Delete Vendor"
+                    title="Eliminar Proveedor"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>

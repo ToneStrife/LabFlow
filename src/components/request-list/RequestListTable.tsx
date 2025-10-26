@@ -95,20 +95,19 @@ const RequestListTable: React.FC<RequestListTableProps> = ({
       <Table>
         <TableHeader>
           <TableRow>
-            {/* <TableHead>Request #</TableHead> <-- Eliminado */}
-            <TableHead>Vendor</TableHead>
-            <TableHead>Requester</TableHead>
-            <TableHead>Items</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Date</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
+            <TableHead>Proveedor</TableHead>
+            <TableHead>Solicitante</TableHead>
+            <TableHead>Artículos</TableHead>
+            <TableHead>Estado</TableHead>
+            <TableHead>Fecha</TableHead>
+            <TableHead className="text-right">Acciones</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {requests.length === 0 ? (
             <TableRow>
               <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
-                No requests found matching your criteria.
+                No se encontraron solicitudes que coincidan con tus criterios.
               </TableCell>
             </TableRow>
           ) : (
@@ -120,7 +119,6 @@ const RequestListTable: React.FC<RequestListTableProps> = ({
 
               return (
                 <TableRow key={request.id}>
-                  {/* <TableCell className="font-medium">{displayRequestNumber}</TableCell> <-- Eliminado */}
                   <TableCell className="font-medium">{vendor?.name || "N/A"}</TableCell>
                   <TableCell>{requesterName}</TableCell>
                   <TableCell className="max-w-[250px]">
@@ -128,7 +126,11 @@ const RequestListTable: React.FC<RequestListTableProps> = ({
                   </TableCell>
                   <TableCell>
                     <Badge variant={getStatusBadgeVariant(request.status)}>
-                      {request.status}
+                      {request.status === "Pending" && "Pendiente"}
+                      {request.status === "Quote Requested" && "Cotización Solicitada"}
+                      {request.status === "PO Requested" && "PO Solicitado"}
+                      {request.status === "Ordered" && "Pedido"}
+                      {request.status === "Received" && "Recibido"}
                     </Badge>
                   </TableCell>
                   <TableCell>{date}</TableCell>

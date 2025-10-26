@@ -40,7 +40,7 @@ import { generateSignedUrl } from "@/utils/supabase-storage";
 
 // Función auxiliar para obtener el nombre de archivo legible (copiada de RequestFilesCard.tsx)
 const getFileNameFromPath = (filePath: string): string => {
-  if (!filePath) return "File";
+  if (!filePath) return "Archivo";
   try {
     const pathParts = filePath.split('/');
     const encodedFileName = pathParts[pathParts.length - 1];
@@ -48,10 +48,10 @@ const getFileNameFromPath = (filePath: string): string => {
     
     // Eliminar el prefijo de timestamp (ej. "1678886400000_")
     const nameWithoutPrefix = decodedFileName.substring(decodedFileName.indexOf('_') + 1);
-    return nameWithoutPrefix || decodedFileName || "File"; // Fallback si algo sale mal
+    return nameWithoutPrefix || decodedFileName || "Archivo"; // Fallback si algo sale mal
   } catch (e) {
     console.error("Could not parse filename from path", e);
-    return "File";
+    return "Archivo";
   }
 };
 
@@ -147,7 +147,7 @@ const RequestDetails: React.FC = () => {
       if (signedUrl) {
         attachmentsForDialog.push({ name: fileName, url: signedUrl });
       } else {
-        toast.warning("Could not generate signed URL for quote file. Attachment link in dialog may be broken.");
+        toast.warning("No se pudo generar la URL firmada para el archivo de cotización. El enlace adjunto en el diálogo podría estar roto.");
       }
       
       // 2. Usar la ruta de almacenamiento original para el envío (Edge Function)
@@ -214,7 +214,7 @@ const RequestDetails: React.FC = () => {
     if (request?.items && request.items.length > 0) {
       setIsReceiveItemsDialogOpen(true);
     } else {
-      toast.error("Cannot receive items.", { description: "The request has no items." });
+      toast.error("No se pueden recibir artículos.", { description: "La solicitud no tiene artículos." });
     }
   };
 
@@ -358,7 +358,7 @@ const RequestDetails: React.FC = () => {
     
     const validStatuses: RequestStatus[] = ["Pending", "Quote Requested", "PO Requested", "Ordered", "Received"];
     if (!validStatuses.includes(newStatus as RequestStatus)) {
-        toast.error("Invalid status selected.");
+        toast.error("Estado no válido seleccionado.");
         return;
     }
     
@@ -414,13 +414,13 @@ const RequestDetails: React.FC = () => {
         <Button variant="outline" onClick={() => navigate("/dashboard")}><ArrowLeft className="mr-2 h-4 w-4" /> Volver al Panel de Control</Button>
         
         <div className="flex items-center space-x-4">
-          <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">Request {displayRequestNumber}</h1>
+          <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">Solicitud {displayRequestNumber}</h1>
           {canOverrideStatus && (
             <Button variant="secondary" size="sm" onClick={() => {
               setNewStatus(request.status);
               setIsStatusOverrideDialogOpen(true);
             }}>
-              <Edit className="mr-2 h-4 w-4" /> Change Status
+              <Edit className="mr-2 h-4 w-4" /> Cambiar Estado
             </Button>
           )}
         </div>
@@ -441,7 +441,7 @@ const RequestDetails: React.FC = () => {
         
         <div className="lg:col-span-1 space-y-6">
           <div className="p-4 border rounded-lg bg-card shadow-lg">
-            <h3 className="text-lg font-semibold mb-3">Actions</h3>
+            <h3 className="text-lg font-semibold mb-3">Acciones</h3>
             <RequestActions
               request={request}
               isUpdatingStatus={updateStatusMutation.isPending || updateFileMutation.isPending || revertReceptionMutation.isPending}
@@ -462,11 +462,11 @@ const RequestDetails: React.FC = () => {
       <Dialog open={isEditMetadataDialogOpen} onOpenChange={setIsEditMetadataDialogOpen}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
-            <DialogTitle>{isFullEditAllowed ? "Edit Full Request Details" : "Edit Request Metadata"}</DialogTitle>
+            <DialogTitle>{isFullEditAllowed ? "Editar Detalles Completos de la Solicitud" : "Editar Metadatos de la Solicitud"}</DialogTitle>
             <DialogDescription>
               {isFullEditAllowed 
-                ? "Update vendor, addresses, manager, projects, and notes. (Available in Pending and PO Requested status)"
-                : "Update the assigned manager, project codes, and general notes. (Available in Quote Requested status)"
+                ? "Actualiza proveedor, direcciones, gerente, proyectos y notas. (Disponible en estado Pendiente y PO Solicitado)"
+                : "Actualiza el gerente asignado, códigos de proyecto y notas generales. (Disponible en estado Cotización Solicitada)"
               }
             </DialogDescription>
           </DialogHeader>
@@ -485,7 +485,7 @@ const RequestDetails: React.FC = () => {
               isSubmitting={updateMetadataMutation.isPending}
             />
           ) : (
-            <p className="text-muted-foreground p-4">Editing is only allowed in 'Pending', 'Quote Requested', or 'PO Requested' status.</p>
+            <p className="text-muted-foreground p-4">La edición solo está permitida en estado 'Pendiente', 'Cotización Solicitada' o 'PO Solicitado'.</p>
           )}
         </DialogContent>
       </Dialog>
@@ -506,29 +506,35 @@ const RequestDetails: React.FC = () => {
       <Dialog open={isStatusOverrideDialogOpen} onOpenChange={setIsStatusOverrideDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Override Request Status</DialogTitle>
+            <DialogTitle>Anular Estado de Solicitud</DialogTitle>
             <DialogDescription>
-              Manually change the status of Request {displayRequestNumber}. Use with caution.
+              Cambia manualmente el estado de la Solicitud {displayRequestNumber}. Úsalo con precaución.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <Select value={newStatus} onValueChange={setNewStatus} disabled={updateStatusMutation.isPending}>
               <SelectTrigger>
-                <SelectValue placeholder="Select new status" />
+                <SelectValue placeholder="Seleccionar nuevo estado" />
               </SelectTrigger>
               <SelectContent>
                 {["Pending", "Quote Requested", "PO Requested", "Ordered", "Received"].map((status) => (
-                  <SelectItem key={status} value={status}>{status}</SelectItem>
+                  <SelectItem key={status} value={status}>
+                    {status === "Pending" && "Pendiente"}
+                    {status === "Quote Requested" && "Cotización Solicitada"}
+                    {status === "PO Requested" && "PO Solicitado"}
+                    {status === "Ordered" && "Pedido"}
+                    {status === "Received" && "Recibido"}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsStatusOverrideDialogOpen(false)} disabled={updateStatusMutation.isPending}>
-              Cancel
+              Cancelar
             </Button>
             <Button onClick={handleStatusOverride} disabled={updateStatusMutation.isPending || newStatus === request?.status}>
-              {updateStatusMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Confirm Change"}
+              {updateStatusMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Confirmar Cambio"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -538,17 +544,17 @@ const RequestDetails: React.FC = () => {
       <Dialog open={isRevertReceptionDialogOpen} onOpenChange={setIsRevertReceptionDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Revert Reception & Inventory</DialogTitle>
+            <DialogTitle>Revertir Recepción e Inventario</DialogTitle>
             <DialogDescription>
-              Are you sure you want to revert Request {displayRequestNumber} from "Received" to "Ordered"? This action will permanently remove all associated packing slips and decrease the corresponding quantities from the Inventory.
+              ¿Estás seguro de que deseas revertir la Solicitud {displayRequestNumber} de "Recibido" a "Pedido"? Esta acción eliminará permanentemente todos los albaranes asociados y disminuirá las cantidades correspondientes del Inventario.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsRevertReceptionDialogOpen(false)} disabled={revertReceptionMutation.isPending}>
-              Cancel
+              Cancelar
             </Button>
             <Button variant="destructive" onClick={handleRevertReception} disabled={revertReceptionMutation.isPending}>
-              {revertReceptionMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Confirm Revert & Remove from Inventory"}
+              {revertReceptionMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Confirmar Reversión y Quitar del Inventario"}
             </Button>
           </DialogFooter>
         </DialogContent>
