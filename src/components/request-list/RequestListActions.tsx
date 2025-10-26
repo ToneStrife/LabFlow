@@ -32,8 +32,8 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
   onCancel,
   onMerge, // Desestructurar la nueva acción
 }) => {
-  // Permitir fusión en estados activos antes de la orden de compra
-  const isMergeAllowed = request.status === "Pending" || request.status === "Quote Requested" || request.status === "PO Requested";
+  // Permitir fusión solo en estado Pendiente
+  const isMergeAllowed = request.status === "Pending";
 
   return (
     <div className="text-right flex justify-end space-x-2">
@@ -46,7 +46,7 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
         <Eye className="h-4 w-4" />
       </Button>
 
-      {/* Merge Action (Disponible en Pending, Quote Requested, PO Requested) */}
+      {/* Merge Action (Disponible solo en Pending) */}
       {isMergeAllowed && (
         <Button
           variant="ghost"
