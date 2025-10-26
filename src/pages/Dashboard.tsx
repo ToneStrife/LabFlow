@@ -17,13 +17,13 @@ interface SummaryCardProps {
 }
 
 const SummaryCard: React.FC<SummaryCardProps> = ({ title, count, icon, color }) => (
-  <Card className="shadow-lg transition-shadow hover:shadow-xl">
-    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-      <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-      <div className={`h-5 w-5 text-${color}`}>{icon}</div>
+  <Card className="shadow-sm transition-shadow hover:shadow-md">
+    <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3">
+      <CardTitle className="text-xs font-medium text-muted-foreground">{title}</CardTitle>
+      <div className={`h-4 w-4 text-${color}`}>{icon}</div>
     </CardHeader>
-    <CardContent>
-      <div className="text-2xl font-bold">{count}</div>
+    <CardContent className="p-3 pt-0">
+      <div className="text-xl font-bold">{count}</div>
     </CardContent>
   </Card>
 );
@@ -66,8 +66,8 @@ const Dashboard = () => {
         Bienvenido a tu Panel de Gestión de Pedidos de Laboratorio.
       </p>
       
-      {/* Redesigned Summary Cards */}
-      <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* Redesigned Summary Cards (Smaller) */}
+      <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <SummaryCard 
           title="Solicitudes Pendientes" 
           count={pendingRequestsCount} 

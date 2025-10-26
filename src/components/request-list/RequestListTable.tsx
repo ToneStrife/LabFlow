@@ -62,11 +62,12 @@ const RequestListTable: React.FC<RequestListTableProps> = ({
     return getFullName(profile);
   };
 
-  const getAccountManagerName = (managerId: string | null) => {
-    if (!managerId) return "N/A";
-    const manager = accountManagers?.find(am => am.id === managerId); // Buscar en la nueva lista de Account Managers
-    return manager ? `${manager.first_name} ${manager.last_name}` : "N/A";
-  };
+  // Función ya no necesaria en la tabla, pero se mantiene por si acaso
+  // const getAccountManagerName = (managerId: string | null) => {
+  //   if (!managerId) return "N/A";
+  //   const manager = accountManagers?.find(am => am.id === managerId);
+  //   return manager ? `${manager.first_name} ${manager.last_name}` : "N/A";
+  // };
 
   return (
     <div className="rounded-md border">
@@ -75,7 +76,7 @@ const RequestListTable: React.FC<RequestListTableProps> = ({
           <TableRow>
             <TableHead>Vendor</TableHead>
             <TableHead>Requester</TableHead>
-            <TableHead>Account Manager</TableHead>
+            <TableHead>Items</TableHead> {/* Columna cambiada */}
             <TableHead>Status</TableHead>
             <TableHead>Date</TableHead>
             <TableHead className="text-right">Actions</TableHead>
@@ -92,14 +93,17 @@ const RequestListTable: React.FC<RequestListTableProps> = ({
             requests.map((request) => {
               const vendor = vendors?.find(v => v.id === request.vendor_id);
               const requesterName = getRequesterName(request.requester_id);
-              const accountManagerName = getAccountManagerName(request.account_manager_id);
+              // const accountManagerName = getAccountManagerName(request.account_manager_id); // Eliminado
               const date = format(new Date(request.created_at), 'yyyy-MM-dd');
+              const totalItems = request.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
 
               return (
                 <TableRow key={request.id}>
                   <TableCell className="font-medium">{vendor?.name || "N/A"}</TableCell>
                   <TableCell>{requesterName}</TableCell>
-                  <TableCell>{accountManagerName}</TableCell>
+                  <TableCell>
+                    {totalItems} item{totalItems !== 1 ? 's' : ''}
+                  </TableCell> {/* Contenido cambiado */}
                   <TableCell>
                     <Badge variant={getStatusBadgeVariant(request.status)}>
                       {request.status}
