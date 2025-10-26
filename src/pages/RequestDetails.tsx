@@ -533,7 +533,7 @@ const RequestDetails: React.FC = () => {
             <DialogDescription>
               {isFullEditAllowed 
                 ? "Actualiza proveedor, direcciones, gerente, proyectos y notas. (Disponible en estado Pendiente y PO Solicitado)"
-                : "Actualiza el gerente asignado, códigos de proyecto y notas generales. (Disponible en estado Cotización Solicitada)"
+                : "Actualiza el gerente asignado, códigos de proyecto y notas generales. (Disponible en estado Pendiente y Cotización Solicitada)"
               }
             </DialogDescription>
           </DialogHeader>
