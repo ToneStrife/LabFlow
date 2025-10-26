@@ -393,19 +393,21 @@ const RequestDetails: React.FC = () => {
   const displayRequestNumber = request.request_number || `#${request.id.substring(0, 8)}`;
 
   return (
-    <div className="container mx-auto py-8 space-y-6">
+    <div className="max-w-7xl mx-auto py-8 space-y-6">
       <div className="flex items-center justify-between mb-6">
         <Button variant="outline" onClick={() => navigate("/dashboard")}><ArrowLeft className="mr-2 h-4 w-4" /> Volver al Panel de Control</Button>
-        <h1 className="text-3xl font-bold text-gray-800">Request {displayRequestNumber}</h1>
         
-        {canOverrideStatus && (
-          <Button variant="secondary" onClick={() => {
-            setNewStatus(request.status);
-            setIsStatusOverrideDialogOpen(true);
-          }}>
-            <Edit className="mr-2 h-4 w-4" /> Change Status
-          </Button>
-        )}
+        <div className="flex items-center space-x-4">
+          <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">Request {displayRequestNumber}</h1>
+          {canOverrideStatus && (
+            <Button variant="secondary" size="sm" onClick={() => {
+              setNewStatus(request.status);
+              setIsStatusOverrideDialogOpen(true);
+            }}>
+              <Edit className="mr-2 h-4 w-4" /> Change Status
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -422,10 +424,7 @@ const RequestDetails: React.FC = () => {
         </div>
         
         <div className="lg:col-span-1 space-y-6">
-          <RequestFilesCard request={request} onUploadClick={handleUploadClick} />
-          
-          {/* RequestActions ahora está fuera del flujo normal de contenido para evitar solapamientos */}
-          <div className="p-4 border rounded-lg bg-card shadow-sm">
+          <div className="p-4 border rounded-lg bg-card shadow-lg">
             <h3 className="text-lg font-semibold mb-3">Actions</h3>
             <RequestActions
               request={request}
@@ -438,6 +437,8 @@ const RequestDetails: React.FC = () => {
               handleMarkAsOrderedAndSendEmail={handleMarkAsOrderedAndSendEmail}
             />
           </div>
+          
+          <RequestFilesCard request={request} onUploadClick={handleUploadClick} />
         </div>
       </div>
       

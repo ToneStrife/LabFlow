@@ -7,23 +7,24 @@ import { Button } from "@/components/ui/button";
 import { PlusCircle, Loader2, Clock, Package, CheckCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useRequests } from "@/hooks/use-requests";
+import { cn } from "@/lib/utils";
 
 // Componente de Tarjeta de Resumen Compacta
 interface SummaryCardProps {
   title: string;
   count: number;
   icon: React.ReactNode;
-  color: string;
+  colorClass: string;
 }
 
-const SummaryCard: React.FC<SummaryCardProps> = ({ title, count, icon, color }) => (
-  <Card className="shadow-sm transition-shadow hover:shadow-md">
-    <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3">
-      <CardTitle className="text-xs font-medium text-muted-foreground">{title}</CardTitle>
-      <div className={`h-4 w-4 text-${color}`}>{icon}</div>
+const SummaryCard: React.FC<SummaryCardProps> = ({ title, count, icon, colorClass }) => (
+  <Card className="shadow-lg transition-all duration-300 hover:shadow-xl border-l-4" style={{ borderColor: `var(--${colorClass})` }}>
+    <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4">
+      <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
+      <div className={cn("h-6 w-6", colorClass)}>{icon}</div>
     </CardHeader>
-    <CardContent className="p-3 pt-0">
-      <div className="text-xl font-bold">{count}</div>
+    <CardContent className="p-4 pt-0">
+      <div className="text-3xl font-bold">{count}</div>
     </CardContent>
   </Card>
 );
@@ -60,41 +61,38 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="container mx-auto py-8">
-      <h1 className="text-3xl font-bold mb-6">Panel de Control</h1>
-      <p className="text-lg text-muted-foreground mb-8">
-        Bienvenido a tu Panel de Gestión de Pedidos de Laboratorio.
-      </p>
+    <div className="max-w-7xl mx-auto">
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold">Panel de Control</h1>
+        <Button onClick={() => navigate("/new-request")}>
+          <PlusCircle className="mr-2 h-4 w-4" /> Nueva Solicitud
+        </Button>
+      </div>
       
-      {/* Redesigned Summary Cards (Narrower) */}
-      <div className="mt-8 grid grid-cols-3 gap-4"> {/* Usamos grid-cols-3 para forzar 3 columnas */}
+      {/* Redesigned Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
         <SummaryCard 
           title="Solicitudes Pendientes" 
           count={pendingRequestsCount} 
           icon={<Clock />} 
-          color="orange-500" 
+          colorClass="text-orange-500" 
         />
         <SummaryCard 
           title="Artículos Pedidos" 
           count={orderedItemsCount} 
           icon={<Package />} 
-          color="blue-500" 
+          colorClass="text-blue-500" 
         />
         <SummaryCard 
           title="Artículos Recibidos" 
           count={receivedItemsCount} 
           icon={<CheckCircle />} 
-          color="green-500" 
+          colorClass="text-green-500" 
         />
       </div>
 
-      <div className="mt-12">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-bold">Solicitudes Recientes</h2>
-          <Button onClick={() => navigate("/new-request")}>
-            <PlusCircle className="mr-2 h-4 w-4" /> Nueva Solicitud
-          </Button>
-        </div>
+      <div className="mt-8">
+        <h2 className="text-2xl font-bold mb-4">Solicitudes Recientes</h2>
         <RequestList />
       </div>
     </div>
