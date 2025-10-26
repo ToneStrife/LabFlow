@@ -33,6 +33,7 @@ import RequestMetadataForm from "@/components/request-details/RequestMetadataFor
 import RequestFullEditForm, { FullEditFormValues } from "@/components/request-details/RequestFullEditForm";
 import { toast } from "sonner";
 import { useSession } from "@/components/SessionContextProvider";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"; // Importar Select
 
 const RequestDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -65,6 +66,9 @@ const RequestDetails: React.FC = () => {
   const [fileTypeToUpload, setFileTypeToUpload] = React.useState<FileType>("quote");
 
   const [isEditMetadataDialogOpen, setIsEditMetadataDialogOpen] = React.useState(false);
+  const [isStatusOverrideDialogOpen, setIsStatusOverrideDialogOpen] = React.useState(false);
+  const [newStatus, setNewStatus] = React.useState<string>(request?.status || "Pending");
+
 
   const getVendorEmail = (vendorId: string) => vendors?.find(v => v.id === vendorId)?.email || "";
   
@@ -245,7 +249,7 @@ const RequestDetails: React.FC = () => {
     setIsEmailDialogOpen(true);
   };
 
-  // Handler para la edición completa (solo Pending)
+  // Handler para la edición completa (solo Pending y PO Requested)
   const handleUpdateFullRequest = async (data: FullEditFormValues) => {
     if (!request) return;
     
@@ -278,6 +282,21 @@ const RequestDetails: React.FC = () => {
     setIsEditMetadataDialogOpen(false);
   };
 
+  // Handler para el cambio de estado manual
+  const handleStatusOverride = async () => {
+    if (!request || !newStatus) return;
+    
+    // Validar que el nuevo estado sea uno de los permitidos
+    const validStatuses: RequestStatus[] = ["Pending", "Quote Requested", "PO Requested", "Ordered", "Received"];
+    if (!validStatuses.includes(newStatus as RequestStatus)) {
+        toast.error("Invalid status selected.");
+        return;
+    }
+
+    await updateStatusMutation.mutateAsync({ id: request.id, status: newStatus as RequestStatus });
+    setIsStatusOverrideDialogOpen(false);
+  };
+
   if (isLoadingRequests || isLoadingVendors || isLoadingProfiles || isLoadingAccountManagers || isLoadingProjects || isLoadingEmailTemplates || isLoadingShippingAddresses || isLoadingBillingAddresses) {
     return <div className="container mx-auto py-8 flex justify-center items-center"><Loader2 className="h-8 w-8 animate-spin mr-2" /> Cargando Detalles de la Solicitud...</div>;
   }
@@ -293,8 +312,11 @@ const RequestDetails: React.FC = () => {
   
   // La edición de ítems y metadatos (manager, notes, projects) está permitida en Pending y Quote Requested.
   const isEditable = request.status === "Pending" || request.status === "Quote Requested";
-  // La edición completa (Vendor, Addresses) solo está permitida en Pending.
-  const isFullEditAllowed = request.status === "Pending";
+  // La edición completa (Vendor, Addresses) ahora está permitida en Pending y PO Requested.
+  const isFullEditAllowed = request.status === "Pending" || request.status === "PO Requested";
+  
+  // Permitir el cambio de estado manual solo a Admins/Account Managers
+  const canOverrideStatus = profile?.role === "Admin" || profile?.role === "Account Manager";
 
   const vendor = vendors?.find(v => v.id === request.vendor_id);
 
@@ -303,6 +325,15 @@ const RequestDetails: React.FC = () => {
       <div className="flex items-center justify-between mb-6">
         <Button variant="outline" onClick={() => navigate("/dashboard")}><ArrowLeft className="mr-2 h-4 w-4" /> Volver al Panel de Control</Button>
         <h1 className="text-3xl font-bold text-gray-800">Request #{request.id.substring(0, 8)}</h1>
+        
+        {canOverrideStatus && (
+          <Button variant="secondary" onClick={() => {
+            setNewStatus(request.status);
+            setIsStatusOverrideDialogOpen(true);
+          }}>
+            <Edit className="mr-2 h-4 w-4" /> Change Status
+          </Button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -312,7 +343,7 @@ const RequestDetails: React.FC = () => {
             vendor={vendor} 
             profiles={profiles} 
             onEditDetails={() => setIsEditMetadataDialogOpen(true)}
-            isEditable={isEditable}
+            isEditable={isEditable || isFullEditAllowed} // Permitir abrir el diálogo si se permite la edición completa o de metadatos
           />
           
           <RequestItemsTable items={request.items} isEditable={isEditable} />
@@ -321,16 +352,20 @@ const RequestDetails: React.FC = () => {
         <div className="lg:col-span-1 space-y-6">
           <RequestFilesCard request={request} onUploadClick={handleUploadClick} />
           
-          <RequestActions
-            request={request}
-            isUpdatingStatus={updateStatusMutation.isPending || updateFileMutation.isPending}
-            openApproveRequestDialog={openApproveRequestDialog}
-            handleSendPORequest={handleSendPORequest}
-            handleUploadQuote={handleUploadQuote}
-            handleUploadPOAndOrder={handleUploadPOAndOrder}
-            handleMarkAsReceived={handleMarkAsReceived}
-            handleMarkAsOrderedAndSendEmail={handleMarkAsOrderedAndSendEmail}
-          />
+          {/* RequestActions ahora está fuera del flujo normal de contenido para evitar solapamientos */}
+          <div className="p-4 border rounded-lg bg-card shadow-sm">
+            <h3 className="text-lg font-semibold mb-3">Actions</h3>
+            <RequestActions
+              request={request}
+              isUpdatingStatus={updateStatusMutation.isPending || updateFileMutation.isPending}
+              openApproveRequestDialog={openApproveRequestDialog}
+              handleSendPORequest={handleSendPORequest}
+              handleUploadQuote={handleUploadQuote}
+              handleUploadPOAndOrder={handleUploadPOAndOrder}
+              handleMarkAsReceived={handleMarkAsReceived}
+              handleMarkAsOrderedAndSendEmail={handleMarkAsOrderedAndSendEmail}
+            />
+          </div>
         </div>
       </div>
       
@@ -341,8 +376,8 @@ const RequestDetails: React.FC = () => {
             <DialogTitle>{isFullEditAllowed ? "Edit Full Request Details" : "Edit Request Metadata"}</DialogTitle>
             <DialogDescription>
               {isFullEditAllowed 
-                ? "Update vendor, addresses, manager, projects, and notes. (Only available in Pending status)"
-                : "Update the assigned manager, project codes, and general notes."
+                ? "Update vendor, addresses, manager, projects, and notes. (Available in Pending and PO Requested status)"
+                : "Update the assigned manager, project codes, and general notes. (Available in Quote Requested status)"
               }
             </DialogDescription>
           </DialogHeader>
@@ -361,7 +396,7 @@ const RequestDetails: React.FC = () => {
               isSubmitting={updateMetadataMutation.isPending}
             />
           ) : (
-            <p className="text-muted-foreground p-4">Editing is only allowed in 'Pending' or 'Quote Requested' status.</p>
+            <p className="text-muted-foreground p-4">Editing is only allowed in 'Pending', 'Quote Requested', or 'PO Requested' status.</p>
           )}
         </DialogContent>
       </Dialog>
@@ -374,6 +409,38 @@ const RequestDetails: React.FC = () => {
           <DialogFooter className="flex flex-col sm:flex-row sm:justify-end sm:space-x-2">
             <Button variant="outline" onClick={handleApproveOnly} disabled={updateStatusMutation.isPending}>Aprobar Solamente</Button>
             <Button onClick={handleApproveAndRequestQuoteEmail} disabled={updateStatusMutation.isPending}>Aprobar y Solicitar Cotización (Correo)</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Diálogo de Cambio de Estado Manual (Override) */}
+      <Dialog open={isStatusOverrideDialogOpen} onOpenChange={setIsStatusOverrideDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Override Request Status</DialogTitle>
+            <DialogDescription>
+              Manually change the status of Request #{request?.id.substring(0, 8)}. Use with caution.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <Select value={newStatus} onValueChange={setNewStatus} disabled={updateStatusMutation.isPending}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select new status" />
+              </SelectTrigger>
+              <SelectContent>
+                {["Pending", "Quote Requested", "PO Requested", "Ordered", "Received"].map((status) => (
+                  <SelectItem key={status} value={status}>{status}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsStatusOverrideDialogOpen(false)} disabled={updateStatusMutation.isPending}>
+              Cancel
+            </Button>
+            <Button onClick={handleStatusOverride} disabled={updateStatusMutation.isPending || newStatus === request?.status}>
+              {updateStatusMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Confirm Change"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
