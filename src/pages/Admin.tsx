@@ -3,7 +3,7 @@
 import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Loader2 } from "lucide-react";
+import { PlusCircle, Loader2, MapPin, DollarSign } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
@@ -36,8 +36,23 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Save } from "lucide-react";
 import { useEmailTemplates, useUpdateEmailTemplate } from "@/hooks/use-email-templates";
-import { EmailTemplate } from "@/data/types";
+import { EmailTemplate, Address } from "@/data/types";
 import { Badge } from "@/components/ui/badge";
+
+// Address imports
+import AddressTable from "@/components/AddressTable";
+import AddressForm, { AddressFormValues } from "@/components/AddressForm";
+import { 
+  useShippingAddresses, 
+  useBillingAddresses, 
+  useAddShippingAddress, 
+  useUpdateShippingAddress, 
+  useDeleteShippingAddress,
+  useAddBillingAddress,
+  useUpdateBillingAddress,
+  useDeleteBillingAddress,
+} from "@/hooks/use-addresses";
+
 
 // --- Email Template Form Schema and Placeholders ---
 const emailTemplateFormSchema = z.object({
@@ -94,6 +109,21 @@ const AdminPage = () => {
     defaultValues: { template_name: "", subject_template: "", body_template: "" },
   });
 
+  // --- Hooks for Addresses ---
+  const { data: shippingAddresses, isLoading: isLoadingShipping } = useShippingAddresses();
+  const { data: billingAddresses, isLoading: isLoadingBilling } = useBillingAddresses();
+  const addShippingMutation = useAddShippingAddress();
+  const updateShippingMutation = useUpdateShippingAddress();
+  const deleteShippingMutation = useDeleteShippingAddress();
+  const addBillingMutation = useAddBillingAddress();
+  const updateBillingMutation = useUpdateBillingAddress();
+  const deleteBillingMutation = useDeleteBillingAddress();
+
+  const [isAddAddressDialogOpen, setIsAddAddressDialogOpen] = React.useState(false);
+  const [isEditAddressDialogOpen, setIsEditAddressDialogOpen] = React.useState(false);
+  const [editingAddress, setEditingAddress] = React.useState<Address | undefined>(undefined);
+  const [currentAddressType, setCurrentAddressType] = React.useState<'shipping' | 'billing'>('shipping');
+
   // --- Handlers for Account Managers ---
   const handleAddManager = async (data: AccountManagerFormValues) => {
     await addAccountManagerMutation.mutateAsync(data);
@@ -144,6 +174,46 @@ const AdminPage = () => {
     await deleteProfileMutation.mutateAsync(userId);
   };
 
+  // --- Handlers for Addresses ---
+  const handleAddAddress = async (data: AddressFormValues) => {
+    if (currentAddressType === 'shipping') {
+      await addShippingMutation.mutateAsync(data);
+    } else {
+      await addBillingMutation.mutateAsync(data);
+    }
+    setIsAddAddressDialogOpen(false);
+  };
+
+  const handleEditAddress = async (id: string, data: AddressFormValues) => {
+    if (currentAddressType === 'shipping') {
+      await updateShippingMutation.mutateAsync({ id, data });
+    } else {
+      await updateBillingMutation.mutateAsync({ id, data });
+    }
+    setIsEditAddressDialogOpen(false);
+    setEditingAddress(undefined);
+  };
+
+  const handleDeleteAddress = async (id: string) => {
+    if (currentAddressType === 'shipping') {
+      await deleteShippingMutation.mutateAsync(id);
+    } else {
+      await deleteBillingMutation.mutateAsync(id);
+    }
+  };
+
+  const openAddAddressDialog = (type: 'shipping' | 'billing') => {
+    setCurrentAddressType(type);
+    setIsAddAddressDialogOpen(true);
+  };
+
+  const openEditAddressDialog = (address: Address, type: 'shipping' | 'billing') => {
+    setCurrentAddressType(type);
+    setEditingAddress(address);
+    setIsEditAddressDialogOpen(true);
+  };
+
+
   // --- Handlers and Effects for Email Templates ---
   React.useEffect(() => {
     if (templates && templates.length > 0 && !selectedTemplateId) {
@@ -172,7 +242,7 @@ const AdminPage = () => {
   };
 
   // --- Loading and Error States ---
-  const isLoading = isLoadingManagers || isLoadingProjects || isLoadingUsers || isLoadingTemplates || sessionLoading;
+  const isLoading = isLoadingManagers || isLoadingProjects || isLoadingUsers || isLoadingTemplates || sessionLoading || isLoadingShipping || isLoadingBilling;
   const error = managersError || projectsError || usersError || templatesError;
 
   if (isLoading) {
@@ -199,7 +269,8 @@ const AdminPage = () => {
           <TabsTrigger value="account-managers">Account Managers</TabsTrigger>
           <TabsTrigger value="projects">Projects</TabsTrigger>
           <TabsTrigger value="users">Users</TabsTrigger>
-          <TabsTrigger value="email-templates">Email Templates</TabsTrigger>
+          <TabsTrigger value="addresses">Addresses</TabsTrigger>
+          <TabsTrigger value="email-templates">Templates</TabsTrigger>
         </TabsList>
 
         {/* Account Managers Tab */}
@@ -259,6 +330,39 @@ const AdminPage = () => {
           <UserTable users={allProfiles || []} onRoleChange={handleUpdateUserRole} onDelete={handleDeleteUser} currentUserId={currentUserProfile?.id} isUpdatingRole={updateProfileMutation.isPending} isDeletingUser={deleteProfileMutation.isPending} />
         </TabsContent>
 
+        {/* Addresses Tab */}
+        <TabsContent value="addresses" className="mt-6 space-y-8">
+          {/* Shipping Addresses */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-xl flex items-center"><MapPin className="mr-2 h-5 w-5" /> Shipping Addresses</CardTitle>
+              <Button onClick={() => openAddAddressDialog('shipping')}><PlusCircle className="mr-2 h-4 w-4" /> Add Shipping Address</Button>
+            </CardHeader>
+            <CardContent>
+              <AddressTable 
+                addresses={shippingAddresses || []} 
+                onEdit={(addr) => openEditAddressDialog(addr, 'shipping')} 
+                onDelete={deleteShippingMutation.mutateAsync} 
+              />
+            </CardContent>
+          </Card>
+
+          {/* Billing Addresses */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-xl flex items-center"><DollarSign className="mr-2 h-5 w-5" /> Billing Addresses</CardTitle>
+              <Button onClick={() => openAddAddressDialog('billing')}><PlusCircle className="mr-2 h-4 w-4" /> Add Billing Address</Button>
+            </CardHeader>
+            <CardContent>
+              <AddressTable 
+                addresses={billingAddresses || []} 
+                onEdit={(addr) => openEditAddressDialog(addr, 'billing')} 
+                onDelete={deleteBillingMutation.mutateAsync} 
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         {/* Email Templates Tab */}
         <TabsContent value="email-templates" className="mt-6">
           <Card>
@@ -290,6 +394,27 @@ const AdminPage = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Edit/Add Address Dialog */}
+      <Dialog open={isAddAddressDialogOpen || isEditAddressDialogOpen} onOpenChange={isEditAddressDialogOpen ? setIsEditAddressDialogOpen : setIsAddAddressDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>{editingAddress ? "Edit Address" : `Add New ${currentAddressType === 'shipping' ? 'Shipping' : 'Billing'} Address`}</DialogTitle>
+          </DialogHeader>
+          <AddressForm 
+            initialData={editingAddress} 
+            onSubmit={editingAddress ? (data) => handleEditAddress(editingAddress.id, data) : handleAddAddress} 
+            onCancel={() => {
+              setIsAddAddressDialogOpen(false);
+              setIsEditAddressDialogOpen(false);
+              setEditingAddress(undefined);
+            }} 
+            isSubmitting={
+              (editingAddress ? (currentAddressType === 'shipping' ? updateShippingMutation.isPending : updateBillingMutation.isPending) : (currentAddressType === 'shipping' ? addShippingMutation.isPending : addBillingMutation.isPending))
+            }
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

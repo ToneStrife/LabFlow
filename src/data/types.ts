@@ -75,6 +75,7 @@ export interface Address {
   state: string;
   zip_code: string;
   country: string;
+  cif: string | null; // Nuevo campo CIF
 }
 
 export interface ShippingAddress extends Address {}
