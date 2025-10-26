@@ -30,7 +30,7 @@ import RequestActions from "@/components/request-details/RequestActions";
 import RequestFilesCard from "@/components/request-details/RequestFilesCard";
 import FileUploadDialog from "@/components/request-details/FileUploadDialog";
 import RequestMetadataForm from "@/components/request-details/RequestMetadataForm";
-import RequestFullEditForm, { FullEditFormValues } from "@/components/request-details/RequestFullEditForm"; // Nuevo import
+import RequestFullEditForm, { FullEditFormValues } from "@/components/request-details/RequestFullEditForm";
 import { toast } from "sonner";
 import { useSession } from "@/components/SessionContextProvider";
 
@@ -50,7 +50,7 @@ const RequestDetails: React.FC = () => {
   const updateStatusMutation = useUpdateRequestStatus();
   const updateFileMutation = useUpdateRequestFile();
   const updateMetadataMutation = useUpdateRequestMetadata();
-  const updateFullRequestMutation = useUpdateFullRequest(); // Nuevo hook
+  const updateFullRequestMutation = useUpdateFullRequest();
   const sendEmailMutation = useSendEmail();
 
   const request = requests?.find(req => req.id === id);
@@ -64,7 +64,7 @@ const RequestDetails: React.FC = () => {
   const [isUploadDialogOpen, setIsUploadDialogOpen] = React.useState(false);
   const [fileTypeToUpload, setFileTypeToUpload] = React.useState<FileType>("quote");
 
-  const [isEditMetadataDialogOpen, setIsEditMetadataDialogOpen] = React.useState(false); // Estado para el diálogo de edición
+  const [isEditMetadataDialogOpen, setIsEditMetadataDialogOpen] = React.useState(false);
 
   const getVendorEmail = (vendorId: string) => vendors?.find(v => v.id === vendorId)?.email || "";
   
@@ -165,11 +165,11 @@ const RequestDetails: React.FC = () => {
   const handleUploadQuote = () => handleUploadClick("quote");
   const handleUploadPOAndOrder = () => handleUploadClick("po");
 
-  const handleFileUpload = async (file: File, poNumber?: string) => {
+  const handleFileUpload = async (file: File | null, poNumber?: string) => {
     if (!request) return;
 
     try {
-      // Step 1: Upload the file and get the URL back.
+      // Step 1: Upload the file/Save PO Number via Edge Function
       const { fileUrl, poNumber: returnedPoNumber } = await updateFileMutation.mutateAsync({
         id: request.id,
         fileType: fileTypeToUpload,
@@ -177,12 +177,14 @@ const RequestDetails: React.FC = () => {
         poNumber: poNumber,
       });
 
-      // Step 2: Update the request status with the new file URL.
+      // Step 2: Update the request status based on file type
       if (fileTypeToUpload === "po") {
-        if (request.status === "PO Requested") {
-             await updateStatusMutation.mutateAsync({ id: request.id, status: "Ordered", poNumber: returnedPoNumber });
+        // If PO Number was successfully saved, mark as Ordered
+        if (returnedPoNumber && request.status === "PO Requested") {
+             await updateStatusMutation.mutateAsync({ id: request.id, status: "Ordered", poNumber: returnedPoNumber, quoteUrl: request.quote_url });
         }
-      } else if (fileTypeToUpload === "quote") {
+      } else if (fileTypeToUpload === "quote" && fileUrl) {
+        // Quote upload is mandatory and changes status to PO Requested
         await updateStatusMutation.mutateAsync({ id: request.id, status: "PO Requested", quoteUrl: fileUrl });
         
         const updatedRequestWithQuote = { ...request, quote_url: fileUrl, status: "PO Requested" as const };
@@ -192,6 +194,8 @@ const RequestDetails: React.FC = () => {
           toast.info("Cotización subida. Por favor, asigna un Gerente de Cuenta para solicitar un PO.");
         }
       }
+      // Note: 'slip' file type does not change status.
+
       setIsUploadDialogOpen(false);
     } catch (error) {
       console.error("File upload orchestration failed:", error);

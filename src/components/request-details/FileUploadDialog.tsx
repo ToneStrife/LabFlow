@@ -14,11 +14,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
 import { FileType } from "@/hooks/use-requests";
+import { toast } from "sonner";
 
 interface FileUploadDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  onUpload: (file: File, poNumber?: string) => Promise<void>;
+  onUpload: (file: File | null, poNumber?: string) => Promise<void>; // Aceptar File | null
   isUploading: boolean;
   fileType: FileType;
 }
@@ -44,25 +45,40 @@ const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
       setSelectedFile(event.target.files[0]);
+    } else {
+      setSelectedFile(null);
     }
   };
 
   const handleSubmit = async () => {
-    if (selectedFile) {
-      // Only pass poNumber if fileType is 'po'
-      const poNumToPass = fileType === 'po' ? poNumber || undefined : undefined;
-      await onUpload(selectedFile, poNumToPass);
+    const isPoUpload = fileType === 'po';
+    
+    if (isPoUpload) {
+      if (!poNumber.trim()) {
+        toast.error("PO Number is required.", { description: "Please enter a Purchase Order number." });
+        return;
+      }
+      // Si es PO, enviamos el archivo (puede ser null) y el número de PO (obligatorio)
+      await onUpload(selectedFile, poNumber.trim());
+    } else if (selectedFile) {
+      // Si no es PO, el archivo es obligatorio
+      await onUpload(selectedFile);
+    } else {
+      toast.error("File is required.", { description: "Please select a file to upload." });
+      return;
     }
   };
 
   const getTitle = () => {
     switch (fileType) {
-      case "quote": return "Upload Quote File";
-      case "po": return "Upload Purchase Order File";
-      case "slip": return "Upload Packing Slip";
+      case "quote": return "Upload Quote File (Required)";
+      case "po": return "Upload Purchase Order File (Optional)";
+      case "slip": return "Upload Packing Slip (Optional)";
       default: return "Upload File";
     }
   };
+  
+  const isSubmitDisabled = isUploading || (fileType !== 'po' && !selectedFile);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -78,7 +94,7 @@ const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
           {fileType === "po" && (
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="poNumber" className="text-right">
-                PO Number (Optional)
+                PO Number <span className="text-red-500">*</span>
               </Label>
               <Input
                 id="poNumber"
@@ -92,7 +108,7 @@ const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
           )}
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="file" className="text-right">
-              File
+              File {fileType === 'po' || fileType === 'slip' ? "(Optional)" : "(Required)"}
             </Label>
             <Input
               id="file"
@@ -107,13 +123,13 @@ const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isUploading}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={!selectedFile || isUploading}>
+          <Button onClick={handleSubmit} disabled={isSubmitDisabled}>
             {isUploading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Uploading...
               </>
             ) : (
-              "Upload"
+              fileType === 'po' ? "Save PO Details" : "Upload"
             )}
           </Button>
         </DialogFooter>

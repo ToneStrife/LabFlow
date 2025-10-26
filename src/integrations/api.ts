@@ -385,9 +385,9 @@ export const apiUpdateRequestMetadata = async (
 export const apiUpdateRequestFile = async (
   id: string,
   fileType: "quote" | "po" | "slip",
-  file: File, // Ahora acepta un objeto File real
+  file: File | null, // Aceptar File | null
   poNumber: string | null = null
-): Promise<{ fileUrl: string; poNumber: string | null }> => {
+): Promise<{ fileUrl: string | null; poNumber: string | null }> => {
   // Asegurarse de que la sesión esté fresca antes de invocar la función Edge
   const { data: { session }, error: refreshError } = await supabase.auth.refreshSession();
   if (refreshError || !session) {
@@ -396,7 +396,9 @@ export const apiUpdateRequestFile = async (
   }
 
   const formData = new FormData();
-  formData.append('file', file);
+  if (file) {
+    formData.append('file', file);
+  }
   formData.append('fileType', fileType);
   formData.append('requestId', id);
   if (poNumber) {
@@ -427,14 +429,31 @@ export const apiUpdateRequestFile = async (
     throw new Error(errorMessage);
   }
   
-  // La función Edge devuelve { fileUrl: string, poNumber: string | null }
-  const { fileUrl, poNumber: returnedPoNumber } = edgeFunctionData as { fileUrl: string; poNumber: string | null };
+  // La función Edge devuelve { fileUrl: string | null, poNumber: string | null }
+  const { fileUrl, poNumber: returnedPoNumber } = edgeFunctionData as { fileUrl: string | null; poNumber: string | null };
 
-  // Paso adicional: Actualizar la URL del archivo en la tabla 'requests'
-  const updateField = fileType === 'quote' ? 'quote_url' : fileType === 'po' ? 'po_url' : 'slip_url';
-  const updateData: Partial<SupabaseRequest> = { [updateField]: fileUrl };
-  if (fileType === 'po' && returnedPoNumber) {
+  // Paso adicional: Actualizar la URL del archivo y el PO Number en la tabla 'requests'
+  const updateData: Partial<SupabaseRequest> = {};
+  
+  if (fileType === 'quote') {
+    updateData.quote_url = fileUrl;
+  } else if (fileType === 'po') {
+    updateData.po_url = fileUrl;
+    if (returnedPoNumber) {
+      updateData.po_number = returnedPoNumber;
+    }
+  } else if (fileType === 'slip') {
+    updateData.slip_url = fileUrl;
+  }
+
+  // Si no hay URL de archivo, pero hay un número de PO, solo actualizamos el número de PO.
+  if (fileType === 'po' && !fileUrl && returnedPoNumber) {
     updateData.po_number = returnedPoNumber;
+  }
+  
+  // Si no hay datos para actualizar, salimos.
+  if (Object.keys(updateData).length === 0) {
+      return { fileUrl, poNumber: returnedPoNumber };
   }
 
   const { error: dbUpdateError } = await supabase
@@ -443,8 +462,8 @@ export const apiUpdateRequestFile = async (
     .eq('id', id);
 
   if (dbUpdateError) {
-    console.error(`Error updating request DB with ${fileType} URL:`, dbUpdateError);
-    throw new Error(`File uploaded, but failed to update database record: ${dbUpdateError.message}`);
+    console.error(`Error updating request DB with ${fileType} URL/PO Number:`, dbUpdateError);
+    throw new Error(`File uploaded/PO Number saved, but failed to update database record: ${dbUpdateError.message}`);
   }
 
   return { fileUrl, poNumber: returnedPoNumber };

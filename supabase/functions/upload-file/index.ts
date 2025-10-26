@@ -45,54 +45,69 @@ serve(async (req) => {
 
     // Parsear el FormData para obtener el archivo y los metadatos
     const formData = await req.formData();
-    const file = formData.get('file') as File;
+    const file = formData.get('file') as File | null;
     const fileType = formData.get('fileType') as string; // 'quote', 'po', 'slip'
     const requestId = formData.get('requestId') as string;
     const poNumber = formData.get('poNumber') as string | null;
 
-    // Verificación mejorada para el archivo y su nombre
-    if (!file || typeof file.name === 'undefined' || !fileType || !requestId) {
-      console.error('Edge Function: Missing required fields or invalid file object:', { file: !!file, fileName: file?.name, fileType, requestId });
-      return new Response(JSON.stringify({ error: 'Missing required fields or invalid file object: file, fileType, or requestId' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    // Verificación de campos obligatorios
+    if (!fileType || !requestId) {
+      console.error('Edge Function: Missing required fields: fileType or requestId');
+      return new Response(JSON.stringify({ error: 'Missing required fields: fileType or requestId' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    
+    // Si es 'po', el número de PO es obligatorio
+    if (fileType === 'po' && (!poNumber || poNumber.trim() === '')) {
+        console.error('Edge Function: Missing required field: poNumber for PO upload');
+        return new Response(JSON.stringify({ error: 'PO Number is required for PO updates.' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // Generar un nombre de archivo único conservando el original
-    const sanitizedOriginalName = sanitizeFilename(file.name);
-    const fileName = `${Date.now()}_${sanitizedOriginalName}`;
-    const filePath = `${user.id}/${requestId}/${fileName}`; // Organizar por user_id/request_id/file_name
+    let fileUrl: string | null = null;
 
-    // Subir el archivo a Supabase Storage
-    const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
-      .from('LabFlow') // Usar el nombre del bucket 'LabFlow'
-      .upload(filePath, file, {
-        cacheControl: '3600',
-        upsert: true, // Permite sobrescribir si el archivo ya existe
-        contentType: file.type,
-      });
+    if (file && file.size > 0) {
+        // Si hay un archivo, proceder con la subida a Storage
+        const sanitizedOriginalName = sanitizeFilename(file.name);
+        const fileName = `${Date.now()}_${sanitizedOriginalName}`;
+        const filePath = `${user.id}/${requestId}/${fileName}`; // Organizar por user_id/request_id/file_name
 
-    if (uploadError) {
-      console.error('Edge Function: Supabase Storage upload error:', uploadError);
-      return new Response(JSON.stringify({ error: uploadError.message }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500,
-      });
+        // Subir el archivo a Supabase Storage
+        const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
+            .from('LabFlow') // Usar el nombre del bucket 'LabFlow'
+            .upload(filePath, file, {
+                cacheControl: '3600',
+                upsert: true, // Permite sobrescribir si el archivo ya existe
+                contentType: file.type,
+            });
+
+        if (uploadError) {
+            console.error('Edge Function: Supabase Storage upload error:', uploadError);
+            return new Response(JSON.stringify({ error: uploadError.message }), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                status: 500,
+            });
+        }
+
+        // Obtener la URL pública del archivo
+        const { data: publicUrlData } = supabaseAdmin.storage
+            .from('LabFlow')
+            .getPublicUrl(filePath);
+
+        if (!publicUrlData || !publicUrlData.publicUrl) {
+            console.error('Edge Function: Failed to get public URL for file:', filePath);
+            return new Response(JSON.stringify({ error: 'Failed to get public URL for the uploaded file.' }), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                status: 500,
+            });
+        }
+        fileUrl = publicUrlData.publicUrl;
+        console.log('Edge Function: File uploaded successfully:', fileUrl);
+    } else if (fileType !== 'po' && fileType !== 'slip') {
+        // Si no hay archivo y no es PO/Slip, es un error (Quote es obligatorio)
+        return new Response(JSON.stringify({ error: `${fileType} file is required.` }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
-
-    // Obtener la URL pública del archivo
-    const { data: publicUrlData } = supabaseAdmin.storage
-      .from('LabFlow')
-      .getPublicUrl(filePath);
-
-    if (!publicUrlData || !publicUrlData.publicUrl) {
-      console.error('Edge Function: Failed to get public URL for file:', filePath);
-      return new Response(JSON.stringify({ error: 'Failed to get public URL for the uploaded file.' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500,
-      });
-    }
-
-    console.log('Edge Function: File uploaded successfully:', publicUrlData.publicUrl);
-    return new Response(JSON.stringify({ fileUrl: publicUrlData.publicUrl, poNumber: poNumber }), {
+    
+    // Devolver la URL (puede ser null si no se subió archivo) y el número de PO
+    return new Response(JSON.stringify({ fileUrl: fileUrl, poNumber: poNumber }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     });

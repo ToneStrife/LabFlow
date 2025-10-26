@@ -163,23 +163,31 @@ export type FileType = "quote" | "po" | "slip";
 interface UpdateRequestFileData {
   id: string;
   fileType: FileType;
-  file: File;
+  file: File | null; // Aceptar File | null
   poNumber?: string | null;
 }
 
 // REFACTOR: This mutation now ONLY handles the file upload and returns the URL.
 export const useUpdateRequestFile = () => {
   const queryClient = useQueryClient();
-  return useMutation<{ fileUrl: string; poNumber: string | null }, Error, UpdateRequestFileData>({
+  return useMutation<{ fileUrl: string | null; poNumber: string | null }, Error, UpdateRequestFileData>({
     mutationFn: async ({ id, fileType, file, poNumber }) => {
       return apiUpdateRequestFile(id, fileType, file, poNumber);
     },
-    onSuccess: (_, variables) => {
+    onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["requests"] });
-      toast.success(`${variables.fileType.toUpperCase()} file uploaded successfully!`);
+      
+      let message = `${variables.fileType.toUpperCase()} details saved successfully!`;
+      if (data.fileUrl) {
+        message = `${variables.fileType.toUpperCase()} file uploaded successfully!`;
+      } else if (variables.fileType === 'po' && data.poNumber) {
+        message = `PO Number ${data.poNumber} saved successfully!`;
+      }
+
+      toast.success(message);
     },
     onError: (error, variables) => {
-      toast.error(`Failed to upload ${variables.fileType.toUpperCase()} file.`, {
+      toast.error(`Failed to save ${variables.fileType.toUpperCase()} details.`, {
         description: error.message,
       });
     },
