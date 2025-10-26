@@ -141,9 +141,17 @@ const RequestForm: React.FC = () => {
       showSuccess("¡Detalles del producto autocompletados desde el historial!");
 
     } catch (error: any) {
-      // FIX: Asegurar que el error sea una cadena legible
+      // Si la búsqueda falla (ej. 404 No encontrado o Confianza baja), no detenemos el flujo.
+      // Solo mostramos un mensaje informativo si el error no es el genérico [object Object].
       const errorMessage = error instanceof Error ? error.message : (typeof error === 'object' && error !== null && error.message) ? error.message : String(error);
-      showError(errorMessage || "Fallo al buscar detalles del producto.");
+      
+      // Si el error es que no se encontró información fiable, lo mostramos como info, no como error.
+      if (errorMessage.includes("No se encontró información fiable")) {
+        toast.info("Búsqueda de historial: No se encontraron coincidencias fiables. Por favor, introduce los detalles manualmente.");
+      } else {
+        // Para cualquier otro error inesperado (ej. error de red, error de servidor), mostramos un error.
+        showError(errorMessage || "Fallo al buscar detalles del producto.");
+      }
     } finally {
       dismissToast(toastId);
       setEnrichingIndex(null);
