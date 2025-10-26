@@ -1,4 +1,3 @@
-'PO Solicitado (Cómprame)'.">
 "use client";
 
 import React from "react";
