@@ -22,6 +22,7 @@ import { useEmailTemplates } from "@/hooks/use-email-templates";
 import { useShippingAddresses, useBillingAddresses } from "@/hooks/use-addresses";
 import { processEmailTemplate, processTextTemplate, processPlainTextTemplate } from "@/utils/email-templating"; // Importar processPlainTextTemplate
 import EmailDialog, { EmailFormValues } from "@/components/EmailDialog";
+import ReceiveItemsDialog from "@/components/ReceiveItemsDialog"; // Importar nuevo componente
 
 // Import new modular components
 import RequestSummaryCard from "@/components/request-details/RequestSummaryCard";
@@ -34,6 +35,7 @@ import RequestFullEditForm, { FullEditFormValues } from "@/components/request-de
 import { toast } from "sonner";
 import { useSession } from "@/components/SessionContextProvider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"; // Importar Select
+import { useAggregatedReceivedItems } from "@/hooks/use-packing-slips"; // Importar hook de recepción
 
 const RequestDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -55,6 +57,7 @@ const RequestDetails: React.FC = () => {
   const sendEmailMutation = useSendEmail();
 
   const request = requests?.find(req => req.id === id);
+  const { data: aggregatedReceived, isLoading: isLoadingAggregatedReceived } = useAggregatedReceivedItems(id || '');
 
   const [isEmailDialogOpen, setIsEmailDialogOpen] = React.useState(false);
   const [emailInitialData, setEmailInitialData] = React.useState<Partial<EmailFormValues>>({});
@@ -67,6 +70,7 @@ const RequestDetails: React.FC = () => {
 
   const [isEditMetadataDialogOpen, setIsEditMetadataDialogOpen] = React.useState(false);
   const [isStatusOverrideDialogOpen, setIsStatusOverrideDialogOpen] = React.useState(false);
+  const [isReceiveItemsDialogOpen, setIsReceiveItemsDialogOpen] = React.useState(false);
   const [newStatus, setNewStatus] = React.useState<string>(request?.status || "Pending");
 
 
@@ -164,8 +168,13 @@ const RequestDetails: React.FC = () => {
     }
   };
 
-  const handleMarkAsReceived = async (request: SupabaseRequest) => {
-    await updateStatusMutation.mutateAsync({ id: request.id, status: "Received" });
+  // NUEVO: Abrir diálogo de recepción
+  const handleOpenReceiveItemsDialog = () => {
+    if (request?.items && request.items.length > 0) {
+      setIsReceiveItemsDialogOpen(true);
+    } else {
+      toast.error("Cannot receive items.", { description: "The request has no items." });
+    }
   };
 
   const handleUploadClick = (fileType: FileType) => {
@@ -297,7 +306,7 @@ const RequestDetails: React.FC = () => {
     setIsStatusOverrideDialogOpen(false);
   };
 
-  if (isLoadingRequests || isLoadingVendors || isLoadingProfiles || isLoadingAccountManagers || isLoadingProjects || isLoadingEmailTemplates || isLoadingShippingAddresses || isLoadingBillingAddresses) {
+  if (isLoadingRequests || isLoadingVendors || isLoadingProfiles || isLoadingAccountManagers || isLoadingProjects || isLoadingEmailTemplates || isLoadingShippingAddresses || isLoadingBillingAddresses || isLoadingAggregatedReceived) {
     return <div className="container mx-auto py-8 flex justify-center items-center"><Loader2 className="h-8 w-8 animate-spin mr-2" /> Cargando Detalles de la Solicitud...</div>;
   }
 
@@ -311,7 +320,8 @@ const RequestDetails: React.FC = () => {
   }
   
   // La edición de ítems y metadatos (manager, notes, projects) está permitida en Pending y Quote Requested.
-  const isEditable = request.status === "Pending" || request.status === "Quote Requested";
+  const isItemEditable = request.status === "Pending" || request.status === "Quote Requested";
+  const isMetadataEditable = request.status === "Pending" || request.status === "Quote Requested";
   // La edición completa (Vendor, Addresses) ahora está permitida en Pending y PO Requested.
   const isFullEditAllowed = request.status === "Pending" || request.status === "PO Requested";
   
@@ -344,10 +354,10 @@ const RequestDetails: React.FC = () => {
             vendor={vendor} 
             profiles={profiles} 
             onEditDetails={() => setIsEditMetadataDialogOpen(true)}
-            isEditable={isEditable || isFullEditAllowed} // Permitir abrir el diálogo si se permite la edición completa o de metadatos
+            isEditable={isMetadataEditable || isFullEditAllowed} // Permitir abrir el diálogo si se permite la edición completa o de metadatos
           />
           
-          <RequestItemsTable items={request.items} isEditable={isEditable} />
+          <RequestItemsTable items={request.items} isEditable={isItemEditable} />
         </div>
         
         <div className="lg:col-span-1 space-y-6">
@@ -363,7 +373,7 @@ const RequestDetails: React.FC = () => {
               handleSendPORequest={handleSendPORequest}
               handleUploadQuote={handleUploadQuote}
               handleUploadPOAndOrder={handleUploadPOAndOrder}
-              handleMarkAsReceived={handleMarkAsReceived}
+              handleMarkAsReceived={handleOpenReceiveItemsDialog} // Usar el nuevo manejador
               handleMarkAsOrderedAndSendEmail={handleMarkAsOrderedAndSendEmail}
             />
           </div>
@@ -389,7 +399,7 @@ const RequestDetails: React.FC = () => {
               onSubmit={handleUpdateFullRequest}
               isSubmitting={updateFullRequestMutation.isPending}
             />
-          ) : request && isEditable ? (
+          ) : request && isMetadataEditable ? (
             <RequestMetadataForm
               request={request}
               profiles={profiles || []}
@@ -461,6 +471,16 @@ const RequestDetails: React.FC = () => {
         isUploading={updateFileMutation.isPending}
         fileType={fileTypeToUpload}
       />
+      
+      {/* Diálogo de Recepción de Ítems */}
+      {request && request.items && (
+        <ReceiveItemsDialog
+          isOpen={isReceiveItemsDialogOpen}
+          onOpenChange={setIsReceiveItemsDialogOpen}
+          requestId={request.id}
+          requestItems={request.items}
+        />
+      )}
     </div>
   );
 };

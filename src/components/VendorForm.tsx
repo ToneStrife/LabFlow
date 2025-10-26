@@ -3,7 +3,7 @@
 import React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
+import *s as z from "zod";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -19,11 +19,11 @@ import { Loader2 } from "lucide-react"; // Import Loader2
 
 const vendorFormSchema = z.object({
   name: z.string().min(1, { message: "Vendor name is required." }),
-  contactPerson: z.string().optional(),
-  email: z.string().email({ message: "Must be a valid email address." }).optional().or(z.literal("")),
-  phone: z.string().optional(),
-  notes: z.string().optional(),
-  brands: z.string().optional(), // New field for comma-separated brands
+  contactPerson: z.string().optional().nullable(),
+  email: z.string().email({ message: "Must be a valid email address." }).optional().or(z.literal("")).nullable(),
+  phone: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  brands: z.string().optional().nullable(), // Permitir null
 });
 
 export type VendorFormValues = z.infer<typeof vendorFormSchema>;
@@ -40,17 +40,25 @@ const VendorForm: React.FC<VendorFormProps> = ({ initialData, onSubmit, onCancel
     resolver: zodResolver(vendorFormSchema),
     defaultValues: initialData || {
       name: "",
-      contactPerson: "",
-      email: "",
-      phone: "",
-      notes: "",
-      brands: "", // Initialize brands as an empty string
+      contactPerson: null,
+      email: null,
+      phone: null,
+      notes: null,
+      brands: null, // Initialize brands as null
     },
   });
 
   const handleSubmit = (data: VendorFormValues) => {
-    onSubmit(data);
-    // form.reset(); // Do not reset here, let parent component handle it after mutation success
+    // Convertir cadenas vacías a null antes de enviar, si el campo es opcional/nullable
+    const cleanedData: VendorFormValues = {
+      ...data,
+      contactPerson: data.contactPerson || null,
+      email: data.email || null,
+      phone: data.phone || null,
+      notes: data.notes || null,
+      brands: data.brands || null,
+    };
+    onSubmit(cleanedData);
   };
 
   return (
@@ -76,7 +84,13 @@ const VendorForm: React.FC<VendorFormProps> = ({ initialData, onSubmit, onCancel
             <FormItem>
               <FormLabel>Contact Person (Optional)</FormLabel>
               <FormControl>
-                <Input placeholder="e.g., Jane Doe" {...field} disabled={isSubmitting} />
+                <Input 
+                  placeholder="e.g., Jane Doe" 
+                  {...field} 
+                  disabled={isSubmitting} 
+                  value={field.value || ""} 
+                  onChange={(e) => field.onChange(e.target.value || null)}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -89,7 +103,14 @@ const VendorForm: React.FC<VendorFormProps> = ({ initialData, onSubmit, onCancel
             <FormItem>
               <FormLabel>Email (Optional)</FormLabel>
               <FormControl>
-                <Input type="email" placeholder="e.g., jane.doe@example.com" {...field} disabled={isSubmitting} />
+                <Input 
+                  type="email" 
+                  placeholder="e.g., jane.doe@example.com" 
+                  {...field} 
+                  disabled={isSubmitting} 
+                  value={field.value || ""} 
+                  onChange={(e) => field.onChange(e.target.value || null)}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -102,7 +123,13 @@ const VendorForm: React.FC<VendorFormProps> = ({ initialData, onSubmit, onCancel
             <FormItem>
               <FormLabel>Phone (Optional)</FormLabel>
               <FormControl>
-                <Input placeholder="e.g., 1-800-123-4567" {...field} disabled={isSubmitting} />
+                <Input 
+                  placeholder="e.g., 1-800-123-4567" 
+                  {...field} 
+                  disabled={isSubmitting} 
+                  value={field.value || ""} 
+                  onChange={(e) => field.onChange(e.target.value || null)}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -119,6 +146,8 @@ const VendorForm: React.FC<VendorFormProps> = ({ initialData, onSubmit, onCancel
                   placeholder="e.g., Invitrogen, Applied Biosystems, Gibco (comma-separated)"
                   {...field}
                   disabled={isSubmitting}
+                  value={field.value || ""} 
+                  onChange={(e) => field.onChange(e.target.value || null)}
                 />
               </FormControl>
               <FormMessage />
@@ -132,7 +161,13 @@ const VendorForm: React.FC<VendorFormProps> = ({ initialData, onSubmit, onCancel
             <FormItem>
               <FormLabel>Notes (Optional)</FormLabel>
               <FormControl>
-                <Textarea placeholder="Any specific details about this vendor..." {...field} disabled={isSubmitting} />
+                <Textarea 
+                  placeholder="Any specific details about this vendor..." 
+                  {...field} 
+                  disabled={isSubmitting} 
+                  value={field.value || ""} 
+                  onChange={(e) => field.onChange(e.target.value || null)}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>

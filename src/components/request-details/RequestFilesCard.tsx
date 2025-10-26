@@ -3,7 +3,7 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, Upload, Paperclip } from "lucide-react";
+import { FileText, Upload, Paperclip, Loader2 } from "lucide-react";
 import { SupabaseRequest } from "@/hooks/use-requests";
 import { FileType } from "@/hooks/use-requests";
 import { generateSignedUrl } from "@/utils/supabase-storage"; // Importar utilidad
@@ -51,27 +51,34 @@ const FileRow: React.FC<{ label: string; filePath: string | null; onUpload: () =
         <span className="font-medium">{label}</span>
       </div>
       <div className="flex items-center space-x-2">
-        {filePath && (
-          <Button 
-            variant="link" 
-            size="sm" 
-            onClick={handleViewClick} 
-            disabled={isGenerating}
-            className="text-sm text-blue-600 hover:underline flex items-center p-0 h-auto"
-            title={getFileNameFromPath(filePath)}
-          >
-            {isGenerating ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-1" />
-            ) : (
-              <Paperclip className="h-4 w-4 mr-1" />
-            )}
-            <span className="truncate max-w-[150px]">{getFileNameFromPath(filePath)}</span>
+        {filePath ? (
+          <>
+            <Button variant="outline" size="sm" onClick={onUpload} title="Replace File">
+              <Upload className="h-4 w-4 mr-2" />
+              Replace
+            </Button>
+            <Button 
+              variant="link" 
+              size="sm" 
+              onClick={handleViewClick} 
+              disabled={isGenerating}
+              className="text-sm text-blue-600 hover:underline flex items-center p-0 h-auto"
+              title={getFileNameFromPath(filePath)}
+            >
+              {isGenerating ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-1" />
+              ) : (
+                <Paperclip className="h-4 w-4 mr-1" />
+              )}
+              <span className="truncate max-w-[150px]">{getFileNameFromPath(filePath)}</span>
+            </Button>
+          </>
+        ) : (
+          <Button variant="outline" size="sm" onClick={onUpload} title="Upload File">
+            <Upload className="h-4 w-4 mr-2" />
+            Upload
           </Button>
         )}
-        <Button variant="outline" size="sm" onClick={onUpload} title={filePath ? "Replace File" : "Upload File"}>
-          <Upload className="h-4 w-4 mr-2" />
-          {filePath ? "Replace" : "Upload"}
-        </Button>
       </div>
     </div>
   );

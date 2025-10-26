@@ -12,8 +12,8 @@ interface RequestActionsProps {
   handleSendPORequest: (request: SupabaseRequest) => void;
   handleUploadQuote: () => void;
   handleUploadPOAndOrder: (request: SupabaseRequest) => void;
-  handleMarkAsReceived: (request: SupabaseRequest) => Promise<void>;
-  handleMarkAsOrderedAndSendEmail: (request: SupabaseRequest) => void; // New prop
+  handleMarkAsReceived: (request: SupabaseRequest) => void; // Cambiado a void para abrir el diálogo
+  handleMarkAsOrderedAndSendEmail: (request: SupabaseRequest) => void; 
 }
 
 const RequestActions: React.FC<RequestActionsProps> = ({
@@ -63,7 +63,7 @@ const RequestActions: React.FC<RequestActionsProps> = ({
 
       {/* Ordered: 
           1. Send Order Confirmation Email (if PO is available)
-          2. Mark as Received
+          2. Mark as Received (Partial/Full)
       */}
       {request.status === "Ordered" && (
         <>
@@ -73,7 +73,7 @@ const RequestActions: React.FC<RequestActionsProps> = ({
             </Button>
           )}
           <Button onClick={() => handleMarkAsReceived(request)} disabled={isUpdatingStatus}>
-            <Receipt className="mr-2 h-4 w-4" /> Mark as Received
+            <Receipt className="mr-2 h-4 w-4" /> Receive Items
           </Button>
         </>
       )}

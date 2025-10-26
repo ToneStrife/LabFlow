@@ -94,6 +94,23 @@ export interface SupabaseRequestItem {
   brand: string | null;
 }
 
+export interface PackingSlip {
+  id: string;
+  request_id: string;
+  slip_number: string;
+  received_by: string | null; // auth.users.id
+  received_at: string;
+  slip_url: string | null;
+}
+
+export interface ReceivedItem {
+  id: string;
+  slip_id: string;
+  request_item_id: string;
+  quantity_received: number;
+  received_at: string;
+}
+
 export interface SupabaseRequest {
   id: string;
   request_number: string | null; // Nuevo campo para el número de solicitud legible
@@ -110,7 +127,7 @@ export interface SupabaseRequest {
   po_number: string | null;
   quote_url: string | null;
   po_url: string | null;
-  slip_url: string | null;
+  slip_url: string | null; // Este campo se mantiene para el último albarán subido, pero la lógica de recepción usará la tabla packing_slips
 }
 
 export interface ProductDetails {
