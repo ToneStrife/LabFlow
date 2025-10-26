@@ -22,7 +22,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Loader2, FileText } from "lucide-react";
+import { Loader2, CheckSquare, Square, CheckCheck } from "lucide-react";
 import { SupabaseRequestItem } from "@/data/types";
 import { useReceiveItems, useAggregatedReceivedItems } from "@/hooks/use-packing-slips";
 import { toast } from "sonner";
@@ -41,7 +41,7 @@ const receivedItemSchema = z.object({
 
 // Esquema principal del formulario
 const receiveFormSchema = z.object({
-  slipNumber: z.string().min(1, { message: "Packing slip number is required." }),
+  slipNumber: z.string().optional(), // Hacemos el número de albarán opcional
   slipFile: z.any().optional(),
   items: z.array(receivedItemSchema).min(1),
 });
@@ -129,12 +129,25 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
 
     await receiveItemsMutation.mutateAsync({
       requestId,
-      slipNumber: data.slipNumber,
+      slipNumber: data.slipNumber || '', // Enviar cadena vacía si es null/undefined
       slipFile: file,
       items: itemsToReceive,
     });
 
     onOpenChange(false);
+  };
+
+  const handleReceiveAll = () => {
+    const currentItems = form.getValues('items');
+    const updatedItems = currentItems.map(item => {
+      const quantityRemaining = item.quantityOrdered - item.quantityPreviouslyReceived;
+      return {
+        ...item,
+        quantityReceived: quantityRemaining > 0 ? quantityRemaining : 0,
+      };
+    });
+    form.setValue('items', updatedItems, { shouldDirty: true });
+    toast.info("All remaining quantities set to be received.");
   };
 
   if (isLoadingReceived) {
@@ -150,6 +163,7 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
   }
 
   const isSubmitting = receiveItemsMutation.isPending;
+  const allItemsFullyReceived = initialItems.every(item => item.quantityOrdered - item.quantityPreviouslyReceived <= 0);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -168,7 +182,7 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
                 name="slipNumber"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Packing Slip Number</FormLabel>
+                    <FormLabel>Packing Slip Number (Optional)</FormLabel>
                     <FormControl>
                       <Input placeholder="e.g., SLIP-12345" {...field} disabled={isSubmitting} />
                     </FormControl>
@@ -192,12 +206,25 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
             </div>
 
             <div className="space-y-4 max-h-[400px] overflow-y-auto p-2 border rounded-md">
-              <h3 className="text-lg font-semibold">Items to Receive</h3>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold">Items to Receive</h3>
+                <Button 
+                  type="button" 
+                  variant="secondary" 
+                  size="sm" 
+                  onClick={handleReceiveAll} 
+                  disabled={isSubmitting || allItemsFullyReceived}
+                >
+                  <CheckCheck className="mr-2 h-4 w-4" /> Receive All Remaining
+                </Button>
+              </div>
+              
               {fields.map((item, index) => {
                 const quantityOrdered = form.watch(`items.${index}.quantityOrdered`);
                 const quantityPreviouslyReceived = form.watch(`items.${index}.quantityPreviouslyReceived`);
                 const quantityRemaining = quantityOrdered - quantityPreviouslyReceived;
                 const isFullyReceived = quantityRemaining <= 0;
+                const currentQuantityReceived = form.watch(`items.${index}.quantityReceived`);
 
                 return (
                   <div key={item.id} className="grid grid-cols-1 sm:grid-cols-5 gap-4 items-center border-b pb-3 last:border-b-0">
@@ -213,23 +240,41 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
                       control={form.control}
                       name={`items.${index}.quantityReceived`}
                       render={({ field: quantityField }) => (
-                        <FormItem className="sm:col-span-2">
-                          <FormLabel>Quantity to Receive</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              min={0}
-                              max={quantityRemaining}
-                              {...quantityField} 
-                              onChange={(e) => {
-                                const val = Number(e.target.value);
-                                quantityField.onChange(val);
+                        <FormItem className="sm:col-span-2 flex items-end space-y-0 gap-2">
+                          <div className="flex-1">
+                            <FormLabel>Quantity to Receive</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number" 
+                                min={0}
+                                max={quantityRemaining}
+                                {...quantityField} 
+                                onChange={(e) => {
+                                  const val = Number(e.target.value);
+                                  quantityField.onChange(val);
+                                }}
+                                disabled={isSubmitting || isFullyReceived}
+                                className={isFullyReceived ? "bg-green-50/50" : ""}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </div>
+                          
+                          {/* Botón de Recibir Restante (Tick) */}
+                          {quantityRemaining > 0 && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              onClick={() => {
+                                quantityField.onChange(quantityRemaining);
                               }}
-                              disabled={isSubmitting || isFullyReceived}
-                              className={isFullyReceived ? "bg-green-50/50" : ""}
-                            />
-                          </FormControl>
-                          <FormMessage />
+                              disabled={isSubmitting || currentQuantityReceived === quantityRemaining}
+                              title="Receive Remaining Quantity"
+                            >
+                              <CheckSquare className="h-4 w-4" />
+                            </Button>
+                          )}
                         </FormItem>
                       )}
                     />
