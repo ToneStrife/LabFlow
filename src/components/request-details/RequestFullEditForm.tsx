@@ -18,7 +18,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
-import { Check, ChevronsUpDown, Loader2, Input } from "lucide-react";
+import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input"; // Importación corregida
 import { cn } from "@/lib/utils";
 import { SupabaseRequest } from "@/hooks/use-requests";
 import { useAccountManagers } from "@/hooks/use-account-managers";
