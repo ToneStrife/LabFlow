@@ -155,11 +155,62 @@ export const useReceiveItems = () => {
       }
 
       // 5. Verificar si la solicitud está completamente recibida y actualizar el estado
-      // Esto requiere una lógica más compleja que se puede implementar en una función de base de datos
-      // o en el cliente. Por simplicidad, lo haremos en el cliente por ahora.
       
+      // Obtener la solicitud completa con ítems
+      const { data: requestData, error: requestError } = await supabase
+        .from('requests')
+        .select(`
+          id,
+          status,
+          items:request_items (id, quantity)
+        `)
+        .eq('id', requestId)
+        .single();
+
+      if (requestError) throw new Error(`Failed to fetch request details for status check: ${requestError.message}`);
+
+      // Obtener el total recibido agregado (usando la misma lógica que el hook de fetch)
+      const { data: aggregatedReceived, error: aggError } = await supabase
+        .from('received_items')
+        .select(`
+          quantity_received,
+          request_item_id,
+          slip_id!inner (request_id)
+        `)
+        .eq('slip_id.request_id', requestId);
+
+      if (aggError) throw new Error(`Failed to fetch aggregated received items for status check: ${aggError.message}`);
+
+      const aggregation = (aggregatedReceived as any[]).reduce((acc, item) => {
+        const itemId = item.request_item_id;
+        acc[itemId] = (acc[itemId] || 0) + item.quantity_received;
+        return acc;
+      }, {} as Record<string, number>);
+
+      const allItemsReceived = requestData.items.every(item => {
+        const totalOrdered = item.quantity;
+        const totalReceived = aggregation[item.id] || 0;
+        return totalReceived >= totalOrdered;
+      });
+
+      if (allItemsReceived && requestData.status !== 'Received') {
+        // Actualizar el estado de la solicitud a 'Received'
+        const { error: statusUpdateError } = await supabase
+          .from('requests')
+          .update({ status: 'Received' as RequestStatus })
+          .eq('id', requestId);
+        
+        if (statusUpdateError) {
+          console.error("Error updating request status to Received:", statusUpdateError);
+          // No lanzamos un error fatal, solo registramos.
+        } else {
+          toast.info(`Request ${requestId} is now fully received! Status updated.`);
+        }
+      }
+
+
       // Invalidar consultas para forzar la verificación del estado completo
-      queryClient.invalidateQueries({ queryKey: ['requests', requestId] });
+      queryClient.invalidateQueries({ queryKey: ['requests'] });
       queryClient.invalidateQueries({ queryKey: ['aggregatedReceivedItems', requestId] });
       queryClient.invalidateQueries({ queryKey: ['packingSlips', requestId] });
       queryClient.invalidateQueries({ queryKey: ['inventory'] });

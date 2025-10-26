@@ -99,7 +99,7 @@ const RequestDetails: React.FC = () => {
 
     const poRequestTemplate = emailTemplates?.find(t => t.template_name === 'PO Request');
     if (!poRequestTemplate) {
-      toast.error("Plantilla de correo electrónico 'PO Request' no encontrada.");
+      toast.error("Plantilla de correo electrónico 'PO Request' no encontrada. Por favor, crea una en el panel de Admin.");
       return;
     }
 
@@ -143,7 +143,7 @@ const RequestDetails: React.FC = () => {
       
       const quoteTemplate = emailTemplates?.find(t => t.template_name === 'Quote Request');
       if (!quoteTemplate) {
-        toast.error("Plantilla de correo electrónico 'Quote Request' no encontrada.");
+        toast.error("Plantilla de correo electrónico 'Quote Request' no encontrada. Por favor, crea una en el panel de Admin.");
         return;
       }
 
@@ -207,8 +207,14 @@ const RequestDetails: React.FC = () => {
         // Quote upload is mandatory and changes status to PO Requested
         await updateStatusMutation.mutateAsync({ id: request.id, status: "PO Requested", quoteUrl: filePath });
         
+        // Crear una versión actualizada de la solicitud para el contexto del correo electrónico
         const updatedRequestWithQuote = { ...request, quote_url: filePath, status: "PO Requested" as const };
+        
+        // Si hay un gerente de cuenta asignado, enviar el correo de solicitud de PO
         if (updatedRequestWithQuote.account_manager_id) {
+          // Usamos setTimeout para dar tiempo a que la mutación de estado se complete y la caché se invalide
+          // Aunque la mutación es asíncrona, la invalidación de caché puede ser lenta.
+          // Sin embargo, dado que la mutación de estado ya se completó (await), podemos llamar a la función directamente.
           handleSendPORequest(updatedRequestWithQuote);
         } else {
           toast.info("Cotización subida. Por favor, asigna un Gerente de Cuenta para solicitar un PO.");
@@ -230,7 +236,7 @@ const RequestDetails: React.FC = () => {
 
     const orderConfirmationTemplate = emailTemplates?.find(t => t.template_name === 'Order Confirmation');
     if (!orderConfirmationTemplate) {
-      toast.error("Plantilla de correo electrónico 'Order Confirmation' no encontrada.");
+      toast.error("Plantilla de correo electrónico 'Order Confirmation' no encontrada. Por favor, crea una en el panel de Admin.");
       return;
     }
 
