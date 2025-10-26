@@ -32,8 +32,9 @@ const RequestList: React.FC = () => {
   const [isEmailDialogOpen, setIsEmailDialogOpen] = React.useState(false);
   const [emailInitialData, setEmailInitialData] = React.useState<Partial<EmailFormValues>>({});
   
-  const [isApproveRequestDialogOpen, setIsApproveRequestDialogOpen] = React.useState(false);
-  const [requestToApprove, setRequestToApprove] = React.useState<SupabaseRequest | null>(null);
+  // Eliminamos el estado de diálogo de aprobación, ya que la aprobación simple será directa.
+  // const [isApproveRequestDialogOpen, setIsApproveRequestDialogOpen] = React.useState(false);
+  // const [requestToApprove, setRequestToApprove] = React.useState<SupabaseRequest | null>(null);
 
   const getRequesterName = (requesterId: string) => {
     const profile = profiles?.find(p => p.id === requesterId);
@@ -69,6 +70,14 @@ const RequestList: React.FC = () => {
       return;
     }
 
+    // NOTE: The actual email templating logic is complex and relies on other hooks (projects, templates)
+    // For simplicity in the list view, we will redirect to details if we need to send an email,
+    // or use a simplified toast/log if we want to keep it here.
+    // Since the user asked for the buttons, we will keep the logic simple here and rely on the details page for complex flows.
+    
+    // For now, we will keep the existing logic which prepares the email data and opens the dialog.
+    // This requires fetching templates/projects, which is already done in the parent component.
+
     const managerName = getAccountManagerName(request.account_manager_id);
     const requesterName = getRequesterName(request.requester_id);
     const attachments = request.quote_url ? [{ name: `Quote_Request_${request.id}.pdf`, url: request.quote_url }] : [];
@@ -82,31 +91,9 @@ const RequestList: React.FC = () => {
     setIsEmailDialogOpen(true);
   };
 
-  const openApproveRequestDialog = (request: SupabaseRequest) => {
-    setRequestToApprove(request);
-    setIsApproveRequestDialogOpen(true);
-  };
-
-  const handleApproveOnly = async () => {
-    if (requestToApprove) {
-      await updateStatusMutation.mutateAsync({ id: requestToApprove.id, status: "Quote Requested" });
-      setIsApproveRequestDialogOpen(false);
-      setRequestToApprove(null);
-    }
-  };
-
-  const handleApproveAndRequestQuoteEmail = async () => {
-    if (requestToApprove) {
-      await updateStatusMutation.mutateAsync({ id: requestToApprove.id, status: "Quote Requested" });
-      
-      setEmailInitialData({
-        to: getVendorEmail(requestToApprove.vendor_id),
-        subject: `Quote Request for Lab Order #${requestToApprove.id}`,
-        body: `Dear ${vendors?.find(v => v.id === requestToApprove.vendor_id)?.contact_person || "Vendor"},\n\nWe would like to request a quote for the following items from our lab order request #${requestToApprove.id}:\n\n${requestToApprove.items?.map(item => `- ${item.quantity}x ${item.product_name} (Catalog #: ${item.catalog_number})`).join("\n")}\n\nPlease provide your best pricing and estimated delivery times.\n\nThank you,\n${getRequesterName(requestToApprove.requester_id)}`,
-      });
-      setIsApproveRequestDialogOpen(false);
-      setIsEmailDialogOpen(true);
-    }
+  // NUEVO: Manejador de aprobación simple para la vista de lista
+  const handleApproveRequest = async (request: SupabaseRequest) => {
+    await updateStatusMutation.mutateAsync({ id: request.id, status: "Quote Requested" });
   };
 
   const openQuoteAndPODetailsDialog = (request: SupabaseRequest) => {
@@ -169,14 +156,15 @@ const RequestList: React.FC = () => {
         profiles={profiles}
         isUpdatingStatus={updateStatusMutation.isPending}
         onViewDetails={(id) => navigate(`/requests/${id}`)}
-        onApprove={openApproveRequestDialog}
+        onApprove={handleApproveRequest} // Usar la aprobación simple
         onEnterQuoteDetails={openQuoteAndPODetailsDialog}
         onSendPORequest={handleSendPORequest}
         onMarkAsOrdered={openOrderConfirmationDialog}
         onMarkAsReceived={handleMarkAsReceived}
       />
 
-      <Dialog open={isApproveRequestDialogOpen} onOpenChange={setIsApproveRequestDialogOpen}>
+      {/* Eliminamos el diálogo de aprobación de la lista, ya que la aprobación es ahora de un solo clic */}
+      {/* <Dialog open={isApproveRequestDialogOpen} onOpenChange={setIsApproveRequestDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Approve Request</DialogTitle>
@@ -191,7 +179,7 @@ const RequestList: React.FC = () => {
             <Button onClick={handleApproveAndRequestQuoteEmail} disabled={updateStatusMutation.isPending}>Approve & Request Quote (Email)</Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
+      </Dialog> */}
 
       <EmailDialog
         isOpen={isEmailDialogOpen}
