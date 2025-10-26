@@ -58,6 +58,7 @@ const fetchProductSearch = async (
   }
 
   // 2. Búsqueda por Similitud de Nombre (Fuzzy Search)
+  // Solo ejecutar si no se encontraron resultados exactos y si hay un nombre de producto lo suficientemente largo
   if (productName && productName.length > 3 && results.length === 0) {
     const similarityThreshold = 0.3; // Umbral de similitud (0.3 es un buen punto de partida)
 
@@ -119,7 +120,7 @@ export const useProductSearch = (
   // Determinar si la búsqueda debe estar habilitada
   const isSearchEnabled = 
     (!!catNum && !!brnd) || 
-    (!!prodName && prodName.length > 3);
+    (!!prodName && prodName.length > 3); // Habilitar si hay nombre de producto con > 3 caracteres
 
   return useQuery<ProductSearchResult[], Error>({
     queryKey: ['productSearch', catNum, brnd, prodName],

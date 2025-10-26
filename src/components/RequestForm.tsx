@@ -3,7 +3,7 @@
 import React from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
+import *s z from "zod";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -99,9 +99,14 @@ const ItemAutofill: React.FC<ItemAutofillProps> = ({ index, form }) => {
   };
 
   const hasResults = searchResults && searchResults.length > 0;
+  
+  // Habilitar si hay catálogo Y marca, O si hay nombre de producto con más de 3 caracteres
+  const isSearchEnabled = 
+    (!!catalogNumber && !!brand) || 
+    (!!productName && productName.length > 3);
 
   return (
-    <div className="absolute top-4 left-4">
+    <div className="absolute top-4 right-4 sm:right-auto sm:left-4">
       <Popover>
         <PopoverTrigger asChild>
           <Button 
@@ -109,7 +114,7 @@ const ItemAutofill: React.FC<ItemAutofillProps> = ({ index, form }) => {
             variant="outline" 
             size="sm" 
             className="h-8 px-3 text-xs"
-            disabled={isSearching || (!catalogNumber && !brand && (!productName || productName.length < 4))}
+            disabled={isSearching || !isSearchEnabled}
           >
             {isSearching ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -476,11 +481,13 @@ const RequestForm: React.FC = () => {
             <div key={field.id} className="border p-4 rounded-md relative bg-muted/20 pt-16 sm:pt-4">
               <h3 className="text-lg font-medium mb-4 text-primary hidden sm:block">Artículo #{index + 1}</h3>
               
-              {/* Autofill Component */}
-              <ItemAutofill index={index} form={form} />
+              {/* Autofill Component - Moved to the right */}
+              <div className="absolute top-4 right-4">
+                <ItemAutofill index={index} form={form} />
+              </div>
 
               {fields.length > 1 && (
-                <Button type="button" variant="destructive" size="icon" onClick={() => remove(index)} className="absolute top-4 right-4 h-8 w-8">
+                <Button type="button" variant="destructive" size="icon" onClick={() => remove(index)} className="absolute top-4 left-4 h-8 w-8">
                   <Trash2 className="h-4 w-4" />
                 </Button>
               )}
