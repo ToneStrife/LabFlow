@@ -95,11 +95,25 @@ const RequestForm: React.FC = () => {
     },
   });
 
+  // Establecer valores predeterminados para direcciones y solicitante
   React.useEffect(() => {
     if (session?.user?.id) {
       form.setValue("requesterId", session.user.id);
     }
   }, [session, form]);
+
+  React.useEffect(() => {
+    if (shippingAddresses && shippingAddresses.length > 0 && !form.getValues("shippingAddressId")) {
+      form.setValue("shippingAddressId", shippingAddresses[0].id);
+    }
+  }, [shippingAddresses, form]);
+
+  React.useEffect(() => {
+    if (billingAddresses && billingAddresses.length > 0 && !form.getValues("billingAddressId")) {
+      form.setValue("billingAddressId", billingAddresses[0].id);
+    }
+  }, [billingAddresses, form]);
+
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
@@ -137,12 +151,13 @@ const RequestForm: React.FC = () => {
       items: itemsToSubmit,
     });
 
+    // Restablecer el formulario, manteniendo los valores predeterminados de dirección si existen
     form.reset({
       vendorId: "",
       requesterId: session.user.id,
       accountManagerId: "unassigned",
-      shippingAddressId: "",
-      billingAddressId: "",
+      shippingAddressId: shippingAddresses?.[0]?.id || "",
+      billingAddressId: billingAddresses?.[0]?.id || "",
       items: [{ 
         productName: "", 
         catalogNumber: "", 
@@ -178,7 +193,7 @@ const RequestForm: React.FC = () => {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Proveedor</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoadingVendors}>
+                <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingVendors}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder={isLoadingVendors ? "Cargando proveedores..." : "Selecciona un proveedor"} />
