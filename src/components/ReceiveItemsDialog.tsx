@@ -147,7 +147,22 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
       };
     });
     form.setValue('items', updatedItems, { shouldDirty: true });
-    toast.info("All remaining quantities set to be received.");
+  };
+  
+  const handleReceiveAllAndSubmit = () => {
+    if (allItemsFullyReceived) {
+      toast.info("All items are already fully received.");
+      return;
+    }
+    
+    // 1. Set all remaining quantities
+    handleReceiveAll();
+    
+    // 2. Submit the form
+    // Usamos setTimeout para asegurar que React Hook Form haya procesado el setValue antes de enviar.
+    setTimeout(() => {
+      form.handleSubmit(handleSubmit)();
+    }, 0);
   };
 
   const handleReceiveRemaining = (index: number) => {
@@ -206,7 +221,6 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
                   <FormItem>
                     <FormLabel>Upload Slip File (Optional)</FormLabel>
                     <FormControl>
-                      {/* Añadir capture="camera" */}
                       <Input type="file" onChange={(e) => field.onChange(e.target.files)} disabled={isSubmitting} capture="camera" />
                     </FormControl>
                     <FormMessage />
@@ -281,16 +295,24 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
             </div>
 
             <DialogFooter className="flex flex-col sm:flex-row sm:justify-end sm:space-x-2 pt-4">
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
+                Cancel
+              </Button>
               <Button 
                 type="button" 
                 variant="secondary" 
-                onClick={handleReceiveAll} 
+                onClick={handleReceiveAllAndSubmit} 
                 disabled={isSubmitting || allItemsFullyReceived}
               >
-                <CheckCheck className="mr-2 h-4 w-4" /> Receive All Remaining
-              </Button>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
-                Cancel
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Recording All...
+                  </>
+                ) : (
+                  <>
+                    <CheckCheck className="mr-2 h-4 w-4" /> Receive All & Record
+                  </>
+                )}
               </Button>
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? (
