@@ -3,10 +3,11 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, Upload, Paperclip, Loader2 } from "lucide-react";
+import { FileText, Upload, Paperclip, Loader2, Trash2 } from "lucide-react";
 import { SupabaseRequest } from "@/hooks/use-requests";
 import { FileType } from "@/hooks/use-requests";
 import { generateSignedUrl } from "@/utils/supabase-storage"; // Importar utilidad
+import { toast } from "sonner";
 
 interface RequestFilesCardProps {
   request: SupabaseRequest;
@@ -62,12 +63,13 @@ const FileRow: React.FC<{ label: string; filePath: string | null; onUpload: () =
   };
 
   return (
-    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-2 rounded-md hover:bg-muted border-b last:border-b-0">
-      <div className="flex items-center mb-2 sm:mb-0">
+    <div className="flex items-center justify-between p-3 rounded-md hover:bg-muted/50 border-b last:border-b-0">
+      <div className="flex items-center min-w-0 flex-shrink-0">
         <FileText className="h-5 w-5 mr-3 text-muted-foreground" />
-        <span className="font-medium">{label}</span>
+        <span className="font-medium text-sm">{label}</span>
       </div>
-      <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-1 sm:space-y-0 sm:space-x-2">
+      
+      <div className="flex items-center space-x-2 min-w-0 flex-grow justify-end">
         {filePath ? (
           <>
             <Button 
@@ -75,24 +77,25 @@ const FileRow: React.FC<{ label: string; filePath: string | null; onUpload: () =
               size="sm" 
               onClick={handleViewClick} 
               disabled={isGenerating}
-              className="text-xs text-blue-600 hover:underline flex items-center p-0 h-auto"
+              className="text-xs text-blue-600 hover:underline flex items-center p-0 h-auto truncate max-w-[150px] sm:max-w-[200px]"
               title={getFileNameFromPath(filePath)}
             >
               {isGenerating ? (
                 <Loader2 className="h-4 w-4 animate-spin mr-1" />
               ) : (
-                <Paperclip className="h-4 w-4 mr-1" />
+                <Paperclip className="h-4 w-4 mr-1 flex-shrink-0" />
               )}
-              <span className="truncate max-w-[150px]">{getFileNameFromPath(filePath)}</span>
+              <span className="truncate">{getFileNameFromPath(filePath)}</span>
             </Button>
-            <Button variant="outline" size="sm" onClick={onUpload} title="Replace File" className="h-7 px-2 text-xs">
-              <Upload className="h-3 w-3 mr-1" />
-              Replace
+            
+            {/* Botón de Reemplazar/Subir como icono */}
+            <Button variant="outline" size="icon" onClick={onUpload} title="Replace File" className="h-8 w-8 flex-shrink-0">
+              <Upload className="h-4 w-4" />
             </Button>
           </>
         ) : (
-          <Button variant="outline" size="sm" onClick={onUpload} title="Upload File" className="h-7 px-2 text-xs">
-            <Upload className="h-3 w-3 mr-1" />
+          <Button variant="outline" size="sm" onClick={onUpload} title="Upload File" className="h-8 px-3 text-sm">
+            <Upload className="h-4 w-4 mr-2" />
             Upload
           </Button>
         )}
