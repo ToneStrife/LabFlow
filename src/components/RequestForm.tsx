@@ -31,7 +31,7 @@ import { useAccountManagers } from "@/hooks/use-account-managers";
 import { useProjects } from "@/hooks/use-projects";
 import { getFullName } from "@/hooks/use-profiles";
 import { apiSearchExternalProduct } from "@/integrations/api";
-import { debounce } from "lodash-es"; // Importar debounce
+import { debounce } from "lodash-es";
 
 const itemSchema = z.object({
   productName: z.string().min(1, { message: "El nombre del producto es obligatorio." }),
@@ -113,7 +113,10 @@ const RequestForm: React.FC = () => {
   });
 
   const handleAutofill = async (index: number, catalogNumber: string, brand: string) => {
-    if (!catalogNumber) return;
+    if (!catalogNumber || catalogNumber.length < 4) return; // Mínimo 4 caracteres para buscar
+
+    // Si ya estamos buscando para este índice, no hacemos nada
+    if (enrichingIndex === index) return;
 
     setEnrichingIndex(index);
     const toastId = showLoading("Buscando detalles del producto en el historial...");
@@ -123,25 +126,22 @@ const RequestForm: React.FC = () => {
       const productDetails: ProductDetails = await apiSearchExternalProduct(catalogNumber, brand);
       console.log("RequestForm: Received product details:", productDetails);
 
-      // Auto-fill main form fields
-      form.setValue(`items.${index}.productName`, productDetails.productName || '');
-      form.setValue(`items.${index}.format`, productDetails.format || '');
-      form.setValue(`items.${index}.unitPrice`, productDetails.unitPrice || undefined);
-      form.setValue(`items.${index}.link`, productDetails.link || '');
-      form.setValue(`items.${index}.brand`, productDetails.brand || '');
+      // Usamos { shouldValidate: true } para que la validación se ejecute después de autocompletar
+      form.setValue(`items.${index}.productName`, productDetails.productName || '', { shouldValidate: true });
+      form.setValue(`items.${index}.format`, productDetails.format || '', { shouldValidate: true });
+      form.setValue(`items.${index}.unitPrice`, productDetails.unitPrice || undefined, { shouldValidate: true });
+      form.setValue(`items.${index}.link`, productDetails.link || '', { shouldValidate: true });
+      form.setValue(`items.${index}.brand`, productDetails.brand || '', { shouldValidate: true });
       
       // Append notes
       const currentNotes = form.getValues(`items.${index}.notes`) || '';
       const newNotes = productDetails.notes ? `\n[Historial] ${productDetails.notes}` : '';
-      form.setValue(`items.${index}.notes`, currentNotes + newNotes);
+      form.setValue(`items.${index}.notes`, currentNotes + newNotes, { shouldValidate: true });
 
       showSuccess("¡Detalles del producto autocompletados desde el historial!");
 
     } catch (error: any) {
-      // Solo mostrar error si el usuario no estaba ya escribiendo
-      if (enrichingIndex === index) {
-        showError(error.message || "Fallo al buscar detalles del producto.");
-      }
+      showError(error.message || "Fallo al buscar detalles del producto.");
     } finally {
       dismissToast(toastId);
       setEnrichingIndex(null);
@@ -151,29 +151,15 @@ const RequestForm: React.FC = () => {
   // Debounced function for automatic search
   const debouncedAutofill = React.useCallback(
     debounce((index: number, catalogNumber: string, brand: string) => {
-      if (catalogNumber.length > 3) {
-        handleAutofill(index, catalogNumber, brand);
-      }
+      handleAutofill(index, catalogNumber, brand);
     }, 800),
-    []
+    [enrichingIndex] // Dependencia para evitar que se ejecute si ya hay una búsqueda en curso
   );
 
-  // Watch fields for automatic search trigger
-  const watchFields = form.watch(fields.map((_, index) => [`items.${index}.catalogNumber`, `items.${index}.brand`]).flat());
-
+  // Cleanup debounce on unmount
   React.useEffect(() => {
-    fields.forEach((field, index) => {
-      const catalogNumber = form.getValues(`items.${index}.catalogNumber`)?.trim() || '';
-      const brand = form.getValues(`items.${index}.brand`)?.trim() || '';
-      
-      // Si ambos campos tienen contenido, disparamos el debounce
-      if (catalogNumber.length > 0 || brand.length > 0) {
-        debouncedAutofill(index, catalogNumber, brand);
-      }
-    });
-    // Cleanup function to cancel any pending debounced calls when the component unmounts or fields change
     return () => debouncedAutofill.cancel();
-  }, [watchFields, fields, debouncedAutofill, form]);
+  }, [debouncedAutofill]);
 
 
   const onSubmit = async (data: RequestFormValues) => {
@@ -342,7 +328,19 @@ const RequestForm: React.FC = () => {
                   render={({ field: itemField }) => (
                     <FormItem>
                       <FormLabel>Marca</FormLabel>
-                      <FormControl><Input id="marca" placeholder="ej. Invitrogen" {...itemField} /></FormControl>
+                      <FormControl>
+                        <Input 
+                          id="marca" 
+                          placeholder="ej. Invitrogen" 
+                          {...itemField} 
+                          onChange={(e) => {
+                            itemField.onChange(e);
+                            const newBrand = e.target.value;
+                            const catalogNumber = form.getValues(`items.${index}.catalogNumber`) || '';
+                            debouncedAutofill(index, catalogNumber, newBrand);
+                          }}
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -353,12 +351,24 @@ const RequestForm: React.FC = () => {
                   render={({ field: itemField }) => (
                     <FormItem>
                       <FormLabel>Número de Catálogo</FormLabel>
-                      <FormControl><Input id="catalogo" placeholder="ej. 18265017" {...itemField} /></FormControl>
+                      <FormControl>
+                        <Input 
+                          id="catalogo" 
+                          placeholder="ej. 18265017" 
+                          {...itemField} 
+                          onChange={(e) => {
+                            itemField.onChange(e);
+                            const newCatalog = e.target.value;
+                            const brand = form.getValues(`items.${index}.brand`) || '';
+                            debouncedAutofill(index, newCatalog, brand);
+                          }}
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                {/* Eliminamos el botón de enriquecer ya que ahora es automático */}
+                {/* Indicador de búsqueda */}
                 {enrichingIndex === index && (
                   <div className="md:col-span-2 flex justify-end">
                     <Loader2 className="h-4 w-4 animate-spin mr-2" /> Buscando...
