@@ -15,7 +15,7 @@ import {
 
 // Mantener las importaciones de mock data para otras tablas hasta que se conviertan
 import {
-  getMockRequests,
+  // getMockRequests, // ELIMINADO
   addMockRequest,
   updateMockRequestStatus,
   updateMockRequestMetadata,
@@ -226,15 +226,69 @@ export const apiSearchExternalProduct = async (catalogNumber: string, brand?: st
 };
 
 
-// --- API de Solicitudes (usando mock data por ahora) ---
+// --- API de Solicitudes (MIGRADO A SUPABASE REAL) ---
 export const apiGetRequests = async (): Promise<SupabaseRequest[]> => {
-  await new Promise(resolve => setTimeout(resolve, 300)); // Simular retraso
-  return getMockRequests();
+  // Selecciona la solicitud y une los ítems relacionados
+  const { data: requestsData, error: requestsError } = await supabase
+    .from('requests')
+    .select(`
+      *,
+      items:request_items (*)
+    `)
+    .order('created_at', { ascending: false });
+
+  if (requestsError) {
+    console.error("Error fetching requests from Supabase:", requestsError);
+    throw requestsError;
+  }
+
+  // Mapear los datos para asegurar que 'items' es un array de SupabaseRequestItem
+  const requests: SupabaseRequest[] = requestsData.map(req => ({
+    ...req,
+    items: req.items || [],
+    // Asegurar que los campos de URL y PO sean strings o null
+    quote_url: req.quote_url || null,
+    po_number: req.po_number || null,
+    po_url: req.po_url || null,
+    slip_url: req.slip_url || null,
+    project_codes: req.project_codes || null,
+    notes: req.notes || null,
+    account_manager_id: req.account_manager_id || null,
+  })) as SupabaseRequest[];
+
+  return requests;
 };
 
 export const apiAddRequest = async (data: Omit<SupabaseRequest, "id" | "created_at" | "status" | "items" | "po_number" | "quote_url" | "po_url" | "slip_url"> & { items: RequestItem[] }): Promise<SupabaseRequest> => {
-  await new Promise(resolve => setTimeout(resolve, 300)); // Simular retraso
-  return addMockRequest(data);
+  // Usar la función RPC para manejar la inserción de la solicitud y sus ítems en una sola transacción
+  const { vendor_id, requester_id, account_manager_id, notes, project_codes, items } = data;
+
+  const itemsJsonb = items.map(item => ({
+    productName: item.productName,
+    catalogNumber: item.catalogNumber,
+    quantity: item.quantity,
+    unitPrice: item.unitPrice,
+    format: item.format,
+    link: item.link,
+    notes: item.notes,
+    brand: item.brand,
+  }));
+
+  const { data: newRequest, error } = await supabase.rpc('create_request_with_items', {
+    vendor_id_in: vendor_id,
+    account_manager_id_in: account_manager_id,
+    notes_in: notes,
+    project_codes_in: project_codes,
+    items_in: itemsJsonb,
+  });
+
+  if (error) {
+    console.error("Error invoking create_request_with_items RPC:", error);
+    throw error;
+  }
+
+  // El RPC devuelve un objeto JSONB que ya incluye los ítems
+  return newRequest as SupabaseRequest;
 };
 
 export const apiUpdateRequestStatus = async (
@@ -243,8 +297,37 @@ export const apiUpdateRequestStatus = async (
   quoteUrl: string | null = null,
   poNumber: string | null = null
 ): Promise<SupabaseRequest> => {
-  await new Promise(resolve => setTimeout(resolve, 300)); // Simular retraso
-  return updateMockRequestStatus(id, status, quoteUrl, poNumber);
+  const updateData: Partial<SupabaseRequest> = { status };
+  if (quoteUrl !== null) updateData.quote_url = quoteUrl;
+  if (poNumber !== null) updateData.po_number = poNumber;
+
+  const { data: updatedRequest, error } = await supabase
+    .from('requests')
+    .update(updateData)
+    .eq('id', id)
+    .select(`
+      *,
+      items:request_items (*)
+    `)
+    .single();
+
+  if (error) throw error;
+
+  // Lógica de inventario (MOCK)
+  if (status === "Ordered" && updatedRequest.items) {
+    for (const item of updatedRequest.items) {
+      await apiAddInventoryItem({
+        product_name: item.product_name,
+        catalog_number: item.catalog_number,
+        brand: item.brand,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        format: item.format,
+      });
+    }
+  }
+
+  return updatedRequest as SupabaseRequest;
 };
 
 export const apiUpdateRequestMetadata = async (
@@ -255,8 +338,23 @@ export const apiUpdateRequestMetadata = async (
     projectCodes?: string[] | null;
   }
 ): Promise<SupabaseRequest> => {
-  await new Promise(resolve => setTimeout(resolve, 300)); // Simular retraso
-  return updateMockRequestMetadata(id, data);
+  const updateData: Partial<SupabaseRequest> = {};
+  if (data.accountManagerId !== undefined) updateData.account_manager_id = data.accountManagerId;
+  if (data.notes !== undefined) updateData.notes = data.notes;
+  if (data.projectCodes !== undefined) updateData.project_codes = data.projectCodes;
+
+  const { data: updatedRequest, error } = await supabase
+    .from('requests')
+    .update(updateData)
+    .eq('id', id)
+    .select(`
+      *,
+      items:request_items (*)
+    `)
+    .single();
+
+  if (error) throw error;
+  return updatedRequest as SupabaseRequest;
 };
 
 // ACTUALIZADO: apiUpdateRequestFile para usar la función Edge
@@ -306,12 +404,31 @@ export const apiUpdateRequestFile = async (
   }
   
   // La función Edge devuelve { fileUrl: string, poNumber: string | null }
-  return edgeFunctionData as { fileUrl: string; poNumber: string | null };
+  const { fileUrl, poNumber: returnedPoNumber } = edgeFunctionData as { fileUrl: string; poNumber: string | null };
+
+  // Paso adicional: Actualizar la URL del archivo en la tabla 'requests'
+  const updateField = fileType === 'quote' ? 'quote_url' : fileType === 'po' ? 'po_url' : 'slip_url';
+  const updateData: Partial<SupabaseRequest> = { [updateField]: fileUrl };
+  if (fileType === 'po' && returnedPoNumber) {
+    updateData.po_number = returnedPoNumber;
+  }
+
+  const { error: dbUpdateError } = await supabase
+    .from('requests')
+    .update(updateData)
+    .eq('id', id);
+
+  if (dbUpdateError) {
+    console.error(`Error updating request DB with ${fileType} URL:`, dbUpdateError);
+    throw new Error(`File uploaded, but failed to update database record: ${dbUpdateError.message}`);
+  }
+
+  return { fileUrl, poNumber: returnedPoNumber };
 };
 
 export const apiDeleteRequest = async (id: string): Promise<void> => {
-  await new Promise(resolve => setTimeout(resolve, 300)); // Simular retraso
-  return deleteMockRequest(id);
+  const { error } = await supabase.from('requests').delete().eq('id', id);
+  if (error) throw error;
 };
 
 // --- API de Inventario (usando mock data por ahora) ---

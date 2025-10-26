@@ -4,8 +4,29 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import RequestList from "@/components/RequestList";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Loader2 } from "lucide-react";
+import { PlusCircle, Loader2, Clock, Package, CheckCircle } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useRequests } from "@/hooks/use-requests";
+
+// Componente de Tarjeta de Resumen Compacta
+interface SummaryCardProps {
+  title: string;
+  count: number;
+  icon: React.ReactNode;
+  color: string;
+}
+
+const SummaryCard: React.FC<SummaryCardProps> = ({ title, count, icon, color }) => (
+  <Card className="shadow-lg transition-shadow hover:shadow-xl">
+    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+      <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
+      <div className={`h-5 w-5 text-${color}`}>{icon}</div>
+    </CardHeader>
+    <CardContent>
+      <div className="text-2xl font-bold">{count}</div>
+    </CardContent>
+  </Card>
+);
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -41,23 +62,30 @@ const Dashboard = () => {
   return (
     <div className="container mx-auto py-8">
       <h1 className="text-3xl font-bold mb-6">Panel de Control</h1>
-      <p className="text-lg text-muted-foreground">
+      <p className="text-lg text-muted-foreground mb-8">
         Bienvenido a tu Panel de Gestión de Pedidos de Laboratorio.
       </p>
-      <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* Dynamic order status cards */}
-        <div className="bg-card p-6 rounded-lg shadow-sm border">
-          <h2 className="text-xl font-semibold mb-2">Solicitudes Pendientes</h2>
-          <p className="text-3xl font-bold">{pendingRequestsCount}</p>
-        </div>
-        <div className="bg-card p-6 rounded-lg shadow-sm border">
-          <h2 className="text-xl font-semibold mb-2">Artículos Pedidos</h2>
-          <p className="text-3xl font-bold">{orderedItemsCount}</p>
-        </div>
-        <div className="bg-card p-6 rounded-lg shadow-sm border">
-          <h2 className="text-xl font-semibold mb-2">Artículos Recibidos</h2>
-          <p className="text-3xl font-bold">{receivedItemsCount}</p>
-        </div>
+      
+      {/* Redesigned Summary Cards */}
+      <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <SummaryCard 
+          title="Solicitudes Pendientes" 
+          count={pendingRequestsCount} 
+          icon={<Clock />} 
+          color="orange-500" 
+        />
+        <SummaryCard 
+          title="Artículos Pedidos" 
+          count={orderedItemsCount} 
+          icon={<Package />} 
+          color="blue-500" 
+        />
+        <SummaryCard 
+          title="Artículos Recibidos" 
+          count={receivedItemsCount} 
+          icon={<CheckCircle />} 
+          color="green-500" 
+        />
       </div>
 
       <div className="mt-12">
