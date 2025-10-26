@@ -353,7 +353,6 @@ const RequestDetails: React.FC = () => {
   };
 
   // Handler para la edición de metadatos (Quote Requested)
-  // NOTA: Este handler ya no es necesario si usamos RequestFullEditForm para todos los estados editables.
   const handleUpdateMetadata = async (data: { accountManagerId?: string | null; notes?: string | null; projectCodes?: string[] | null; }) => {
     if (!request) return;
     
@@ -461,7 +460,7 @@ const RequestDetails: React.FC = () => {
         <Button variant="outline" onClick={() => navigate("/dashboard")}><ArrowLeft className="mr-2 h-4 w-4" /> Volver al Panel de Control</Button>
         
         <div className="flex items-center space-x-4">
-          <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">Solicitud {displayRequestNumber}</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-gray-100">Solicitud {displayRequestNumber}</h1>
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

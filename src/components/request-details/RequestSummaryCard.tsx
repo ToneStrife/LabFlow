@@ -102,8 +102,9 @@ const RequestSummaryCard: React.FC<RequestSummaryCardProps> = ({ request, vendor
   return (
     <Card>
       <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
-        <CardTitle className="text-2xl font-bold">
-          Solicitud {displayRequestNumber} de: {vendor?.name || "N/A"}
+        <CardTitle className="text-xl sm:text-2xl font-bold flex flex-col items-start">
+          <span className="text-base font-semibold text-muted-foreground">Solicitud {displayRequestNumber}</span>
+          <span>{vendor?.name || "N/A"}</span>
         </CardTitle>
         <div className="flex items-center space-x-2">
           <Badge variant={getStatusBadgeVariant(request.status)}>{request.status}</Badge>

@@ -18,6 +18,7 @@ import { AccountManager } from "@/data/types"; // Importar el tipo AccountManage
 import { useAccountManagers } from "@/hooks/use-account-managers"; // Usar el nuevo hook
 import { format } from "date-fns";
 import RequestListActions from "./RequestListActions";
+import { useIsMobile } from "@/hooks/use-mobile"; // Importar hook de móvil
 
 interface RequestListTableProps {
   requests: SupabaseRequest[];
@@ -39,7 +40,6 @@ const getStatusBadgeVariant = (status: RequestStatus) => {
     case "Pending":
       return "secondary";
     case "Quote Requested":
-      return "outline";
     case "PO Requested":
       return "destructive";
     case "Ordered":
@@ -60,7 +60,8 @@ const RequestListTable: React.FC<RequestListTableProps> = ({
   profiles,
   ...actionProps
 }) => {
-  const { data: accountManagers } = useAccountManagers(); // Usar el nuevo hook
+  const { data: accountManagers } = useAccountManagers();
+  const isMobile = useIsMobile();
 
   const getRequesterName = (requesterId: string) => {
     const profile = profiles?.find(p => p.id === requesterId);
@@ -70,14 +71,22 @@ const RequestListTable: React.FC<RequestListTableProps> = ({
   const getItemDisplay = (items: SupabaseRequest['items']) => {
     if (!items || items.length === 0) return "N/A";
     
-    // Mostrar hasta 2 ítems y el total
+    const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
+    
+    if (isMobile) {
+      return (
+        <div className="text-xs text-muted-foreground">
+          {items.length} artículos ({totalItems} uds)
+        </div>
+      );
+    }
+
+    // Desktop view
     const displayItems = items.slice(0, 2).map(item => 
       <div key={item.id} className="text-xs text-muted-foreground">
         {item.quantity}x {item.product_name}
       </div>
     );
-    
-    const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
     
     return (
       <div className="space-y-1">
@@ -97,22 +106,22 @@ const RequestListTable: React.FC<RequestListTableProps> = ({
   };
 
   return (
-    <div className="rounded-md border">
+    <div className="rounded-md border overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Proveedor</TableHead>
-            <TableHead>Solicitante</TableHead>
-            <TableHead>Artículos</TableHead>
+            <TableHead className="min-w-[150px]">Solicitud</TableHead>
+            {!isMobile && <TableHead>Solicitante</TableHead>}
+            <TableHead className="min-w-[120px]">Artículos</TableHead>
             <TableHead>Estado</TableHead>
-            <TableHead>Fecha</TableHead>
-            <TableHead className="text-right">Acciones</TableHead>
+            {!isMobile && <TableHead>Fecha</TableHead>}
+            <TableHead className="text-right min-w-[100px]">Acciones</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {requests.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+              <TableCell colSpan={isMobile ? 4 : 6} className="h-24 text-center text-muted-foreground">
                 No se encontraron solicitudes que coincidan con tus criterios.
               </TableCell>
             </TableRow>
@@ -121,27 +130,32 @@ const RequestListTable: React.FC<RequestListTableProps> = ({
               const vendor = vendors?.find(v => v.id === request.vendor_id);
               const requesterName = getRequesterName(request.requester_id);
               const date = format(new Date(request.created_at), 'yyyy-MM-dd');
-              // const displayRequestNumber = request.request_number || request.id.substring(0, 8); // Eliminado
+              const displayRequestNumber = request.request_number || request.id.substring(0, 8);
 
               return (
                 <TableRow key={request.id}>
-                  <TableCell className="font-medium">{vendor?.name || "N/A"}</TableCell>
-                  <TableCell>{requesterName}</TableCell>
+                  <TableCell className="font-medium">
+                    <div className="flex flex-col">
+                      <span className="font-bold text-primary">{displayRequestNumber}</span>
+                      <span className="text-xs text-muted-foreground">{vendor?.name || "N/A"}</span>
+                    </div>
+                  </TableCell>
+                  {!isMobile && <TableCell>{requesterName}</TableCell>}
                   <TableCell className="max-w-[250px]">
                     {getItemDisplay(request.items)}
                   </TableCell>
                   <TableCell>
                     <Badge variant={getStatusBadgeVariant(request.status)}>
                       {request.status === "Pending" && "Pendiente"}
-                      {request.status === "Quote Requested" && "Cotización Solicitada"}
-                      {request.status === "PO Requested" && "PO Solicitado (Cómprame)"}
+                      {request.status === "Quote Requested" && "Cot. Solicitada"}
+                      {request.status === "PO Requested" && "PO Solicitado"}
                       {request.status === "Ordered" && "Pedido"}
                       {request.status === "Received" && "Recibido"}
                       {request.status === "Denied" && "Denegada"}
                       {request.status === "Cancelled" && "Cancelada"}
                     </Badge>
                   </TableCell>
-                  <TableCell>{date}</TableCell>
+                  {!isMobile && <TableCell>{date}</TableCell>}
                   <TableCell>
                     <RequestListActions request={request} {...actionProps} />
                   </TableCell>
