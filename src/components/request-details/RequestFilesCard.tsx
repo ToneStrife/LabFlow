@@ -50,28 +50,29 @@ const FileRow: React.FC<{ label: string; filePath: string | null; onUpload: () =
         <FileText className="h-5 w-5 mr-3 text-muted-foreground" />
         <span className="font-medium">{label}</span>
       </div>
-      {filePath ? (
-        <Button 
-          variant="link" 
-          size="sm" 
-          onClick={handleViewClick} 
-          disabled={isGenerating}
-          className="text-sm text-blue-600 hover:underline flex items-center p-0 h-auto"
-          title={getFileNameFromPath(filePath)}
-        >
-          {isGenerating ? (
-            <Loader2 className="h-4 w-4 animate-spin mr-1" />
-          ) : (
-            <Paperclip className="h-4 w-4 mr-1" />
-          )}
-          <span className="truncate max-w-[150px]">{getFileNameFromPath(filePath)}</span>
-        </Button>
-      ) : (
-        <Button variant="outline" size="sm" onClick={onUpload}>
+      <div className="flex items-center space-x-2">
+        {filePath && (
+          <Button 
+            variant="link" 
+            size="sm" 
+            onClick={handleViewClick} 
+            disabled={isGenerating}
+            className="text-sm text-blue-600 hover:underline flex items-center p-0 h-auto"
+            title={getFileNameFromPath(filePath)}
+          >
+            {isGenerating ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-1" />
+            ) : (
+              <Paperclip className="h-4 w-4 mr-1" />
+            )}
+            <span className="truncate max-w-[150px]">{getFileNameFromPath(filePath)}</span>
+          </Button>
+        )}
+        <Button variant="outline" size="sm" onClick={onUpload} title={filePath ? "Replace File" : "Upload File"}>
           <Upload className="h-4 w-4 mr-2" />
-          Upload
+          {filePath ? "Replace" : "Upload"}
         </Button>
-      )}
+      </div>
     </div>
   );
 };

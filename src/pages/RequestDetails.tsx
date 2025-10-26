@@ -181,7 +181,7 @@ const RequestDetails: React.FC = () => {
 
     try {
       // Step 1: Upload the file/Save PO Number via Edge Function
-      const { fileUrl, poNumber: returnedPoNumber } = await updateFileMutation.mutateAsync({
+      const { filePath, poNumber: returnedPoNumber } = await updateFileMutation.mutateAsync({
         id: request.id,
         fileType: fileTypeToUpload,
         file: file,
@@ -194,11 +194,11 @@ const RequestDetails: React.FC = () => {
         if (returnedPoNumber && request.status === "PO Requested") {
              await updateStatusMutation.mutateAsync({ id: request.id, status: "Ordered", poNumber: returnedPoNumber, quoteUrl: request.quote_url });
         }
-      } else if (fileTypeToUpload === "quote" && fileUrl) {
+      } else if (fileTypeToUpload === "quote" && filePath) {
         // Quote upload is mandatory and changes status to PO Requested
-        await updateStatusMutation.mutateAsync({ id: request.id, status: "PO Requested", quoteUrl: fileUrl });
+        await updateStatusMutation.mutateAsync({ id: request.id, status: "PO Requested", quoteUrl: filePath });
         
-        const updatedRequestWithQuote = { ...request, quote_url: fileUrl, status: "PO Requested" as const };
+        const updatedRequestWithQuote = { ...request, quote_url: filePath, status: "PO Requested" as const };
         if (updatedRequestWithQuote.account_manager_id) {
           handleSendPORequest(updatedRequestWithQuote);
         } else {
@@ -319,12 +319,13 @@ const RequestDetails: React.FC = () => {
   const canOverrideStatus = profile?.role === "Admin" || profile?.role === "Account Manager";
 
   const vendor = vendors?.find(v => v.id === request.vendor_id);
+  const displayRequestNumber = request.request_number || `#${request.id.substring(0, 8)}`;
 
   return (
     <div className="container mx-auto py-8 space-y-6">
       <div className="flex items-center justify-between mb-6">
         <Button variant="outline" onClick={() => navigate("/dashboard")}><ArrowLeft className="mr-2 h-4 w-4" /> Volver al Panel de Control</Button>
-        <h1 className="text-3xl font-bold text-gray-800">Request #{request.id.substring(0, 8)}</h1>
+        <h1 className="text-3xl font-bold text-gray-800">Request {displayRequestNumber}</h1>
         
         {canOverrideStatus && (
           <Button variant="secondary" onClick={() => {
@@ -419,7 +420,7 @@ const RequestDetails: React.FC = () => {
           <DialogHeader>
             <DialogTitle>Override Request Status</DialogTitle>
             <DialogDescription>
-              Manually change the status of Request #{request?.id.substring(0, 8)}. Use with caution.
+              Manually change the status of Request {displayRequestNumber}. Use with caution.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">

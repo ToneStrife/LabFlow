@@ -348,27 +348,22 @@ const RequestForm: React.FC = () => {
         <h2 className="text-xl font-semibold">Artículos</h2>
         <div className="space-y-6">
           {fields.map((field, index) => (
-            <div key={field.id} className="border p-4 rounded-md relative">
-              <h3 className="text-lg font-medium mb-4">Artículo #{index + 1}</h3>
+            <div key={field.id} className="border p-4 rounded-md relative bg-muted/20">
+              <h3 className="text-lg font-medium mb-4 text-primary">Artículo #{index + 1}</h3>
               {fields.length > 1 && (
-                <Button type="button" variant="destructive" size="icon" onClick={() => remove(index)} className="absolute top-4 right-4">
+                <Button type="button" variant="destructive" size="icon" onClick={() => remove(index)} className="absolute top-4 right-4 h-8 w-8">
                   <Trash2 className="h-4 w-4" />
                 </Button>
               )}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Fila 1: Marca, Catálogo, Nombre, Cantidad */}
                 <FormField
                   control={form.control}
                   name={`items.${index}.brand`}
                   render={({ field: itemField }) => (
                     <FormItem>
                       <FormLabel>Marca</FormLabel>
-                      <FormControl>
-                        <Input 
-                          id="marca" 
-                          placeholder="ej. Invitrogen" 
-                          {...itemField} 
-                        />
-                      </FormControl>
+                      <FormControl><Input placeholder="ej. Invitrogen" {...itemField} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -379,13 +374,7 @@ const RequestForm: React.FC = () => {
                   render={({ field: itemField }) => (
                     <FormItem>
                       <FormLabel>Número de Catálogo</FormLabel>
-                      <FormControl>
-                        <Input 
-                          id="catalogo" 
-                          placeholder="ej. 18265017" 
-                          {...itemField} 
-                        />
-                      </FormControl>
+                      <FormControl><Input placeholder="ej. 18265017" {...itemField} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -394,20 +383,22 @@ const RequestForm: React.FC = () => {
                   control={form.control}
                   name={`items.${index}.productName`}
                   render={({ field: itemField }) => (
-                    <FormItem>
+                    <FormItem className="lg:col-span-2">
                       <FormLabel>Nombre del Producto</FormLabel>
-                      <FormControl><Input id="nombre_producto" placeholder="ej. Células Competentes E. coli DH5a" {...itemField} /></FormControl>
+                      <FormControl><Input placeholder="ej. Células Competentes E. coli DH5a" {...itemField} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+                
+                {/* Fila 2: Cantidad, Precio, Formato, Enlace */}
                 <FormField
                   control={form.control}
                   name={`items.${index}.quantity`}
                   render={({ field: itemField }) => (
                     <FormItem>
                       <FormLabel>Cantidad</FormLabel>
-                      <FormControl><Input id="cantidad" type="number" {...itemField} /></FormControl>
+                      <FormControl><Input type="number" {...itemField} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -419,7 +410,7 @@ const RequestForm: React.FC = () => {
                     return (
                       <FormItem>
                         <FormLabel>Precio Unitario (Opcional)</FormLabel>
-                        <FormControl><Input id="precio_unitario" type="number" step="0.01" placeholder="ej. 120.50" {...itemField} /></FormControl>
+                        <FormControl><Input type="number" step="0.01" placeholder="ej. 120.50" {...itemField} /></FormControl>
                         <FormMessage />
                       </FormItem>
                     );
@@ -431,7 +422,7 @@ const RequestForm: React.FC = () => {
                   render={({ field: itemField }) => (
                     <FormItem>
                       <FormLabel>Formato (Opcional)</FormLabel>
-                      <FormControl><Input id="formato" placeholder="ej. 200pack 8cs of 25" {...itemField} /></FormControl>
+                      <FormControl><Input placeholder="ej. 500 mL" {...itemField} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -442,18 +433,20 @@ const RequestForm: React.FC = () => {
                   render={({ field: itemField }) => (
                     <FormItem>
                       <FormLabel>Enlace del Producto (Opcional)</FormLabel>
-                      <FormControl><Input id="enlace_producto" type="url" placeholder="ej. https://www.vendor.com/product" {...itemField} /></FormControl>
+                      <FormControl><Input type="url" placeholder="ej. https://www.vendor.com/product" {...itemField} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+                
+                {/* Fila 3: Notas */}
                 <FormField
                   control={form.control}
                   name={`items.${index}.notes`}
                   render={({ field: itemField }) => (
-                    <FormItem className="md:col-span-2">
+                    <FormItem className="lg:col-span-4">
                       <FormLabel>Notas (Opcional)</FormLabel>
-                      <FormControl><Textarea id="notas" placeholder="Cualquier requisito o detalle específico..." {...itemField} /></FormControl>
+                      <FormControl><Textarea placeholder="Cualquier requisito o detalle específico..." {...itemField} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}

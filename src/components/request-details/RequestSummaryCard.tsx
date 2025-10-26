@@ -96,12 +96,14 @@ const RequestSummaryCard: React.FC<RequestSummaryCardProps> = ({ request, vendor
   
   const shippingAddress = shippingAddresses?.find(a => a.id === request.shipping_address_id);
   const billingAddress = billingAddresses?.find(a => a.id === request.billing_address_id);
+  
+  const displayRequestNumber = request.request_number || `ID: ${request.id.substring(0, 8)}`;
 
   return (
     <Card>
       <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
         <CardTitle className="text-2xl font-bold">
-          Request from: {vendor?.name || "N/A"}
+          Request {displayRequestNumber} from: {vendor?.name || "N/A"}
         </CardTitle>
         <div className="flex items-center space-x-2">
           <Badge variant={getStatusBadgeVariant(request.status)}>{request.status}</Badge>

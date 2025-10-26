@@ -95,9 +95,10 @@ const RequestListTable: React.FC<RequestListTableProps> = ({
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead>Request #</TableHead> {/* Nueva columna */}
             <TableHead>Vendor</TableHead>
             <TableHead>Requester</TableHead>
-            <TableHead>Items</TableHead> {/* Título de columna actualizado */}
+            <TableHead>Items</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Date</TableHead>
             <TableHead className="text-right">Actions</TableHead>
@@ -106,7 +107,7 @@ const RequestListTable: React.FC<RequestListTableProps> = ({
         <TableBody>
           {requests.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+              <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
                 No requests found matching your criteria.
               </TableCell>
             </TableRow>
@@ -115,9 +116,11 @@ const RequestListTable: React.FC<RequestListTableProps> = ({
               const vendor = vendors?.find(v => v.id === request.vendor_id);
               const requesterName = getRequesterName(request.requester_id);
               const date = format(new Date(request.created_at), 'yyyy-MM-dd');
+              const displayRequestNumber = request.request_number || request.id.substring(0, 8);
 
               return (
                 <TableRow key={request.id}>
+                  <TableCell className="font-medium">{displayRequestNumber}</TableCell> {/* Mostrar Request # */}
                   <TableCell className="font-medium">{vendor?.name || "N/A"}</TableCell>
                   <TableCell>{requesterName}</TableCell>
                   <TableCell className="max-w-[250px]">

@@ -96,6 +96,7 @@ export interface SupabaseRequestItem {
 
 export interface SupabaseRequest {
   id: string;
+  request_number: string | null; // Nuevo campo para el número de solicitud legible
   created_at: string;
   vendor_id: string;
   requester_id: string; // Still references auth.users.id via profiles
