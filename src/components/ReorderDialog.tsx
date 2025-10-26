@@ -21,7 +21,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
 import { InventoryItem } from "@/hooks/use-inventory";
 import { useVendors } from "@/hooks/use-vendors";
@@ -162,17 +162,19 @@ const ReorderDialog: React.FC<ReorderDialogProps> = ({ isOpen, onOpenChange, ite
                     </FormControl>
                     <SelectContent>
                       {suggestedVendors.length > 0 && (
-                        <CommandGroup heading="Proveedores Sugeridos (por Marca)">
+                        <SelectGroup>
+                          <SelectLabel>Proveedores Sugeridos (por Marca)</SelectLabel>
                           {suggestedVendors.map((vendor) => (
                             <SelectItem key={vendor.id} value={vendor.id}>{vendor.name}</SelectItem>
                           ))}
-                        </CommandGroup>
+                        </SelectGroup>
                       )}
-                      <CommandGroup heading="Todos los Proveedores">
+                      <SelectGroup>
+                        <SelectLabel>Todos los Proveedores</SelectLabel>
                         {allVendors.map((vendor) => (
                           <SelectItem key={vendor.id} value={vendor.id}>{vendor.name}</SelectItem>
                         ))}
-                      </CommandGroup>
+                      </SelectGroup>
                     </SelectContent>
                   </Select>
                   <FormMessage />
