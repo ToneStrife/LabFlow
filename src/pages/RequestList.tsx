@@ -8,9 +8,9 @@ import { useRequests, useUpdateRequestStatus, SupabaseRequest, useSendEmail } fr
 import { useVendors } from "@/hooks/use-vendors";
 import { useAllProfiles, getFullName } from "@/hooks/use-profiles";
 import { useAccountManagers } from "@/hooks/use-account-managers";
-import { useProjects } from "@/hooks/use-projects"; // Importar useProjects
-import { useEmailTemplates } from "@/hooks/use-email-templates"; // Importar useEmailTemplates
-import { processEmailTemplate, processTextTemplate, processPlainTextTemplate } from "@/utils/email-templating"; // Importar la utilidad de templating
+import { useProjects } from "@/hooks/use-projects";
+import { useEmailTemplates } from "@/hooks/use-email-templates";
+import { processEmailTemplate, processTextTemplate, processPlainTextTemplate } from "@/utils/email-templating";
 import EmailDialog, { EmailFormValues } from "@/components/EmailDialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -19,8 +19,9 @@ import { Button } from "@/components/ui/button";
 import RequestListToolbar from "@/components/request-list/RequestListToolbar";
 import RequestListTable from "@/components/request-list/RequestListTable";
 import { toast } from "sonner";
-import { useSession } from "@/components/SessionContextProvider"; // Importar useSession
-import { generateSignedUrl } from "@/utils/supabase-storage"; // Importar utilidad de URL firmada
+import { useSession } from "@/components/SessionContextProvider";
+import { generateSignedUrl } from "@/utils/supabase-storage";
+import ReceiveItemsDialog from "@/components/ReceiveItemsDialog"; // Importar el diálogo de recepción
 
 // Función auxiliar para obtener el nombre de archivo legible (copiada de RequestFilesCard.tsx)
 const getFileNameFromPath = (filePath: string): string => {
@@ -42,13 +43,13 @@ const getFileNameFromPath = (filePath: string): string => {
 
 const RequestList: React.FC = () => {
   const navigate = useNavigate();
-  const { session, profile } = useSession(); // Obtener la sesión y el perfil del usuario actual
+  const { session, profile } = useSession();
   const { data: requests, isLoading: isLoadingRequests, error: requestsError } = useRequests();
   const { data: vendors, isLoading: isLoadingVendors } = useVendors();
   const { data: profiles, isLoading: isLoadingProfiles } = useAllProfiles();
   const { data: accountManagers, isLoading: isLoadingAccountManagers } = useAccountManagers();
-  const { data: projects, isLoading: isLoadingProjects } = useProjects(); // Usar el hook de proyectos
-  const { data: emailTemplates, isLoading: isLoadingEmailTemplates } = useEmailTemplates(); // Usar el hook de plantillas
+  const { data: projects, isLoading: isLoadingProjects } = useProjects();
+  const { data: emailTemplates, isLoading: isLoadingEmailTemplates } = useEmailTemplates();
   const updateStatusMutation = useUpdateRequestStatus();
   const sendEmailMutation = useSendEmail();
 
@@ -58,8 +59,8 @@ const RequestList: React.FC = () => {
   const [isEmailDialogOpen, setIsEmailDialogOpen] = React.useState(false);
   const [emailInitialData, setEmailInitialData] = React.useState<Partial<EmailFormValues>>({});
   
-  const [isApproveRequestDialogOpen, setIsApproveRequestDialogOpen] = React.useState(false);
-  const [requestToApprove, setRequestToApprove] = React.useState<SupabaseRequest | null>(null);
+  const [isReceiveItemsDialogOpen, setIsReceiveItemsDialogOpen] = React.useState(false); // Nuevo estado
+  const [requestToReceive, setRequestToReceive] = React.useState<SupabaseRequest | null>(null); // Nuevo estado
 
   const getRequesterName = (requesterId: string) => {
     const profile = profiles?.find(p => p.id === requesterId);
@@ -124,7 +125,7 @@ const RequestList: React.FC = () => {
     let attachmentsForSend = [];
     
     if (request.quote_url) {
-      const fileName = getFileNameFromPath(request.quote_url); // Usar el nombre de archivo real
+      const fileName = getFileNameFromPath(request.quote_url);
       
       // 1. Generar URL firmada para el diálogo (visualización)
       const signedUrl = await generateSignedUrl(request.quote_url);
@@ -142,13 +143,12 @@ const RequestList: React.FC = () => {
       to: getAccountManagerEmail(request.account_manager_id),
       subject: processTextTemplate(poRequestTemplate.subject_template, context),
       body: processPlainTextTemplate(poRequestTemplate.body_template, context),
-      attachments: attachmentsForDialog, // Usar URL firmada para el diálogo
-      attachmentsForSend: attachmentsForSend, // Usar ruta original para el envío
+      attachments: attachmentsForDialog,
+      attachmentsForSend: attachmentsForSend,
     });
     setIsEmailDialogOpen(true);
   };
 
-  // NUEVO: Manejador de aprobación simple para la vista de lista
   const handleApproveRequest = async (request: SupabaseRequest) => {
     await updateStatusMutation.mutateAsync({ id: request.id, status: "Quote Requested" });
   };
@@ -161,8 +161,14 @@ const RequestList: React.FC = () => {
     navigate(`/requests/${request.id}`);
   };
 
-  const handleMarkAsReceived = async (request: SupabaseRequest) => {
-    await updateStatusMutation.mutateAsync({ id: request.id, status: "Received" });
+  // NUEVO: Manejador para abrir el diálogo de recepción
+  const handleMarkAsReceived = (request: SupabaseRequest) => {
+    if (!request.items || request.items.length === 0) {
+      toast.error("Cannot receive items.", { description: "The request has no items." });
+      return;
+    }
+    setRequestToReceive(request);
+    setIsReceiveItemsDialogOpen(true);
   };
 
   const filteredRequests = (requests || []).filter(request => {
@@ -213,11 +219,11 @@ const RequestList: React.FC = () => {
         profiles={profiles}
         isUpdatingStatus={updateStatusMutation.isPending}
         onViewDetails={(id) => navigate(`/requests/${id}`)}
-        onApprove={handleApproveRequest} // Usar la aprobación simple
+        onApprove={handleApproveRequest}
         onEnterQuoteDetails={openQuoteAndPODetailsDialog}
         onSendPORequest={handleSendPORequest}
         onMarkAsOrdered={openOrderConfirmationDialog}
-        onMarkAsReceived={handleMarkAsReceived}
+        onMarkAsReceived={handleMarkAsReceived} // Usar el nuevo manejador
       />
 
       <EmailDialog
@@ -227,6 +233,16 @@ const RequestList: React.FC = () => {
         onSend={handleSendEmail}
         isSending={sendEmailMutation.isPending}
       />
+      
+      {/* Diálogo de Recepción de Ítems */}
+      {requestToReceive && requestToReceive.items && (
+        <ReceiveItemsDialog
+          isOpen={isReceiveItemsDialogOpen}
+          onOpenChange={setIsReceiveItemsDialogOpen}
+          requestId={requestToReceive.id}
+          requestItems={requestToReceive.items}
+        />
+      )}
     </div>
   );
 };

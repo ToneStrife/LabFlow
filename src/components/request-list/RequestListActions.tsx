@@ -13,7 +13,7 @@ interface RequestListActionsProps {
   onEnterQuoteDetails: (request: SupabaseRequest) => void; // Now redirects to details
   onSendPORequest: (request: SupabaseRequest) => void;
   onMarkAsOrdered: (request: SupabaseRequest) => void; // Now redirects to details
-  onMarkAsReceived: (request: SupabaseRequest) => void;
+  onMarkAsReceived: (request: SupabaseRequest) => void; // Recibe el request completo
 }
 
 const RequestListActions: React.FC<RequestListActionsProps> = ({
@@ -49,7 +49,7 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
         </Button>
       )}
 
-      {/* Quote Requested: Redirect to details to upload file, ONLY if quote is missing */}
+      {/* Quote Requested: Upload Quote file, ONLY if quote is missing */}
       {request.status === "Quote Requested" && !request.quote_url && (
         <Button
           variant="ghost"
@@ -77,16 +77,6 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
 
       {request.status === "PO Requested" && (
         <>
-          {/* Send PO Request Email (Orange envelope) - This is usually done automatically after quote upload, but kept as manual option */}
-          {/* <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onSendPORequest(request)}
-            title="Send PO Request to Account Manager"
-            disabled={isUpdatingStatus}
-          >
-            <Mail className="h-4 w-4 text-orange-600" />
-          </Button> */}
           {/* Mark as Ordered: Redirect to details to upload PO file */}
           <Button
             variant="ghost"
@@ -104,7 +94,7 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => onMarkAsReceived(request)}
+          onClick={() => onMarkAsReceived(request)} // Pasa el request completo
           title="Mark as Received"
           disabled={isUpdatingStatus}
         >
