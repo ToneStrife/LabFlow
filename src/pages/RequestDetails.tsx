@@ -13,16 +13,16 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 
-import { useRequests, SupabaseRequest, useUpdateRequestStatus, useSendEmail, useUpdateRequestFile, useUpdateRequestMetadata, useUpdateFullRequest, FileType } from "@/hooks/use-requests";
+import { useRequests, SupabaseRequest, useUpdateRequestStatus, useSendEmail, useUpdateRequestFile, useUpdateRequestMetadata, useUpdateFullRequest, useRevertRequestReception, FileType } from "@/hooks/use-requests";
 import { useVendors } from "@/hooks/use-vendors";
 import { useAllProfiles, getFullName } from "@/hooks/use-profiles";
 import { useAccountManagers } from "@/hooks/use-account-managers";
 import { useProjects } from "@/hooks/use-projects";
 import { useEmailTemplates } from "@/hooks/use-email-templates";
 import { useShippingAddresses, useBillingAddresses } from "@/hooks/use-addresses";
-import { processEmailTemplate, processTextTemplate, processPlainTextTemplate } from "@/utils/email-templating"; // Importar processPlainTextTemplate
+import { processEmailTemplate, processTextTemplate, processPlainTextTemplate } from "@/utils/email-templating";
 import EmailDialog, { EmailFormValues } from "@/components/EmailDialog";
-import ReceiveItemsDialog from "@/components/ReceiveItemsDialog"; // Importar nuevo componente
+import ReceiveItemsDialog from "@/components/ReceiveItemsDialog";
 
 // Import new modular components
 import RequestSummaryCard from "@/components/request-details/RequestSummaryCard";
@@ -34,9 +34,9 @@ import RequestMetadataForm from "@/components/request-details/RequestMetadataFor
 import RequestFullEditForm, { FullEditFormValues } from "@/components/request-details/RequestFullEditForm";
 import { toast } from "sonner";
 import { useSession } from "@/components/SessionContextProvider";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"; // Importar Select
-import { useAggregatedReceivedItems } from "@/hooks/use-packing-slips"; // Importar hook de recepción
-import { generateSignedUrl } from "@/utils/supabase-storage"; // Importar utilidad de URL firmada
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useAggregatedReceivedItems } from "@/hooks/use-packing-slips";
+import { generateSignedUrl } from "@/utils/supabase-storage";
 
 // Función auxiliar para obtener el nombre de archivo legible (copiada de RequestFilesCard.tsx)
 const getFileNameFromPath = (filePath: string): string => {
@@ -73,6 +73,7 @@ const RequestDetails: React.FC = () => {
   const updateFileMutation = useUpdateRequestFile();
   const updateMetadataMutation = useUpdateRequestMetadata();
   const updateFullRequestMutation = useUpdateFullRequest();
+  const revertReceptionMutation = useRevertRequestReception(); // Nuevo hook
   const sendEmailMutation = useSendEmail();
 
   const request = requests?.find(req => req.id === id);
@@ -90,6 +91,7 @@ const RequestDetails: React.FC = () => {
   const [isEditMetadataDialogOpen, setIsEditMetadataDialogOpen] = React.useState(false);
   const [isStatusOverrideDialogOpen, setIsStatusOverrideDialogOpen] = React.useState(false);
   const [isReceiveItemsDialogOpen, setIsReceiveItemsDialogOpen] = React.useState(false);
+  const [isRevertReceptionDialogOpen, setIsRevertReceptionDialogOpen] = React.useState(false); // Nuevo estado
   const [newStatus, setNewStatus] = React.useState<string>(request?.status || "Pending");
 
 
@@ -354,16 +356,30 @@ const RequestDetails: React.FC = () => {
   const handleStatusOverride = async () => {
     if (!request || !newStatus) return;
     
-    // Validar que el nuevo estado sea uno de los permitidos
     const validStatuses: RequestStatus[] = ["Pending", "Quote Requested", "PO Requested", "Ordered", "Received"];
     if (!validStatuses.includes(newStatus as RequestStatus)) {
         toast.error("Invalid status selected.");
+        return;
+    }
+    
+    if (request.status === "Received" && newStatus !== "Received") {
+        // Si se intenta cambiar de Received a otro estado, abrir el diálogo de confirmación de reversión
+        setIsStatusOverrideDialogOpen(false);
+        setIsRevertReceptionDialogOpen(true);
         return;
     }
 
     await updateStatusMutation.mutateAsync({ id: request.id, status: newStatus as RequestStatus });
     setIsStatusOverrideDialogOpen(false);
   };
+  
+  // Handler para la reversión de recepción
+  const handleRevertReception = async () => {
+    if (!request) return;
+    await revertReceptionMutation.mutateAsync(request.id);
+    setIsRevertReceptionDialogOpen(false);
+  };
+
 
   if (isLoadingRequests || isLoadingVendors || isLoadingProfiles || isLoadingAccountManagers || isLoadingProjects || isLoadingEmailTemplates || isLoadingShippingAddresses || isLoadingBillingAddresses || isLoadingAggregatedReceived) {
     return <div className="container mx-auto py-8 flex justify-center items-center"><Loader2 className="h-8 w-8 animate-spin mr-2" /> Cargando Detalles de la Solicitud...</div>;
@@ -417,7 +433,7 @@ const RequestDetails: React.FC = () => {
             vendor={vendor} 
             profiles={profiles} 
             onEditDetails={() => setIsEditMetadataDialogOpen(true)}
-            isEditable={isMetadataEditable || isFullEditAllowed} // Permitir abrir el diálogo si se permite la edición completa o de metadatos
+            isEditable={isMetadataEditable || isFullEditAllowed}
           />
           
           <RequestItemsTable items={request.items} isEditable={isItemEditable} />
@@ -428,12 +444,12 @@ const RequestDetails: React.FC = () => {
             <h3 className="text-lg font-semibold mb-3">Actions</h3>
             <RequestActions
               request={request}
-              isUpdatingStatus={updateStatusMutation.isPending || updateFileMutation.isPending}
+              isUpdatingStatus={updateStatusMutation.isPending || updateFileMutation.isPending || revertReceptionMutation.isPending}
               openApproveRequestDialog={openApproveRequestDialog}
               handleSendPORequest={handleSendPORequest}
               handleUploadQuote={handleUploadQuote}
               handleUploadPOAndOrder={handleUploadPOAndOrder}
-              handleMarkAsReceived={handleOpenReceiveItemsDialog} // Usar el nuevo manejador
+              handleMarkAsReceived={handleOpenReceiveItemsDialog}
               handleMarkAsOrderedAndSendEmail={handleMarkAsOrderedAndSendEmail}
             />
           </div>
@@ -517,6 +533,27 @@ const RequestDetails: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      
+      {/* NUEVO: Diálogo de Confirmación de Reversión de Recepción */}
+      <Dialog open={isRevertReceptionDialogOpen} onOpenChange={setIsRevertReceptionDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Revert Reception & Inventory</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to revert Request {displayRequestNumber} from "Received" to "Ordered"? This action will permanently remove all associated packing slips and decrease the corresponding quantities from the Inventory.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsRevertReceptionDialogOpen(false)} disabled={revertReceptionMutation.isPending}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleRevertReception} disabled={revertReceptionMutation.isPending}>
+              {revertReceptionMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Confirm Revert & Remove from Inventory"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
 
       <EmailDialog 
         isOpen={isEmailDialogOpen} 

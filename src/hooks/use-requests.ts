@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { SupabaseRequest as MockSupabaseRequest, SupabaseRequestItem as MockSupabaseRequestItem, RequestItem, RequestStatus } from "@/data/mockData";
 import { toast } from "sonner";
-import { apiGetRequests, apiAddRequest, apiUpdateRequestStatus, apiDeleteRequest, apiAddInventoryItem, apiSendEmail, apiUpdateRequestFile, apiUpdateRequestMetadata, apiUpdateFullRequest } from "@/integrations/api";
+import { apiGetRequests, apiAddRequest, apiUpdateRequestStatus, apiDeleteRequest, apiAddInventoryItem, apiSendEmail, apiUpdateRequestFile, apiUpdateRequestMetadata, apiUpdateFullRequest, apiRevertRequestReception } from "@/integrations/api";
 
 export interface SupabaseRequestItem extends MockSupabaseRequestItem {}
 export interface SupabaseRequest extends MockSupabaseRequest {}
@@ -212,6 +212,31 @@ export const useDeleteRequest = () => {
     },
   });
 };
+
+// Revert Request Reception (New Hook)
+export const useRevertRequestReception = () => {
+  const queryClient = useQueryClient();
+  return useMutation<void, Error, string>({
+    mutationFn: async (requestId) => {
+      await apiRevertRequestReception(requestId);
+    },
+    onSuccess: (data, requestId) => {
+      queryClient.invalidateQueries({ queryKey: ["requests"] });
+      queryClient.invalidateQueries({ queryKey: ["inventory"] });
+      queryClient.invalidateQueries({ queryKey: ["packingSlips", requestId] });
+      queryClient.invalidateQueries({ queryKey: ["aggregatedReceivedItems", requestId] });
+      toast.success("Reception reverted successfully!", {
+        description: "Items removed from inventory and status set to Ordered.",
+      });
+    },
+    onError: (error) => {
+      toast.error("Failed to revert reception.", {
+        description: error.message,
+      });
+    },
+  });
+};
+
 
 // Hook for sending emails
 interface SendEmailData {

@@ -296,25 +296,9 @@ export const apiUpdateRequestStatus = async (
   if (error) throw new Error(error.message);
 
   // Lógica de inventario: Mover artículos al inventario cuando se marcan como "Recibido"
-  if (status === "Received" && updatedRequest.items) {
-    try {
-      for (const item of updatedRequest.items) {
-        // Usar la función RPC para añadir o actualizar el inventario
-        const { error: inventoryError } = await supabase.rpc('add_or_update_inventory_item', {
-          product_name_in: item.product_name,
-          catalog_number_in: item.catalog_number,
-          brand_in: item.brand,
-          quantity_in: item.quantity,
-          unit_price_in: item.unit_price,
-          format_in: item.format,
-        });
-        if (inventoryError) throw new Error(inventoryError.message);
-      }
-    } catch (inventoryError) {
-      console.error("Error adding items to inventory via RPC:", inventoryError);
-      throw new Error(`Failed to add items to inventory: ${inventoryError instanceof Error ? inventoryError.message : String(inventoryError)}`);
-    }
-  }
+  // NOTA: Esta lógica se ha movido al hook useReceiveItems para manejar la recepción parcial y los albaranes.
+  // Si el estado se actualiza a 'Received' aquí, es una actualización manual y no debería afectar al inventario.
+  // La función RPC 'add_or_update_inventory_item' se llama en useReceiveItems.
 
   return updatedRequest as SupabaseRequest;
 };
@@ -472,6 +456,16 @@ export const apiDeleteRequest = async (id: string): Promise<void> => {
   const { error } = await supabase.from('requests').delete().eq('id', id);
   if (error) throw new Error(error.message);
 };
+
+// NUEVA FUNCIÓN: Revertir la recepción de una solicitud
+export const apiRevertRequestReception = async (requestId: string): Promise<void> => {
+  const { error } = await supabase.rpc('revert_request_reception', { request_id_in: requestId });
+  if (error) {
+    console.error("Error invoking revert_request_reception RPC:", error);
+    throw new Error(error.message);
+  }
+};
+
 
 // --- API de Inventario (usando mock data por ahora) ---
 export const apiGetInventory = async (): Promise<InventoryItem[]> => {
