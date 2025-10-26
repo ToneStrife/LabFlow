@@ -274,9 +274,12 @@ export const apiAddRequest = async (data: Omit<SupabaseRequest, "id" | "created_
     brand: item.brand,
   }));
 
+  // Aseguramos que account_manager_id se pase como texto (UUID o null)
+  const accountManagerIdText = account_manager_id || null;
+
   const { data: newRequest, error } = await supabase.rpc('create_request_with_items', {
     vendor_id_in: vendor_id,
-    account_manager_id_in: account_manager_id,
+    account_manager_id_in: accountManagerIdText, // Pasamos como texto
     notes_in: notes,
     project_codes_in: project_codes,
     items_in: itemsJsonb,
