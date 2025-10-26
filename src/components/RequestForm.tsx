@@ -3,7 +3,7 @@
 import React from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import *s z from "zod";
+import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -106,7 +106,7 @@ const ItemAutofill: React.FC<ItemAutofillProps> = ({ index, form }) => {
     (!!productName && productName.length > 3);
 
   return (
-    <div className="absolute top-4 right-4 sm:right-auto sm:left-4">
+    <div className="absolute top-4 right-4">
       <Popover>
         <PopoverTrigger asChild>
           <Button 
@@ -481,10 +481,8 @@ const RequestForm: React.FC = () => {
             <div key={field.id} className="border p-4 rounded-md relative bg-muted/20 pt-16 sm:pt-4">
               <h3 className="text-lg font-medium mb-4 text-primary hidden sm:block">Artículo #{index + 1}</h3>
               
-              {/* Autofill Component - Moved to the right */}
-              <div className="absolute top-4 right-4">
-                <ItemAutofill index={index} form={form} />
-              </div>
+              {/* Autofill Component */}
+              <ItemAutofill index={index} form={form} />
 
               {fields.length > 1 && (
                 <Button type="button" variant="destructive" size="icon" onClick={() => remove(index)} className="absolute top-4 left-4 h-8 w-8">
