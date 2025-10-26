@@ -62,24 +62,20 @@ const FileRow: React.FC<{ label: string; filePath: string | null; onUpload: () =
   };
 
   return (
-    <div className="flex items-center justify-between p-2 rounded-md hover:bg-muted">
-      <div className="flex items-center">
+    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-2 rounded-md hover:bg-muted border-b last:border-b-0">
+      <div className="flex items-center mb-2 sm:mb-0">
         <FileText className="h-5 w-5 mr-3 text-muted-foreground" />
         <span className="font-medium">{label}</span>
       </div>
-      <div className="flex items-center space-x-2">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-1 sm:space-y-0 sm:space-x-2">
         {filePath ? (
           <>
-            <Button variant="outline" size="sm" onClick={onUpload} title="Replace File">
-              <Upload className="h-4 w-4 mr-2" />
-              Replace
-            </Button>
             <Button 
               variant="link" 
               size="sm" 
               onClick={handleViewClick} 
               disabled={isGenerating}
-              className="text-sm text-blue-600 hover:underline flex items-center p-0 h-auto"
+              className="text-xs text-blue-600 hover:underline flex items-center p-0 h-auto"
               title={getFileNameFromPath(filePath)}
             >
               {isGenerating ? (
@@ -89,10 +85,14 @@ const FileRow: React.FC<{ label: string; filePath: string | null; onUpload: () =
               )}
               <span className="truncate max-w-[150px]">{getFileNameFromPath(filePath)}</span>
             </Button>
+            <Button variant="outline" size="sm" onClick={onUpload} title="Replace File" className="h-7 px-2 text-xs">
+              <Upload className="h-3 w-3 mr-1" />
+              Replace
+            </Button>
           </>
         ) : (
-          <Button variant="outline" size="sm" onClick={onUpload} title="Upload File">
-            <Upload className="h-4 w-4 mr-2" />
+          <Button variant="outline" size="sm" onClick={onUpload} title="Upload File" className="h-7 px-2 text-xs">
+            <Upload className="h-3 w-3 mr-1" />
             Upload
           </Button>
         )}
@@ -107,7 +107,7 @@ const RequestFilesCard: React.FC<RequestFilesCardProps> = ({ request, onUploadCl
       <CardHeader>
         <CardTitle>Attached Files</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-2">
+      <CardContent className="space-y-0 p-0">
         <FileRow label="Quote" filePath={request.quote_url} onUpload={() => onUploadClick("quote")} />
         <FileRow label="Purchase Order" filePath={request.po_url} onUpload={() => onUploadClick("po")} />
         <FileRow label="Packing Slip" filePath={request.slip_url} onUpload={() => onUploadClick("slip")} />

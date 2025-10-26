@@ -34,37 +34,32 @@ const RequestActions: React.FC<RequestActionsProps> = ({
         </Button>
       )}
 
-      {/* Quote Requested: Upload Quote file. This action automatically transitions to PO Requested and triggers the PO Request email if successful. */}
-      {request.status === "Quote Requested" && !request.quote_url && (
-        <Button onClick={handleUploadQuote} disabled={isUpdatingStatus}>
-          <Upload className="mr-2 h-4 w-4" /> Upload Quote
-        </Button>
-      )}
-      
-      {/* PO Requested: 
-          1. Send PO Request Email (if quote is available)
-          2. Upload PO file (which marks as Ordered)
-      */}
-      {request.status === "PO Requested" && (
+      {/* Quote Requested: Upload Quote file OR Send PO Request Email */}
+      {request.status === "Quote Requested" && (
         <>
-          {request.quote_url && (
+          {!request.quote_url ? (
+            <Button onClick={handleUploadQuote} disabled={isUpdatingStatus}>
+              <Upload className="mr-2 h-4 w-4" /> Upload Quote
+            </Button>
+          ) : (
             <Button onClick={() => handleSendPORequest(request)} disabled={isUpdatingStatus} variant="outline">
               <Mail className="mr-2 h-4 w-4" /> Request PO (Email)
             </Button>
           )}
-          <Button
-            onClick={() => handleUploadPOAndOrder(request)}
-            disabled={isUpdatingStatus}
-          >
-            <Upload className="mr-2 h-4 w-4" /> Upload PO & Mark as Ordered
-          </Button>
         </>
       )}
+      
+      {/* PO Requested: Upload PO file (which marks as Ordered) */}
+      {request.status === "PO Requested" && (
+        <Button
+          onClick={() => handleUploadPOAndOrder(request)}
+          disabled={isUpdatingStatus}
+        >
+          <Upload className="mr-2 h-4 w-4" /> Upload PO & Mark as Ordered
+        </Button>
+      )}
 
-      {/* Ordered: 
-          1. Send Order Confirmation Email (if PO is available)
-          2. Mark as Received (Partial/Full)
-      */}
+      {/* Ordered: Send Order Confirmation Email OR Receive Items */}
       {request.status === "Ordered" && (
         <>
           {request.po_url && (

@@ -378,8 +378,10 @@ const RequestDetails: React.FC = () => {
     );
   }
   
-  // La edición de ítems y metadatos (manager, notes, projects) está permitida en Pending y Quote Requested.
-  const isItemEditable = request.status === "Pending" || request.status === "Quote Requested";
+  // Permitir la edición de ítems en todos los estados
+  const isItemEditable = true; 
+  
+  // La edición de metadatos (manager, notes, projects) está permitida en Pending y Quote Requested.
   const isMetadataEditable = request.status === "Pending" || request.status === "Quote Requested";
   // La edición completa (Vendor, Addresses) ahora está permitida en Pending y PO Requested.
   const isFullEditAllowed = request.status === "Pending" || request.status === "PO Requested";
