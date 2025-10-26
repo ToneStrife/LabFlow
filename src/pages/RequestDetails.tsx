@@ -13,7 +13,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 
-import { useRequests, SupabaseRequest, useUpdateRequestStatus, useSendEmail, useUpdateRequestFile, useUpdateRequestMetadata, FileType } from "@/hooks/use-requests";
+import { useRequests, SupabaseRequest, useUpdateRequestStatus, useSendEmail, useUpdateRequestFile, useUpdateRequestMetadata, useUpdateFullRequest, FileType } from "@/hooks/use-requests";
 import { useVendors } from "@/hooks/use-vendors";
 import { useAllProfiles, getFullName } from "@/hooks/use-profiles";
 import { useAccountManagers } from "@/hooks/use-account-managers";
@@ -30,6 +30,7 @@ import RequestActions from "@/components/request-details/RequestActions";
 import RequestFilesCard from "@/components/request-details/RequestFilesCard";
 import FileUploadDialog from "@/components/request-details/FileUploadDialog";
 import RequestMetadataForm from "@/components/request-details/RequestMetadataForm";
+import RequestFullEditForm, { FullEditFormValues } from "@/components/request-details/RequestFullEditForm"; // Nuevo import
 import { toast } from "sonner";
 import { useSession } from "@/components/SessionContextProvider";
 
@@ -49,6 +50,7 @@ const RequestDetails: React.FC = () => {
   const updateStatusMutation = useUpdateRequestStatus();
   const updateFileMutation = useUpdateRequestFile();
   const updateMetadataMutation = useUpdateRequestMetadata();
+  const updateFullRequestMutation = useUpdateFullRequest(); // Nuevo hook
   const sendEmailMutation = useSendEmail();
 
   const request = requests?.find(req => req.id === id);
@@ -62,7 +64,7 @@ const RequestDetails: React.FC = () => {
   const [isUploadDialogOpen, setIsUploadDialogOpen] = React.useState(false);
   const [fileTypeToUpload, setFileTypeToUpload] = React.useState<FileType>("quote");
 
-  const [isEditMetadataDialogOpen, setIsEditMetadataDialogOpen] = React.useState(false); // Nuevo estado para el diálogo de edición
+  const [isEditMetadataDialogOpen, setIsEditMetadataDialogOpen] = React.useState(false); // Estado para el diálogo de edición
 
   const getVendorEmail = (vendorId: string) => vendors?.find(v => v.id === vendorId)?.email || "";
   
@@ -163,7 +165,6 @@ const RequestDetails: React.FC = () => {
   const handleUploadQuote = () => handleUploadClick("quote");
   const handleUploadPOAndOrder = () => handleUploadClick("po");
 
-  // REFACTOR: This function now orchestrates the upload and status update.
   const handleFileUpload = async (file: File, poNumber?: string) => {
     if (!request) return;
 
@@ -178,8 +179,6 @@ const RequestDetails: React.FC = () => {
 
       // Step 2: Update the request status with the new file URL.
       if (fileTypeToUpload === "po") {
-        // PO upload is now optional, but if uploaded, we mark as Ordered.
-        // We only require poNumber if we are marking as Ordered.
         if (request.status === "PO Requested") {
              await updateStatusMutation.mutateAsync({ id: request.id, status: "Ordered", poNumber: returnedPoNumber });
         }
@@ -193,11 +192,8 @@ const RequestDetails: React.FC = () => {
           toast.info("Cotización subida. Por favor, asigna un Gerente de Cuenta para solicitar un PO.");
         }
       }
-      // Note: 'slip' file type does not change status, but the file URL will be saved in a real DB.
-
       setIsUploadDialogOpen(false);
     } catch (error) {
-      // Errors are already handled by the mutation's onError, but you could add more specific logic here if needed.
       console.error("File upload orchestration failed:", error);
     }
   };
@@ -238,6 +234,25 @@ const RequestDetails: React.FC = () => {
     setIsEmailDialogOpen(true);
   };
 
+  // Handler para la edición completa (solo Pending)
+  const handleUpdateFullRequest = async (data: FullEditFormValues) => {
+    if (!request) return;
+    
+    await updateFullRequestMutation.mutateAsync({
+      id: request.id,
+      data: {
+        vendorId: data.vendorId,
+        shippingAddressId: data.shippingAddressId,
+        billingAddressId: data.billingAddressId,
+        accountManagerId: data.accountManagerId === 'unassigned' ? null : data.accountManagerId,
+        notes: data.notes,
+        projectCodes: data.projectCodes,
+      }
+    });
+    setIsEditMetadataDialogOpen(false);
+  };
+
+  // Handler para la edición de metadatos (Quote Requested)
   const handleUpdateMetadata = async (data: { accountManagerId?: string | null; notes?: string | null; projectCodes?: string[] | null; }) => {
     if (!request) return;
     
@@ -249,7 +264,7 @@ const RequestDetails: React.FC = () => {
         projectCodes: data.projectCodes,
       }
     });
-    setIsEditMetadataDialogOpen(false); // Cerrar diálogo después de la actualización
+    setIsEditMetadataDialogOpen(false);
   };
 
   if (isLoadingRequests || isLoadingVendors || isLoadingProfiles || isLoadingAccountManagers || isLoadingProjects || isLoadingEmailTemplates || isLoadingShippingAddresses || isLoadingBillingAddresses) {
@@ -265,8 +280,10 @@ const RequestDetails: React.FC = () => {
     );
   }
   
-  // La edición solo está permitida si el estado es Pending o Quote Requested
+  // La edición de ítems y metadatos (manager, notes, projects) está permitida en Pending y Quote Requested.
   const isEditable = request.status === "Pending" || request.status === "Quote Requested";
+  // La edición completa (Vendor, Addresses) solo está permitida en Pending.
+  const isFullEditAllowed = request.status === "Pending";
 
   const vendor = vendors?.find(v => v.id === request.vendor_id);
 
@@ -306,21 +323,34 @@ const RequestDetails: React.FC = () => {
         </div>
       </div>
       
-      {/* Diálogo de Edición de Metadatos */}
+      {/* Diálogo de Edición de Metadatos/Completa */}
       <Dialog open={isEditMetadataDialogOpen} onOpenChange={setIsEditMetadataDialogOpen}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
-            <DialogTitle>Edit Request Details</DialogTitle>
-            <DialogDescription>Update the assigned manager, project codes, and general notes.</DialogDescription>
+            <DialogTitle>{isFullEditAllowed ? "Edit Full Request Details" : "Edit Request Metadata"}</DialogTitle>
+            <DialogDescription>
+              {isFullEditAllowed 
+                ? "Update vendor, addresses, manager, projects, and notes. (Only available in Pending status)"
+                : "Update the assigned manager, project codes, and general notes."
+              }
+            </DialogDescription>
           </DialogHeader>
-          {request && (
+          {request && isFullEditAllowed ? (
+            <RequestFullEditForm
+              request={request}
+              profiles={profiles || []}
+              onSubmit={handleUpdateFullRequest}
+              isSubmitting={updateFullRequestMutation.isPending}
+            />
+          ) : request && isEditable ? (
             <RequestMetadataForm
               request={request}
               profiles={profiles || []}
               onSubmit={handleUpdateMetadata}
               isSubmitting={updateMetadataMutation.isPending}
-              isEditable={isEditable}
             />
+          ) : (
+            <p className="text-muted-foreground p-4">Editing is only allowed in 'Pending' or 'Quote Requested' status.</p>
           )}
         </DialogContent>
       </Dialog>

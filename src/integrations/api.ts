@@ -186,13 +186,6 @@ export const apiDeleteProject = async (id: string): Promise<void> => {
   if (error) throw new Error(error.message);
 };
 
-// --- API de Búsqueda de Productos (ELIMINADA) ---
-// Esta función ya no se usa y se elimina para simplificar.
-export const apiSearchExternalProduct = async (catalogNumber: string, brand?: string): Promise<ProductDetails> => {
-  throw new Error("La búsqueda de productos externos ha sido deshabilitada.");
-};
-
-
 // --- API de Solicitudes (MIGRADO A SUPABASE REAL) ---
 export const apiGetRequests = async (): Promise<SupabaseRequest[]> => {
   // Selecciona la solicitud y une los ítems relacionados
@@ -325,6 +318,41 @@ export const apiUpdateRequestStatus = async (
 
   return updatedRequest as SupabaseRequest;
 };
+
+// NUEVA FUNCIÓN: Actualización completa de los detalles de la solicitud (solo para estado Pending)
+interface UpdateFullRequestData {
+  vendorId: string;
+  shippingAddressId: string;
+  billingAddressId: string;
+  accountManagerId: string | null;
+  notes?: string | null;
+  projectCodes?: string[] | null;
+}
+
+export const apiUpdateFullRequest = async (id: string, data: UpdateFullRequestData): Promise<SupabaseRequest> => {
+  const updateData: Partial<SupabaseRequest> = {
+    vendor_id: data.vendorId,
+    shipping_address_id: data.shippingAddressId,
+    billing_address_id: data.billingAddressId,
+    account_manager_id: data.accountManagerId,
+    notes: data.notes,
+    project_codes: data.projectCodes,
+  };
+
+  const { data: updatedRequest, error } = await supabase
+    .from('requests')
+    .update(updateData)
+    .eq('id', id)
+    .select(`
+      *,
+      items:request_items (*)
+    `)
+    .single();
+
+  if (error) throw new Error(error.message);
+  return updatedRequest as SupabaseRequest;
+};
+
 
 export const apiUpdateRequestMetadata = async (
   id: string,

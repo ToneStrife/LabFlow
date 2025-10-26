@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { SupabaseRequest as MockSupabaseRequest, SupabaseRequestItem as MockSupabaseRequestItem, RequestItem, RequestStatus } from "@/data/mockData";
 import { toast } from "sonner";
-import { apiGetRequests, apiAddRequest, apiUpdateRequestStatus, apiDeleteRequest, apiAddInventoryItem, apiSendEmail, apiUpdateRequestFile, apiUpdateRequestMetadata } from "@/integrations/api";
+import { apiGetRequests, apiAddRequest, apiUpdateRequestStatus, apiDeleteRequest, apiAddInventoryItem, apiSendEmail, apiUpdateRequestFile, apiUpdateRequestMetadata, apiUpdateFullRequest } from "@/integrations/api";
 
 export interface SupabaseRequestItem extends MockSupabaseRequestItem {}
 export interface SupabaseRequest extends MockSupabaseRequest {}
@@ -24,6 +24,8 @@ interface AddRequestFormData {
   vendorId: string;
   requesterId: string;
   accountManagerId: string | null;
+  shippingAddressId: string;
+  billingAddressId: string;
   notes?: string | null;
   projectCodes?: string[] | null;
   items: RequestItem[];
@@ -34,14 +36,16 @@ export const useAddRequest = () => {
   const queryClient = useQueryClient();
   return useMutation<SupabaseRequest, Error, AddRequestFormData>({
     mutationFn: async (data) => {
-      const { vendorId, requesterId, accountManagerId, notes, projectCodes, items } = data;
+      const { vendorId, requesterId, accountManagerId, shippingAddressId, billingAddressId, notes, projectCodes, items } = data;
 
       return apiAddRequest({
-        vendor_id: vendorId,
-        requester_id: requesterId,
-        account_manager_id: accountManagerId,
+        vendorId: vendorId,
+        requesterId: requesterId,
+        accountManagerId: accountManagerId,
+        shippingAddressId: shippingAddressId,
+        billingAddressId: billingAddressId,
         notes: notes || null,
-        project_codes: projectCodes || null,
+        projectCodes: projectCodes || null,
         items: items,
       });
     },
@@ -74,17 +78,9 @@ export const useUpdateRequestStatus = () => {
       const updatedRequest = await apiUpdateRequestStatus(id, status, quoteUrl, poNumber);
 
       if (status === "Ordered" && updatedRequest.items) {
-        for (const item of updatedRequest.items) {
-          await apiAddInventoryItem({
-            product_name: item.product_name,
-            catalog_number: item.catalog_number,
-            brand: item.brand,
-            quantity: item.quantity,
-            unit_price: item.unit_price,
-            format: item.format,
-          });
-        }
-        toast.success("Items added to inventory!");
+        // NOTE: Inventory update logic is now handled inside apiUpdateRequestStatus when status is 'Received'
+        // The previous logic here was incorrect as it triggered on 'Ordered'.
+        // The correct logic is now implemented in api.ts for 'Received' status.
       }
       return updatedRequest;
     },
@@ -101,7 +97,40 @@ export const useUpdateRequestStatus = () => {
   });
 };
 
-// Update Request Metadata
+// Update Full Request Details (Vendor, Addresses, Manager, Notes, Projects)
+interface UpdateFullRequestData {
+  id: string;
+  data: {
+    vendorId: string;
+    shippingAddressId: string;
+    billingAddressId: string;
+    accountManagerId: string | null;
+    notes?: string | null;
+    projectCodes?: string[] | null;
+  };
+}
+
+export const useUpdateFullRequest = () => {
+  const queryClient = useQueryClient();
+  return useMutation<SupabaseRequest, Error, UpdateFullRequestData>({
+    mutationFn: async ({ id, data }) => {
+      const managerId = data.accountManagerId === 'unassigned' ? null : data.accountManagerId;
+      return apiUpdateFullRequest(id, { ...data, accountManagerId: managerId });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["requests"] });
+      toast.success(`Request details updated successfully!`);
+    },
+    onError: (error) => {
+      toast.error("Failed to update request details.", {
+        description: error.message,
+      });
+    },
+  });
+};
+
+
+// Update Request Metadata (Only Manager, Notes, Projects - kept for consistency if needed later)
 interface UpdateRequestMetadataData {
   id: string;
   data: {
