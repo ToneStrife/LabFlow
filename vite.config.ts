@@ -3,7 +3,7 @@ import dyadComponentTagger from "@dyad-sh/react-vite-component-tagger";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 
-export default defineConfig(() => ({
+export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
@@ -14,4 +14,6 @@ export default defineConfig(() => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  // Set base path for GitHub Pages deployment
+  base: mode === 'production' ? '/vite_react_shadcn_ts/' : '/',
 }));
