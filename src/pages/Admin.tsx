@@ -3,7 +3,7 @@
 import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Loader2, MapPin, DollarSign } from "lucide-react";
+import { PlusCircle, Loader2, MapPin, DollarSign, Users, Briefcase, Shield, Mail } from "lucide-react"; // Añadir iconos para pestañas
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
@@ -261,31 +261,65 @@ const AdminPage = () => {
     <div className="container mx-auto py-8">
       <h1 className="text-3xl font-bold mb-6">Admin Panel</h1>
       <p className="text-lg text-muted-foreground mb-8">
-        Manage account managers, projects, users, and email templates from one place.
+        Manage account managers, projects, users, addresses, and email templates.
       </p>
 
-      <Tabs defaultValue="account-managers" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="account-managers">Account Managers</TabsTrigger>
-          <TabsTrigger value="projects">Projects</TabsTrigger>
-          <TabsTrigger value="users">Users</TabsTrigger>
-          <TabsTrigger value="addresses">Addresses</TabsTrigger>
-          <TabsTrigger value="email-templates">Templates</TabsTrigger>
+      <Tabs defaultValue="users" className="w-full">
+        {/* Tabs List: Use flex-wrap and overflow-x-auto for responsiveness */}
+        <TabsList className="flex flex-wrap h-auto p-1 bg-muted/50 border rounded-lg overflow-x-auto w-full justify-start">
+          <TabsTrigger value="users" className="flex items-center gap-2 px-4 py-2">
+            <Shield className="h-4 w-4" /> Users
+          </TabsTrigger>
+          <TabsTrigger value="account-managers" className="flex items-center gap-2 px-4 py-2">
+            <Users className="h-4 w-4" /> Account Managers
+          </TabsTrigger>
+          <TabsTrigger value="projects" className="flex items-center gap-2 px-4 py-2">
+            <Briefcase className="h-4 w-4" /> Projects
+          </TabsTrigger>
+          <TabsTrigger value="addresses" className="flex items-center gap-2 px-4 py-2">
+            <MapPin className="h-4 w-4" /> Addresses
+          </TabsTrigger>
+          <TabsTrigger value="email-templates" className="flex items-center gap-2 px-4 py-2">
+            <Mail className="h-4 w-4" /> Templates
+          </TabsTrigger>
         </TabsList>
+
+        {/* Users Tab */}
+        <TabsContent value="users" className="mt-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-xl">User Management</CardTitle>
+              <Dialog open={isInviteUserDialogOpen} onOpenChange={setIsInviteUserDialogOpen}>
+                <DialogTrigger asChild><Button size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Invite New User</Button></DialogTrigger>
+                <DialogContent className="sm:max-w-[425px]">
+                  <DialogHeader><DialogTitle>Invite New User</DialogTitle></DialogHeader>
+                  <InviteUserDialog onSubmit={handleInviteUser} onCancel={() => setIsInviteUserDialogOpen(false)} isSubmitting={inviteUserMutation.isPending} />
+                </DialogContent>
+              </Dialog>
+            </CardHeader>
+            <CardContent>
+              <UserTable users={allProfiles || []} onRoleChange={handleUpdateUserRole} onDelete={handleDeleteUser} currentUserId={currentUserProfile?.id} isUpdatingRole={updateProfileMutation.isPending} isDeletingUser={deleteProfileMutation.isPending} />
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* Account Managers Tab */}
         <TabsContent value="account-managers" className="mt-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-2xl font-bold">Account Managers</h2>
-            <Dialog open={isAddManagerDialogOpen} onOpenChange={setIsAddManagerDialogOpen}>
-              <DialogTrigger asChild><Button><PlusCircle className="mr-2 h-4 w-4" /> Add New Manager</Button></DialogTrigger>
-              <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader><DialogTitle>Add New Account Manager</DialogTitle></DialogHeader>
-                <AccountManagerForm onSubmit={handleAddManager} onCancel={() => setIsAddManagerDialogOpen(false)} isSubmitting={addAccountManagerMutation.isPending} />
-              </DialogContent>
-            </Dialog>
-          </div>
-          <AccountManagerTable managers={accountManagers || []} onEdit={openEditManagerDialog} onDelete={handleDeleteManager} />
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-xl">Account Managers</CardTitle>
+              <Dialog open={isAddManagerDialogOpen} onOpenChange={setIsAddManagerDialogOpen}>
+                <DialogTrigger asChild><Button size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add New Manager</Button></DialogTrigger>
+                <DialogContent className="sm:max-w-[425px]">
+                  <DialogHeader><DialogTitle>Add New Account Manager</DialogTitle></DialogHeader>
+                  <AccountManagerForm onSubmit={handleAddManager} onCancel={() => setIsAddManagerDialogOpen(false)} isSubmitting={addAccountManagerMutation.isPending} />
+                </DialogContent>
+              </Dialog>
+            </CardHeader>
+            <CardContent>
+              <AccountManagerTable managers={accountManagers || []} onEdit={openEditManagerDialog} onDelete={handleDeleteManager} />
+            </CardContent>
+          </Card>
           <Dialog open={isEditManagerDialogOpen} onOpenChange={setIsEditManagerDialogOpen}>
             <DialogContent className="sm:max-w-[425px]">
               <DialogHeader><DialogTitle>Edit Account Manager</DialogTitle></DialogHeader>
@@ -296,17 +330,21 @@ const AdminPage = () => {
 
         {/* Projects Tab */}
         <TabsContent value="projects" className="mt-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-2xl font-bold">Projects</h2>
-            <Dialog open={isAddProjectDialogOpen} onOpenChange={setIsAddProjectDialogOpen}>
-              <DialogTrigger asChild><Button><PlusCircle className="mr-2 h-4 w-4" /> Add New Project</Button></DialogTrigger>
-              <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader><DialogTitle>Add New Project</DialogTitle></DialogHeader>
-                <ProjectForm onSubmit={handleAddProject} onCancel={() => setIsAddProjectDialogOpen(false)} isSubmitting={addProjectMutation.isPending} />
-              </DialogContent>
-            </Dialog>
-          </div>
-          <ProjectTable projects={projects || []} onEdit={openEditProjectDialog} onDelete={handleDeleteProject} />
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-xl">Projects</CardTitle>
+              <Dialog open={isAddProjectDialogOpen} onOpenChange={setIsAddProjectDialogOpen}>
+                <DialogTrigger asChild><Button size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add New Project</Button></DialogTrigger>
+                <DialogContent className="sm:max-w-[425px]">
+                  <DialogHeader><DialogTitle>Add New Project</DialogTitle></DialogHeader>
+                  <ProjectForm onSubmit={handleAddProject} onCancel={() => setIsAddProjectDialogOpen(false)} isSubmitting={addProjectMutation.isPending} />
+                </DialogContent>
+              </Dialog>
+            </CardHeader>
+            <CardContent>
+              <ProjectTable projects={projects || []} onEdit={openEditProjectDialog} onDelete={handleDeleteProject} />
+            </CardContent>
+          </Card>
           <Dialog open={isEditProjectDialogOpen} onOpenChange={setIsEditProjectDialogOpen}>
             <DialogContent className="sm:max-w-[425px]">
               <DialogHeader><DialogTitle>Edit Project</DialogTitle></DialogHeader>
@@ -315,28 +353,13 @@ const AdminPage = () => {
           </Dialog>
         </TabsContent>
 
-        {/* Users Tab */}
-        <TabsContent value="users" className="mt-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-2xl font-bold">User Management</h2>
-            <Dialog open={isInviteUserDialogOpen} onOpenChange={setIsInviteUserDialogOpen}>
-              <DialogTrigger asChild><Button><PlusCircle className="mr-2 h-4 w-4" /> Invite New User</Button></DialogTrigger>
-              <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader><DialogTitle>Invite New User</DialogTitle></DialogHeader>
-                <InviteUserDialog onSubmit={handleInviteUser} onCancel={() => setIsInviteUserDialogOpen(false)} isSubmitting={inviteUserMutation.isPending} />
-              </DialogContent>
-            </Dialog>
-          </div>
-          <UserTable users={allProfiles || []} onRoleChange={handleUpdateUserRole} onDelete={handleDeleteUser} currentUserId={currentUserProfile?.id} isUpdatingRole={updateProfileMutation.isPending} isDeletingUser={deleteProfileMutation.isPending} />
-        </TabsContent>
-
         {/* Addresses Tab */}
         <TabsContent value="addresses" className="mt-6 space-y-8">
           {/* Shipping Addresses */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-xl flex items-center"><MapPin className="mr-2 h-5 w-5" /> Shipping Addresses</CardTitle>
-              <Button onClick={() => openAddAddressDialog('shipping')}><PlusCircle className="mr-2 h-4 w-4" /> Add Shipping Address</Button>
+              <Button size="sm" onClick={() => openAddAddressDialog('shipping')}><PlusCircle className="mr-2 h-4 w-4" /> Add Shipping Address</Button>
             </CardHeader>
             <CardContent>
               <AddressTable 
@@ -351,7 +374,7 @@ const AdminPage = () => {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-xl flex items-center"><DollarSign className="mr-2 h-5 w-5" /> Billing Addresses</CardTitle>
-              <Button onClick={() => openAddAddressDialog('billing')}><PlusCircle className="mr-2 h-4 w-4" /> Add Billing Address</Button>
+              <Button size="sm" onClick={() => openAddAddressDialog('billing')}><PlusCircle className="mr-2 h-4 w-4" /> Add Billing Address</Button>
             </CardHeader>
             <CardContent>
               <AddressTable 
@@ -366,7 +389,7 @@ const AdminPage = () => {
         {/* Email Templates Tab */}
         <TabsContent value="email-templates" className="mt-6">
           <Card>
-            <CardHeader><CardTitle>Select & Edit Template</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-xl">Email Templates</CardTitle></CardHeader>
             <CardContent className="space-y-6">
               <Select value={selectedTemplateId} onValueChange={handleTemplateChange}>
                 <SelectTrigger className="w-full md:w-[300px]"><SelectValue placeholder="Select a template" /></SelectTrigger>
