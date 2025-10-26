@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { PlusCircle, Trash2, Check, ChevronsUpDown, Loader2 } from "lucide-react";
+import { PlusCircle, Trash2, Check, ChevronsUpDown, Loader2, Search } from "lucide-react";
 import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
@@ -26,11 +26,12 @@ import { RequestItem } from "@/data/types";
 import { showError } from "@/utils/toast";
 import { useSession } from "@/components/SessionContextProvider";
 import { useVendors } from "@/hooks/use-vendors";
-import { useAddRequest, useUpdateRequestFile } from "@/hooks/use-requests"; // Importar useUpdateRequestFile
+import { useAddRequest, useUpdateRequestFile, useUpdateRequestStatus } from "@/hooks/use-requests"; // Importar useUpdateRequestStatus
 import { useAccountManagers } from "@/hooks/use-account-managers";
 import { useProjects } from "@/hooks/use-projects";
 import { useShippingAddresses, useBillingAddresses } from "@/hooks/use-addresses";
 import { getFullName } from "@/hooks/use-profiles";
+import { useProductSearch, ProductSearchResult } from "@/hooks/use-product-search"; // Importar hook de búsqueda
 
 const itemSchema = z.object({
   productName: z.string().min(1, { message: "El nombre del producto es obligatorio." }),
@@ -63,6 +64,85 @@ const formSchema = z.object({
 
 type RequestFormValues = z.infer<typeof formSchema>;
 
+// Componente auxiliar para manejar el autocompletado de un solo ítem
+interface ItemAutofillProps {
+  index: number;
+  form: ReturnType<typeof useForm<RequestFormValues>>;
+}
+
+const ItemAutofill: React.FC<ItemAutofillProps> = ({ index, form }) => {
+  const { control, watch, setValue } = form;
+  
+  // Observar los campos clave para la búsqueda
+  const productName = watch(`items.${index}.productName`);
+  const catalogNumber = watch(`items.${index}.catalogNumber`);
+  const brand = watch(`items.${index}.brand`);
+
+  // Usar el hook de búsqueda
+  const { data: searchResults, isLoading: isSearching } = useProductSearch(
+    catalogNumber || null,
+    brand || null,
+    productName || null
+  );
+
+  const handleAutofill = (result: ProductSearchResult) => {
+    setValue(`items.${index}.productName`, result.product_name, { shouldDirty: true });
+    setValue(`items.${index}.catalogNumber`, result.catalog_number, { shouldDirty: true });
+    setValue(`items.${index}.brand`, result.brand || "", { shouldDirty: true });
+    setValue(`items.${index}.unitPrice`, result.unit_price || undefined, { shouldDirty: true });
+    setValue(`items.${index}.format`, result.format || "", { shouldDirty: true });
+    setValue(`items.${index}.link`, result.link || "", { shouldDirty: true });
+    
+    toast.info("Autocompletado aplicado.", {
+      description: `Datos cargados desde ${result.source}.`,
+    });
+  };
+
+  const hasResults = searchResults && searchResults.length > 0;
+
+  return (
+    <div className="absolute top-4 left-4">
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button 
+            type="button" 
+            variant="outline" 
+            size="sm" 
+            className="h-8 px-3 text-xs"
+            disabled={isSearching || (!catalogNumber && !brand && (!productName || productName.length < 4))}
+          >
+            {isSearching ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Search className="mr-2 h-4 w-4" />
+            )}
+            {hasResults ? `Sugerencias (${searchResults.length})` : "Buscar Sugerencias"}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-80 p-0">
+          <Command>
+            {isSearching && <CommandEmpty>Buscando...</CommandEmpty>}
+            {!isSearching && !hasResults && <CommandEmpty>No se encontraron sugerencias.</CommandEmpty>}
+            <CommandGroup heading="Sugerencias de Productos">
+              {searchResults?.map((result, i) => (
+                <CommandItem key={i} onSelect={() => handleAutofill(result)} className="cursor-pointer">
+                  <div className="flex flex-col w-full">
+                    <span className="font-medium">{result.product_name}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {result.catalog_number} | {result.brand || 'Sin Marca'} ({result.source})
+                    </span>
+                  </div>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </Command>
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+};
+
+
 const RequestForm: React.FC = () => {
   const { session, profile } = useSession();
   const { data: vendors, isLoading: isLoadingVendors } = useVendors();
@@ -72,6 +152,7 @@ const RequestForm: React.FC = () => {
   const { data: billingAddresses, isLoading: isLoadingBillingAddresses } = useBillingAddresses();
   const addRequestMutation = useAddRequest();
   const updateFileMutation = useUpdateRequestFile(); // Para subir el archivo de cotización
+  const updateStatusMutation = useUpdateRequestStatus(); // Para actualizar el estado después de la subida
 
   const form = useForm<RequestFormValues>({
     resolver: zodResolver(formSchema),
@@ -164,19 +245,7 @@ const RequestForm: React.FC = () => {
         });
         
         // Actualizar el estado de la solicitud a 'Quote Requested'
-        // Esto se hace automáticamente dentro de apiUpdateRequestFile si fileType es 'quote'
-        // Pero si queremos asegurarnos de que el estado se actualice inmediatamente después de la subida:
-        // Nota: apiUpdateRequestFile ya actualiza la DB con la URL del archivo.
-        // Aquí solo necesitamos actualizar el estado si la subida fue exitosa.
         if (filePath) {
-            // Llamamos a updateStatusMutation para cambiar el estado a Quote Requested
-            // Esto es redundante si apiUpdateRequestFile ya lo hace, pero lo mantenemos explícito
-            // para asegurar que el estado se refleje correctamente.
-            // Sin embargo, revisando la lógica de RequestDetails, la subida de quote cambia el estado a PO Requested.
-            // Para la creación, el requisito es que vaya a Cotización Solicitada.
-            
-            // Si se sube un archivo al crear, el estado debe ser 'Quote Requested'.
-            // La función RPC crea la solicitud en 'Pending'. La actualizamos aquí.
             await updateStatusMutation.mutateAsync({ 
                 id: newRequest.id, 
                 status: "Quote Requested", 
@@ -404,8 +473,12 @@ const RequestForm: React.FC = () => {
         <h2 className="text-xl font-semibold">Artículos</h2>
         <div className="space-y-6">
           {fields.map((field, index) => (
-            <div key={field.id} className="border p-4 rounded-md relative bg-muted/20">
-              <h3 className="text-lg font-medium mb-4 text-primary">Artículo #{index + 1}</h3>
+            <div key={field.id} className="border p-4 rounded-md relative bg-muted/20 pt-16 sm:pt-4">
+              <h3 className="text-lg font-medium mb-4 text-primary hidden sm:block">Artículo #{index + 1}</h3>
+              
+              {/* Autofill Component */}
+              <ItemAutofill index={index} form={form} />
+
               {fields.length > 1 && (
                 <Button type="button" variant="destructive" size="icon" onClick={() => remove(index)} className="absolute top-4 right-4 h-8 w-8">
                   <Trash2 className="h-4 w-4" />
