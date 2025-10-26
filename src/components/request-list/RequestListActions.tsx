@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { Eye, CheckCircle, Package, Receipt, Mail, FileText, Ban, XCircle } from "lucide-react";
+import { Eye, CheckCircle, Package, Receipt, Mail, FileText, Ban, XCircle, Combine } from "lucide-react";
 import { SupabaseRequest } from "@/hooks/use-requests";
 
 interface RequestListActionsProps {
@@ -14,9 +14,9 @@ interface RequestListActionsProps {
   onSendPORequest: (request: SupabaseRequest) => void;
   onMarkAsOrdered: (request: SupabaseRequest) => void;
   onMarkAsReceived: (request: SupabaseRequest) => void;
-  // Nuevas acciones
   onDeny: (request: SupabaseRequest) => void;
   onCancel: (request: SupabaseRequest) => void;
+  onMerge: (request: SupabaseRequest) => void; // Nueva acción
 }
 
 const RequestListActions: React.FC<RequestListActionsProps> = ({
@@ -30,6 +30,7 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
   onMarkAsReceived,
   onDeny,
   onCancel,
+  onMerge, // Desestructurar la nueva acción
 }) => {
   return (
     <div className="text-right flex justify-end space-x-2">
@@ -41,6 +42,19 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
       >
         <Eye className="h-4 w-4" />
       </Button>
+
+      {/* Merge Action (Disponible en Pending y Quote Requested) */}
+      {(request.status === "Pending" || request.status === "Quote Requested") && (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => onMerge(request)}
+          title="Fusionar con otra solicitud"
+          disabled={isUpdatingStatus}
+        >
+          <Combine className="h-4 w-4 text-purple-600" />
+        </Button>
+      )}
 
       {request.status === "Pending" && (
         <>

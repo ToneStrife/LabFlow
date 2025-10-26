@@ -6,7 +6,9 @@ import { Button } from "@/components/ui/button";
 import { PlusCircle, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useInventory, useAddInventoryItem, useUpdateInventoryItem, useDeleteInventoryItem, InventoryItem } from "@/hooks/use-inventory";
-import InventoryForm, { InventoryFormValues } from "@/components/InventoryForm"; // Importar el componente extraído
+import InventoryForm, { InventoryFormValues } from "@/components/InventoryForm";
+import InventoryToolbar from "@/components/InventoryToolbar"; // Importar Toolbar
+import ReorderDialog from "@/components/ReorderDialog"; // Importar ReorderDialog
 
 const Inventory = () => {
   const { data: inventoryItems, isLoading, error } = useInventory();
@@ -17,6 +19,11 @@ const Inventory = () => {
   const [isAddInventoryDialogOpen, setIsAddInventoryDialogOpen] = React.useState(false);
   const [isEditInventoryDialogOpen, setIsEditInventoryDialogOpen] = React.useState(false);
   const [editingInventoryItem, setEditingInventoryItem] = React.useState<InventoryItem | undefined>(undefined);
+  
+  // Estados para búsqueda y reorder
+  const [searchTerm, setSearchTerm] = React.useState("");
+  const [selectedItems, setSelectedItems] = React.useState<string[]>([]);
+  const [isReorderDialogOpen, setIsReorderDialogOpen] = React.useState(false);
 
   const handleAddInventoryItem = async (newItemData: InventoryFormValues) => {
     await addInventoryItemMutation.mutateAsync(newItemData);
@@ -37,6 +44,29 @@ const Inventory = () => {
     setEditingInventoryItem(item);
     setIsEditInventoryDialogOpen(true);
   };
+  
+  const handleReorder = () => {
+    if (selectedItems.length > 0) {
+      setIsReorderDialogOpen(true);
+    }
+  };
+
+  // Filtrado de ítems
+  const filteredItems = React.useMemo(() => {
+    if (!inventoryItems) return [];
+    const lowerCaseSearch = searchTerm.toLowerCase();
+    return inventoryItems.filter(item => 
+      item.product_name.toLowerCase().includes(lowerCaseSearch) ||
+      item.catalog_number.toLowerCase().includes(lowerCaseSearch) ||
+      (item.brand && item.brand.toLowerCase().includes(lowerCaseSearch))
+    );
+  }, [inventoryItems, searchTerm]);
+  
+  // Ítems seleccionados para reorder
+  const itemsToReorder = React.useMemo(() => {
+    return inventoryItems?.filter(item => selectedItems.includes(item.id)) || [];
+  }, [inventoryItems, selectedItems]);
+
 
   if (isLoading) {
     return (
@@ -56,7 +86,7 @@ const Inventory = () => {
 
   return (
     <div className="container mx-auto py-8">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
         <h1 className="text-3xl font-bold">Inventario</h1>
         <Dialog open={isAddInventoryDialogOpen} onOpenChange={setIsAddInventoryDialogOpen}>
           <DialogTrigger asChild>
@@ -77,13 +107,25 @@ const Inventory = () => {
         </Dialog>
       </div>
       <p className="text-lg text-muted-foreground mb-8">
-        Gestiona el inventario de productos de tu laboratorio. Los artículos se añaden automáticamente aquí cuando una solicitud se marca como "Recibida".
+        Gestiona el inventario de productos de tu laboratorio.
       </p>
-      <InventoryTable
-        items={inventoryItems || []}
-        onEdit={openEditDialog}
-        onDelete={handleDeleteInventoryItem}
+      
+      <InventoryToolbar
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        selectedItemCount={selectedItems.length}
+        onReorder={handleReorder}
       />
+      
+      <div className="mt-6">
+        <InventoryTable
+          items={filteredItems}
+          onEdit={openEditDialog}
+          onDelete={handleDeleteInventoryItem}
+          selectedItems={selectedItems}
+          onSelectChange={setSelectedItems}
+        />
+      </div>
 
       {/* Edit Inventory Item Dialog */}
       <Dialog open={isEditInventoryDialogOpen} onOpenChange={setIsEditInventoryDialogOpen}>
@@ -101,6 +143,18 @@ const Inventory = () => {
           )}
         </DialogContent>
       </Dialog>
+      
+      {/* Reorder Dialog */}
+      {itemsToReorder.length > 0 && (
+        <ReorderDialog
+          isOpen={isReorderDialogOpen}
+          onOpenChange={(open) => {
+            setIsReorderDialogOpen(open);
+            if (!open) setSelectedItems([]); // Limpiar selección al cerrar
+          }}
+          items={itemsToReorder}
+        />
+      )}
     </div>
   );
 };

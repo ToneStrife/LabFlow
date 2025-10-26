@@ -22,6 +22,7 @@ import { useProjects } from "@/hooks/use-projects";
 import { useEmailTemplates } from "@/hooks/use-email-templates";
 import { processTextTemplate, processPlainTextTemplate } from "@/utils/email-templating";
 import ReceiveItemsDialog from "@/components/ReceiveItemsDialog"; // Importar el diálogo de recepción
+import MergeRequestsDialog from "./MergeRequestsDialog"; // Importar Merge Dialog
 
 // Función auxiliar para obtener el nombre de archivo legible (copiada de RequestFilesCard.tsx)
 const getFileNameFromPath = (filePath: string): string => {
@@ -65,6 +66,10 @@ const RequestList: React.FC = () => {
   const [isDenyDialogOpen, setIsDenyDialogOpen] = React.useState(false);
   const [isCancelDialogOpen, setIsCancelDialogOpen] = React.useState(false);
   const [requestToModify, setRequestToModify] = React.useState<SupabaseRequest | null>(null);
+  
+  // Estados para Merge
+  const [isMergeDialogOpen, setIsMergeDialogOpen] = React.useState(false);
+  const [sourceRequestToMerge, setSourceRequestToMerge] = React.useState<SupabaseRequest | null>(null);
 
 
   const getRequesterName = (requesterId: string) => {
@@ -201,7 +206,24 @@ const RequestList: React.FC = () => {
       setRequestToModify(null);
     }
   };
-  // FIN NUEVOS MANEJADORES
+  
+  // MANEJADOR DE MERGE
+  const handleMergeRequest = (request: SupabaseRequest) => {
+    setSourceRequestToMerge(request);
+    setIsMergeDialogOpen(true);
+  };
+  
+  // Solicitudes fusionables (mismo proveedor, no la solicitud de origen)
+  const mergeableRequests = React.useMemo(() => {
+    if (!sourceRequestToMerge || !requests) return [];
+    
+    return requests.filter(req => 
+      req.id !== sourceRequestToMerge.id && 
+      req.vendor_id === sourceRequestToMerge.vendor_id &&
+      (req.status === "Pending" || req.status === "Quote Requested" || req.status === "PO Requested") // Solo fusionar en solicitudes activas
+    );
+  }, [sourceRequestToMerge, requests]);
+  // FIN MANEJADOR DE MERGE
 
   const filteredRequests = (requests || []).filter(request => {
     const vendorName = vendors?.find(v => v.id === request.vendor_id)?.name || "";
@@ -258,6 +280,7 @@ const RequestList: React.FC = () => {
         onMarkAsReceived={handleMarkAsReceived}
         onDeny={handleDenyRequest}
         onCancel={handleCancelRequest}
+        onMerge={handleMergeRequest} // Pasar el nuevo manejador
       />
 
       <EmailDialog
@@ -275,6 +298,16 @@ const RequestList: React.FC = () => {
           onOpenChange={setIsReceiveItemsDialogOpen}
           requestId={requestToReceive.id}
           requestItems={requestToReceive.items}
+        />
+      )}
+      
+      {/* Diálogo de Fusión de Solicitudes */}
+      {sourceRequestToMerge && (
+        <MergeRequestsDialog
+          isOpen={isMergeDialogOpen}
+          onOpenChange={setIsMergeDialogOpen}
+          sourceRequest={sourceRequestToMerge}
+          mergeableRequests={mergeableRequests}
         />
       )}
       
