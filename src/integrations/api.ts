@@ -315,15 +315,21 @@ export const apiUpdateRequestStatus = async (
 
   // Lógica de inventario (MOCK)
   if (status === "Ordered" && updatedRequest.items) {
-    for (const item of updatedRequest.items) {
-      await apiAddInventoryItem({
-        product_name: item.product_name,
-        catalog_number: item.catalog_number,
-        brand: item.brand,
-        quantity: item.quantity,
-        unit_price: item.unit_price,
-        format: item.format,
-      });
+    try {
+      for (const item of updatedRequest.items) {
+        await apiAddInventoryItem({
+          product_name: item.product_name,
+          catalog_number: item.catalog_number,
+          brand: item.brand,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          format: item.format,
+        });
+      }
+    } catch (inventoryError) {
+      // Aseguramos que el error de inventario se lance como un Error
+      console.error("Error adding items to mock inventory:", inventoryError);
+      throw new Error(`Failed to add items to inventory: ${inventoryError instanceof Error ? inventoryError.message : String(inventoryError)}`);
     }
   }
 
@@ -433,23 +439,39 @@ export const apiDeleteRequest = async (id: string): Promise<void> => {
 
 // --- API de Inventario (usando mock data por ahora) ---
 export const apiGetInventory = async (): Promise<InventoryItem[]> => {
-  await new Promise(resolve => setTimeout(resolve, 300)); // Simular retraso
-  return getMockInventory();
+  try {
+    await new Promise(resolve => setTimeout(resolve, 300)); // Simular retraso
+    return getMockInventory();
+  } catch (e) {
+    throw new Error(`Failed to fetch mock inventory: ${e instanceof Error ? e.message : String(e)}`);
+  }
 };
 
 export const apiAddInventoryItem = async (data: Omit<InventoryItem, "id" | "added_at" | "last_updated">): Promise<InventoryItem> => {
-  await new Promise(resolve => setTimeout(resolve, 300)); // Simular retraso
-  return addMockInventoryItem(data);
+  try {
+    await new Promise(resolve => setTimeout(resolve, 300)); // Simular retraso
+    return addMockInventoryItem(data);
+  } catch (e) {
+    throw new Error(`Failed to add mock inventory item: ${e instanceof Error ? e.message : String(e)}`);
+  }
 };
 
 export const apiUpdateInventoryItem = async (id: string, data: Partial<Omit<InventoryItem, "id" | "added_at">>): Promise<InventoryItem> => {
-  await new Promise(resolve => setTimeout(resolve, 300)); // Simular retraso
-  return updateMockInventoryItem(id, data);
+  try {
+    await new Promise(resolve => setTimeout(resolve, 300)); // Simular retraso
+    return updateMockInventoryItem(id, data);
+  } catch (e) {
+    throw new Error(`Failed to update mock inventory item: ${e instanceof Error ? e.message : String(e)}`);
+  }
 };
 
 export const apiDeleteInventoryItem = async (id: string): Promise<void> => {
-  await new Promise(resolve => setTimeout(resolve, 300)); // Simular retraso
-  return deleteMockInventoryItem(id);
+  try {
+    await new Promise(resolve => setTimeout(resolve, 300)); // Simular retraso
+    return deleteMockInventoryItem(id);
+  } catch (e) {
+    throw new Error(`Failed to delete mock inventory item: ${e instanceof Error ? e.message : String(e)}`);
+  }
 };
 
 // --- API de Envío de Correo Electrónico (REAL) ---
