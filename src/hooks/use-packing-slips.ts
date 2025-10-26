@@ -87,6 +87,14 @@ export const useReceiveItems = () => {
 
       if (!receivedBy) throw new Error("User must be logged in to receive items.");
 
+      // --- SOLUCIÓN AL ERROR DE UNICIDAD ---
+      // Si slipNumber está vacío, generamos uno basado en el timestamp para evitar colisiones.
+      let finalSlipNumber = slipNumber.trim();
+      if (!finalSlipNumber) {
+        finalSlipNumber = `AUTO-${Date.now()}`;
+      }
+      // ------------------------------------
+
       // 1. Subir el archivo del albarán si existe
       let slipFilePath: string | null = null;
       if (slipFile) {
@@ -115,7 +123,7 @@ export const useReceiveItems = () => {
         .from('packing_slips')
         .insert({
           request_id: requestId,
-          slip_number: slipNumber,
+          slip_number: finalSlipNumber, // Usar el número final (generado o proporcionado)
           received_by: receivedBy,
           slip_url: slipFilePath,
         })
