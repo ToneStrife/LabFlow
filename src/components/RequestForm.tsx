@@ -115,42 +115,33 @@ const RequestForm: React.FC = () => {
   const handleAutofill = async (index: number, catalogNumber: string, brand: string) => {
     if (!catalogNumber || catalogNumber.length < 4) return; // Mínimo 4 caracteres para buscar
 
-    // Si ya estamos buscando para este índice, no hacemos nada
     if (enrichingIndex === index) return;
 
     setEnrichingIndex(index);
-    const toastId = showLoading("Buscando detalles del producto en el historial...");
+    const toastId = showLoading("Buscando detalles del producto online...");
 
     try {
-      console.log(`RequestForm: Calling apiSearchExternalProduct for item ${index} with catalog: ${catalogNumber}, brand: ${brand}`);
       const productDetails: ProductDetails = await apiSearchExternalProduct(catalogNumber, brand);
-      console.log("RequestForm: Received product details:", productDetails);
 
-      // Usamos { shouldValidate: true } para que la validación se ejecute después de autocompletar
       form.setValue(`items.${index}.productName`, productDetails.productName || '', { shouldValidate: true });
       form.setValue(`items.${index}.format`, productDetails.format || '', { shouldValidate: true });
       form.setValue(`items.${index}.unitPrice`, productDetails.unitPrice || undefined, { shouldValidate: true });
       form.setValue(`items.${index}.link`, productDetails.link || '', { shouldValidate: true });
       form.setValue(`items.${index}.brand`, productDetails.brand || '', { shouldValidate: true });
       
-      // Append notes
       const currentNotes = form.getValues(`items.${index}.notes`) || '';
-      const newNotes = productDetails.notes ? `\n[Historial] ${productDetails.notes}` : '';
+      const newNotes = productDetails.notes ? `\n[Sugerencia IA] ${productDetails.notes}` : '';
       form.setValue(`items.${index}.notes`, currentNotes + newNotes, { shouldValidate: true });
 
-      showSuccess("¡Detalles del producto autocompletados desde el historial!");
+      showSuccess("¡Detalles del producto autocompletados!");
 
     } catch (error: any) {
-      // Si la búsqueda falla (ej. 404 No encontrado o Confianza baja), no detenemos el flujo.
-      // Solo mostramos un mensaje informativo si el error no es el genérico [object Object].
-      const errorMessage = error instanceof Error ? error.message : (typeof error === 'object' && error !== null && error.message) ? error.message : String(error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
       
-      // Si el error es que no se encontró información fiable, lo mostramos como info, no como error.
-      if (errorMessage.includes("No se encontró información fiable")) {
-        toast.info("Búsqueda de historial: No se encontraron coincidencias fiables. Por favor, introduce los detalles manualmente.");
+      if (errorMessage.includes("No reliable product information found") || errorMessage.includes("No se encontró información fiable")) {
+        toast.info("Búsqueda online: No se encontraron coincidencias. Por favor, introduce los detalles manualmente.");
       } else {
-        // Para cualquier otro error inesperado (ej. error de red, error de servidor), mostramos un error.
-        showError(errorMessage || "Fallo al buscar detalles del producto.");
+        showError(errorMessage);
       }
     } finally {
       dismissToast(toastId);
@@ -158,15 +149,13 @@ const RequestForm: React.FC = () => {
     }
   };
 
-  // Debounced function for automatic search
   const debouncedAutofill = React.useCallback(
     debounce((index: number, catalogNumber: string, brand: string) => {
       handleAutofill(index, catalogNumber, brand);
     }, 800),
-    [enrichingIndex] // Dependencia para evitar que se ejecute si ya hay una búsqueda en curso
+    [enrichingIndex]
   );
 
-  // Cleanup debounce on unmount
   React.useEffect(() => {
     return () => debouncedAutofill.cancel();
   }, [debouncedAutofill]);
@@ -184,7 +173,7 @@ const RequestForm: React.FC = () => {
       vendor_id: data.vendorId,
       requester_id: session.user.id,
       account_manager_id: managerId,
-      notes: undefined, // Notes are now part of itemSchema, not top-level
+      notes: undefined,
       project_codes: data.projectCodes,
       items: data.items,
     };

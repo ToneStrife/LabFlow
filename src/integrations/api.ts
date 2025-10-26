@@ -186,42 +186,40 @@ export const apiDeleteProject = async (id: string): Promise<void> => {
   if (error) throw error;
 };
 
-// --- API de Búsqueda Externa de Productos (Ahora usa la función RPC de búsqueda interna) ---
+// --- API de Búsqueda Externa de Productos (Ahora usa la función Edge 'search-product') ---
 export const apiSearchExternalProduct = async (catalogNumber: string, brand?: string): Promise<ProductDetails> => {
-  console.log(`API: Invoking smart_lookup_mock for catalog: ${catalogNumber}, brand: ${brand}`);
-  
-  // Llama a la función RPC que busca en datos internos (request_items y items_master)
-  const { data, error } = await supabase.rpc("smart_lookup_mock", { 
-    brand_q: brand || '', 
-    catalog_q: catalogNumber 
+  console.log(`API: Invoking 'search-product' edge function for catalog: ${catalogNumber}, brand: ${brand}`);
+
+  const { data, error } = await supabase.functions.invoke('search-product', {
+    body: JSON.stringify({ catalogNumber, brand: brand || '' }),
+    method: 'POST',
   });
 
   if (error) {
-    console.error("API: Error invoking smart_lookup_mock RPC:", error);
-    throw new Error(`Failed to search internal product history: ${error.message}`);
+    console.error("API: Error invoking 'search-product' edge function:", error);
+    const errorMessage = data?.error || error.message || "Failed to search for product.";
+    throw new Error(errorMessage);
   }
 
-  console.log("API: Raw data received from smart_lookup_mock:", data);
-
-  if (!data || !data.record || data.match.score < 0.5) {
-    throw new Error("No se encontró información fiable en el historial de pedidos (Confianza baja).");
+  if (!data || !data.products) {
+    throw new Error("No reliable product information found online.");
   }
 
-  const record = data.record;
-  
+  const result = data.products;
+
   const productDetails: ProductDetails = {
-    id: record.catalog_number || 'unknown',
-    productName: record.product_name,
-    catalogNumber: record.catalog_number || catalogNumber,
-    unitPrice: record.unit_price || undefined,
-    format: record.format || undefined,
-    link: record.link || undefined,
-    brand: record.brand || brand || 'N/A',
-    notes: record.notes || undefined,
-    source: data.source || 'internal_history',
+    id: result.catalogNumber || catalogNumber,
+    productName: result.productName,
+    catalogNumber: result.catalogNumber || catalogNumber,
+    unitPrice: result.unitPrice,
+    format: result.format,
+    link: result.link,
+    brand: result.brand,
+    notes: result.notes,
+    source: result.source,
   };
-  
-  console.log("API: Mapped ProductDetails from internal history:", productDetails);
+
+  console.log("API: Mapped ProductDetails from 'search-product' edge function:", productDetails);
   return productDetails;
 };
 
