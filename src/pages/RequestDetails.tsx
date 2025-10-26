@@ -353,6 +353,7 @@ const RequestDetails: React.FC = () => {
   };
 
   // Handler para la edición de metadatos (Quote Requested)
+  // NOTA: Este handler ya no es necesario si usamos RequestFullEditForm para todos los estados editables.
   const handleUpdateMetadata = async (data: { accountManagerId?: string | null; notes?: string | null; projectCodes?: string[] | null; }) => {
     if (!request) return;
     
@@ -437,14 +438,13 @@ const RequestDetails: React.FC = () => {
   // Permitir la edición de ítems en todos los estados
   const isItemEditable = true; 
   
-  // La edición de metadatos (manager, notes, projects) está permitida en Pending y Quote Requested.
-  const isMetadataEditable = request.status === "Pending" || request.status === "Quote Requested";
-  // La edición completa (Vendor, Addresses) ahora está permitida en Pending y PO Requested.
-  const isFullEditAllowed = request.status === "Pending" || request.status === "PO Requested";
+  // LÓGICA ACTUALIZADA: Permitir la edición completa de metadatos si el usuario es Admin o Account Manager
+  const isEditableByRole = profile?.role === "Admin" || profile?.role === "Account Manager";
+  const isFullEditAllowed = isEditableByRole; // Permitir edición completa en cualquier estado si tiene el rol
   
   // Permitir el cambio de estado manual solo a Admins/Account Managers
-  const canOverrideStatus = profile?.role === "Admin" || profile?.role === "Account Manager";
-  const canDelete = profile?.role === "Admin" || profile?.role === "Account Manager";
+  const canOverrideStatus = isEditableByRole;
+  const canDelete = isEditableByRole;
 
   const vendor = vendors?.find(v => v.id === request.vendor_id);
   const displayRequestNumber = request.request_number || `#${request.id.substring(0, 8)}`;
@@ -498,7 +498,7 @@ const RequestDetails: React.FC = () => {
             vendor={vendor} 
             profiles={profiles} 
             onEditDetails={() => setIsEditMetadataDialogOpen(true)}
-            isEditable={isMetadataEditable || isFullEditAllowed}
+            isEditable={isFullEditAllowed} // Usar isFullEditAllowed para el botón de edición
           />
           
           <RequestItemsTable items={request.items} isEditable={isItemEditable} />
@@ -529,12 +529,9 @@ const RequestDetails: React.FC = () => {
       <Dialog open={isEditMetadataDialogOpen} onOpenChange={setIsEditMetadataDialogOpen}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
-            <DialogTitle>{isFullEditAllowed ? "Editar Detalles Completos de la Solicitud" : "Editar Metadatos de la Solicitud"}</DialogTitle>
+            <DialogTitle>Editar Detalles de la Solicitud</DialogTitle>
             <DialogDescription>
-              {isFullEditAllowed 
-                ? "Actualiza proveedor, direcciones, gerente, proyectos y notas. (Disponible en estado Pendiente y PO Solicitado)"
-                : "Actualiza el gerente asignado, códigos de proyecto y notas generales. (Disponible en estado Pendiente y Cotización Solicitada)"
-              }
+              Actualiza proveedor, direcciones, gerente, proyectos y notas. (Disponible en todos los estados para Administradores y Gerentes de Cuenta)
             </DialogDescription>
           </DialogHeader>
           {request && isFullEditAllowed ? (
@@ -544,15 +541,8 @@ const RequestDetails: React.FC = () => {
               onSubmit={handleUpdateFullRequest}
               isSubmitting={updateFullRequestMutation.isPending}
             />
-          ) : request && isMetadataEditable ? (
-            <RequestMetadataForm
-              request={request}
-              profiles={profiles || []}
-              onSubmit={handleUpdateMetadata}
-              isSubmitting={updateMetadataMutation.isPending}
-            />
           ) : (
-            <p className="text-muted-foreground p-4">La edición solo está permitida en estado 'Pendiente', 'Cotización Solicitada' o 'PO Solicitado'.</p>
+            <p className="text-muted-foreground p-4">No tienes permiso para editar los detalles de esta solicitud.</p>
           )}
         </DialogContent>
       </Dialog>
