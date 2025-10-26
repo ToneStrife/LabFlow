@@ -27,7 +27,7 @@ const RequestActions: React.FC<RequestActionsProps> = ({
   handleMarkAsOrderedAndSendEmail,
 }) => {
   return (
-    <div className="flex justify-end space-x-2 mt-6">
+    <div className="flex flex-col space-y-2"> {/* Cambiado a columna vertical */}
       {request.status === "Pending" && (
         <Button onClick={() => openApproveRequestDialog(request)} disabled={isUpdatingStatus}>
           <CheckCircle className="mr-2 h-4 w-4" /> Approve Request

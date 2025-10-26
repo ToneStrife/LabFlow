@@ -15,12 +15,22 @@ interface RequestFilesCardProps {
 const getFileNameFromUrl = (url: string): string => {
   if (!url) return "File";
   try {
-    const urlParts = url.split('/');
-    const encodedFileName = urlParts[urlParts.length - 1];
+    const urlObj = new URL(url);
+    // La ruta del archivo es la última parte después del bucket name (LabFlow)
+    const pathParts = urlObj.pathname.split('/');
+    
+    // Buscar el índice de 'LabFlow' o 'public' para encontrar el nombre del archivo
+    let startIndex = pathParts.indexOf('LabFlow');
+    if (startIndex === -1) {
+        startIndex = pathParts.indexOf('public');
+    }
+    
+    const encodedFileName = pathParts[pathParts.length - 1];
     const decodedFileName = decodeURIComponent(encodedFileName);
+    
     // Eliminar el prefijo de timestamp (ej. "1678886400000_")
     const nameWithoutPrefix = decodedFileName.substring(decodedFileName.indexOf('_') + 1);
-    return nameWithoutPrefix || "File"; // Fallback si algo sale mal
+    return nameWithoutPrefix || decodedFileName || "File"; // Fallback si algo sale mal
   } catch (e) {
     console.error("Could not parse filename from URL", e);
     return "File";
