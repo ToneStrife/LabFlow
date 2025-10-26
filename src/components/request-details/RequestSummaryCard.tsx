@@ -13,11 +13,15 @@ import { useAccountManagers } from "@/hooks/use-account-managers"; // Usar el nu
 import { useProjects } from "@/hooks/use-projects"; // Usar el nuevo hook
 import { useShippingAddresses, useBillingAddresses } from "@/hooks/use-addresses"; // Importar hooks de direcciones
 import { format } from "date-fns";
+import { Button } from "@/components/ui/button";
+import { Edit } from "lucide-react";
 
 interface RequestSummaryCardProps {
   request: SupabaseRequest;
   vendor?: Vendor;
   profiles?: Profile[];
+  onEditDetails: () => void; // Nuevo prop para manejar la edición
+  isEditable: boolean; // Nuevo prop para controlar si se puede editar
 }
 
 const getStatusBadgeVariant = (status: RequestStatus) => {
@@ -50,7 +54,7 @@ const formatAddress = (address: Address | undefined) => {
   );
 };
 
-const RequestSummaryCard: React.FC<RequestSummaryCardProps> = ({ request, vendor, profiles }) => {
+const RequestSummaryCard: React.FC<RequestSummaryCardProps> = ({ request, vendor, profiles, onEditDetails, isEditable }) => {
   const { data: accountManagers } = useAccountManagers(); // Usar el nuevo hook
   const { data: projects } = useProjects(); // Usar el nuevo hook
   const { data: shippingAddresses } = useShippingAddresses();
@@ -82,13 +86,20 @@ const RequestSummaryCard: React.FC<RequestSummaryCardProps> = ({ request, vendor
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <span>Request from: {vendor?.name || "N/A"}</span>
-          <Badge variant={getStatusBadgeVariant(request.status)}>{request.status}</Badge>
+      <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
+        <CardTitle className="text-2xl font-bold">
+          Request from: {vendor?.name || "N/A"}
         </CardTitle>
+        <div className="flex items-center space-x-2">
+          <Badge variant={getStatusBadgeVariant(request.status)}>{request.status}</Badge>
+          {isEditable && (
+            <Button variant="outline" size="icon" onClick={onEditDetails} title="Edit Request Details">
+              <Edit className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-6 pt-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <p className="text-sm text-muted-foreground">Requester</p>
@@ -145,7 +156,7 @@ const RequestSummaryCard: React.FC<RequestSummaryCardProps> = ({ request, vendor
             <Separator />
             <div>
               <p className="text-sm text-muted-foreground mb-1">Notes</p>
-              <p className="text-sm">{request.notes}</p>
+              <p className="text-sm italic text-gray-700">{request.notes}</p>
             </div>
           </>
         )}

@@ -3,7 +3,7 @@
 import React from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Loader2, ArrowLeft } from "lucide-react";
+import { Loader2, ArrowLeft, Edit } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -19,7 +19,7 @@ import { useAllProfiles, getFullName } from "@/hooks/use-profiles";
 import { useAccountManagers } from "@/hooks/use-account-managers";
 import { useProjects } from "@/hooks/use-projects";
 import { useEmailTemplates } from "@/hooks/use-email-templates";
-import { useShippingAddresses, useBillingAddresses } from "@/hooks/use-addresses"; // Importar hooks de direcciones
+import { useShippingAddresses, useBillingAddresses } from "@/hooks/use-addresses";
 import { processEmailTemplate } from "@/utils/email-templating";
 import EmailDialog, { EmailFormValues } from "@/components/EmailDialog";
 
@@ -61,6 +61,8 @@ const RequestDetails: React.FC = () => {
 
   const [isUploadDialogOpen, setIsUploadDialogOpen] = React.useState(false);
   const [fileTypeToUpload, setFileTypeToUpload] = React.useState<FileType>("quote");
+
+  const [isEditMetadataDialogOpen, setIsEditMetadataDialogOpen] = React.useState(false); // Nuevo estado para el diálogo de edición
 
   const getVendorEmail = (vendorId: string) => vendors?.find(v => v.id === vendorId)?.email || "";
   
@@ -132,7 +134,7 @@ const RequestDetails: React.FC = () => {
         request: requestToApprove,
         vendor: vendors?.find(v => v.id === requestToApprove.vendor_id),
         requesterProfile: profiles?.find(p => p.id === requestToApprove.requester_id),
-        accountManager: accountManagers?.find(am => am.id === requestToAprove.account_manager_id),
+        accountManager: accountManagers?.find(am => am.id === requestToApprove.account_manager_id),
         projects: projects,
         actorProfile: profile,
         shippingAddress: shippingAddresses?.find(a => a.id === requestToApprove.shipping_address_id),
@@ -247,6 +249,7 @@ const RequestDetails: React.FC = () => {
         projectCodes: data.projectCodes,
       }
     });
+    setIsEditMetadataDialogOpen(false); // Cerrar diálogo después de la actualización
   };
 
   if (isLoadingRequests || isLoadingVendors || isLoadingProfiles || isLoadingAccountManagers || isLoadingProjects || isLoadingEmailTemplates || isLoadingShippingAddresses || isLoadingBillingAddresses) {
@@ -269,40 +272,60 @@ const RequestDetails: React.FC = () => {
 
   return (
     <div className="container mx-auto py-8 space-y-6">
-      <Button variant="outline" onClick={() => navigate("/dashboard")}><ArrowLeft className="mr-2 h-4 w-4" /> Volver al Panel de Control</Button>
+      <div className="flex items-center justify-between mb-6">
+        <Button variant="outline" onClick={() => navigate("/dashboard")}><ArrowLeft className="mr-2 h-4 w-4" /> Volver al Panel de Control</Button>
+        <h1 className="text-3xl font-bold text-gray-800">Request #{request.id.substring(0, 8)}</h1>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
-          <RequestSummaryCard request={request} vendor={vendor} profiles={profiles} />
+          <RequestSummaryCard 
+            request={request} 
+            vendor={vendor} 
+            profiles={profiles} 
+            onEditDetails={() => setIsEditMetadataDialogOpen(true)}
+            isEditable={isEditable}
+          />
+          
           <RequestItemsTable items={request.items} isEditable={isEditable} />
         </div>
-        <div className="lg:col-span-1">
+        
+        <div className="lg:col-span-1 space-y-6">
           <RequestFilesCard request={request} onUploadClick={handleUploadClick} />
+          
+          <RequestActions
+            request={request}
+            isUpdatingStatus={updateStatusMutation.isPending || updateFileMutation.isPending}
+            openApproveRequestDialog={openApproveRequestDialog}
+            handleSendPORequest={handleSendPORequest}
+            handleUploadQuote={handleUploadQuote}
+            handleUploadPOAndOrder={handleUploadPOAndOrder}
+            handleMarkAsReceived={handleMarkAsReceived}
+            handleMarkAsOrderedAndSendEmail={handleMarkAsOrderedAndSendEmail}
+          />
         </div>
       </div>
       
-      <div className="mt-6">
-        <h2 className="text-2xl font-bold mb-4">Metadatos de la Solicitud {isEditable ? "(Editable)" : "(Read-Only)"}</h2>
-        <RequestMetadataForm
-          request={request}
-          profiles={profiles || []}
-          onSubmit={handleUpdateMetadata}
-          isSubmitting={updateMetadataMutation.isPending}
-          isEditable={isEditable} // Pasar prop de edición
-        />
-      </div>
+      {/* Diálogo de Edición de Metadatos */}
+      <Dialog open={isEditMetadataDialogOpen} onOpenChange={setIsEditMetadataDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Edit Request Details</DialogTitle>
+            <DialogDescription>Update the assigned manager, project codes, and general notes.</DialogDescription>
+          </DialogHeader>
+          {request && (
+            <RequestMetadataForm
+              request={request}
+              profiles={profiles || []}
+              onSubmit={handleUpdateMetadata}
+              isSubmitting={updateMetadataMutation.isPending}
+              isEditable={isEditable}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
 
-      <RequestActions
-        request={request}
-        isUpdatingStatus={updateStatusMutation.isPending || updateFileMutation.isPending}
-        openApproveRequestDialog={openApproveRequestDialog}
-        handleSendPORequest={handleSendPORequest}
-        handleUploadQuote={handleUploadQuote}
-        handleUploadPOAndOrder={handleUploadPOAndOrder}
-        handleMarkAsReceived={handleMarkAsReceived}
-        handleMarkAsOrderedAndSendEmail={handleMarkAsOrderedAndSendEmail}
-      />
-
+      {/* Diálogo de Aprobación (existente) */}
       <Dialog open={isApproveRequestDialogOpen} onOpenChange={setIsApproveRequestDialogOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>Aprobar Solicitud</DialogTitle></DialogHeader>
