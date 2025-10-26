@@ -186,62 +186,42 @@ export const apiDeleteProject = async (id: string): Promise<void> => {
   if (error) throw error;
 };
 
-// --- API de Búsqueda Externa de Productos (Ahora invoca la Edge Function) ---
+// --- API de Búsqueda Externa de Productos (Ahora usa la función RPC de búsqueda interna) ---
 export const apiSearchExternalProduct = async (catalogNumber: string, brand?: string): Promise<ProductDetails> => {
-  console.log(`API: Invoking smart_lookup for catalog: ${catalogNumber}, brand: ${brand}`);
-  const { data, error } = await supabase.functions.invoke('smart_lookup', {
-    body: JSON.stringify({ catalog: catalogNumber, brand: brand }),
-    method: 'POST',
+  console.log(`API: Invoking smart_lookup_mock for catalog: ${catalogNumber}, brand: ${brand}`);
+  
+  // Llama a la función RPC que busca en datos internos (request_items y items_master)
+  const { data, error } = await supabase.rpc("smart_lookup_mock", { 
+    brand_q: brand || '', 
+    catalog_q: catalogNumber 
   });
 
   if (error) {
-    console.error("API: Error invoking smart_lookup edge function:", error);
-    let errorMessage = 'Failed to search external product via Edge Function.';
-    if (data && typeof data === 'object' && 'error' in data) {
-        errorMessage = (data as any).error;
-    } else if (error.message) {
-        errorMessage = error.message;
-    } else if (typeof data === 'string') {
-        errorMessage = data;
-    }
-    if ((error as any).status) {
-        errorMessage = `(Status: ${(error as any).status}) ${errorMessage}`;
-    }
-    throw new Error(errorMessage);
+    console.error("API: Error invoking smart_lookup_mock RPC:", error);
+    throw new Error(`Failed to search internal product history: ${error.message}`);
   }
 
-  console.log("API: Raw data received from smart_lookup:", data); // <-- ADDED LOG
+  console.log("API: Raw data received from smart_lookup_mock:", data);
 
-  // La Edge Function devuelve un objeto con claves en español. Mapear a ProductDetails.
-  const aiResponse = data as {
-    marca: string | null;
-    numero_catalogo: string | null;
-    nombre_producto: string | null;
-    formato: string | null;
-    precio_unitario: number | null;
-    enlace_producto: string | null;
-    notas: string | null;
-    confidence_score: number | null; // Incluido el score de confianza
-    _source?: string;
-  };
-
-  if (!aiResponse || !aiResponse.nombre_producto) {
-    console.error("API: AI did not return valid product details (nombre_producto is null or missing). Raw AI response:", aiResponse); // <-- ADDED LOG
-    throw new Error(aiResponse.notas || "AI did not return valid product details.");
+  if (!data || !data.record || data.match.score < 0.5) {
+    throw new Error("No se encontró información fiable en el historial de pedidos (Confianza baja).");
   }
+
+  const record = data.record;
   
-  const productDetails: ProductDetails = { // Explicitly type here
-    id: aiResponse.numero_catalogo || 'unknown',
-    productName: aiResponse.nombre_producto,
-    catalogNumber: aiResponse.numero_catalogo || catalogNumber,
-    unitPrice: aiResponse.precio_unitario || undefined,
-    format: aiResponse.formato || undefined,
-    link: aiResponse.enlace_producto || undefined,
-    brand: aiResponse.marca || brand || 'N/A',
-    notes: aiResponse.notas || undefined,
-    source: aiResponse._source || 'web',
+  const productDetails: ProductDetails = {
+    id: record.catalog_number || 'unknown',
+    productName: record.product_name,
+    catalogNumber: record.catalog_number || catalogNumber,
+    unitPrice: record.unit_price || undefined,
+    format: record.format || undefined,
+    link: record.link || undefined,
+    brand: record.brand || brand || 'N/A',
+    notes: record.notes || undefined,
+    source: data.source || 'internal_history',
   };
-  console.log("API: Mapped ProductDetails:", productDetails); // <-- ADDED LOG
+  
+  console.log("API: Mapped ProductDetails from internal history:", productDetails);
   return productDetails;
 };
 
