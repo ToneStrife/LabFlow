@@ -3,7 +3,7 @@
 import React from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Loader2, ArrowLeft, Edit } from "lucide-react";
+import { Loader2, ArrowLeft, Edit, Trash2, MoreVertical, Ban, XCircle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -12,8 +12,9 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
-import { useRequests, SupabaseRequest, useUpdateRequestStatus, useSendEmail, useUpdateRequestFile, useUpdateRequestMetadata, useUpdateFullRequest, useRevertRequestReception, FileType } from "@/hooks/use-requests";
+import { useRequests, SupabaseRequest, useUpdateRequestStatus, useSendEmail, useUpdateRequestFile, useUpdateRequestMetadata, useUpdateFullRequest, useRevertRequestReception, useDeleteRequest, FileType } from "@/hooks/use-requests";
 import { useVendors } from "@/hooks/use-vendors";
 import { useAllProfiles, getFullName } from "@/hooks/use-profiles";
 import { useAccountManagers } from "@/hooks/use-account-managers";
@@ -74,6 +75,7 @@ const RequestDetails: React.FC = () => {
   const updateMetadataMutation = useUpdateRequestMetadata();
   const updateFullRequestMutation = useUpdateFullRequest();
   const revertReceptionMutation = useRevertRequestReception(); // Nuevo hook
+  const deleteRequestMutation = useDeleteRequest(); // Nuevo hook
   const sendEmailMutation = useSendEmail();
 
   const request = requests?.find(req => req.id === id);
@@ -91,7 +93,13 @@ const RequestDetails: React.FC = () => {
   const [isEditMetadataDialogOpen, setIsEditMetadataDialogOpen] = React.useState(false);
   const [isStatusOverrideDialogOpen, setIsStatusOverrideDialogOpen] = React.useState(false);
   const [isReceiveItemsDialogOpen, setIsReceiveItemsDialogOpen] = React.useState(false);
-  const [isRevertReceptionDialogOpen, setIsRevertReceptionDialogOpen] = React.useState(false); // Nuevo estado
+  const [isRevertReceptionDialogOpen, setIsRevertReceptionDialogOpen] = React.useState(false);
+  
+  // Nuevos estados para Denegar/Cancelar/Eliminar
+  const [isDenyDialogOpen, setIsDenyDialogOpen] = React.useState(false);
+  const [isCancelDialogOpen, setIsCancelDialogOpen] = React.useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
+  
   const [newStatus, setNewStatus] = React.useState<string>(request?.status || "Pending");
 
 
@@ -363,7 +371,7 @@ const RequestDetails: React.FC = () => {
   const handleStatusOverride = async () => {
     if (!request || !newStatus) return;
     
-    const validStatuses: RequestStatus[] = ["Pending", "Quote Requested", "PO Requested", "Ordered", "Received"];
+    const validStatuses: RequestStatus[] = ["Pending", "Quote Requested", "PO Requested", "Ordered", "Received", "Denied", "Cancelled"];
     if (!validStatuses.includes(newStatus as RequestStatus)) {
         toast.error("Estado no válido seleccionado.");
         return;
@@ -386,6 +394,31 @@ const RequestDetails: React.FC = () => {
     await revertReceptionMutation.mutateAsync(request.id);
     setIsRevertReceptionDialogOpen(false);
   };
+  
+  // NUEVOS HANDLERS DE ACCIÓN
+  const openDenyRequestDialog = () => setIsDenyDialogOpen(true);
+  const openCancelRequestDialog = () => setIsCancelDialogOpen(true);
+  const openDeleteRequestDialog = () => setIsDeleteDialogOpen(true);
+
+  const confirmDenyRequest = async () => {
+    if (!request) return;
+    await updateStatusMutation.mutateAsync({ id: request.id, status: "Denied" });
+    setIsDenyDialogOpen(false);
+  };
+
+  const confirmCancelRequest = async () => {
+    if (!request) return;
+    await updateStatusMutation.mutateAsync({ id: request.id, status: "Cancelled" });
+    setIsCancelDialogOpen(false);
+  };
+  
+  const confirmDeleteRequest = async () => {
+    if (!request) return;
+    await deleteRequestMutation.mutateAsync(request.id);
+    setIsDeleteDialogOpen(false);
+    navigate("/dashboard"); // Redirigir después de la eliminación
+  };
+  // FIN NUEVOS HANDLERS DE ACCIÓN
 
 
   if (isLoadingRequests || isLoadingVendors || isLoadingProfiles || isLoadingAccountManagers || isLoadingProjects || isLoadingEmailTemplates || isLoadingShippingAddresses || isLoadingBillingAddresses || isLoadingAggregatedReceived) {
@@ -411,6 +444,7 @@ const RequestDetails: React.FC = () => {
   
   // Permitir el cambio de estado manual solo a Admins/Account Managers
   const canOverrideStatus = profile?.role === "Admin" || profile?.role === "Account Manager";
+  const canDelete = profile?.role === "Admin" || profile?.role === "Account Manager";
 
   const vendor = vendors?.find(v => v.id === request.vendor_id);
   const displayRequestNumber = request.request_number || `#${request.id.substring(0, 8)}`;
@@ -428,14 +462,32 @@ const RequestDetails: React.FC = () => {
         
         <div className="flex items-center space-x-4">
           <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">Solicitud {displayRequestNumber}</h1>
-          {canOverrideStatus && (
-            <Button variant="secondary" size="sm" onClick={() => {
-              setNewStatus(request.status);
-              setIsStatusOverrideDialogOpen(true);
-            }}>
-              <Edit className="mr-2 h-4 w-4" /> Cambiar Estado
-            </Button>
-          )}
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon" disabled={updateStatusMutation.isPending || deleteRequestMutation.isPending}>
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {canOverrideStatus && (
+                <DropdownMenuItem onClick={() => {
+                  setNewStatus(request.status);
+                  setIsStatusOverrideDialogOpen(true);
+                }}>
+                  <Edit className="mr-2 h-4 w-4" /> Cambiar Estado Manualmente
+                </DropdownMenuItem>
+              )}
+              {canDelete && (
+                <>
+                  {canOverrideStatus && <DropdownMenuSeparator />}
+                  <DropdownMenuItem onClick={openDeleteRequestDialog} className="text-red-600">
+                    <Trash2 className="mr-2 h-4 w-4" /> Eliminar Solicitud
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -464,6 +516,8 @@ const RequestDetails: React.FC = () => {
               handleUploadPOAndOrder={handleUploadPOAndOrder}
               handleMarkAsReceived={handleOpenReceiveItemsDialog}
               handleMarkAsOrderedAndSendEmail={handleMarkAsOrderedAndSendEmail}
+              openDenyRequestDialog={openDenyRequestDialog}
+              openCancelRequestDialog={openCancelRequestDialog}
             />
           </div>
           
@@ -532,13 +586,15 @@ const RequestDetails: React.FC = () => {
                 <SelectValue placeholder="Seleccionar nuevo estado" />
               </SelectTrigger>
               <SelectContent>
-                {["Pending", "Quote Requested", "PO Requested", "Ordered", "Received"].map((status) => (
+                {["Pending", "Quote Requested", "PO Requested", "Ordered", "Received", "Denied", "Cancelled"].map((status) => (
                   <SelectItem key={status} value={status}>
                     {status === "Pending" && "Pendiente"}
                     {status === "Quote Requested" && "Cotización Solicitada"}
                     {status === "PO Requested" && "PO Solicitado (Cómprame)"}
                     {status === "Ordered" && "Pedido"}
                     {status === "Received" && "Recibido"}
+                    {status === "Denied" && "Denegada"}
+                    {status === "Cancelled" && "Cancelada"}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -555,7 +611,67 @@ const RequestDetails: React.FC = () => {
         </DialogContent>
       </Dialog>
       
-      {/* NUEVO: Diálogo de Confirmación de Reversión de Recepción */}
+      {/* Diálogo de Denegación */}
+      <Dialog open={isDenyDialogOpen} onOpenChange={setIsDenyDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Denegar Solicitud</DialogTitle>
+            <DialogDescription>
+              ¿Estás seguro de que deseas denegar la Solicitud {displayRequestNumber}? Esta acción cambiará su estado a "Denegada".
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDenyDialogOpen(false)} disabled={updateStatusMutation.isPending}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={confirmDenyRequest} disabled={updateStatusMutation.isPending}>
+              {updateStatusMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Confirmar Denegación"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Diálogo de Cancelación */}
+      <Dialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Cancelar Solicitud</DialogTitle>
+            <DialogDescription>
+              ¿Estás seguro de que deseas cancelar la Solicitud {displayRequestNumber}? Esta acción cambiará su estado a "Cancelada".
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCancelDialogOpen(false)} disabled={updateStatusMutation.isPending}>
+              No, Mantener
+            </Button>
+            <Button variant="destructive" onClick={confirmCancelRequest} disabled={updateStatusMutation.isPending}>
+              {updateStatusMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Sí, Cancelar Solicitud"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Diálogo de Eliminación */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Eliminar Solicitud Permanentemente</DialogTitle>
+            <DialogDescription>
+              Esta acción es irreversible. ¿Estás seguro de que deseas eliminar la Solicitud {displayRequestNumber} en estado "{request?.status}"?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)} disabled={deleteRequestMutation.isPending}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={confirmDeleteRequest} disabled={deleteRequestMutation.isPending}>
+              {deleteRequestMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Eliminar Permanentemente"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Diálogo de Confirmación de Reversión de Recepción */}
       <Dialog open={isRevertReceptionDialogOpen} onOpenChange={setIsRevertReceptionDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>

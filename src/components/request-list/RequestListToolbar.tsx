@@ -37,6 +37,8 @@ const RequestListToolbar: React.FC<RequestListToolbarProps> = ({
           <SelectItem value="PO Requested">PO Solicitado (Cómprame)</SelectItem>
           <SelectItem value="Ordered">Pedido</SelectItem>
           <SelectItem value="Received">Recibido</SelectItem>
+          <SelectItem value="Denied">Denegada</SelectItem>
+          <SelectItem value="Cancelled">Cancelada</SelectItem>
         </SelectContent>
       </Select>
     </div>

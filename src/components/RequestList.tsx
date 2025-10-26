@@ -61,6 +61,11 @@ const RequestList: React.FC = () => {
   
   const [isReceiveItemsDialogOpen, setIsReceiveItemsDialogOpen] = React.useState(false); // Nuevo estado
   const [requestToReceive, setRequestToReceive] = React.useState<SupabaseRequest | null>(null); // Nuevo estado
+  
+  const [isDenyDialogOpen, setIsDenyDialogOpen] = React.useState(false);
+  const [isCancelDialogOpen, setIsCancelDialogOpen] = React.useState(false);
+  const [requestToModify, setRequestToModify] = React.useState<SupabaseRequest | null>(null);
+
 
   const getRequesterName = (requesterId: string) => {
     const profile = profiles?.find(p => p.id === requesterId);
@@ -161,7 +166,6 @@ const RequestList: React.FC = () => {
     navigate(`/requests/${request.id}`);
   };
 
-  // CORREGIDO: Manejador para abrir el diálogo de recepción
   const handleMarkAsReceived = (request: SupabaseRequest) => {
     if (!request.items || request.items.length === 0) {
       toast.error("No se pueden recibir artículos.", { description: "La solicitud no tiene artículos." });
@@ -170,6 +174,34 @@ const RequestList: React.FC = () => {
     setRequestToReceive(request);
     setIsReceiveItemsDialogOpen(true);
   };
+  
+  // NUEVOS MANEJADORES
+  const handleDenyRequest = (request: SupabaseRequest) => {
+    setRequestToModify(request);
+    setIsDenyDialogOpen(true);
+  };
+
+  const handleCancelRequest = (request: SupabaseRequest) => {
+    setRequestToModify(request);
+    setIsCancelDialogOpen(true);
+  };
+  
+  const confirmDenyRequest = async () => {
+    if (requestToModify) {
+      await updateStatusMutation.mutateAsync({ id: requestToModify.id, status: "Denied" });
+      setIsDenyDialogOpen(false);
+      setRequestToModify(null);
+    }
+  };
+
+  const confirmCancelRequest = async () => {
+    if (requestToModify) {
+      await updateStatusMutation.mutateAsync({ id: requestToModify.id, status: "Cancelled" });
+      setIsCancelDialogOpen(false);
+      setRequestToModify(null);
+    }
+  };
+  // FIN NUEVOS MANEJADORES
 
   const filteredRequests = (requests || []).filter(request => {
     const vendorName = vendors?.find(v => v.id === request.vendor_id)?.name || "";
@@ -223,7 +255,9 @@ const RequestList: React.FC = () => {
         onEnterQuoteDetails={openQuoteAndPODetailsDialog}
         onSendPORequest={handleSendPORequest}
         onMarkAsOrdered={openOrderConfirmationDialog}
-        onMarkAsReceived={handleMarkAsReceived} // Usar el manejador que abre el diálogo
+        onMarkAsReceived={handleMarkAsReceived}
+        onDeny={handleDenyRequest}
+        onCancel={handleCancelRequest}
       />
 
       <EmailDialog
@@ -243,6 +277,46 @@ const RequestList: React.FC = () => {
           requestItems={requestToReceive.items}
         />
       )}
+      
+      {/* Diálogo de Denegación */}
+      <Dialog open={isDenyDialogOpen} onOpenChange={setIsDenyDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Denegar Solicitud</DialogTitle>
+            <DialogDescription>
+              ¿Estás seguro de que deseas denegar la Solicitud {requestToModify?.request_number || requestToModify?.id.substring(0, 8)}? Esta acción cambiará su estado a "Denegada".
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDenyDialogOpen(false)} disabled={updateStatusMutation.isPending}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={confirmDenyRequest} disabled={updateStatusMutation.isPending}>
+              {updateStatusMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Confirmar Denegación"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Diálogo de Cancelación */}
+      <Dialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Cancelar Solicitud</DialogTitle>
+            <DialogDescription>
+              ¿Estás seguro de que deseas cancelar la Solicitud {requestToModify?.request_number || requestToModify?.id.substring(0, 8)}? Esta acción cambiará su estado a "Cancelada".
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCancelDialogOpen(false)} disabled={updateStatusMutation.isPending}>
+              No, Mantener
+            </Button>
+            <Button variant="destructive" onClick={confirmCancelRequest} disabled={updateStatusMutation.isPending}>
+              {updateStatusMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Sí, Cancelar Solicitud"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

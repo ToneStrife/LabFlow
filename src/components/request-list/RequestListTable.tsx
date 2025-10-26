@@ -30,6 +30,8 @@ interface RequestListTableProps {
   onSendPORequest: (request: SupabaseRequest) => void;
   onMarkAsOrdered: (request: SupabaseRequest) => void;
   onMarkAsReceived: (request: SupabaseRequest) => void;
+  onDeny: (request: SupabaseRequest) => void;
+  onCancel: (request: SupabaseRequest) => void;
 }
 
 const getStatusBadgeVariant = (status: RequestStatus) => {
@@ -41,8 +43,12 @@ const getStatusBadgeVariant = (status: RequestStatus) => {
     case "PO Requested":
       return "destructive";
     case "Ordered":
-    case "Received":
       return "default";
+    case "Received":
+      return "success";
+    case "Denied":
+    case "Cancelled":
+      return "destructive";
     default:
       return "secondary";
   }
@@ -131,6 +137,8 @@ const RequestListTable: React.FC<RequestListTableProps> = ({
                       {request.status === "PO Requested" && "PO Solicitado (Cómprame)"}
                       {request.status === "Ordered" && "Pedido"}
                       {request.status === "Received" && "Recibido"}
+                      {request.status === "Denied" && "Denegada"}
+                      {request.status === "Cancelled" && "Cancelada"}
                     </Badge>
                   </TableCell>
                   <TableCell>{date}</TableCell>
