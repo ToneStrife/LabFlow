@@ -20,6 +20,7 @@ import RequestListToolbar from "@/components/request-list/RequestListToolbar";
 import RequestListTable from "@/components/request-list/RequestListTable";
 import { toast } from "sonner";
 import { useSession } from "@/components/SessionContextProvider"; // Importar useSession
+import { generateSignedUrl } from "@/utils/supabase-storage"; // Importar utilidad de URL firmada
 
 const RequestList: React.FC = () => {
   const navigate = useNavigate();
@@ -66,7 +67,7 @@ const RequestList: React.FC = () => {
     setIsEmailDialogOpen(false);
   };
 
-  const handleSendPORequest = (request: SupabaseRequest) => {
+  const handleSendPORequest = async (request: SupabaseRequest) => {
     if (!request.account_manager_id) {
       toast.error("No se puede enviar la solicitud de PO.", { description: "No hay un gerente de cuenta asignado a esta solicitud." });
       return;
@@ -92,7 +93,16 @@ const RequestList: React.FC = () => {
       // Nota: Las direcciones de envío/facturación no están disponibles en la lista, pero el templating las manejará como N/A si se usan.
     };
 
-    const attachments = request.quote_url ? [{ name: `Quote_Request_${request.id}.pdf`, url: request.quote_url }] : [];
+    // Generar URL firmada para el adjunto
+    let attachments = [];
+    if (request.quote_url) {
+      const signedUrl = await generateSignedUrl(request.quote_url);
+      if (signedUrl) {
+        attachments.push({ name: `Quote_Request_${request.id}.pdf`, url: signedUrl });
+      } else {
+        toast.warning("Could not generate signed URL for quote file. Sending email without attachment link.");
+      }
+    }
 
     setEmailInitialData({
       to: getAccountManagerEmail(request.account_manager_id),

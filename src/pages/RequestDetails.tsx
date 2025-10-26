@@ -36,6 +36,7 @@ import { toast } from "sonner";
 import { useSession } from "@/components/SessionContextProvider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"; // Importar Select
 import { useAggregatedReceivedItems } from "@/hooks/use-packing-slips"; // Importar hook de recepción
+import { generateSignedUrl } from "@/utils/supabase-storage"; // Importar utilidad de URL firmada
 
 const RequestDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -87,7 +88,7 @@ const RequestDetails: React.FC = () => {
     setIsEmailDialogOpen(false);
   };
 
-  const handleSendPORequest = (request: SupabaseRequest) => {
+  const handleSendPORequest = async (request: SupabaseRequest) => {
     if (!request.account_manager_id) {
       toast.error("No se puede enviar la solicitud de PO.", { description: "No hay un gerente de cuenta asignado a esta solicitud." });
       return;
@@ -114,7 +115,16 @@ const RequestDetails: React.FC = () => {
       billingAddress: billingAddresses?.find(a => a.id === request.billing_address_id),
     };
 
-    const attachments = request.quote_url ? [{ name: `Quote_Request_${request.id}.pdf`, url: request.quote_url }] : [];
+    // Generar URL firmada para el adjunto
+    let attachments = [];
+    if (request.quote_url) {
+      const signedUrl = await generateSignedUrl(request.quote_url);
+      if (signedUrl) {
+        attachments.push({ name: `Quote_Request_${request.id}.pdf`, url: signedUrl });
+      } else {
+        toast.warning("Could not generate signed URL for quote file. Sending email without attachment link.");
+      }
+    }
 
     setEmailInitialData({
       to: getAccountManagerEmail(request.account_manager_id),
@@ -158,6 +168,9 @@ const RequestDetails: React.FC = () => {
         billingAddress: billingAddresses?.find(a => a.id === requestToApprove.billing_address_id),
       };
 
+      // No necesitamos generar URL firmada aquí, ya que no hay adjuntos en este estado.
+      // El correo de Quote Request es para el VENDOR, no para el AM.
+      
       setEmailInitialData({
         to: getVendorEmail(requestToApprove.vendor_id),
         subject: processTextTemplate(quoteTemplate.subject_template, context),
@@ -212,9 +225,7 @@ const RequestDetails: React.FC = () => {
         
         // Si hay un gerente de cuenta asignado, enviar el correo de solicitud de PO
         if (updatedRequestWithQuote.account_manager_id) {
-          // Usamos setTimeout para dar tiempo a que la mutación de estado se complete y la caché se invalide
-          // Aunque la mutación es asíncrona, la invalidación de caché puede ser lenta.
-          // Sin embargo, dado que la mutación de estado ya se completó (await), podemos llamar a la función directamente.
+          // Llamar a handleSendPORequest con la solicitud actualizada
           handleSendPORequest(updatedRequestWithQuote);
         } else {
           toast.info("Cotización subida. Por favor, asigna un Gerente de Cuenta para solicitar un PO.");
@@ -228,7 +239,7 @@ const RequestDetails: React.FC = () => {
     }
   };
 
-  const handleMarkAsOrderedAndSendEmail = (request: SupabaseRequest) => {
+  const handleMarkAsOrderedAndSendEmail = async (request: SupabaseRequest) => {
     if (!request.po_url) {
       toast.error("No se puede enviar el correo de pedido.", { description: "El archivo PO no está disponible. Por favor, sube el archivo PO primero." });
       return;
@@ -252,8 +263,18 @@ const RequestDetails: React.FC = () => {
     };
     
     const attachments = [];
-    if (request.quote_url) attachments.push({ name: `Quote_Request_${request.id}.pdf`, url: request.quote_url });
-    if (request.po_url) attachments.push({ name: `PO_${request.po_number || request.id}.pdf`, url: request.po_url });
+    
+    // Generar URL firmada para Quote
+    if (request.quote_url) {
+      const signedUrl = await generateSignedUrl(request.quote_url);
+      if (signedUrl) attachments.push({ name: `Quote_Request_${request.id}.pdf`, url: signedUrl });
+    }
+    
+    // Generar URL firmada para PO
+    if (request.po_url) {
+      const signedUrl = await generateSignedUrl(request.po_url);
+      if (signedUrl) attachments.push({ name: `PO_${request.po_number || request.id}.pdf`, url: signedUrl });
+    }
 
     setEmailInitialData({
       to: getVendorEmail(request.vendor_id),
