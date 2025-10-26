@@ -15,23 +15,21 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { PlusCircle, Trash2, Check, ChevronsUpDown, Sparkles, Loader2 } from "lucide-react";
+import { PlusCircle, Trash2, Check, ChevronsUpDown, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { ProductDetails, RequestItem } from "@/data/types";
-import { showError, showLoading, dismissToast, showSuccess } from "@/utils/toast";
+import { RequestItem } from "@/data/types";
+import { showError } from "@/utils/toast";
 import { useSession } from "@/components/SessionContextProvider";
 import { useVendors } from "@/hooks/use-vendors";
 import { useAddRequest } from "@/hooks/use-requests";
 import { useAccountManagers } from "@/hooks/use-account-managers";
 import { useProjects } from "@/hooks/use-projects";
 import { getFullName } from "@/hooks/use-profiles";
-import { apiSearchExternalProduct } from "@/integrations/api";
-import { debounce } from "lodash-es";
 
 const itemSchema = z.object({
   productName: z.string().min(1, { message: "El nombre del producto es obligatorio." }),
@@ -48,12 +46,6 @@ const itemSchema = z.object({
   link: z.string().url({ message: "Debe ser una URL válida." }).optional().or(z.literal("")),
   notes: z.string().optional(),
   brand: z.string().optional(),
-  // AI-enriched fields (these will now be directly updated into the main fields)
-  ai_enriched_product_name: z.string().optional(),
-  ai_enriched_pack_size: z.string().optional(),
-  ai_enriched_estimated_price: z.number().optional(),
-  ai_enriched_link: z.string().optional(),
-  ai_enriched_notes: z.string().optional(),
 });
 
 const formSchema = z.object({
@@ -75,8 +67,6 @@ const RequestForm: React.FC = () => {
   const { data: projects, isLoading: isLoadingProjects } = useProjects();
   const addRequestMutation = useAddRequest();
 
-  const [enrichingIndex, setEnrichingIndex] = React.useState<number | null>(null);
-
   const form = useForm<RequestFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -92,11 +82,6 @@ const RequestForm: React.FC = () => {
         link: "", 
         notes: "", 
         brand: "",
-        ai_enriched_product_name: undefined,
-        ai_enriched_pack_size: undefined,
-        ai_enriched_estimated_price: undefined,
-        ai_enriched_link: undefined,
-        ai_enriched_notes: undefined,
       }],
       projectCodes: [],
       notes: "",
@@ -114,55 +99,6 @@ const RequestForm: React.FC = () => {
     name: "items",
   });
 
-  const handleAutofill = async (index: number, catalogNumber: string, brand: string) => {
-    if (!catalogNumber || catalogNumber.length < 4) return; // Mínimo 4 caracteres para buscar
-
-    if (enrichingIndex === index) return;
-
-    setEnrichingIndex(index);
-    const toastId = showLoading("Buscando detalles del producto online...");
-
-    try {
-      const productDetails: ProductDetails = await apiSearchExternalProduct(catalogNumber, brand);
-
-      form.setValue(`items.${index}.productName`, productDetails.productName || '', { shouldValidate: true });
-      form.setValue(`items.${index}.format`, productDetails.format || '', { shouldValidate: true });
-      form.setValue(`items.${index}.unitPrice`, productDetails.unitPrice || undefined, { shouldValidate: true });
-      form.setValue(`items.${index}.link`, productDetails.link || '', { shouldValidate: true });
-      form.setValue(`items.${index}.brand`, productDetails.brand || '', { shouldValidate: true });
-      
-      const currentNotes = form.getValues(`items.${index}.notes`) || '';
-      const newNotes = productDetails.notes ? `\n[Sugerencia IA] ${productDetails.notes}` : '';
-      form.setValue(`items.${index}.notes`, currentNotes + newNotes, { shouldValidate: true });
-
-      showSuccess("¡Detalles del producto autocompletados!");
-
-    } catch (error: any) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      
-      if (errorMessage.includes("No reliable product information found") || errorMessage.includes("No se encontró información fiable")) {
-        toast.info("Búsqueda online: No se encontraron coincidencias. Por favor, introduce los detalles manualmente.");
-      } else {
-        showError(errorMessage);
-      }
-    } finally {
-      dismissToast(toastId);
-      setEnrichingIndex(null);
-    }
-  };
-
-  const debouncedAutofill = React.useCallback(
-    debounce((index: number, catalogNumber: string, brand: string) => {
-      handleAutofill(index, catalogNumber, brand);
-    }, 800),
-    [enrichingIndex]
-  );
-
-  React.useEffect(() => {
-    return () => debouncedAutofill.cancel();
-  }, [debouncedAutofill]);
-
-
   const onSubmit = async (data: RequestFormValues) => {
     if (!session?.user?.id) {
       showError("Debes iniciar sesión para enviar una solicitud.");
@@ -171,13 +107,25 @@ const RequestForm: React.FC = () => {
 
     const managerId = data.accountManagerId === 'unassigned' || !data.accountManagerId ? null : data.accountManagerId;
 
+    // Mapear los ítems para que coincidan con la interfaz RequestItem
+    const itemsToSubmit: RequestItem[] = data.items.map(item => ({
+      productName: item.productName,
+      catalogNumber: item.catalogNumber,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      format: item.format,
+      link: item.link,
+      notes: item.notes,
+      brand: item.brand,
+    }));
+
     await addRequestMutation.mutateAsync({
       vendorId: data.vendorId,
       requesterId: session.user.id,
       accountManagerId: managerId,
       notes: data.notes,
       projectCodes: data.projectCodes,
-      items: data.items,
+      items: itemsToSubmit,
     });
 
     form.reset({
@@ -193,11 +141,6 @@ const RequestForm: React.FC = () => {
         link: "", 
         notes: "", 
         brand: "",
-        ai_enriched_product_name: undefined,
-        ai_enriched_pack_size: undefined,
-        ai_enriched_estimated_price: undefined,
-        ai_enriched_link: undefined,
-        ai_enriched_notes: undefined,
       }],
       projectCodes: [],
       notes: "",
@@ -349,12 +292,6 @@ const RequestForm: React.FC = () => {
                           id="marca" 
                           placeholder="ej. Invitrogen" 
                           {...itemField} 
-                          onChange={(e) => {
-                            itemField.onChange(e);
-                            const newBrand = e.target.value;
-                            const catalogNumber = form.getValues(`items.${index}.catalogNumber`) || '';
-                            debouncedAutofill(index, catalogNumber, newBrand);
-                          }}
                         />
                       </FormControl>
                       <FormMessage />
@@ -372,24 +309,12 @@ const RequestForm: React.FC = () => {
                           id="catalogo" 
                           placeholder="ej. 18265017" 
                           {...itemField} 
-                          onChange={(e) => {
-                            itemField.onChange(e);
-                            const newCatalog = e.target.value;
-                            const brand = form.getValues(`items.${index}.brand`) || '';
-                            debouncedAutofill(index, newCatalog, brand);
-                          }}
                         />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                {/* Indicador de búsqueda */}
-                {enrichingIndex === index && (
-                  <div className="md:col-span-2 flex justify-end">
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" /> Buscando...
-                  </div>
-                )}
                 <FormField
                   control={form.control}
                   name={`items.${index}.productName`}
@@ -398,9 +323,6 @@ const RequestForm: React.FC = () => {
                       <FormLabel>Nombre del Producto</FormLabel>
                       <FormControl><Input id="nombre_producto" placeholder="ej. Células Competentes E. coli DH5a" {...itemField} /></FormControl>
                       <FormMessage />
-                      {form.watch(`items.${index}.ai_enriched_product_name`) && (
-                        <p className="text-xs text-muted-foreground">Sugerencia Historial: {form.watch(`items.${index}.ai_enriched_product_name`)}</p>
-                      )}
                     </FormItem>
                   )}
                 />
@@ -419,17 +341,11 @@ const RequestForm: React.FC = () => {
                   control={form.control}
                   name={`items.${index}.unitPrice`}
                   render={({ field: itemField }) => {
-                    const aiPriceValue = form.watch(`items.${index}.ai_enriched_estimated_price`);
-                    const hasAiPrice = aiPriceValue !== undefined && aiPriceValue !== null && aiPriceValue !== '';
-
                     return (
                       <FormItem>
                         <FormLabel>Precio Unitario (Opcional)</FormLabel>
                         <FormControl><Input id="precio_unitario" type="number" step="0.01" placeholder="ej. 120.50" {...itemField} /></FormControl>
                         <FormMessage />
-                        {hasAiPrice && (
-                          <p className="text-xs text-muted-foreground">Sugerencia Historial: ${Number(aiPriceValue).toFixed(2)}</p>
-                        )}
                       </FormItem>
                     );
                   }}
@@ -442,9 +358,6 @@ const RequestForm: React.FC = () => {
                       <FormLabel>Formato (Opcional)</FormLabel>
                       <FormControl><Input id="formato" placeholder="ej. 200pack 8cs of 25" {...itemField} /></FormControl>
                       <FormMessage />
-                      {form.watch(`items.${index}.ai_enriched_pack_size`) && (
-                        <p className="text-xs text-muted-foreground">Sugerencia Historial: {form.watch(`items.${index}.ai_enriched_pack_size`)}</p>
-                      )}
                     </FormItem>
                   )}
                 />
@@ -456,9 +369,6 @@ const RequestForm: React.FC = () => {
                       <FormLabel>Enlace del Producto (Opcional)</FormLabel>
                       <FormControl><Input id="enlace_producto" type="url" placeholder="ej. https://www.vendor.com/product" {...itemField} /></FormControl>
                       <FormMessage />
-                      {form.watch(`items.${index}.ai_enriched_link`) && (
-                        <p className="text-xs text-muted-foreground">Sugerencia Historial: <a href={form.watch(`items.${index}.ai_enriched_link`)} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">Ver Enlace</a></p>
-                      )}
                     </FormItem>
                   )}
                 />
@@ -470,9 +380,6 @@ const RequestForm: React.FC = () => {
                       <FormLabel>Notas (Opcional)</FormLabel>
                       <FormControl><Textarea id="notas" placeholder="Cualquier requisito o detalle específico..." {...itemField} /></FormControl>
                       <FormMessage />
-                      {form.watch(`items.${index}.ai_enriched_notes`) && (
-                        <p className="text-xs text-muted-foreground">Sugerencia Historial: {form.watch(`items.${index}.ai_enriched_notes`)}</p>
-                      )}
                     </FormItem>
                   )}
                 />
@@ -489,11 +396,6 @@ const RequestForm: React.FC = () => {
           link: "", 
           notes: "", 
           brand: "",
-          ai_enriched_product_name: undefined,
-          ai_enriched_pack_size: undefined,
-          ai_enriched_estimated_price: undefined,
-          ai_enriched_link: undefined,
-          ai_enriched_notes: undefined,
         })} className="w-full">
           <PlusCircle className="mr-2 h-4 w-4" /> Añadir Otro Artículo
         </Button>

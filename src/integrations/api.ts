@@ -186,68 +186,10 @@ export const apiDeleteProject = async (id: string): Promise<void> => {
   if (error) throw new Error(error.message);
 };
 
-// --- API de Búsqueda de Productos (Lógica Híbrida) ---
+// --- API de Búsqueda de Productos (ELIMINADA) ---
+// Esta función ya no se usa y se elimina para simplificar.
 export const apiSearchExternalProduct = async (catalogNumber: string, brand?: string): Promise<ProductDetails> => {
-  // Paso 1: Intentar la búsqueda interna primero
-  try {
-    const { data: internalData, error: internalError } = await supabase.rpc('smart_lookup_mock', {
-      brand_q: brand || '',
-      catalog_q: catalogNumber,
-    });
-
-    if (internalError) {
-      console.warn("API: Error en la búsqueda interna (RPC), se procederá a la búsqueda externa.", internalError);
-    } else if (internalData && internalData.record && internalData.match.score > 0.5) {
-      console.log("API: Coincidencia encontrada en el historial interno.", internalData);
-      const record = internalData.record;
-      return {
-        id: record.catalog_number || catalogNumber,
-        productName: record.product_name,
-        catalogNumber: record.catalog_number || catalogNumber,
-        unitPrice: record.unit_price,
-        format: record.format,
-        link: record.link,
-        brand: record.brand,
-        notes: record.notes,
-        source: `Historial Interno (Confianza: ${internalData.match.score.toFixed(2)})`,
-      };
-    }
-  } catch (rpcError) {
-    console.warn("API: Excepción en la búsqueda interna (RPC), se procederá a la búsqueda externa.", rpcError);
-  }
-
-  // Paso 2: Si la búsqueda interna falla o no es concluyente, recurrir a la búsqueda externa con IA
-  console.log(`API: No se encontró coincidencia interna. Invocando 'search-product' para catalog: ${catalogNumber}, brand: ${brand}`);
-  const { data, error } = await supabase.functions.invoke('search-product', {
-    body: JSON.stringify({ catalogNumber, brand: brand || '' }),
-    method: 'POST',
-  });
-
-  if (error) {
-    console.error("API: Error al invocar la función 'search-product':", error);
-    const errorMessage = data?.error || error.message || "Fallo al buscar el producto.";
-    throw new Error(errorMessage);
-  }
-
-  if (!data || !data.products) {
-    throw new Error("No se encontró información fiable del producto online.");
-  }
-
-  const result = data.products;
-  const productDetails: ProductDetails = {
-    id: result.catalogNumber || catalogNumber,
-    productName: result.productName,
-    catalogNumber: result.catalogNumber || catalogNumber,
-    unitPrice: result.unitPrice,
-    format: result.format,
-    link: result.link,
-    brand: result.brand,
-    notes: result.notes,
-    source: result.source,
-  };
-
-  console.log("API: Detalles del producto mapeados desde la función 'search-product':", productDetails);
-  return productDetails;
+  throw new Error("La búsqueda de productos externos ha sido deshabilitada.");
 };
 
 
@@ -299,12 +241,12 @@ export const apiAddRequest = async (data: Omit<SupabaseRequest, "id" | "created_
     brand: item.brand,
   }));
 
-  // Aseguramos que account_manager_id se pase como texto (UUID o null)
-  const accountManagerIdText = account_manager_id || null;
+  // Aseguramos que account_manager_id se pase como UUID o null
+  const accountManagerIdUuid = account_manager_id || null;
 
   const { data: newRequest, error } = await supabase.rpc('create_request_with_items', {
     vendor_id_in: vendor_id,
-    account_manager_id_in: accountManagerIdText, // Pasamos como texto
+    account_manager_id_in: accountManagerIdUuid, // Pasamos como UUID o null
     notes_in: notes,
     project_codes_in: project_codes,
     items_in: itemsJsonb,
