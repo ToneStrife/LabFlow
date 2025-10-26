@@ -34,20 +34,20 @@ export const useAggregatedReceivedItems = (requestId: string) => {
   return useQuery<AggregatedReceivedItem[], Error>({
     queryKey: ['aggregatedReceivedItems', requestId],
     queryFn: async () => {
-      // 1. Obtener todos los ítems recibidos para la solicitud
+      // 1. Obtener todos los ítems recibidos para la solicitud, filtrando por la relación packing_slips.request_id
       const { data: receivedItems, error: receivedError } = await supabase
         .from('received_items')
         .select(`
           quantity_received,
           request_item_id,
-          slip_id (request_id)
+          slip_id!inner (request_id)
         `)
-        .in('slip_id', supabase.from('packing_slips').select('id').eq('request_id', requestId).single());
+        .eq('slip_id.request_id', requestId); // Filtrar por el ID de la solicitud a través de la tabla packing_slips
 
       if (receivedError) throw new Error(receivedError.message);
 
       // 2. Agregar las cantidades por request_item_id
-      const aggregation = receivedItems.reduce((acc, item) => {
+      const aggregation = (receivedItems as any[]).reduce((acc, item) => {
         const itemId = item.request_item_id;
         acc[itemId] = (acc[itemId] || 0) + item.quantity_received;
         return acc;
