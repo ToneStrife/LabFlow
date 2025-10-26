@@ -22,7 +22,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Loader2, CheckSquare, Square, CheckCheck } from "lucide-react";
+import { Loader2, CheckSquare, CheckCheck } from "lucide-react";
 import { SupabaseRequestItem } from "@/data/types";
 import { useReceiveItems, useAggregatedReceivedItems } from "@/hooks/use-packing-slips";
 import { toast } from "sonner";
@@ -41,7 +41,7 @@ const receivedItemSchema = z.object({
 
 // Esquema principal del formulario
 const receiveFormSchema = z.object({
-  slipNumber: z.string().optional(), // Hacemos el número de albarán opcional
+  slipNumber: z.string().optional(), // Opcional
   slipFile: z.any().optional(),
   items: z.array(receivedItemSchema).min(1),
 });
@@ -150,10 +150,19 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
     toast.info("All remaining quantities set to be received.");
   };
 
+  const handleReceiveRemaining = (index: number) => {
+    const item = form.getValues(`items.${index}`);
+    const quantityRemaining = item.quantityOrdered - item.quantityPreviouslyReceived;
+    if (quantityRemaining > 0) {
+      form.setValue(`items.${index}.quantityReceived`, quantityRemaining, { shouldDirty: true });
+      toast.info(`Received remaining ${quantityRemaining} units of ${item.productName}.`);
+    }
+  };
+
   if (isLoadingReceived) {
     return (
       <Dialog open={isOpen} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-[800px]">
           <div className="flex justify-center items-center h-40">
             <Loader2 className="h-6 w-6 animate-spin mr-2" /> Loading received status...
           </div>
@@ -197,7 +206,8 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
                   <FormItem>
                     <FormLabel>Upload Slip File (Optional)</FormLabel>
                     <FormControl>
-                      <Input type="file" onChange={(e) => field.onChange(e.target.files)} disabled={isSubmitting} />
+                      {/* Añadir capture="camera" */}
+                      <Input type="file" onChange={(e) => field.onChange(e.target.files)} disabled={isSubmitting} capture="camera" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -206,18 +216,7 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
             </div>
 
             <div className="space-y-4 max-h-[400px] overflow-y-auto p-2 border rounded-md">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold">Items to Receive</h3>
-                <Button 
-                  type="button" 
-                  variant="secondary" 
-                  size="sm" 
-                  onClick={handleReceiveAll} 
-                  disabled={isSubmitting || allItemsFullyReceived}
-                >
-                  <CheckCheck className="mr-2 h-4 w-4" /> Receive All Remaining
-                </Button>
-              </div>
+              <h3 className="text-lg font-semibold mb-4">Items to Receive</h3>
               
               {fields.map((item, index) => {
                 const quantityOrdered = form.watch(`items.${index}.quantityOrdered`);
@@ -266,9 +265,7 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
                               type="button"
                               variant="outline"
                               size="icon"
-                              onClick={() => {
-                                quantityField.onChange(quantityRemaining);
-                              }}
+                              onClick={() => handleReceiveRemaining(index)}
                               disabled={isSubmitting || currentQuantityReceived === quantityRemaining}
                               title="Receive Remaining Quantity"
                             >
@@ -283,7 +280,15 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
               })}
             </div>
 
-            <DialogFooter>
+            <DialogFooter className="flex flex-col sm:flex-row sm:justify-end sm:space-x-2 pt-4">
+              <Button 
+                type="button" 
+                variant="secondary" 
+                onClick={handleReceiveAll} 
+                disabled={isSubmitting || allItemsFullyReceived}
+              >
+                <CheckCheck className="mr-2 h-4 w-4" /> Receive All Remaining
+              </Button>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
                 Cancel
               </Button>
