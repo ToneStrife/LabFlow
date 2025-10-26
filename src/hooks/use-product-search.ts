@@ -61,13 +61,19 @@ const fetchProductSearch = async (
   if (productName && productName.length > 3 && results.length === 0) {
     const similarityThreshold = 0.3; // Umbral de similitud (0.3 es un buen punto de partida)
 
+    // Nota: La función RPC 'similarity' requiere un objeto con claves vacías para la sintaxis de Supabase JS.
+    const similarityRpc = supabase.rpc('similarity', { 
+        '': 'product_name', 
+        '': productName 
+    });
+
     // Buscar en Inventory por similitud
     const { data: invFuzzyData } = await supabase
       .from('inventory')
       .select('*')
       .limit(5)
-      .order(supabase.rpc('similarity', { '': 'product_name', '': productName }), { ascending: false })
-      .gte(supabase.rpc('similarity', { '': 'product_name', '': productName }), similarityThreshold);
+      .order(similarityRpc, { ascending: false })
+      .gte(similarityRpc, similarityThreshold);
 
     if (invFuzzyData && invFuzzyData.length > 0) {
       invFuzzyData.forEach(item => {
@@ -83,8 +89,8 @@ const fetchProductSearch = async (
             .from('request_items')
             .select('product_name, catalog_number, brand, unit_price, format, link')
             .limit(5)
-            .order(supabase.rpc('similarity', { '': 'product_name', '': productName }), { ascending: false })
-            .gte(supabase.rpc('similarity', { '': 'product_name', '': productName }), similarityThreshold);
+            .order(similarityRpc, { ascending: false })
+            .gte(similarityRpc, similarityThreshold);
 
         if (reqFuzzyData && reqFuzzyData.length > 0) {
             reqFuzzyData.forEach(item => {
@@ -101,18 +107,23 @@ const fetchProductSearch = async (
 };
 
 export const useProductSearch = (
-  catalogNumber: string | null,
-  brand: string | null,
-  productName: string | null
+  catalogNumber: string | null | undefined,
+  brand: string | null | undefined,
+  productName: string | null | undefined
 ) => {
+  // Normalizar a string | null para la clave de consulta
+  const catNum = catalogNumber || null;
+  const brnd = brand || null;
+  const prodName = productName || null;
+  
   // Determinar si la búsqueda debe estar habilitada
   const isSearchEnabled = 
-    (catalogNumber && brand) || 
-    (productName && productName.length > 3);
+    (!!catNum && !!brnd) || 
+    (!!prodName && prodName.length > 3);
 
   return useQuery<ProductSearchResult[], Error>({
-    queryKey: ['productSearch', catalogNumber, brand, productName],
-    queryFn: () => fetchProductSearch(catalogNumber, brand, productName),
+    queryKey: ['productSearch', catNum, brnd, prodName],
+    queryFn: () => fetchProductSearch(catNum, brnd, prodName),
     enabled: isSearchEnabled,
     staleTime: 1000 * 60 * 5, // 5 minutos
   });
