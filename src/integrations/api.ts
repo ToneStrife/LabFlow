@@ -241,8 +241,9 @@ export const apiAddRequest = async (data: Omit<SupabaseRequest, "id" | "created_
     brand: item.brand,
   }));
 
-  // Aseguramos que account_manager_id se pase como UUID o null
-  const accountManagerIdUuid = account_manager_id || null;
+  // Aseguramos que account_manager_id se pase como UUID o null. 
+  // Si es una cadena vacía, también debe ser null.
+  const accountManagerIdUuid = (account_manager_id && account_manager_id.trim() !== '') ? account_manager_id : null;
 
   const { data: newRequest, error } = await supabase.rpc('create_request_with_items', {
     vendor_id_in: vendor_id,
