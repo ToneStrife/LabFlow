@@ -217,10 +217,11 @@ const RequestList: React.FC = () => {
   const mergeableRequests = React.useMemo(() => {
     if (!sourceRequestToMerge || !requests) return [];
     
+    // Filtramos por proveedor y solo permitimos estados activos
     return requests.filter(req => 
       req.id !== sourceRequestToMerge.id && 
       req.vendor_id === sourceRequestToMerge.vendor_id &&
-      (req.status === "Pending" || req.status === "Quote Requested" || req.status === "PO Requested") // Solo fusionar en solicitudes activas
+      (req.status === "Pending" || req.status === "Quote Requested" || req.status === "PO Requested")
     );
   }, [sourceRequestToMerge, requests]);
   // FIN MANEJADOR DE MERGE
