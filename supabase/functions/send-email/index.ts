@@ -48,14 +48,15 @@ serve(async (req) => {
 
       for (const attachment of attachments) {
         try {
-          const url = new URL(attachment.url);
-          const filePath = url.pathname.split('/LabFlow/')[1];
+          // CORRECCIÓN: attachment.url es la ruta de almacenamiento (storage path), no una URL completa.
+          const filePath = attachment.url; 
+          
           const { data: fileBlob, error: downloadError } = await supabaseAdmin.storage
             .from('LabFlow')
-            .download(decodeURIComponent(filePath));
+            .download(filePath); // Usar la ruta directamente
 
           if (downloadError) {
-            console.error(`Failed to download attachment: ${attachment.name}`, downloadError);
+            console.error(`Failed to download attachment: ${attachment.name} at path ${filePath}`, downloadError);
             continue;
           }
 
