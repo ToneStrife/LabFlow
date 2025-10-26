@@ -19,6 +19,7 @@ import { useAllProfiles, getFullName } from "@/hooks/use-profiles";
 import { useAccountManagers } from "@/hooks/use-account-managers";
 import { useProjects } from "@/hooks/use-projects";
 import { useEmailTemplates } from "@/hooks/use-email-templates";
+import { useShippingAddresses, useBillingAddresses } from "@/hooks/use-addresses"; // Importar hooks de direcciones
 import { processEmailTemplate } from "@/utils/email-templating";
 import EmailDialog, { EmailFormValues } from "@/components/EmailDialog";
 
@@ -42,6 +43,9 @@ const RequestDetails: React.FC = () => {
   const { data: accountManagers, isLoading: isLoadingAccountManagers } = useAccountManagers();
   const { data: projects, isLoading: isLoadingProjects } = useProjects();
   const { data: emailTemplates, isLoading: isLoadingEmailTemplates } = useEmailTemplates();
+  const { data: shippingAddresses, isLoading: isLoadingShippingAddresses } = useShippingAddresses();
+  const { data: billingAddresses, isLoading: isLoadingBillingAddresses } = useBillingAddresses();
+  
   const updateStatusMutation = useUpdateRequestStatus();
   const updateFileMutation = useUpdateRequestFile();
   const updateMetadataMutation = useUpdateRequestMetadata();
@@ -94,6 +98,8 @@ const RequestDetails: React.FC = () => {
       accountManager: accountManagers?.find(am => am.id === request.account_manager_id),
       projects: projects,
       actorProfile: profile,
+      shippingAddress: shippingAddresses?.find(a => a.id === request.shipping_address_id),
+      billingAddress: billingAddresses?.find(a => a.id === request.billing_address_id),
     };
 
     const attachments = request.quote_url ? [{ name: `Quote_Request_${request.id}.pdf`, url: request.quote_url }] : [];
@@ -126,9 +132,11 @@ const RequestDetails: React.FC = () => {
         request: requestToApprove,
         vendor: vendors?.find(v => v.id === requestToApprove.vendor_id),
         requesterProfile: profiles?.find(p => p.id === requestToApprove.requester_id),
-        accountManager: accountManagers?.find(am => am.id === requestToApprove.account_manager_id),
+        accountManager: accountManagers?.find(am => am.id === requestToAprove.account_manager_id),
         projects: projects,
         actorProfile: profile,
+        shippingAddress: shippingAddresses?.find(a => a.id === requestToApprove.shipping_address_id),
+        billingAddress: billingAddresses?.find(a => a.id === requestToApprove.billing_address_id),
       };
 
       setEmailInitialData({
@@ -168,7 +176,11 @@ const RequestDetails: React.FC = () => {
 
       // Step 2: Update the request status with the new file URL.
       if (fileTypeToUpload === "po") {
-        await updateStatusMutation.mutateAsync({ id: request.id, status: "Ordered", poNumber: returnedPoNumber });
+        // PO upload is now optional, but if uploaded, we mark as Ordered.
+        // We only require poNumber if we are marking as Ordered.
+        if (request.status === "PO Requested") {
+             await updateStatusMutation.mutateAsync({ id: request.id, status: "Ordered", poNumber: returnedPoNumber });
+        }
       } else if (fileTypeToUpload === "quote") {
         await updateStatusMutation.mutateAsync({ id: request.id, status: "PO Requested", quoteUrl: fileUrl });
         
@@ -180,7 +192,6 @@ const RequestDetails: React.FC = () => {
         }
       }
       // Note: 'slip' file type does not change status, but the file URL will be saved in a real DB.
-      // The mock data doesn't persist this well, but the flow is correct for a real backend.
 
       setIsUploadDialogOpen(false);
     } catch (error) {
@@ -208,6 +219,8 @@ const RequestDetails: React.FC = () => {
       accountManager: accountManagers?.find(am => am.id === request.account_manager_id),
       projects: projects,
       actorProfile: profile,
+      shippingAddress: shippingAddresses?.find(a => a.id === request.shipping_address_id),
+      billingAddress: billingAddresses?.find(a => a.id === request.billing_address_id),
     };
     
     const attachments = [];
@@ -236,7 +249,7 @@ const RequestDetails: React.FC = () => {
     });
   };
 
-  if (isLoadingRequests || isLoadingVendors || isLoadingProfiles || isLoadingAccountManagers || isLoadingProjects || isLoadingEmailTemplates) {
+  if (isLoadingRequests || isLoadingVendors || isLoadingProfiles || isLoadingAccountManagers || isLoadingProjects || isLoadingEmailTemplates || isLoadingShippingAddresses || isLoadingBillingAddresses) {
     return <div className="container mx-auto py-8 flex justify-center items-center"><Loader2 className="h-8 w-8 animate-spin mr-2" /> Cargando Detalles de la Solicitud...</div>;
   }
 
@@ -248,6 +261,9 @@ const RequestDetails: React.FC = () => {
       </div>
     );
   }
+  
+  // La edición solo está permitida si el estado es Pending o Quote Requested
+  const isEditable = request.status === "Pending" || request.status === "Quote Requested";
 
   const vendor = vendors?.find(v => v.id === request.vendor_id);
 
@@ -258,7 +274,7 @@ const RequestDetails: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           <RequestSummaryCard request={request} vendor={vendor} profiles={profiles} />
-          <RequestItemsTable items={request.items} />
+          <RequestItemsTable items={request.items} isEditable={isEditable} />
         </div>
         <div className="lg:col-span-1">
           <RequestFilesCard request={request} onUploadClick={handleUploadClick} />
@@ -266,12 +282,13 @@ const RequestDetails: React.FC = () => {
       </div>
       
       <div className="mt-6">
-        <h2 className="text-2xl font-bold mb-4">Metadatos de la Solicitud</h2>
+        <h2 className="text-2xl font-bold mb-4">Metadatos de la Solicitud {isEditable ? "(Editable)" : "(Read-Only)"}</h2>
         <RequestMetadataForm
           request={request}
           profiles={profiles || []}
           onSubmit={handleUpdateMetadata}
           isSubmitting={updateMetadataMutation.isPending}
+          isEditable={isEditable} // Pasar prop de edición
         />
       </div>
 

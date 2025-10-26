@@ -1,4 +1,4 @@
-import { SupabaseRequest, Vendor, Profile, AccountManager, Project, SupabaseRequestItem } from "@/data/types";
+import { SupabaseRequest, Vendor, Profile, AccountManager, Project, SupabaseRequestItem, Address } from "@/data/types";
 import { getFullName } from "@/hooks/use-profiles";
 
 interface EmailTemplateContext {
@@ -8,6 +8,8 @@ interface EmailTemplateContext {
   accountManager?: AccountManager;
   projects?: Project[];
   actorProfile?: Profile; // The user performing the action
+  shippingAddress?: Address; // Nuevo
+  billingAddress?: Address; // Nuevo
   message?: string; // Generic message
   order?: { itemName: string; id: string }; // For specific order items
 }
@@ -18,6 +20,17 @@ const formatItemsList = (items: SupabaseRequestItem[] | null): string => {
   }
   const listItems = items.map(item => `<li>${item.quantity}x <strong>${item.product_name}</strong> (Catalog #: ${item.catalog_number})</li>`).join("");
   return `<ul>${listItems}</ul>`;
+};
+
+const formatAddressHtml = (address: Address | undefined): string => {
+  if (!address) return "N/A";
+  return `
+    <p style="margin: 0;"><strong>${address.name}</strong></p>
+    <p style="margin: 0;">${address.address_line_1}</p>
+    ${address.address_line_2 ? `<p style="margin: 0;">${address.address_line_2}</p>` : ''}
+    <p style="margin: 0;">${address.city}, ${address.state} ${address.zip_code}</p>
+    <p style="margin: 0;">${address.country}</p>
+  `;
 };
 
 const replacePlaceholder = (template: string, placeholder: string, value: string | number | null | undefined): string => {
@@ -31,7 +44,7 @@ const replacePlaceholder = (template: string, placeholder: string, value: string
 
 export const processEmailTemplate = (templateString: string, context: EmailTemplateContext): string => {
   let processedString = templateString;
-  const { request, vendor, requesterProfile, accountManager, projects, actorProfile, message, order } = context;
+  const { request, vendor, requesterProfile, accountManager, projects, actorProfile, shippingAddress, billingAddress, message, order } = context;
 
   // General request details
   processedString = replacePlaceholder(processedString, 'request.id', request.id);
@@ -62,8 +75,12 @@ export const processEmailTemplate = (templateString: string, context: EmailTempl
   }).join(", ");
   processedString = replacePlaceholder(processedString, 'request.project_codes', projectCodesDisplay);
 
+  // Address details (HTML formatting)
+  processedString = processedString.replace(/{{shipping_address}}/g, formatAddressHtml(shippingAddress));
+  processedString = processedString.replace(/{{billing_address}}/g, formatAddressHtml(billingAddress));
+
   // Special placeholders
-  processedString = replacePlaceholder(processedString, 'items_list', formatItemsList(request.items));
+  processedString = processedString.replace(/{{items_list}}/g, formatItemsList(request.items));
   processedString = replacePlaceholder(processedString, 'message', message);
   processedString = replacePlaceholder(processedString, 'actor.full_name', getFullName(actorProfile));
   processedString = replacePlaceholder(processedString, 'order.itemName', order?.itemName);
@@ -72,7 +89,7 @@ export const processEmailTemplate = (templateString: string, context: EmailTempl
   // CTA Button (simple placeholder for now, actual button would be HTML)
   processedString = processedString.replace(/{{cta_button}}/g, '[Call to Action Button]');
 
-  // After all replacements, convert newlines to <br> and wrap in a basic HTML structure
+  // After all replacements, convert remaining newlines to <br> and wrap in a basic HTML structure
   let processedHtml = processedString.replace(/\n/g, '<br />');
 
   // A simple HTML wrapper

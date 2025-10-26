@@ -41,9 +41,8 @@ const getStatusBadgeVariant = (status: RequestStatus) => {
     case "PO Requested":
       return "destructive";
     case "Ordered":
-      return "default";
     case "Received":
-      return "success";
+      return "default";
     default:
       return "secondary";
   }
@@ -65,14 +64,30 @@ const RequestListTable: React.FC<RequestListTableProps> = ({
   const getItemDisplay = (items: SupabaseRequest['items']) => {
     if (!items || items.length === 0) return "N/A";
     
-    const firstItem = items[0];
+    // Mostrar hasta 2 ítems y el total
+    const displayItems = items.slice(0, 2).map(item => 
+      <div key={item.id} className="text-xs text-muted-foreground">
+        {item.quantity}x {item.product_name}
+      </div>
+    );
+    
     const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
     
-    if (items.length === 1) {
-      return `${firstItem.product_name} (${firstItem.quantity}x)`;
-    }
-    
-    return `${firstItem.product_name} (+${items.length - 1} más, ${totalItems} total)`;
+    return (
+      <div className="space-y-1">
+        {displayItems}
+        {items.length > 2 && (
+          <div className="text-xs font-medium text-primary">
+            (+{items.length - 2} más, {totalItems} unidades)
+          </div>
+        )}
+        {items.length <= 2 && (
+          <div className="text-xs font-medium text-primary">
+            ({totalItems} unidades)
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -82,7 +97,7 @@ const RequestListTable: React.FC<RequestListTableProps> = ({
           <TableRow>
             <TableHead>Vendor</TableHead>
             <TableHead>Requester</TableHead>
-            <TableHead>Item / Summary</TableHead> {/* Título de columna actualizado */}
+            <TableHead>Items</TableHead> {/* Título de columna actualizado */}
             <TableHead>Status</TableHead>
             <TableHead>Date</TableHead>
             <TableHead className="text-right">Actions</TableHead>
@@ -105,7 +120,7 @@ const RequestListTable: React.FC<RequestListTableProps> = ({
                 <TableRow key={request.id}>
                   <TableCell className="font-medium">{vendor?.name || "N/A"}</TableCell>
                   <TableCell>{requesterName}</TableCell>
-                  <TableCell className="max-w-[200px] truncate" title={getItemDisplay(request.items)}>
+                  <TableCell className="max-w-[250px]">
                     {getItemDisplay(request.items)}
                   </TableCell>
                   <TableCell>

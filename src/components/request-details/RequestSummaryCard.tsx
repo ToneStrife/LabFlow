@@ -4,13 +4,14 @@ import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { SupabaseRequest, RequestStatus } from "@/data/types";
+import { SupabaseRequest, RequestStatus, Address } from "@/data/types"; // Importar Address
 import { Vendor } from "@/hooks/use-vendors";
 import { Profile, getFullName } from "@/hooks/use-profiles";
 import { AccountManager } from "@/data/types"; // Importar el tipo AccountManager
 import { Project } from "@/data/types"; // Importar el tipo Project
 import { useAccountManagers } from "@/hooks/use-account-managers"; // Usar el nuevo hook
 import { useProjects } from "@/hooks/use-projects"; // Usar el nuevo hook
+import { useShippingAddresses, useBillingAddresses } from "@/hooks/use-addresses"; // Importar hooks de direcciones
 import { format } from "date-fns";
 
 interface RequestSummaryCardProps {
@@ -36,9 +37,24 @@ const getStatusBadgeVariant = (status: RequestStatus) => {
   }
 };
 
+const formatAddress = (address: Address | undefined) => {
+  if (!address) return "N/A";
+  return (
+    <div className="text-sm">
+      <p className="font-medium">{address.name}</p>
+      <p>{address.address_line_1}</p>
+      {address.address_line_2 && <p>{address.address_line_2}</p>}
+      <p>{address.city}, {address.state} {address.zip_code}</p>
+      <p>{address.country}</p>
+    </div>
+  );
+};
+
 const RequestSummaryCard: React.FC<RequestSummaryCardProps> = ({ request, vendor, profiles }) => {
   const { data: accountManagers } = useAccountManagers(); // Usar el nuevo hook
   const { data: projects } = useProjects(); // Usar el nuevo hook
+  const { data: shippingAddresses } = useShippingAddresses();
+  const { data: billingAddresses } = useBillingAddresses();
 
   const getRequesterName = (requesterId: string) => {
     const profile = profiles?.find(p => p.id === requesterId);
@@ -60,6 +76,9 @@ const RequestSummaryCard: React.FC<RequestSummaryCardProps> = ({ request, vendor
   }).join(", ") || "N/A";
 
   const dateSubmitted = format(new Date(request.created_at), 'yyyy-MM-dd HH:mm');
+  
+  const shippingAddress = shippingAddresses?.find(a => a.id === request.shipping_address_id);
+  const billingAddress = billingAddresses?.find(a => a.id === request.billing_address_id);
 
   return (
     <Card>
@@ -70,7 +89,7 @@ const RequestSummaryCard: React.FC<RequestSummaryCardProps> = ({ request, vendor
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <p className="text-sm text-muted-foreground">Requester</p>
             <p className="font-medium">{requesterName}</p>
@@ -83,6 +102,24 @@ const RequestSummaryCard: React.FC<RequestSummaryCardProps> = ({ request, vendor
             <p className="text-sm text-muted-foreground">Project Codes</p>
             <p className="font-medium">{projectCodesDisplay}</p>
           </div>
+        </div>
+
+        <Separator />
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <p className="text-sm text-muted-foreground mb-1">Shipping Address</p>
+            {formatAddress(shippingAddress)}
+          </div>
+          <div>
+            <p className="text-sm text-muted-foreground mb-1">Billing Address</p>
+            {formatAddress(billingAddress)}
+          </div>
+        </div>
+
+        <Separator />
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <p className="text-sm text-muted-foreground">Date Submitted</p>
             <p className="font-medium">{dateSubmitted}</p>

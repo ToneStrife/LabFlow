@@ -53,6 +53,7 @@ const availablePlaceholders = [
   "{{requester.email}}", "{{vendor.name}}", "{{vendor.contact_person}}", "{{vendor.email}}",
   "{{account_manager.full_name}}", "{{account_manager.email}}", "{{items_list}}", "{{cta_button}}",
   "{{message}}", "{{actor.full_name}}", "{{order.itemName}}", "{{order.id}}",
+  "{{shipping_address}}", "{{billing_address}}", // Nuevos placeholders de dirección
 ];
 
 // --- Main Admin Page Component ---

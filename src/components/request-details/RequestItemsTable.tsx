@@ -10,13 +10,46 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
+import { Edit, Trash2, Loader2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { SupabaseRequestItem } from "@/data/types";
+import RequestItemForm, { ItemEditFormValues } from "./RequestItemForm";
+import { useUpdateRequestItem, useDeleteRequestItem } from "@/hooks/use-request-items";
+import { toast } from "sonner";
 
 interface RequestItemsTableProps {
   items: SupabaseRequestItem[] | null;
+  isEditable: boolean;
 }
 
-const RequestItemsTable: React.FC<RequestItemsTableProps> = ({ items }) => {
+const RequestItemsTable: React.FC<RequestItemsTableProps> = ({ items, isEditable }) => {
+  const updateItemMutation = useUpdateRequestItem();
+  const deleteItemMutation = useDeleteRequestItem();
+
+  const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
+  const [editingItem, setEditingItem] = React.useState<SupabaseRequestItem | undefined>(undefined);
+
+  const handleEditItem = (item: SupabaseRequestItem) => {
+    setEditingItem(item);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleUpdateItem = async (data: ItemEditFormValues) => {
+    if (!editingItem) return;
+    await updateItemMutation.mutateAsync({ id: editingItem.id, data });
+    setIsEditDialogOpen(false);
+    setEditingItem(undefined);
+  };
+
+  const handleDeleteItem = async (itemId: string) => {
+    if (items && items.length <= 1) {
+      toast.error("Cannot delete the last item.", { description: "A request must have at least one item. Consider deleting the entire request instead." });
+      return;
+    }
+    await deleteItemMutation.mutateAsync(itemId);
+  };
+
   if (!items || items.length === 0) {
     return (
       <div className="text-muted-foreground text-center py-4">
@@ -40,6 +73,7 @@ const RequestItemsTable: React.FC<RequestItemsTableProps> = ({ items }) => {
               <TableHead>Unit Price</TableHead>
               <TableHead>Format</TableHead>
               <TableHead>Link</TableHead>
+              {isEditable && <TableHead className="text-right">Actions</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -60,11 +94,55 @@ const RequestItemsTable: React.FC<RequestItemsTableProps> = ({ items }) => {
                     "N/A"
                   )}
                 </TableCell>
+                {isEditable && (
+                  <TableCell className="text-right">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleEditItem(item)}
+                      className="mr-2"
+                      title="Edit Item"
+                      disabled={updateItemMutation.isPending || deleteItemMutation.isPending}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      onClick={() => handleDeleteItem(item.id)}
+                      title="Delete Item"
+                      disabled={updateItemMutation.isPending || deleteItemMutation.isPending}
+                    >
+                      {deleteItemMutation.isPending && deleteItemMutation.variables === item.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </TableCell>
+                )}
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </div>
+
+      {/* Edit Item Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Edit Request Item</DialogTitle>
+          </DialogHeader>
+          {editingItem && (
+            <RequestItemForm
+              initialData={editingItem}
+              onSubmit={handleUpdateItem}
+              onCancel={() => setIsEditDialogOpen(false)}
+              isSubmitting={updateItemMutation.isPending}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 };

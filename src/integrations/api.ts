@@ -200,7 +200,9 @@ export const apiGetRequests = async (): Promise<SupabaseRequest[]> => {
     .from('requests')
     .select(`
       *,
-      items:request_items (*)
+      items:request_items (*),
+      shipping_address:shipping_addresses (*),
+      billing_address:billing_addresses (*)
     `)
     .order('created_at', { ascending: false });
 
@@ -221,14 +223,29 @@ export const apiGetRequests = async (): Promise<SupabaseRequest[]> => {
     project_codes: req.project_codes || null,
     notes: req.notes || null,
     account_manager_id: req.account_manager_id || null,
+    shipping_address_id: req.shipping_address_id || null,
+    billing_address_id: req.billing_address_id || null,
+    // Nota: Los objetos de dirección se adjuntan aquí si se usan en el cliente,
+    // pero por ahora solo necesitamos los IDs para la creación.
   })) as SupabaseRequest[];
 
   return requests;
 };
 
-export const apiAddRequest = async (data: Omit<SupabaseRequest, "id" | "created_at" | "status" | "items" | "po_number" | "quote_url" | "po_url" | "slip_url"> & { items: RequestItem[] }): Promise<SupabaseRequest> => {
+interface AddRequestData {
+  vendorId: string;
+  requesterId: string;
+  accountManagerId: string | null;
+  shippingAddressId: string; // Nuevo
+  billingAddressId: string; // Nuevo
+  notes?: string | null;
+  projectCodes?: string[] | null;
+  items: RequestItem[];
+}
+
+export const apiAddRequest = async (data: AddRequestData): Promise<SupabaseRequest> => {
   // Usar la función RPC para manejar la inserción de la solicitud y sus ítems en una sola transacción
-  const { vendor_id, requester_id, account_manager_id, notes, project_codes, items } = data;
+  const { vendorId, requesterId, accountManagerId, shippingAddressId, billingAddressId, notes, projectCodes, items } = data;
 
   const itemsJsonb = items.map(item => ({
     productName: item.productName,
@@ -241,15 +258,16 @@ export const apiAddRequest = async (data: Omit<SupabaseRequest, "id" | "created_
     brand: item.brand,
   }));
 
-  // Aseguramos que account_manager_id se pase como UUID o null. 
-  // Si es una cadena vacía, también debe ser null.
-  const accountManagerIdUuid = (account_manager_id && account_manager_id.trim() !== '') ? account_manager_id : null;
+  // Aseguramos que accountManagerId se pase como UUID o null. 
+  const accountManagerIdUuid = (accountManagerId && accountManagerId.trim() !== '') ? accountManagerId : null;
 
   const { data: newRequest, error } = await supabase.rpc('create_request_with_items', {
-    vendor_id_in: vendor_id,
-    account_manager_id_in: accountManagerIdUuid, // Pasamos como UUID o null
+    vendor_id_in: vendorId,
+    account_manager_id_in: accountManagerIdUuid,
+    shipping_address_id_in: shippingAddressId,
+    billing_address_id_in: billingAddressId,
     notes_in: notes,
-    project_codes_in: project_codes,
+    project_codes_in: projectCodes,
     items_in: itemsJsonb,
   });
 

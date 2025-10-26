@@ -65,6 +65,21 @@ export interface EmailTemplate {
   created_at: string;
 }
 
+export interface Address {
+  id: string;
+  created_at: string;
+  name: string;
+  address_line_1: string;
+  address_line_2: string | null;
+  city: string;
+  state: string;
+  zip_code: string;
+  country: string;
+}
+
+export interface ShippingAddress extends Address {}
+export interface BillingAddress extends Address {}
+
 export interface SupabaseRequestItem {
   id: string;
   request_id: string;
@@ -84,6 +99,8 @@ export interface SupabaseRequest {
   vendor_id: string;
   requester_id: string; // Still references auth.users.id via profiles
   account_manager_id: string | null; // Now references public.account_managers.id
+  shipping_address_id: string | null; // Nuevo campo
+  billing_address_id: string | null; // Nuevo campo
   status: RequestStatus;
   notes: string | null;
   project_codes: string[] | null; // Still string[] but values are public.projects.id

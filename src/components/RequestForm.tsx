@@ -29,6 +29,7 @@ import { useVendors } from "@/hooks/use-vendors";
 import { useAddRequest } from "@/hooks/use-requests";
 import { useAccountManagers } from "@/hooks/use-account-managers";
 import { useProjects } from "@/hooks/use-projects";
+import { useShippingAddresses, useBillingAddresses } from "@/hooks/use-addresses"; // Importar hooks de direcciones
 import { getFullName } from "@/hooks/use-profiles";
 
 const itemSchema = z.object({
@@ -52,6 +53,8 @@ const formSchema = z.object({
   vendorId: z.string().min(1, { message: "El proveedor es obligatorio." }),
   requesterId: z.string().min(1, { message: "El ID del solicitante es obligatorio." }), 
   accountManagerId: z.string().optional(), 
+  shippingAddressId: z.string().min(1, { message: "La dirección de envío es obligatoria." }), // Nuevo campo
+  billingAddressId: z.string().min(1, { message: "La dirección de facturación es obligatoria." }), // Nuevo campo
   items: z.array(itemSchema).min(1, { message: "Se requiere al menos un artículo." }),
   attachments: z.any().optional(),
   projectCodes: z.array(z.string()).optional(),
@@ -65,6 +68,8 @@ const RequestForm: React.FC = () => {
   const { data: vendors, isLoading: isLoadingVendors } = useVendors();
   const { data: accountManagers, isLoading: isLoadingAccountManagers } = useAccountManagers();
   const { data: projects, isLoading: isLoadingProjects } = useProjects();
+  const { data: shippingAddresses, isLoading: isLoadingShippingAddresses } = useShippingAddresses(); // Nuevo hook
+  const { data: billingAddresses, isLoading: isLoadingBillingAddresses } = useBillingAddresses(); // Nuevo hook
   const addRequestMutation = useAddRequest();
 
   const form = useForm<RequestFormValues>({
@@ -73,6 +78,8 @@ const RequestForm: React.FC = () => {
       vendorId: "",
       requesterId: session?.user?.id || "",
       accountManagerId: "unassigned",
+      shippingAddressId: "", // Inicializar
+      billingAddressId: "", // Inicializar
       items: [{ 
         productName: "", 
         catalogNumber: "", 
@@ -123,6 +130,8 @@ const RequestForm: React.FC = () => {
       vendorId: data.vendorId,
       requesterId: session.user.id,
       accountManagerId: managerId,
+      shippingAddressId: data.shippingAddressId, // Nuevo campo
+      billingAddressId: data.billingAddressId, // Nuevo campo
       notes: data.notes,
       projectCodes: data.projectCodes,
       items: itemsToSubmit,
@@ -132,6 +141,8 @@ const RequestForm: React.FC = () => {
       vendorId: "",
       requesterId: session.user.id,
       accountManagerId: "unassigned",
+      shippingAddressId: "",
+      billingAddressId: "",
       items: [{ 
         productName: "", 
         catalogNumber: "", 
@@ -148,6 +159,7 @@ const RequestForm: React.FC = () => {
   };
 
   const requesterName = profile ? getFullName(profile) : 'Cargando...';
+  const isLoadingAddresses = isLoadingShippingAddresses || isLoadingBillingAddresses;
 
   return (
     <Form {...form}>
@@ -183,6 +195,54 @@ const RequestForm: React.FC = () => {
             )}
           />
         </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="shippingAddressId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Dirección de Envío</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingAddresses}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder={isLoadingAddresses ? "Cargando direcciones..." : "Selecciona dirección de envío"} />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {shippingAddresses?.map((address) => (
+                      <SelectItem key={address.id} value={address.id}>{address.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="billingAddressId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Dirección de Facturación</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingAddresses}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder={isLoadingAddresses ? "Cargando direcciones..." : "Selecciona dirección de facturación"} />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {billingAddresses?.map((address) => (
+                      <SelectItem key={address.id} value={address.id}>{address.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
             control={form.control}

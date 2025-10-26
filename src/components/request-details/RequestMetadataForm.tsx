@@ -41,9 +41,10 @@ interface RequestMetadataFormProps {
   profiles: Profile[]; // Se mantiene para el requester, pero no para Account Managers
   onSubmit: (data: MetadataFormValues) => Promise<void>;
   isSubmitting: boolean;
+  isEditable: boolean; // Nuevo prop
 }
 
-const RequestMetadataForm: React.FC<RequestMetadataFormProps> = ({ request, onSubmit, isSubmitting }) => {
+const RequestMetadataForm: React.FC<RequestMetadataFormProps> = ({ request, onSubmit, isSubmitting, isEditable }) => {
   const { data: accountManagers, isLoading: isLoadingManagers } = useAccountManagers(); // Usar el nuevo hook
   const { data: projects, isLoading: isLoadingProjects } = useProjects(); // Usar el nuevo hook
 
@@ -56,6 +57,11 @@ const RequestMetadataForm: React.FC<RequestMetadataFormProps> = ({ request, onSu
       notes: request.notes || "",
       projectCodes: defaultProjectCodes,
     },
+    values: { // Usar values para asegurar que el formulario se actualice si la solicitud cambia
+      accountManagerId: request.account_manager_id || "unassigned",
+      notes: request.notes || "",
+      projectCodes: defaultProjectCodes,
+    }
   });
 
   const handleSubmit = (data: MetadataFormValues) => {
@@ -71,7 +77,7 @@ const RequestMetadataForm: React.FC<RequestMetadataFormProps> = ({ request, onSu
           render={({ field }) => (
             <FormItem>
               <FormLabel>Assigned Account Manager</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value || "unassigned"} disabled={isLoadingManagers || isSubmitting}>
+              <Select onValueChange={field.onChange} value={field.value || "unassigned"} disabled={isLoadingManagers || isSubmitting || !isEditable}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder={isLoadingManagers ? "Loading managers..." : "Select an account manager"} />
@@ -99,7 +105,7 @@ const RequestMetadataForm: React.FC<RequestMetadataFormProps> = ({ request, onSu
               <Popover>
                 <PopoverTrigger asChild>
                   <FormControl>
-                    <Button variant="outline" role="combobox" className={cn("w-full justify-between", !field.value || field.value.length === 0 && "text-muted-foreground")} disabled={isLoadingProjects || isSubmitting}>
+                    <Button variant="outline" role="combobox" className={cn("w-full justify-between", !field.value || field.value.length === 0 && "text-muted-foreground")} disabled={isLoadingProjects || isSubmitting || !isEditable}>
                       {field.value && field.value.length > 0 ? (
                         <div className="flex flex-wrap gap-1">
                           {field.value.map((projectId) => {
@@ -119,6 +125,7 @@ const RequestMetadataForm: React.FC<RequestMetadataFormProps> = ({ request, onSu
                     <CommandGroup>
                       {projects?.map((project) => (
                         <CommandItem value={project.name} key={project.id} onSelect={() => {
+                          if (!isEditable) return; // Prevenir cambios si no es editable
                           const currentValues = field.value || [];
                           if (currentValues.includes(project.id)) {
                             field.onChange(currentValues.filter((id) => id !== project.id));
@@ -145,23 +152,25 @@ const RequestMetadataForm: React.FC<RequestMetadataFormProps> = ({ request, onSu
             <FormItem>
               <FormLabel>Notes</FormLabel>
               <FormControl>
-                <Textarea placeholder="Any specific details about this request..." {...field} disabled={isSubmitting} />
+                <Textarea placeholder="Any specific details about this request..." {...field} disabled={isSubmitting || !isEditable} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
-        <div className="flex justify-end pt-4">
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...
-              </>
-            ) : (
-              "Update Metadata"
-            )}
-          </Button>
-        </div>
+        {isEditable && (
+          <div className="flex justify-end pt-4">
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...
+                </>
+              ) : (
+                "Update Metadata"
+              )}
+            </Button>
+          </div>
+        )}
       </form>
     </Form>
   );
