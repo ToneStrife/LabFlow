@@ -74,20 +74,20 @@ const Dashboard = () => {
         <SummaryCard 
           title="Solicitudes Pendientes" 
           count={pendingRequestsCount} 
-          icon={<Clock />} 
-          colorClass="text-orange-500" 
+          icon={<Clock className="text-orange-500" />} 
+          colorClass="orange-500" 
         />
         <SummaryCard 
           title="Artículos Pedidos" 
           count={orderedItemsCount} 
-          icon={<Package />} 
-          colorClass="text-blue-500" 
+          icon={<Package className="text-primary" />} 
+          colorClass="primary" 
         />
         <SummaryCard 
           title="Artículos Recibidos" 
           count={receivedItemsCount} 
-          icon={<CheckCircle />} 
-          colorClass="text-green-500" 
+          icon={<CheckCircle className="text-green-600" />} 
+          colorClass="green-600" 
         />
       </div>
 
