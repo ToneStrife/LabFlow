@@ -17,7 +17,7 @@ import {
 import {
   // getMockRequests, // ELIMINADO
   addMockRequest,
-  updateMockRequestStatus,
+  updateMockRequestStatus as mockUpdateStatus, // Renombrar para evitar conflictos
   updateMockRequestMetadata,
   deleteMockRequest,
   getMockInventory,
@@ -341,22 +341,23 @@ export const apiUpdateRequestStatus = async (
 
   if (error) throw error;
 
-  // Lógica de inventario (MOCK)
-  if (status === "Ordered" && updatedRequest.items) {
+  // Lógica de inventario: Mover artículos al inventario cuando se marcan como "Recibido"
+  if (status === "Received" && updatedRequest.items) {
     try {
       for (const item of updatedRequest.items) {
-        await apiAddInventoryItem({
-          product_name: item.product_name,
-          catalog_number: item.catalog_number,
-          brand: item.brand,
-          quantity: item.quantity,
-          unit_price: item.unit_price,
-          format: item.format,
+        // Usar la función RPC para añadir o actualizar el inventario
+        const { error: inventoryError } = await supabase.rpc('add_or_update_inventory_item', {
+          product_name_in: item.product_name,
+          catalog_number_in: item.catalog_number,
+          brand_in: item.brand,
+          quantity_in: item.quantity,
+          unit_price_in: item.unit_price,
+          format_in: item.format,
         });
+        if (inventoryError) throw inventoryError;
       }
     } catch (inventoryError) {
-      // Aseguramos que el error de inventario se lance como un Error
-      console.error("Error adding items to mock inventory:", inventoryError);
+      console.error("Error adding items to inventory via RPC:", inventoryError);
       throw new Error(`Failed to add items to inventory: ${inventoryError instanceof Error ? inventoryError.message : String(inventoryError)}`);
     }
   }
@@ -467,39 +468,33 @@ export const apiDeleteRequest = async (id: string): Promise<void> => {
 
 // --- API de Inventario (usando mock data por ahora) ---
 export const apiGetInventory = async (): Promise<InventoryItem[]> => {
-  try {
-    await new Promise(resolve => setTimeout(resolve, 300)); // Simular retraso
-    return getMockInventory();
-  } catch (e) {
-    throw new Error(`Failed to fetch mock inventory: ${e instanceof Error ? e.message : String(e)}`);
-  }
+  const { data, error } = await supabase.from('inventory').select('*');
+  if (error) throw error;
+  return data;
 };
 
 export const apiAddInventoryItem = async (data: Omit<InventoryItem, "id" | "added_at" | "last_updated">): Promise<InventoryItem> => {
-  try {
-    await new Promise(resolve => setTimeout(resolve, 300)); // Simular retraso
-    return addMockInventoryItem(data);
-  } catch (e) {
-    throw new Error(`Failed to add mock inventory item: ${e instanceof Error ? e.message : String(e)}`);
-  }
+  const { data: newItem, error } = await supabase.rpc('add_or_update_inventory_item', {
+    product_name_in: data.product_name,
+    catalog_number_in: data.catalog_number,
+    brand_in: data.brand,
+    quantity_in: data.quantity,
+    unit_price_in: data.unit_price,
+    format_in: data.format,
+  }).single();
+  if (error) throw error;
+  return newItem;
 };
 
 export const apiUpdateInventoryItem = async (id: string, data: Partial<Omit<InventoryItem, "id" | "added_at">>): Promise<InventoryItem> => {
-  try {
-    await new Promise(resolve => setTimeout(resolve, 300)); // Simular retraso
-    return updateMockInventoryItem(id, data);
-  } catch (e) {
-    throw new Error(`Failed to update mock inventory item: ${e instanceof Error ? e.message : String(e)}`);
-  }
+  const { data: updatedItem, error } = await supabase.from('inventory').update(data).eq('id', id).select().single();
+  if (error) throw error;
+  return updatedItem;
 };
 
 export const apiDeleteInventoryItem = async (id: string): Promise<void> => {
-  try {
-    await new Promise(resolve => setTimeout(resolve, 300)); // Simular retraso
-    return deleteMockInventoryItem(id);
-  } catch (e) {
-    throw new Error(`Failed to delete mock inventory item: ${e instanceof Error ? e.message : String(e)}`);
-  }
+  const { error } = await supabase.from('inventory').delete().eq('id', id);
+  if (error) throw error;
 };
 
 // --- API de Envío de Correo Electrónico (REAL) ---
