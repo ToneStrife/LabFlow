@@ -141,7 +141,9 @@ const RequestForm: React.FC = () => {
       showSuccess("¡Detalles del producto autocompletados desde el historial!");
 
     } catch (error: any) {
-      showError(error.message || "Fallo al buscar detalles del producto.");
+      // FIX: Asegurar que el error sea una cadena legible
+      const errorMessage = error instanceof Error ? error.message : (typeof error === 'object' && error !== null && error.message) ? error.message : String(error);
+      showError(errorMessage || "Fallo al buscar detalles del producto.");
     } finally {
       dismissToast(toastId);
       setEnrichingIndex(null);
