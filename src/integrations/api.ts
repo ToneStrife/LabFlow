@@ -31,13 +31,13 @@ import {
 // --- API de Perfiles (Usuarios del sistema) ---
 export const apiGetProfiles = async (): Promise<Profile[]> => {
   const { data, error } = await supabase.from('profiles').select('*');
-  if (error) throw error;
+  if (error) throw new Error(error.message);
   return data;
 };
 
 export const apiUpdateProfile = async (id: string, data: Partial<Profile>): Promise<void> => {
   const { error } = await supabase.from('profiles').update(data).eq('id', id);
-  if (error) throw error;
+  if (error) throw new Error(error.message);
 };
 
 export const apiDeleteProfile = async (id: string): Promise<void> => {
@@ -117,73 +117,73 @@ export const apiInviteUser = async (data: InviteUserData): Promise<any> => {
 // --- API de Vendedores ---
 export const apiGetVendors = async (): Promise<Vendor[]> => {
   const { data, error } = await supabase.from('vendors').select('*');
-  if (error) throw error;
+  if (error) throw new Error(error.message);
   return data;
 };
 
 export const apiAddVendor = async (data: Omit<Vendor, "id" | "created_at">): Promise<Vendor> => {
   const { data: newVendor, error } = await supabase.from('vendors').insert(data).select().single();
-  if (error) throw error;
+  if (error) throw new Error(error.message);
   return newVendor;
 };
 
 export const apiUpdateVendor = async (id: string, data: Partial<Omit<Vendor, "id" | "created_at">>): Promise<Vendor> => {
   const { data: updatedVendor, error } = await supabase.from('vendors').update(data).eq('id', id).select().single();
-  if (error) throw error;
+  if (error) throw new Error(error.message);
   return updatedVendor;
 };
 
 export const apiDeleteVendor = async (id: string): Promise<void> => {
   const { error } = await supabase.from('vendors').delete().eq('id', id);
-  if (error) throw error;
+  if (error) throw new Error(error.message);
 };
 
 // --- API de Account Managers (Contactos, no usuarios del sistema) ---
 export const apiGetAccountManagers = async (): Promise<AccountManager[]> => {
   const { data, error } = await supabase.from('account_managers').select('*');
-  if (error) throw error;
+  if (error) throw new Error(error.message);
   return data;
 };
 
 export const apiAddAccountManager = async (data: Omit<AccountManager, "id" | "created_at">): Promise<AccountManager> => {
   const { data: newManager, error } = await supabase.from('account_managers').insert(data).select().single();
-  if (error) throw error;
+  if (error) throw new Error(error.message);
   return newManager;
 };
 
 export const apiUpdateAccountManager = async (id: string, data: Partial<Omit<AccountManager, "id" | "created_at">>): Promise<AccountManager> => {
   const { data: updatedManager, error } = await supabase.from('account_managers').update(data).eq('id', id).select().single();
-  if (error) throw error;
+  if (error) throw new Error(error.message);
   return updatedManager;
 };
 
 export const apiDeleteAccountManager = async (id: string): Promise<void> => {
   const { error } = await supabase.from('account_managers').delete().eq('id', id);
-  if (error) throw error;
+  if (error) throw new Error(error.message);
 };
 
 // --- API de Proyectos ---
 export const apiGetProjects = async (): Promise<Project[]> => {
   const { data, error } = await supabase.from('projects').select('*');
-  if (error) throw error;
+  if (error) throw new Error(error.message);
   return data;
 };
 
 export const apiAddProject = async (data: Omit<Project, "id" | "created_at">): Promise<Project> => {
   const { data: newProject, error } = await supabase.from('projects').insert(data).select().single();
-  if (error) throw error;
+  if (error) throw new Error(error.message);
   return newProject;
 };
 
 export const apiUpdateProject = async (id: string, data: Partial<Omit<Project, "id" | "created_at">>): Promise<Project> => {
   const { data: updatedProject, error } = await supabase.from('projects').update(data).eq('id', id).select().single();
-  if (error) throw error;
+  if (error) throw new Error(error.message);
   return updatedProject;
 };
 
 export const apiDeleteProject = async (id: string): Promise<void> => {
   const { error } = await supabase.from('projects').delete().eq('id', id);
-  if (error) throw error;
+  if (error) throw new Error(error.message);
 };
 
 // --- API de Búsqueda de Productos (Lógica Híbrida) ---
@@ -264,7 +264,7 @@ export const apiGetRequests = async (): Promise<SupabaseRequest[]> => {
 
   if (requestsError) {
     console.error("Error fetching requests from Supabase:", requestsError);
-    throw requestsError;
+    throw new Error(requestsError.message);
   }
 
   // Mapear los datos para asegurar que 'items' es un array de SupabaseRequestItem
@@ -312,7 +312,7 @@ export const apiAddRequest = async (data: Omit<SupabaseRequest, "id" | "created_
 
   if (error) {
     console.error("Error invoking create_request_with_items RPC:", error);
-    throw error;
+    throw new Error(error.message);
   }
 
   // El RPC devuelve un objeto JSONB que ya incluye los ítems
@@ -339,7 +339,7 @@ export const apiUpdateRequestStatus = async (
     `)
     .single();
 
-  if (error) throw error;
+  if (error) throw new Error(error.message);
 
   // Lógica de inventario: Mover artículos al inventario cuando se marcan como "Recibido"
   if (status === "Received" && updatedRequest.items) {
@@ -354,7 +354,7 @@ export const apiUpdateRequestStatus = async (
           unit_price_in: item.unit_price,
           format_in: item.format,
         });
-        if (inventoryError) throw inventoryError;
+        if (inventoryError) throw new Error(inventoryError.message);
       }
     } catch (inventoryError) {
       console.error("Error adding items to inventory via RPC:", inventoryError);
@@ -388,7 +388,7 @@ export const apiUpdateRequestMetadata = async (
     `)
     .single();
 
-  if (error) throw error;
+  if (error) throw new Error(error.message);
   return updatedRequest as SupabaseRequest;
 };
 
@@ -463,13 +463,13 @@ export const apiUpdateRequestFile = async (
 
 export const apiDeleteRequest = async (id: string): Promise<void> => {
   const { error } = await supabase.from('requests').delete().eq('id', id);
-  if (error) throw error;
+  if (error) throw new Error(error.message);
 };
 
 // --- API de Inventario (usando mock data por ahora) ---
 export const apiGetInventory = async (): Promise<InventoryItem[]> => {
   const { data, error } = await supabase.from('inventory').select('*');
-  if (error) throw error;
+  if (error) throw new Error(error.message);
   return data;
 };
 
@@ -482,19 +482,19 @@ export const apiAddInventoryItem = async (data: Omit<InventoryItem, "id" | "adde
     unit_price_in: data.unit_price,
     format_in: data.format,
   }).single();
-  if (error) throw error;
+  if (error) throw new Error(error.message);
   return newItem;
 };
 
 export const apiUpdateInventoryItem = async (id: string, data: Partial<Omit<InventoryItem, "id" | "added_at">>): Promise<InventoryItem> => {
   const { data: updatedItem, error } = await supabase.from('inventory').update(data).eq('id', id).select().single();
-  if (error) throw error;
+  if (error) throw new Error(error.message);
   return updatedItem;
 };
 
 export const apiDeleteInventoryItem = async (id: string): Promise<void> => {
   const { error } = await supabase.from('inventory').delete().eq('id', id);
-  if (error) throw error;
+  if (error) throw new Error(error.message);
 };
 
 // --- API de Envío de Correo Electrónico (REAL) ---
@@ -528,23 +528,23 @@ export const apiSendEmail = async (email: EmailData): Promise<void> => {
 // --- API de Plantillas de Correo Electrónico ---
 export const apiGetEmailTemplates = async (): Promise<EmailTemplate[]> => {
   const { data, error } = await supabase.from('email_templates').select('*');
-  if (error) throw error;
+  if (error) throw new Error(error.message);
   return data;
 };
 
 export const apiAddEmailTemplate = async (data: Omit<EmailTemplate, "id" | "created_at">): Promise<EmailTemplate> => {
   const { data: newTemplate, error } = await supabase.from('email_templates').insert(data).select().single();
-  if (error) throw error;
+  if (error) throw new Error(error.message);
   return newTemplate;
 };
 
 export const apiUpdateEmailTemplate = async (id: string, data: Partial<Omit<EmailTemplate, "id" | "created_at">>): Promise<EmailTemplate> => {
   const { data: updatedTemplate, error } = await supabase.from('email_templates').update(data).eq('id', id).select().single();
-  if (error) throw error;
+  if (error) throw new Error(error.message);
   return updatedTemplate;
 };
 
 export const apiDeleteEmailTemplate = async (id: string): Promise<void> => {
   const { error } = await supabase.from('email_templates').delete().eq('id', id);
-  if (error) throw error;
+  if (error) throw new Error(error.message);
 };
