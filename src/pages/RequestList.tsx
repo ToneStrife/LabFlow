@@ -10,14 +10,14 @@ import { useAllProfiles, getFullName } from "@/hooks/use-profiles";
 import { useAccountManagers } from "@/hooks/use-account-managers";
 import { useProjects } from "@/hooks/use-projects"; // Importar useProjects
 import { useEmailTemplates } from "@/hooks/use-email-templates"; // Importar useEmailTemplates
-import { processEmailTemplate } from "@/utils/email-templating"; // Importar la utilidad de templating
-import EmailDialog, { EmailFormValues } from "./EmailDialog";
+import { processEmailTemplate, processTextTemplate, processPlainTextTemplate } from "@/utils/email-templating"; // Importar la utilidad de templating
+import EmailDialog, { EmailFormValues } from "@/components/EmailDialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import RequestListToolbar from "./request-list/RequestListToolbar";
-import RequestListTable from "./request-list/RequestListTable";
+import RequestListToolbar from "@/components/request-list/RequestListToolbar";
+import RequestListTable from "@/components/request-list/RequestListTable";
 import { toast } from "sonner";
 import { useSession } from "@/components/SessionContextProvider"; // Importar useSession
 
@@ -78,7 +78,7 @@ const RequestList: React.FC = () => {
 
     const poRequestTemplate = emailTemplates?.find(t => t.template_name === 'PO Request');
     if (!poRequestTemplate) {
-      toast.error("Plantilla de correo electrónico 'PO Request' no encontrada.");
+      toast.error("Plantilla de correo electrónico 'PO Request' no encontrada. Por favor, crea una en el panel de Admin.");
       return;
     }
 
@@ -89,51 +89,23 @@ const RequestList: React.FC = () => {
       accountManager: accountManagers?.find(am => am.id === request.account_manager_id),
       projects: projects,
       actorProfile: profile,
+      // Nota: Las direcciones de envío/facturación no están disponibles en la lista, pero el templating las manejará como N/A si se usan.
     };
 
     const attachments = request.quote_url ? [{ name: `Quote_Request_${request.id}.pdf`, url: request.quote_url }] : [];
 
     setEmailInitialData({
       to: getAccountManagerEmail(request.account_manager_id),
-      subject: processEmailTemplate(poRequestTemplate.subject_template, context),
-      body: processEmailTemplate(poRequestTemplate.body_template, context),
+      subject: processTextTemplate(poRequestTemplate.subject_template, context),
+      body: processPlainTextTemplate(poRequestTemplate.body_template, context),
       attachments,
     });
     setIsEmailDialogOpen(true);
   };
 
-  const openApproveRequestDialog = (request: SupabaseRequest) => {
-    setRequestToApprove(request);
-    setIsApproveRequestDialogOpen(true);
-  };
-
-  const handleApproveAndRequestQuoteEmail = async () => {
-    if (requestToApprove) {
-      await updateStatusMutation.mutateAsync({ id: requestToApprove.id, status: "Quote Requested" });
-      
-      const quoteTemplate = emailTemplates?.find(t => t.template_name === 'Quote Request');
-      if (!quoteTemplate) {
-        toast.error("Plantilla de correo electrónico 'Quote Request' no encontrada.");
-        return;
-      }
-
-      const context = {
-        request: requestToApprove,
-        vendor: vendors?.find(v => v.id === requestToApprove.vendor_id),
-        requesterProfile: profiles?.find(p => p.id === requestToApprove.requester_id),
-        accountManager: accountManagers?.find(am => am.id === requestToApprove.account_manager_id),
-        projects: projects,
-        actorProfile: profile,
-      };
-
-      setEmailInitialData({
-        to: getVendorEmail(requestToApprove.vendor_id),
-        subject: processEmailTemplate(quoteTemplate.subject_template, context),
-        body: processEmailTemplate(quoteTemplate.body_template, context),
-      });
-      setIsApproveRequestDialogOpen(false);
-      setIsEmailDialogOpen(true);
-    }
+  // NUEVO: Manejador de aprobación simple para la vista de lista
+  const handleApproveRequest = async (request: SupabaseRequest) => {
+    await updateStatusMutation.mutateAsync({ id: request.id, status: "Quote Requested" });
   };
 
   const openQuoteAndPODetailsDialog = (request: SupabaseRequest) => {
@@ -196,29 +168,12 @@ const RequestList: React.FC = () => {
         profiles={profiles}
         isUpdatingStatus={updateStatusMutation.isPending}
         onViewDetails={(id) => navigate(`/requests/${id}`)}
-        onApprove={openApproveRequestDialog}
+        onApprove={handleApproveRequest} // Usar la aprobación simple
         onEnterQuoteDetails={openQuoteAndPODetailsDialog}
         onSendPORequest={handleSendPORequest}
         onMarkAsOrdered={openOrderConfirmationDialog}
         onMarkAsReceived={handleMarkAsReceived}
       />
-
-      <Dialog open={isApproveRequestDialogOpen} onOpenChange={setIsApproveRequestDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Aprobar Solicitud</DialogTitle>
-            <DialogDescription>Elige cómo proceder con esta solicitud.</DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <p>ID de Solicitud: {requestToApprove?.id}</p>
-            <p>Proveedor: {vendors?.find(v => v.id === requestToApprove?.vendor_id)?.name || "N/A"}</p>
-          </div>
-          <DialogFooter className="flex flex-col sm:flex-row sm:justify-end sm:space-x-2">
-            <Button variant="outline" onClick={() => updateStatusMutation.mutate({ id: requestToApprove!.id, status: "Quote Requested" }).then(() => setIsApproveRequestDialogOpen(false))}>Aprobar Solamente</Button>
-            <Button onClick={handleApproveAndRequestQuoteEmail} disabled={updateStatusMutation.isPending}>Aprobar y Solicitar Cotización (Correo)</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       <EmailDialog
         isOpen={isEmailDialogOpen}
