@@ -66,8 +66,8 @@ const Dashboard = () => {
         Bienvenido a tu Panel de Gestión de Pedidos de Laboratorio.
       </p>
       
-      {/* Redesigned Summary Cards (Smaller) */}
-      <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      {/* Redesigned Summary Cards (Narrower) */}
+      <div className="mt-8 grid grid-cols-3 gap-4"> {/* Usamos grid-cols-3 para forzar 3 columnas */}
         <SummaryCard 
           title="Solicitudes Pendientes" 
           count={pendingRequestsCount} 

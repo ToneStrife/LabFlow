@@ -62,12 +62,18 @@ const RequestListTable: React.FC<RequestListTableProps> = ({
     return getFullName(profile);
   };
 
-  // Función ya no necesaria en la tabla, pero se mantiene por si acaso
-  // const getAccountManagerName = (managerId: string | null) => {
-  //   if (!managerId) return "N/A";
-  //   const manager = accountManagers?.find(am => am.id === managerId);
-  //   return manager ? `${manager.first_name} ${manager.last_name}` : "N/A";
-  // };
+  const getItemDisplay = (items: SupabaseRequest['items']) => {
+    if (!items || items.length === 0) return "N/A";
+    
+    const firstItem = items[0];
+    const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
+    
+    if (items.length === 1) {
+      return `${firstItem.product_name} (${firstItem.quantity}x)`;
+    }
+    
+    return `${firstItem.product_name} (+${items.length - 1} más, ${totalItems} total)`;
+  };
 
   return (
     <div className="rounded-md border">
@@ -76,7 +82,7 @@ const RequestListTable: React.FC<RequestListTableProps> = ({
           <TableRow>
             <TableHead>Vendor</TableHead>
             <TableHead>Requester</TableHead>
-            <TableHead>Items</TableHead> {/* Columna cambiada */}
+            <TableHead>Item / Summary</TableHead> {/* Título de columna actualizado */}
             <TableHead>Status</TableHead>
             <TableHead>Date</TableHead>
             <TableHead className="text-right">Actions</TableHead>
@@ -93,17 +99,15 @@ const RequestListTable: React.FC<RequestListTableProps> = ({
             requests.map((request) => {
               const vendor = vendors?.find(v => v.id === request.vendor_id);
               const requesterName = getRequesterName(request.requester_id);
-              // const accountManagerName = getAccountManagerName(request.account_manager_id); // Eliminado
               const date = format(new Date(request.created_at), 'yyyy-MM-dd');
-              const totalItems = request.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
 
               return (
                 <TableRow key={request.id}>
                   <TableCell className="font-medium">{vendor?.name || "N/A"}</TableCell>
                   <TableCell>{requesterName}</TableCell>
-                  <TableCell>
-                    {totalItems} item{totalItems !== 1 ? 's' : ''}
-                  </TableCell> {/* Contenido cambiado */}
+                  <TableCell className="max-w-[200px] truncate" title={getItemDisplay(request.items)}>
+                    {getItemDisplay(request.items)}
+                  </TableCell>
                   <TableCell>
                     <Badge variant={getStatusBadgeVariant(request.status)}>
                       {request.status}
