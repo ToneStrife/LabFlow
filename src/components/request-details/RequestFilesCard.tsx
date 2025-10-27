@@ -44,14 +44,14 @@ const FileRow: React.FC<{ label: string; filePath: string | null; onUpload: () =
     if (!filePath) return;
     setIsGenerating(true);
     
-    // No necesitamos el cacheBuster en la ruta si el nombre del archivo ya incluye un timestamp único.
     const signedUrl = await generateSignedUrl(filePath);
     setIsGenerating(false);
 
     if (signedUrl) {
       window.open(signedUrl, '_blank');
     } else {
-      toast.error("No se pudo generar la URL firmada. Verifica que el archivo exista y que tu sesión esté activa.");
+      // Explicit toast if the utility failed to return a URL
+      toast.error(`No se pudo generar la URL firmada para ${label}.`);
     }
   };
 

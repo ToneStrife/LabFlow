@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Edit, Loader2 } from "lucide-react";
 import { generateSignedUrl } from "@/utils/supabase-storage"; // Importar utilidad
 import { getFullName } from "@/hooks/use-profiles"; // Importar getFullName
+import { toast } from "sonner"; // Importar toast
 
 interface RequestSummaryCardProps {
   request: SupabaseRequest;
@@ -78,6 +79,9 @@ const RequestSummaryCard: React.FC<RequestSummaryCardProps> = ({ request, vendor
 
     if (signedUrl) {
       window.open(signedUrl, '_blank');
+    } else {
+      // Fallback toast in case generateSignedUrl failed but didn't show a toast (or if the user missed it)
+      toast.error("No se pudo generar la URL firmada para la cotización.");
     }
   };
 
