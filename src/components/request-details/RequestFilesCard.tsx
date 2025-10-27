@@ -54,7 +54,7 @@ const FileRow: React.FC<{ label: string; filePath: string | null; onUpload: () =
   const handleViewClick = async () => {
     if (!filePath) return;
     setIsGenerating(true);
-    // Adding a cache-busting parameter to the URL
+    // Añadir un parámetro para invalidar la caché en la URL
     const cacheBuster = Date.now();
     const filePathWithCacheBuster = `${filePath}?cache=${cacheBuster}`;
     const signedUrl = await generateSignedUrl(filePathWithCacheBuster);
