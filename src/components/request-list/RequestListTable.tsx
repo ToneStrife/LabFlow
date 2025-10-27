@@ -10,10 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { RequestStatus } from "@/data/types";
-import { SupabaseRequest } from "@/hooks/use-requests";
-import { Vendor } from "@/hooks/use-vendors";
-import { Profile, getFullName } from "@/hooks/use-profiles";
+import { RequestStatus, SupabaseRequest, Vendor, Profile } from "@/data/types"; // Corrected imports
 import { AccountManager } from "@/data/types"; // Importar el tipo AccountManager
 import { useAccountManagers } from "@/hooks/use-account-managers"; // Usar el nuevo hook
 import { format } from "date-fns";
@@ -33,6 +30,7 @@ interface RequestListTableProps {
   onMarkAsReceived: (request: SupabaseRequest) => void;
   onDeny: (request: SupabaseRequest) => void;
   onCancel: (request: SupabaseRequest) => void;
+  onMerge: (request: SupabaseRequest) => void; // Nueva acción
 }
 
 const getStatusBadgeVariant = (status: RequestStatus) => {
@@ -45,7 +43,7 @@ const getStatusBadgeVariant = (status: RequestStatus) => {
     case "Ordered":
       return "default";
     case "Received":
-      return "success";
+      return "success"; // Now 'success' is a valid variant
     case "Denied":
     case "Cancelled":
       return "destructive";

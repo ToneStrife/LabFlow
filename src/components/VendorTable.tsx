@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Edit, Trash2 } from "lucide-react";
-import { Vendor } from "@/hooks/use-vendors"; // Import the Vendor interface from use-vendors.ts
+import { Vendor } from "@/data/types"; // Corrected import
 
 interface VendorTableProps {
   vendors: Vendor[];

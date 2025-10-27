@@ -120,8 +120,6 @@ export let mockVendors: Vendor[] = [
   },
 ];
 
-// ELIMINADO: export let mockCustomerAccounts: CustomerAccount[] = [...];
-
 export let mockRequestItems: SupabaseRequestItem[] = [
   {
     id: "ri1",
@@ -164,14 +162,17 @@ export let mockRequestItems: SupabaseRequestItem[] = [
 export let mockRequests: SupabaseRequest[] = [
   {
     id: "req1",
+    request_number: "2024-0001",
     created_at: new Date(Date.now() - 86400000 * 2).toISOString(), // 2 days ago
     vendor_id: "v1",
     requester_id: "mock-user-id-123",
-    account_manager_id: "manager-id-456", // This ID will need to be updated to a real account_manager.id
+    account_manager_id: "manager-id-456",
+    shipping_address_id: null, // Add mock value if needed
+    billing_address_id: null, // Add mock value if needed
     status: "Pending",
     notes: "Urgent request for cell culture supplies.",
-    project_codes: ["p1"], // These IDs will need to be updated to real project.id
-    items: [], // Items will be joined later
+    project_codes: ["p1"],
+    items: null, // Items will be joined later
     quote_url: null,
     po_number: null,
     po_url: null,
@@ -179,14 +180,17 @@ export let mockRequests: SupabaseRequest[] = [
   },
   {
     id: "req2",
+    request_number: "2024-0002",
     created_at: new Date(Date.now() - 86400000 * 5).toISOString(), // 5 days ago
     vendor_id: "v3",
     requester_id: "mock-user-id-123",
     account_manager_id: null,
+    shipping_address_id: null,
+    billing_address_id: null,
     status: "Quote Requested",
     notes: "Antibody for western blot.",
-    project_codes: ["p2"], // These IDs will need to be updated to real project.id
-    items: [], // Items will be joined later
+    project_codes: ["p2"],
+    items: null, // Items will be joined later
     quote_url: null,
     po_number: null,
     po_url: null,
@@ -194,14 +198,17 @@ export let mockRequests: SupabaseRequest[] = [
   },
   {
     id: "req3",
+    request_number: "2024-0003",
     created_at: new Date(Date.now() - 86400000 * 10).toISOString(), // 10 days ago
     vendor_id: "v2",
     requester_id: "mock-user-id-123",
-    account_manager_id: "manager-id-789", // This ID will need to be updated to a real account_manager.id
+    account_manager_id: "manager-id-789",
+    shipping_address_id: null,
+    billing_address_id: null,
     status: "Ordered",
     notes: "Chemicals for new experiment.",
-    project_codes: ["p3"], // These IDs will need to be updated to real project.id
-    items: [], // Items will be joined later
+    project_codes: ["p3"],
+    items: null, // Items will be joined later
     quote_url: "https://example.com/quote-req3.pdf",
     po_number: "PO-CHEM-001",
     po_url: "https://example.com/po/PO-CHEM-001.pdf",

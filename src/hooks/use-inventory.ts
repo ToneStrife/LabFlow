@@ -1,9 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { InventoryItem as MockInventoryItem } from "@/data/mockData";
+import { InventoryItem as InventoryItemType } from "@/data/types"; 
 import { toast } from "sonner";
 import { apiGetInventory, apiAddInventoryItem, apiUpdateInventoryItem, apiDeleteInventoryItem } from "@/integrations/api";
 
-export interface InventoryItem extends MockInventoryItem {}
+export interface InventoryItem extends InventoryItemType {}
 
 // --- Fetch Hook ---
 const fetchInventory = async (): Promise<InventoryItem[]> => {

@@ -4,7 +4,7 @@ import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FileText, Upload, Paperclip, Loader2, Trash2 } from "lucide-react";
-import { SupabaseRequest } from "@/hooks/use-requests";
+import { SupabaseRequest } from "@/data/types"; // Corrected import
 import { FileType } from "@/hooks/use-requests";
 import { generateSignedUrl } from "@/utils/supabase-storage"; // Importar utilidad
 import { toast } from "sonner";

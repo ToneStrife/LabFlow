@@ -107,7 +107,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   <div className="flex flex-col space-y-1">
                     <p className="text-sm font-medium leading-none">{userFullName}</p>
                     <p className="text-xs leading-none text-muted-foreground">
-                      {profile?.email}
+                      {profile?.email || session?.user?.email}
                     </p>
                   </div>
                 </DropdownMenuLabel>

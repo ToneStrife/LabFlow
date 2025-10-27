@@ -30,6 +30,7 @@ import { useAddRequest } from "@/hooks/use-requests";
 import { useSession } from "@/components/SessionContextProvider";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { SupabaseRequest } from "@/data/types"; // Corrected import
 
 const reorderSchema = z.object({
   vendorId: z.string().min(1, { message: "El proveedor es obligatorio." }),
@@ -93,7 +94,7 @@ const ReorderDialog: React.FC<ReorderDialogProps> = ({ isOpen, onOpenChange, ite
     }));
 
     try {
-      const newRequest = await addRequestMutation.mutateAsync({
+      const newRequest: SupabaseRequest = await addRequestMutation.mutateAsync({ // Explicitly type newRequest
         vendorId: data.vendorId,
         requesterId: session.user.id,
         accountManagerId: null, // Dejar sin asignar por defecto

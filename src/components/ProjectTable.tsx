@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Edit, Trash2 } from "lucide-react";
-import { Project } from "@/hooks/use-projects"; // Importar el tipo Project
+import { Project } from "@/data/types"; // Corrected import
 
 interface ProjectTableProps {
   projects: Project[];

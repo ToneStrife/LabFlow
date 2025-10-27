@@ -4,11 +4,7 @@ import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { SupabaseRequest, RequestStatus, Address } from "@/data/types"; // Importar Address
-import { Vendor } from "@/hooks/use-vendors";
-import { Profile, getFullName } from "@/hooks/use-profiles";
-import { AccountManager } from "@/data/types"; // Importar el tipo AccountManager
-import { Project } from "@/data/types"; // Importar el tipo Project
+import { SupabaseRequest, RequestStatus, Address, Vendor, Profile, AccountManager, Project } from "@/data/types"; // Corrected imports
 import { useAccountManagers } from "@/hooks/use-account-managers"; // Usar el nuevo hook
 import { useProjects } from "@/hooks/use-projects"; // Usar el nuevo hook
 import { useShippingAddresses, useBillingAddresses } from "@/hooks/use-addresses"; // Importar hooks de direcciones
@@ -36,7 +32,7 @@ const getStatusBadgeVariant = (status: RequestStatus) => {
     case "Ordered":
       return "default";
     case "Received":
-      return "success";
+      return "success"; // Now 'success' is a valid variant
     default:
       return "secondary";
   }

@@ -10,6 +10,7 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useUpdateProfile, getFullName } from "@/hooks/use-profiles";
 import { useNavigate } from "react-router-dom"; // Importar useNavigate
+import { Profile as ProfileType } from "@/data/types"; // Corrected import
 
 const Profile: React.FC = () => {
   const { session, profile, loading, logout, login } = useSession(); // Añadir login al hook
@@ -79,7 +80,7 @@ const Profile: React.FC = () => {
           <form onSubmit={handleUpdateProfile} className="space-y-4">
             <div>
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" value={session.user.email} disabled />
+              <Input id="email" type="email" value={session.user.email || ''} disabled />
             </div>
             <div>
               <Label htmlFor="firstName">Nombre</Label>

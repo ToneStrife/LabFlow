@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { PlusCircle, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import VendorForm from "@/components/VendorForm";
-import { useVendors, useAddVendor, useUpdateVendor, useDeleteVendor, Vendor } from "@/hooks/use-vendors";
+import { useVendors, useAddVendor, useUpdateVendor, useDeleteVendor } from "@/hooks/use-vendors";
+import { Vendor } from "@/data/types"; // Corrected import
 import { toast } from "sonner";
 
 const Vendors = () => {

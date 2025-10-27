@@ -38,6 +38,7 @@ import { useSession } from "@/components/SessionContextProvider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAggregatedReceivedItems } from "@/hooks/use-packing-slips";
 import { generateSignedUrl } from "@/utils/supabase-storage";
+import { RequestStatus as RequestStatusType, Vendor, Profile, AccountManager, Project, ShippingAddress, BillingAddress } from "@/data/types"; // Corrected import
 
 // Función auxiliar para obtener el nombre de archivo legible (copiada de RequestFilesCard.tsx)
 const getFileNameFromPath = (filePath: string): string => {
@@ -60,7 +61,7 @@ const getFileNameFromPath = (filePath: string): string => {
 const RequestDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { profile } = useSession();
+  const { profile, session } = useSession(); // Added session to useSession
   const { data: requests, isLoading: isLoadingRequests } = useRequests();
   const { data: vendors, isLoading: isLoadingVendors } = useVendors();
   const { data: profiles, isLoading: isLoadingProfiles } = useAllProfiles();
@@ -100,7 +101,7 @@ const RequestDetails: React.FC = () => {
   const [isCancelDialogOpen, setIsCancelDialogOpen] = React.useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   
-  const [newStatus, setNewStatus] = React.useState<string>(request?.status || "Pending");
+  const [newStatus, setNewStatus] = React.useState<RequestStatusType>(request?.status || "Pending");
 
 
   const getVendorEmail = (vendorId: string) => vendors?.find(v => v.id === vendorId)?.email || "";
@@ -112,7 +113,12 @@ const RequestDetails: React.FC = () => {
   };
 
   const handleSendEmail = async (emailData: EmailFormValues) => {
-    await sendEmailMutation.mutateAsync(emailData);
+    await sendEmailMutation.mutateAsync({
+      to: emailData.to!, // Ensure 'to' is not undefined
+      subject: emailData.subject,
+      body: emailData.body,
+      attachments: emailData.attachmentsForSend || emailData.attachments, // Use attachmentsForSend if available
+    });
     setIsEmailDialogOpen(false);
   };
 
@@ -143,7 +149,7 @@ const RequestDetails: React.FC = () => {
       billingAddress: billingAddresses?.find(a => a.id === request.billing_address_id),
     };
 
-    // Generar URL firmada para el adjunto (SOLO para mostrar en el diálogo)
+    // Preparar adjuntos:
     let attachmentsForDialog = [];
     let attachmentsForSend = [];
     
@@ -164,8 +170,8 @@ const RequestDetails: React.FC = () => {
 
     setEmailInitialData({
       to: getAccountManagerEmail(request.account_manager_id),
-      subject: processTextTemplate(poRequestTemplate.subject_template, context),
-      body: processPlainTextTemplate(poRequestTemplate.body_template, context), // Usar PlainText para el cuerpo editable
+      subject: processTextTemplate(poRequestTemplate.subject_template, context as any), // Cast to any to bypass deep type checking
+      body: processPlainTextTemplate(poRequestTemplate.body_template, context as any), // Cast to any
       attachments: attachmentsForDialog, // Usar URL firmada para el diálogo
       attachmentsForSend: attachmentsForSend, // Guardar la ruta original para el envío real
     });
@@ -179,7 +185,7 @@ const RequestDetails: React.FC = () => {
 
   const handleApproveOnly = async () => {
     if (requestToApprove) {
-      // Si ya hay cotización, aprobar significa pasar a PO Requested (Cómprame)
+      // If already has quote, approving means moving to PO Requested (Buy Me)
       const nextStatus = requestToApprove.quote_url ? "PO Requested" : "Quote Requested";
       await updateStatusMutation.mutateAsync({ id: requestToApprove.id, status: nextStatus });
       setIsApproveRequestDialogOpen(false);
@@ -188,11 +194,11 @@ const RequestDetails: React.FC = () => {
 
   const handleApproveAndRequestQuoteEmail = async () => {
     if (requestToApprove) {
-      // Si ya hay cotización, aprobar significa pasar a PO Requested (Cómprame)
+      // If already has quote, approving means moving to PO Requested (Buy Me)
       const nextStatus = requestToApprove.quote_url ? "PO Requested" : "Quote Requested";
       await updateStatusMutation.mutateAsync({ id: requestToApprove.id, status: nextStatus });
       
-      // Si el estado es Quote Requested, enviamos el correo al vendor.
+      // If the status is Quote Requested, send the email to the vendor.
       if (nextStatus === "Quote Requested") {
         const quoteTemplate = emailTemplates?.find(t => t.template_name === 'Quote Request');
         if (!quoteTemplate) {
@@ -213,13 +219,13 @@ const RequestDetails: React.FC = () => {
         
         setEmailInitialData({
           to: getVendorEmail(requestToApprove.vendor_id),
-          subject: processTextTemplate(quoteTemplate.subject_template, context),
-          body: processPlainTextTemplate(quoteTemplate.body_template, context),
+          subject: processTextTemplate(quoteTemplate.subject_template, context as any), // Cast to any
+          body: processPlainTextTemplate(quoteTemplate.body_template, context as any), // Cast to any
         });
         setIsApproveRequestDialogOpen(false);
         setIsEmailDialogOpen(true);
       } else {
-        // Si pasa a PO Requested, simplemente cerramos el diálogo.
+        // If it moves to PO Requested, just close the dialog.
         setIsApproveRequestDialogOpen(false);
       }
     }
@@ -256,20 +262,20 @@ const RequestDetails: React.FC = () => {
 
       // Step 2: Update the request status based on file type
       if (fileTypeToUpload === "quote" && filePath) {
-        // Si se sube una cotización, el estado pasa a PO Requested (Cómprame)
+        // If a quote is uploaded, the status changes to PO Requested (Buy Me)
         await updateStatusMutation.mutateAsync({ id: request.id, status: "PO Requested", quoteUrl: filePath });
         
-        // Crear una versión actualizada de la solicitud para el contexto del correo electrónico
+        // Create an updated version of the request for email context
         const updatedRequestWithQuote = { ...request, quote_url: filePath, status: "PO Requested" as const };
         
-        // Si hay un gerente de cuenta asignado, enviar el correo de solicitud de PO
+        // If an account manager is assigned, send the PO request email
         if (updatedRequestWithQuote.account_manager_id) {
           handleSendPORequest(updatedRequestWithQuote);
         } else {
           toast.info("Cotización subida. Por favor, asigna un Gerente de Cuenta para solicitar un PO.");
         }
       } else if (fileTypeToUpload === "po") {
-        // Si PO Number fue guardado exitosamente, marcar como Ordered
+        // If PO Number was successfully saved, mark as Ordered
         if (returnedPoNumber && request.status === "PO Requested") {
              await updateStatusMutation.mutateAsync({ id: request.id, status: "Ordered", poNumber: returnedPoNumber, quoteUrl: request.quote_url });
         }
@@ -326,8 +332,8 @@ const RequestDetails: React.FC = () => {
 
     setEmailInitialData({
       to: getVendorEmail(request.vendor_id),
-      subject: processTextTemplate(orderConfirmationTemplate.subject_template, context),
-      body: processPlainTextTemplate(orderConfirmationTemplate.body_template, context), // Usar PlainText para el cuerpo editable
+      subject: processTextTemplate(orderConfirmationTemplate.subject_template, context as any), // Cast to any
+      body: processPlainTextTemplate(orderConfirmationTemplate.body_template, context as any), // Cast to any
       attachments: attachmentsForDialog,
       attachmentsForSend: attachmentsForSend, // Guardar la ruta original para el envío real
     });
@@ -371,20 +377,20 @@ const RequestDetails: React.FC = () => {
   const handleStatusOverride = async () => {
     if (!request || !newStatus) return;
     
-    const validStatuses: RequestStatus[] = ["Pending", "Quote Requested", "PO Requested", "Ordered", "Received", "Denied", "Cancelled"];
-    if (!validStatuses.includes(newStatus as RequestStatus)) {
+    const validStatuses: RequestStatusType[] = ["Pending", "Quote Requested", "PO Requested", "Ordered", "Received", "Denied", "Cancelled"];
+    if (!validStatuses.includes(newStatus as RequestStatusType)) {
         toast.error("Estado no válido seleccionado.");
         return;
     }
     
     if (request.status === "Received" && newStatus !== "Received") {
-        // Si se intenta cambiar de Received a otro estado, abrir el diálogo de confirmación de reversión
+        // If trying to change from Received to another state, open the reversion confirmation dialog
         setIsStatusOverrideDialogOpen(false);
         setIsRevertReceptionDialogOpen(true);
         return;
     }
 
-    await updateStatusMutation.mutateAsync({ id: request.id, status: newStatus as RequestStatus });
+    await updateStatusMutation.mutateAsync({ id: request.id, status: newStatus as RequestStatusType });
     setIsStatusOverrideDialogOpen(false);
   };
   
@@ -416,7 +422,7 @@ const RequestDetails: React.FC = () => {
     if (!request) return;
     await deleteRequestMutation.mutateAsync(request.id);
     setIsDeleteDialogOpen(false);
-    navigate("/dashboard"); // Redirigir después de la eliminación
+    navigate("/dashboard"); // Redirect after deletion
   };
   // FIN NUEVOS HANDLERS DE ACCIÓN
 
@@ -570,7 +576,7 @@ const RequestDetails: React.FC = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <Select value={newStatus} onValueChange={setNewStatus} disabled={updateStatusMutation.isPending}>
+            <Select value={newStatus} onValueChange={(value) => setNewStatus(value as RequestStatusType)} disabled={updateStatusMutation.isPending}>
               <SelectTrigger>
                 <SelectValue placeholder="Seleccionar nuevo estado" />
               </SelectTrigger>

@@ -5,9 +5,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Profile } from "@/hooks/use-profiles";
 import { supabase } from "@/integrations/supabase/client"; // Importar cliente de Supabase
 import { toast } from "sonner";
+import { Session } from '@supabase/supabase-js'; // Import Supabase Session type
 
 interface SessionContextType {
-  session: { user: { id: string; email: string } } | null;
+  session: Session | null;
   profile: Profile | null;
   loading: boolean;
   login: () => void;
@@ -17,7 +18,7 @@ interface SessionContextType {
 const SessionContext = createContext<SessionContextType | undefined>(undefined);
 
 export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [session, setSession] = useState<{ user: { id: string; email: string } } | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const queryClient = useQueryClient();
@@ -52,6 +53,7 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
               first_name: session.user.user_metadata?.first_name || 'New',
               last_name: session.user.user_metadata?.last_name || 'User',
               role: 'Requester', // Rol por defecto
+              email: session.user.email, // Include email
             })
             .select()
             .single();

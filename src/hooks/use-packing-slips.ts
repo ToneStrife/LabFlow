@@ -55,7 +55,7 @@ export const useAggregatedReceivedItems = (requestId: string) => {
 
       return Object.entries(aggregation).map(([request_item_id, total_received]) => ({
         request_item_id,
-        total_received,
+        total_received: total_received as number, // Explicitly cast to number
       }));
     },
     enabled: !!requestId,

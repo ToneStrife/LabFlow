@@ -3,8 +3,8 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
-import { RequestStatus } from "@/data/types";
-import { useRequests, useUpdateRequestStatus, SupabaseRequest, useSendEmail } from "@/hooks/use-requests";
+import { RequestStatus, SupabaseRequest, Vendor, Profile, AccountManager, Project, ShippingAddress, BillingAddress } from "@/data/types"; // Corrected imports
+import { useRequests, useUpdateRequestStatus, SupabaseRequest as SupabaseRequestType, useSendEmail } from "@/hooks/use-requests";
 import { useVendors } from "@/hooks/use-vendors";
 import { useAllProfiles, getFullName } from "@/hooks/use-profiles";
 import { useAccountManagers } from "@/hooks/use-account-managers"; // Usar el nuevo hook
@@ -23,6 +23,8 @@ import { useEmailTemplates } from "@/hooks/use-email-templates";
 import { processTextTemplate, processPlainTextTemplate } from "@/utils/email-templating";
 import ReceiveItemsDialog from "@/components/ReceiveItemsDialog"; // Importar el diálogo de recepción
 import MergeRequestsDialog from "./MergeRequestsDialog"; // Importar Merge Dialog
+import { useShippingAddresses, useBillingAddresses } from "@/hooks/use-addresses";
+
 
 // Función auxiliar para obtener el nombre de archivo legible (copiada de RequestFilesCard.tsx)
 const getFileNameFromPath = (filePath: string): string => {
@@ -51,6 +53,9 @@ const RequestList: React.FC = () => {
   const { data: accountManagers, isLoading: isLoadingAccountManagers } = useAccountManagers(); // Usar el nuevo hook
   const { data: projects, isLoading: isLoadingProjects } = useProjects();
   const { data: emailTemplates, isLoading: isLoadingEmailTemplates } = useEmailTemplates();
+  const { data: shippingAddresses, isLoading: isLoadingShippingAddresses } = useShippingAddresses();
+  const { data: billingAddresses, isLoading: isLoadingBillingAddresses } = useBillingAddresses();
+
   const updateStatusMutation = useUpdateRequestStatus();
   const sendEmailMutation = useSendEmail();
 
@@ -96,7 +101,7 @@ const RequestList: React.FC = () => {
     const attachmentsToSend = (emailData as any).attachmentsForSend || emailData.attachments;
     
     await sendEmailMutation.mutateAsync({
-      to: emailData.to,
+      to: emailData.to!, // Ensure 'to' is not undefined
       subject: emailData.subject,
       body: emailData.body,
       attachments: attachmentsToSend,
@@ -127,7 +132,8 @@ const RequestList: React.FC = () => {
       accountManager: accountManagers?.find(am => am.id === request.account_manager_id),
       projects: projects,
       actorProfile: profile,
-      // Nota: Las direcciones de envío/facturación no están disponibles en la lista, pero el templating las manejará como N/A si se usan.
+      shippingAddress: shippingAddresses?.find(a => a.id === request.shipping_address_id),
+      billingAddress: billingAddresses?.find(a => a.id === request.billing_address_id),
     };
 
     // Preparar adjuntos:
@@ -248,7 +254,7 @@ const RequestList: React.FC = () => {
     return matchesSearchTerm && matchesStatus;
   });
 
-  if (isLoadingRequests || isLoadingVendors || isLoadingProfiles || isLoadingAccountManagers || isLoadingProjects || isLoadingEmailTemplates) {
+  if (isLoadingRequests || isLoadingVendors || isLoadingProfiles || isLoadingAccountManagers || isLoadingProjects || isLoadingEmailTemplates || isLoadingShippingAddresses || isLoadingBillingAddresses) {
     return (
       <div className="flex justify-center items-center h-40">
         <Loader2 className="h-6 w-6 animate-spin mr-2" /> Cargando Solicitudes...
@@ -281,7 +287,7 @@ const RequestList: React.FC = () => {
         onMarkAsReceived={handleMarkAsReceived}
         onDeny={handleDenyRequest}
         onCancel={handleCancelRequest}
-        onMerge={handleMergeRequest} // Pasar el nuevo manejador
+        onMerge={handleMergeRequest}
       />
 
       <EmailDialog

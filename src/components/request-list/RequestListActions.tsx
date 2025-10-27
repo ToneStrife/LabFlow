@@ -3,7 +3,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Eye, CheckCircle, Package, Receipt, Mail, FileText, Ban, XCircle, Combine } from "lucide-react";
-import { SupabaseRequest } from "@/hooks/use-requests";
+import { SupabaseRequest } from "@/data/types"; // Corrected import
 
 interface RequestListActionsProps {
   request: SupabaseRequest;

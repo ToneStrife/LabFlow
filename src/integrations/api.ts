@@ -21,7 +21,7 @@ import {
   updateMockRequestMetadata,
   deleteMockRequest,
   getMockInventory,
-  addMockInventoryItem,
+  addMockInventoryItem as mockAddInventoryItem, // Renombrar para evitar conflictos
   updateMockInventoryItem,
   deleteMockInventoryItem,
   sendMockEmail,
@@ -122,27 +122,36 @@ export const apiGetVendors = async (): Promise<Vendor[]> => {
 };
 
 export const apiAddVendor = async (data: Omit<Vendor, "id" | "created_at">): Promise<Vendor> => {
-  const { data: newVendor, error } = await supabase.from('vendors').insert([{
-    name: data.name,
-    contact_person: data.contact_person, // Corrected casing
-    email: data.email,
-    phone: data.phone,
-    notes: data.notes,
-    brands: data.brands,
-  }]).select().single();
+  const { data: newVendor, error } = await supabase
+        .from('vendors')
+        .insert([{
+          name: data.name,
+          contact_person: data.contact_person,
+          email: data.email,
+          phone: data.phone,
+          notes: data.notes,
+          brands: data.brands,
+        }])
+        .select()
+        .single();
   if (error) throw new Error(error.message);
   return newVendor;
 };
 
 export const apiUpdateVendor = async (id: string, data: Partial<Omit<Vendor, "id" | "created_at">>): Promise<Vendor> => {
-  const { data: updatedVendor, error } = await supabase.from('vendors').update({
-    name: data.name,
-    contact_person: data.contact_person, // Corrected casing
-    email: data.email,
-    phone: data.phone,
-    notes: data.notes,
-    brands: data.brands,
-  }).eq('id', id).select().single();
+  const { data: updatedVendor, error } = await supabase
+        .from('vendors')
+        .update({
+          name: data.name,
+          contact_person: data.contact_person,
+          email: data.email,
+          phone: data.phone,
+          notes: data.notes,
+          brands: data.brands,
+        })
+        .eq('id', id)
+        .select()
+        .single();
   if (error) throw new Error(error.message);
   return updatedVendor;
 };
@@ -221,7 +230,7 @@ export const apiGetRequests = async (): Promise<SupabaseRequest[]> => {
   // Mapear los datos para asegurar que 'items' es un array de SupabaseRequestItem
   const requests: SupabaseRequest[] = requestsData.map(req => ({
     ...req,
-    items: req.items || [],
+    items: req.items || null, // Ensure it's SupabaseRequestItem[] | null
     // Asegurar que los campos de URL y PO sean strings o null
     quote_url: req.quote_url || null,
     po_number: req.po_number || null,
@@ -232,6 +241,7 @@ export const apiGetRequests = async (): Promise<SupabaseRequest[]> => {
     account_manager_id: req.account_manager_id || null,
     shipping_address_id: req.shipping_address_id || null,
     billing_address_id: req.billing_address_id || null,
+    request_number: req.request_number || null,
     // Nota: Los objetos de dirección se adjuntan aquí si se usan en el cliente,
     // pero por ahora solo necesitamos los IDs para la creación.
   })) as SupabaseRequest[];
@@ -498,7 +508,7 @@ export const apiAddInventoryItem = async (data: Omit<InventoryItem, "id" | "adde
     format_in: data.format,
   }).single();
   if (error) throw new Error(error.message);
-  return newItem;
+  return newItem as InventoryItem; // Cast to InventoryItem
 };
 
 export const apiUpdateInventoryItem = async (id: string, data: Partial<Omit<InventoryItem, "id" | "added_at">>): Promise<InventoryItem> => {

@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Loader2 } from "lucide-react";
-import { Project } from "@/hooks/use-projects";
+import { Project } from "@/data/types"; // Corrected import
 
 const projectFormSchema = z.object({
   name: z.string().min(1, { message: "El nombre del proyecto es obligatorio." }),

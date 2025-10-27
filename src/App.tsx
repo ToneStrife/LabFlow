@@ -16,7 +16,7 @@ import { SessionContextProvider, useSession } from "./components/SessionContextP
 import React from "react";
 import Login from "./pages/Login";
 import { Loader2 } from "lucide-react";
-import { Profile as UserProfileType } from "@/hooks/use-profiles";
+import { Profile as UserProfileType } from "@/data/types"; // Corrected import
 
 const queryClient = new QueryClient();
 

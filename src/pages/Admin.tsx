@@ -22,8 +22,9 @@ import { Project } from "@/data/types";
 // Users imports
 import UserTable from "@/components/UserTable";
 import InviteUserDialog, { InviteUserFormValues } from "@/components/InviteUserDialog";
-import { useAllProfiles, useInviteUser, useUpdateProfile, useDeleteProfile, Profile } from "@/hooks/use-profiles";
+import { useAllProfiles, useInviteUser, useUpdateProfile, useDeleteProfile } from "@/hooks/use-profiles";
 import { useSession } from "@/components/SessionContextProvider";
+import { Profile } from "@/data/types"; // Corrected import
 
 // Email Templates imports
 import { useForm } from "react-hook-form";

@@ -1,21 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Profile as MockProfile } from "@/data/mockData"; 
+import { Profile } from "@/data/types"; 
 import { toast } from "sonner";
 import { apiGetProfiles, apiUpdateProfile, apiDeleteProfile, apiInviteUser } from "@/integrations/api";
-
-export interface Profile extends MockProfile {}
-
-// --- Fetch Hook ---
-const fetchAllProfiles = async (): Promise<Profile[]> => {
-  return apiGetProfiles();
-};
-
-export const useAllProfiles = () => {
-  return useQuery<Profile[], Error>({
-    queryKey: ["allProfiles"],
-    queryFn: fetchAllProfiles,
-  });
-};
 
 // useAccountManagerProfiles se ha eliminado y se reemplaza por useAccountManagers en src/hooks/use-account-managers.ts
 // export const useAccountManagerProfiles = () => {
@@ -31,16 +17,16 @@ export const useAllProfiles = () => {
 // --- Mutation Hooks for Profiles ---
 
 interface ProfileUpdateFormData { 
-  first_name?: string;
-  last_name?: string;
-  email?: string; 
+  first_name?: string | null;
+  last_name?: string | null;
+  email?: string | null; 
   role?: "Requester" | "Account Manager" | "Admin";
 }
 
 interface InviteUserData {
   email: string;
-  first_name?: string;
-  last_name?: string;
+  first_name?: string | null;
+  last_name?: string | null;
   role?: Profile['role'];
 }
 

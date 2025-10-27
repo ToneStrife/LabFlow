@@ -221,7 +221,7 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
                   <FormItem>
                     <FormLabel>Subir Archivo de Albarán (Opcional)</FormLabel>
                     <FormControl>
-                      <Input type="file" onChange={(e) => field.onChange(e.target.files)} disabled={isSubmitting} capture="camera" />
+                      <Input type="file" onChange={(e) => field.onChange(e.target.files)} disabled={isSubmitting} accept="image/*,application/pdf" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

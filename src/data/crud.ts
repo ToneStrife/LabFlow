@@ -3,7 +3,6 @@
 import {
   Profile,
   Vendor,
-  CustomerAccount,
   SupabaseRequest,
   RequestItem,
   RequestStatus,
@@ -15,7 +14,6 @@ import {
   generateId,
   mockProfiles,
   mockVendors,
-  mockCustomerAccounts,
   mockRequestItems,
   mockRequests,
   mockInventory,
@@ -54,74 +52,6 @@ export const deleteMockProfile = async (id: string): Promise<void> => {
   mockProfiles = mockProfiles.filter(p => p.id !== id);
 };
 
-/*
-// --- CRUD Functions for Vendors ---
-// Estas funciones han sido migradas a src/integrations/api.ts para usar Supabase directamente.
-// Se mantienen aquí como referencia si se necesitaran datos simulados para otras partes.
-export const getMockVendors = async (): Promise<Vendor[]> => {
-  await simulateNetworkDelay();
-  return mockVendors;
-};
-
-export const addMockVendor = async (data: Omit<Vendor, "id" | "created_at">): Promise<Vendor> => {
-  await simulateNetworkDelay();
-  const newVendor: Vendor = {
-    id: generateId(),
-    created_at: new Date().toISOString(),
-    ...data,
-  };
-  mockVendors.push(newVendor);
-  return newVendor;
-};
-
-export const updateMockVendor = async (id: string, data: Partial<Omit<Vendor, "id" | "created_at">>): Promise<Vendor> => {
-  await simulateNetworkDelay();
-  const index = mockVendors.findIndex(v => v.id === id);
-  if (index === -1) throw new Error("Vendor not found");
-  mockVendors[index] = { ...mockVendors[index], ...data };
-  return mockVendors[index];
-};
-
-export const deleteMockVendor = async (id: string): Promise<void> => {
-  await simulateNetworkDelay();
-  mockVendors = mockVendors.filter(v => v.id !== id);
-};
-*/
-
-/*
-// --- CRUD Functions for Customer Accounts ---
-// Estas funciones han sido migradas a src/integrations/api.ts para usar Supabase directamente.
-// Se mantienen aquí como referencia si se necesitaran datos simulados para otras partes.
-export const getMockCustomerAccounts = async (): Promise<CustomerAccount[]> => {
-  await simulateNetworkDelay();
-  return mockCustomerAccounts;
-};
-
-export const addMockCustomerAccount = async (data: Omit<CustomerAccount, "id" | "created_at">): Promise<CustomerAccount> => {
-  await simulateNetworkDelay();
-  const newAccount: CustomerAccount = {
-    id: generateId(),
-    created_at: new Date().toISOString(),
-    ...data,
-  };
-  mockCustomerAccounts.push(newAccount);
-  return newAccount;
-};
-
-export const updateMockCustomerAccount = async (id: string, data: Partial<Omit<CustomerAccount, "id" | "created_at">>): Promise<CustomerAccount> => {
-  await simulateNetworkDelay();
-  const index = mockCustomerAccounts.findIndex(a => a.id === id);
-  if (index === -1) throw new Error("Customer account not found");
-  mockCustomerAccounts[index] = { ...mockCustomerAccounts[index], ...data };
-  return mockCustomerAccounts[index];
-};
-
-export const deleteMockCustomerAccount = async (id: string): Promise<void> => {
-  await simulateNetworkDelay();
-  mockCustomerAccounts = mockCustomerAccounts.filter(a => a.id !== id);
-};
-*/
-
 // --- CRUD Functions for Requests ---
 export const getMockRequests = async (): Promise<SupabaseRequest[]> => {
   await simulateNetworkDelay();
@@ -132,11 +62,12 @@ export const getMockRequests = async (): Promise<SupabaseRequest[]> => {
   }));
 };
 
-export const addMockRequest = async (data: Omit<SupabaseRequest, "id" | "created_at" | "status" | "items" | "po_number" | "quote_url" | "po_url" | "slip_url"> & { items: RequestItem[] }): Promise<SupabaseRequest> => {
+export const addMockRequest = async (data: Omit<SupabaseRequest, "id" | "created_at" | "status" | "items" | "po_number" | "quote_url" | "po_url" | "slip_url" | "request_number" | "shipping_address_id" | "billing_address_id"> & { items: RequestItem[] }): Promise<SupabaseRequest> => {
   await simulateNetworkDelay();
   const newRequestId = generateId();
   const newRequest: SupabaseRequest = {
     id: newRequestId,
+    request_number: null, // Mock requests don't generate numbers
     created_at: new Date().toISOString(),
     status: "Pending",
     quote_url: null,

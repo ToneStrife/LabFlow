@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Loader2 } from "lucide-react";
-import { Profile } from "@/hooks/use-profiles";
+import { Profile } from "@/data/types"; // Corrected import
 
 const accountManagerFormSchema = z.object({
   first_name: z.string().min(1, { message: "El nombre es obligatorio." }),

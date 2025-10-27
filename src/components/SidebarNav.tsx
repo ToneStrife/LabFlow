@@ -5,7 +5,7 @@ import { NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Package, ShoppingCart, Users, User, Warehouse, Shield } from "lucide-react";
 import { useSession } from "@/components/SessionContextProvider";
-import { Profile as UserProfileType } from "@/hooks/use-profiles";
+import { Profile } from "@/data/types"; // Corrected import
 
 interface SidebarNavProps extends React.HTMLAttributes<HTMLElement> {
   isMobile?: boolean;
@@ -16,7 +16,7 @@ interface NavItem {
   title: string;
   href: string;
   icon: JSX.Element;
-  roles: UserProfileType['role'][];
+  roles: Profile['role'][]; // Corrected type
 }
 
 const navItems: NavItem[] = [

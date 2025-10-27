@@ -64,18 +64,22 @@ const fetchProductSearch = async (
 
     // CORRECCIÓN: Usar nombres de argumentos genéricos para evitar el error de clave duplicada.
     // Asumimos que la función 'similarity(text, text)' toma la columna y el término de búsqueda.
-    const similarityRpc = supabase.rpc('similarity', { 
-        col_name: 'product_name', 
-        search_term: productName 
-    });
+    // Para usar RPC functions with .order and .gte, you need to call the RPC directly and then filter.
+    // However, Postgrest doesn't directly support ordering by RPC results in a single query.
+    // A common workaround is to fetch all, then filter/sort in client, or use a view/function on DB side.
+    // For simplicity and to fix the compile error, we'll adjust the RPC call.
+    // The schema shows `similarity(text, text)` which implies `similarity(column_value, search_term)`.
+    // We need to select the similarity score and then filter/order.
 
-    // Buscar en Inventory por similitud
-    const { data: invFuzzyData } = await supabase
+    // Fetch inventory items with similarity score
+    const { data: invFuzzyData, error: invFuzzyError } = await supabase
       .from('inventory')
-      .select('*')
-      .limit(5)
-      .order(similarityRpc, { ascending: false })
-      .gte(similarityRpc, similarityThreshold);
+      .select(`*, similarity(product_name, '${productName}') as score`)
+      .gte('similarity(product_name, \'' + productName + '\')', similarityThreshold)
+      .order('score', { ascending: false })
+      .limit(5);
+
+    if (invFuzzyError) console.error("Error fetching fuzzy inventory:", invFuzzyError);
 
     if (invFuzzyData && invFuzzyData.length > 0) {
       invFuzzyData.forEach(item => {
@@ -85,14 +89,16 @@ const fetchProductSearch = async (
       });
     }
 
-    // Buscar en Request Items por similitud (solo si no encontramos mucho en inventario)
+    // Fetch request items with similarity score
     if (results.length < 5) {
-        const { data: reqFuzzyData } = await supabase
+        const { data: reqFuzzyData, error: reqFuzzyError } = await supabase
             .from('request_items')
-            .select('product_name, catalog_number, brand, unit_price, format, link')
-            .limit(5)
-            .order(similarityRpc, { ascending: false })
-            .gte(similarityRpc, similarityThreshold);
+            .select(`product_name, catalog_number, brand, unit_price, format, link, similarity(product_name, '${productName}') as score`)
+            .gte('similarity(product_name, \'' + productName + '\')', similarityThreshold)
+            .order('score', { ascending: false })
+            .limit(5);
+
+        if (reqFuzzyError) console.error("Error fetching fuzzy request items:", reqFuzzyError);
 
         if (reqFuzzyData && reqFuzzyData.length > 0) {
             reqFuzzyData.forEach(item => {

@@ -1,10 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { SupabaseRequest as MockSupabaseRequest, SupabaseRequestItem as MockSupabaseRequestItem, RequestItem, RequestStatus } from "@/data/mockData";
+import { SupabaseRequest as SupabaseRequestType, SupabaseRequestItem as SupabaseRequestItemType, RequestItem, RequestStatus } from "@/data/types";
 import { toast } from "sonner";
 import { apiGetRequests, apiAddRequest, apiUpdateRequestStatus, apiDeleteRequest, apiAddInventoryItem, apiSendEmail, apiUpdateRequestFile, apiUpdateRequestMetadata, apiUpdateFullRequest, apiRevertRequestReception } from "@/integrations/api";
 
-export interface SupabaseRequestItem extends MockSupabaseRequestItem {}
-export interface SupabaseRequest extends MockSupabaseRequest {}
+export interface SupabaseRequestItem extends SupabaseRequestItemType {}
+export interface SupabaseRequest extends SupabaseRequestType {}
 
 // --- Fetch Hook ---
 const fetchRequests = async (): Promise<SupabaseRequest[]> => {

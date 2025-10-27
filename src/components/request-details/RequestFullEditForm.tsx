@@ -21,7 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input"; // Importación corregida
 import { cn } from "@/lib/utils";
-import { SupabaseRequest } from "@/hooks/use-requests";
+import { SupabaseRequest } from "@/data/types"; // Corrected import
 import { useAccountManagers } from "@/hooks/use-account-managers";
 import { useProjects } from "@/hooks/use-projects";
 import { useVendors } from "@/hooks/use-vendors";
