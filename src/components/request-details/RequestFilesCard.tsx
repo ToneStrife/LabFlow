@@ -22,22 +22,11 @@ const getFileNameFromPath = (filePath: string): string => {
     const encodedFileName = pathParts[pathParts.length - 1];
     const decodedFileName = decodeURIComponent(encodedFileName);
     
-    // 2. Intentar eliminar el prefijo de timestamp (ej. 2024-001-Quote-1721937600000.pdf)
-    // El formato es: [RequestNumber]-[FileType]-[Timestamp].[ext]
-    // Buscamos el último guion (-) que precede a un número largo (timestamp)
-    
-    const parts = decodedFileName.split('-');
-    if (parts.length >= 3) {
-      const timestampPart = parts[parts.length - 1];
-      // Si la última parte contiene un punto (extensión) y la penúltima es un número largo (timestamp)
-      if (timestampPart.includes('.') && !isNaN(Number(parts[parts.length - 2]))) {
-        // Reconstruir el nombre sin el timestamp y la extensión
-        const extension = timestampPart.split('.');
-        const nameWithoutTimestamp = parts.slice(0, parts.length - 2).join('-');
-        
-        // El nombre legible es [RequestNumber]-[FileType].[ext]
-        return `${nameWithoutTimestamp}.${extension}`;
-      }
+    // 2. Eliminar el prefijo de timestamp (ej. 1721937600000_my_file.pdf)
+    const parts = decodedFileName.split('_');
+    if (parts.length > 1 && !isNaN(Number(parts[0]))) {
+      // Si la primera parte es un número (timestamp), devolver el resto
+      return parts.slice(1).join('_');
     }
     
     // Fallback si el formato no coincide o si es el formato antiguo
@@ -54,14 +43,15 @@ const FileRow: React.FC<{ label: string; filePath: string | null; onUpload: () =
   const handleViewClick = async () => {
     if (!filePath) return;
     setIsGenerating(true);
-    // Añadir un parámetro para invalidar la caché en la URL
-    const cacheBuster = Date.now();
-    const filePathWithCacheBuster = `${filePath}?cache=${cacheBuster}`;
-    const signedUrl = await generateSignedUrl(filePathWithCacheBuster);
+    
+    // No necesitamos el cacheBuster en la ruta si el nombre del archivo ya incluye un timestamp único.
+    const signedUrl = await generateSignedUrl(filePath);
     setIsGenerating(false);
 
     if (signedUrl) {
       window.open(signedUrl, '_blank');
+    } else {
+      toast.error("No se pudo generar la URL firmada. Verifica que el archivo exista y que tu sesión esté activa.");
     }
   };
 
@@ -104,21 +94,6 @@ const FileRow: React.FC<{ label: string; filePath: string | null; onUpload: () =
         )}
       </div>
     </div>
-  );
-};
-
-const RequestFilesCard: React.FC<RequestFilesCardProps> = ({ request, onUploadClick }) => {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Archivos Adjuntos</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-0 p-0">
-        <FileRow label="Cotización" filePath={request.quote_url} onUpload={() => onUploadClick("quote")} />
-        <FileRow label="Orden de Compra (PO)" filePath={request.po_url} onUpload={() => onUploadClick("po")} />
-        <FileRow label="Albarán" filePath={request.slip_url} onUpload={() => onUploadClick("slip")} />
-      </CardContent>
-    </Card>
   );
 };
 

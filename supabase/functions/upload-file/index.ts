@@ -66,27 +66,27 @@ serve(async (req) => {
     let filePath: string | null = null;
 
     if (file && file.size > 0) {
-        // 2. Obtener el request_number de la base de datos
-        const { data: requestData, error: requestError } = await supabaseAdmin
+        // 2. Obtener el request_number de la base de datos (opcional, solo para logs)
+        const { data: requestData } = await supabaseAdmin
             .from('requests')
             .select('request_number')
             .eq('id', requestId)
             .single();
 
-        if (requestError) {
-            console.error('Edge Function: Error fetching request number:', requestError);
-            // Continuar con un nombre de archivo genérico si falla la búsqueda
-        }
-
         const requestNumber = requestData?.request_number || requestId.substring(0, 8);
         
-        // 3. Generar el nuevo nombre de archivo (SIMPLIFICADO)
-        const originalExtension = file.name.split('.').pop() || 'pdf';
-        const baseFileName = `${requestNumber}-${fileType.charAt(0).toUpperCase() + fileType.slice(1)}`; // Eliminar timestamp
-        const fileName = `${sanitizeFilename(baseFileName)}.${originalExtension}`;
+        // 3. Generar el nombre de archivo usando el nombre original (sanitizado)
+        const originalFileName = file.name;
+        const sanitizedFileName = sanitizeFilename(originalFileName);
         
-        // Organizar por user_id/request_id/file_name
-        filePath = `${user.id}/${requestId}/${fileName}`; 
+        // Usamos un prefijo de timestamp para asegurar la unicidad si el usuario sube el mismo nombre de archivo varias veces
+        // y para evitar problemas de caché.
+        const timestampPrefix = Date.now();
+        const finalFileName = `${timestampPrefix}_${sanitizedFileName}`;
+        
+        // Organizar por user_id/request_id/file_type/final_file_name
+        // Usamos el tipo de archivo como subcarpeta para mejor organización
+        filePath = `${user.id}/${requestId}/${fileType}/${finalFileName}`; 
 
         // 4. Subir el archivo a Supabase Storage
         const { error: uploadError } = await supabaseAdmin.storage
