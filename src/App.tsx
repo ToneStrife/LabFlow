@@ -76,7 +76,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <HashRouter>
+      <HashRouter future={{ v7_relativeSplatPath: true }}>
         <SessionContextProvider>
           <AppRoutes />
         </SessionContextProvider>
