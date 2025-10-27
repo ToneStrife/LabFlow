@@ -154,7 +154,7 @@ const RequestDetails: React.FC = () => {
     let attachmentsForSend = [];
     
     if (request.quote_url) {
-      const fileName = getFileNameFromPath(request.quote_url); // Usar el nombre de archivo real
+      const fileName = getFileNameFromPath(request.quote_url);
       
       // 1. Generar URL firmada para el diálogo (visualización)
       const signedUrl = await generateSignedUrl(request.quote_url);
@@ -171,7 +171,7 @@ const RequestDetails: React.FC = () => {
     setEmailInitialData({
       to: getAccountManagerEmail(request.account_manager_id),
       subject: processTextTemplate(poRequestTemplate.subject_template, context as any), // Cast to any to bypass deep type checking
-      body: processPlainTextTemplate(poRequestTemplate.body_template, context as any), // Cast to any
+      body: processEmailTemplate(poRequestTemplate.body_template, context as any), // <-- CAMBIO: Usar HTML template
       attachments: attachmentsForDialog, // Usar URL firmada para el diálogo
       attachmentsForSend: attachmentsForSend, // Guardar la ruta original para el envío real
     });
@@ -220,7 +220,7 @@ const RequestDetails: React.FC = () => {
         setEmailInitialData({
           to: getVendorEmail(requestToApprove.vendor_id),
           subject: processTextTemplate(quoteTemplate.subject_template, context as any), // Cast to any
-          body: processPlainTextTemplate(quoteTemplate.body_template, context as any), // Cast to any
+          body: processEmailTemplate(quoteTemplate.body_template, context as any), // <-- CAMBIO: Usar HTML template
         });
         setIsApproveRequestDialogOpen(false);
         setIsEmailDialogOpen(true);
@@ -333,7 +333,7 @@ const RequestDetails: React.FC = () => {
     setEmailInitialData({
       to: getVendorEmail(request.vendor_id),
       subject: processTextTemplate(orderConfirmationTemplate.subject_template, context as any), // Cast to any
-      body: processPlainTextTemplate(orderConfirmationTemplate.body_template, context as any), // Cast to any
+      body: processEmailTemplate(orderConfirmationTemplate.body_template, context as any), // <-- CAMBIO: Usar HTML template
       attachments: attachmentsForDialog,
       attachmentsForSend: attachmentsForSend, // Guardar la ruta original para el envío real
     });
