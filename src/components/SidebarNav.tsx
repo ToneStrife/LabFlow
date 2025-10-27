@@ -3,7 +3,7 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { Package, ShoppingCart, Users, User, Warehouse, Loader2, Shield } from "lucide-react";
+import { Package, ShoppingCart, Users, User, Warehouse, Shield } from "lucide-react";
 import { useSession } from "@/components/SessionContextProvider";
 import { Profile as UserProfileType } from "@/hooks/use-profiles";
 
@@ -58,11 +58,20 @@ const navItems: NavItem[] = [
   },
 ];
 
-export function SidebarNav({ className, isMobile, onLinkClick, ...props }: SidebarNavProps) {
-  const { profile, loading: sessionLoading } = useSession();
+export function SidebarNav({ className, onLinkClick, ...props }: SidebarNavProps) {
+  const { profile } = useSession();
   const userRole = profile?.role;
 
-  const visibleNavItems = navItems.filter(item => userRole && item.roles.includes(userRole));
+  // Si profile es null, no deberíamos llegar aquí, pero si lo hacemos, no renderizamos nada.
+  if (!userRole) {
+    return (
+      <div className="flex items-center px-3 py-2 text-sm text-muted-foreground">
+        No hay elementos de navegación disponibles.
+      </div>
+    );
+  }
+
+  const visibleNavItems = navItems.filter(item => item.roles.includes(userRole));
 
   return (
     <nav
@@ -72,11 +81,7 @@ export function SidebarNav({ className, isMobile, onLinkClick, ...props }: Sideb
       )}
       {...props}
     >
-      {sessionLoading ? (
-        <div className="flex items-center px-3 py-2 text-sm text-muted-foreground">
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Cargando navegación...
-        </div>
-      ) : visibleNavItems.length > 0 ? (
+      {visibleNavItems.length > 0 ? (
         visibleNavItems.map((item) => (
           <NavLink
             key={item.href}

@@ -4,7 +4,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Menu, User, LogOut, Loader2 } from "lucide-react"; // Importar Loader2
+import { Menu, User, LogOut, Loader2 } from "lucide-react";
 import { SidebarNav } from "./SidebarNav";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MadeWithDyad } from "./made-with-dyad";
@@ -20,7 +20,7 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const isMobile = useIsMobile();
   const [isSheetOpen, setIsSheetOpen] = React.useState(false);
-  const { profile, logout, loading: sessionLoading } = useSession(); // Obtener sessionLoading
+  const { profile, logout, loading: sessionLoading } = useSession();
 
   const handleLinkClick = () => {
     if (isMobile) {
@@ -28,7 +28,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     }
   };
 
-  // Mostrar un estado de carga si la sesión está cargando
+  // Si la sesión está cargando, mostramos el loader principal.
   if (sessionLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -40,6 +40,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const userFullName = getFullName(profile);
   const userInitials = userFullName.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
 
+  // Si no hay perfil (y no estamos cargando), el usuario debería ser redirigido por AppRoutes,
+  // pero si por alguna razón llegamos aquí, no renderizamos la navegación.
+  const shouldRenderNav = !!profile;
+
   return (
     <div className="flex min-h-screen bg-background text-foreground">
       {/* Sidebar for desktop */}
@@ -50,9 +54,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               LabFlow
             </Link>
           </div>
-          {/* Renderizar SidebarNav solo si el perfil está cargado */}
-          {profile ? <SidebarNav className="flex-grow" /> : (
+          {shouldRenderNav ? <SidebarNav className="flex-grow" /> : (
             <div className="flex items-center px-3 py-2 text-sm text-muted-foreground">
+              {/* Mostrar un mensaje o un loader simple si la navegación no está lista */}
               <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Cargando navegación...
             </div>
           )}
@@ -76,8 +80,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     LabFlow
                   </Link>
                 </div>
-                {/* Renderizar SidebarNav solo si el perfil está cargado */}
-                {profile ? <SidebarNav className="flex-grow" onLinkClick={handleLinkClick} /> : (
+                {shouldRenderNav ? <SidebarNav className="flex-grow" onLinkClick={handleLinkClick} /> : (
                   <div className="flex items-center px-3 py-2 text-sm text-muted-foreground">
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Cargando navegación...
                   </div>
