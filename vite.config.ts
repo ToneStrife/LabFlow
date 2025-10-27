@@ -15,5 +15,5 @@ export default defineConfig(({ mode }) => ({
     },
   },
   // Set base path for GitHub Pages deployment
-  base: mode === 'production' ? './' : '/',
+  base: mode === 'production' ? '/labflow-test-tone/' : '/',
 }));
