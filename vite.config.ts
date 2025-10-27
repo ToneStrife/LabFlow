@@ -12,6 +12,8 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      // Alias para resolver el error de crypto.getRandomValues en el entorno de compilación
+      crypto: "crypto-browserify",
     },
   },
   // Set base path for GitHub Pages deployment
