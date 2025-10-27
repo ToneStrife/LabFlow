@@ -97,4 +97,31 @@ const FileRow: React.FC<{ label: string; filePath: string | null; onUpload: () =
   );
 };
 
+const RequestFilesCard: React.FC<RequestFilesCardProps> = ({ request, onUploadClick }) => {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg">Archivos Adjuntos</CardTitle>
+      </CardHeader>
+      <CardContent className="p-0">
+        <FileRow 
+          label="Cotización" 
+          filePath={request.quote_url} 
+          onUpload={() => onUploadClick("quote")} 
+        />
+        <FileRow 
+          label="Orden de Compra (PO)" 
+          filePath={request.po_url} 
+          onUpload={() => onUploadClick("po")} 
+        />
+        <FileRow 
+          label="Último Albarán" 
+          filePath={request.slip_url} 
+          onUpload={() => onUploadClick("slip")} 
+        />
+      </CardContent>
+    </Card>
+  );
+};
+
 export default RequestFilesCard;
