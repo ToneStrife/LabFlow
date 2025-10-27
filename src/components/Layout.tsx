@@ -28,15 +28,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     }
   };
 
-  // Si la sesión está cargando, mostramos el loader principal.
-  if (sessionLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin mr-2" /> Cargando interfaz...
-      </div>
-    );
-  }
-
   const userFullName = getFullName(profile);
   const userInitials = userFullName.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
 
@@ -60,7 +51,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Cargando navegación...
             </div>
           )}
-          <MadeWithDyad />
+          
         </aside>
       )}
 
@@ -85,7 +76,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Cargando navegación...
                   </div>
                 )}
-                <MadeWithDyad />
+                
               </SheetContent>
             </Sheet>
           )}
@@ -107,7 +98,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   <div className="flex flex-col space-y-1">
                     <p className="text-sm font-medium leading-none">{userFullName}</p>
                     <p className="text-xs leading-none text-muted-foreground">
-                      {profile?.email || session?.user?.email}
+                      {profile?.email}
                     </p>
                   </div>
                 </DropdownMenuLabel>
