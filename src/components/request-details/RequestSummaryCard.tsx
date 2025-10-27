@@ -12,6 +12,7 @@ import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Edit, Loader2 } from "lucide-react";
 import { generateSignedUrl } from "@/utils/supabase-storage"; // Importar utilidad
+import { getFullName } from "@/hooks/use-profiles"; // Importar getFullName
 
 interface RequestSummaryCardProps {
   request: SupabaseRequest;
