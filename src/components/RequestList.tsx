@@ -20,7 +20,7 @@ import { generateSignedUrl } from "@/utils/supabase-storage";
 import { useSession } from "@/components/SessionContextProvider";
 import { useProjects } from "@/hooks/use-projects";
 import { useEmailTemplates } from "@/hooks/use-email-templates";
-import { processEmailTemplate, processTextTemplate, processPlainTextTemplate } from "@/utils/email-templating"; // Importar processEmailTemplate
+import { processTextTemplate, processPlainTextTemplate } from "@/utils/email-templating";
 import ReceiveItemsDialog from "@/components/ReceiveItemsDialog"; // Importar el diálogo de recepción
 import MergeRequestsDialog from "./MergeRequestsDialog"; // Importar Merge Dialog
 import { useShippingAddresses, useBillingAddresses } from "@/hooks/use-addresses";
@@ -157,8 +157,8 @@ const RequestList: React.FC = () => {
 
     setEmailInitialData({
       to: getAccountManagerEmail(request.account_manager_id),
-      subject: processTextTemplate(poRequestTemplate.subject_template, context as any),
-      body: processEmailTemplate(poRequestTemplate.body_template, context as any), // <-- CAMBIO: Usar HTML template
+      subject: processTextTemplate(poRequestTemplate.subject_template, context),
+      body: processPlainTextTemplate(poRequestTemplate.body_template, context),
       attachments: attachmentsForDialog,
       attachmentsForSend: attachmentsForSend,
     });
