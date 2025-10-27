@@ -16,6 +16,7 @@ import { useAccountManagers } from "@/hooks/use-account-managers"; // Usar el nu
 import { format } from "date-fns";
 import RequestListActions from "./RequestListActions";
 import { useIsMobile } from "@/hooks/use-mobile"; // Importar hook de móvil
+import { getFullName } from "@/hooks/use-profiles"; // Importar getFullName
 
 interface RequestListTableProps {
   requests: SupabaseRequest[];
