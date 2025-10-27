@@ -23,10 +23,10 @@ jobs:
       - name: Build
         run: npm run build
         env:
-          # INYECCIÓN CRÍTICA DE SECRETS DE SUPABASE
-          # Estos nombres deben coincidir con los Secrets que configuraste en tu repositorio de GitHub
-          VITE_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          # ¡CORRECCIÓN CRÍTICA!
+          # Los nombres de los secrets deben coincidir con los que configuraste en GitHub.
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
