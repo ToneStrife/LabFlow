@@ -62,10 +62,11 @@ const fetchProductSearch = async (
   if (productName && productName.length > 3 && results.length === 0) {
     const similarityThreshold = 0.3; // Umbral de similitud (0.3 es un buen punto de partida)
 
-    // Nota: La función RPC 'similarity' requiere un objeto con claves vacías para la sintaxis de Supabase JS.
+    // CORRECCIÓN: Usar nombres de argumentos genéricos para evitar el error de clave duplicada.
+    // Asumimos que la función 'similarity(text, text)' toma la columna y el término de búsqueda.
     const similarityRpc = supabase.rpc('similarity', { 
-        '': 'product_name', 
-        '': productName 
+        col_name: 'product_name', 
+        search_term: productName 
     });
 
     // Buscar en Inventory por similitud
