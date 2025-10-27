@@ -6,7 +6,7 @@ const EXPIRATION_SECONDS = 60; // URL válida por 60 segundos
 
 /**
  * Genera una URL firmada para un archivo privado en Supabase Storage.
- * @param filePath La ruta del archivo almacenada en la base de datos (ej: user_id/request_id/file_name.pdf)
+ * @param filePath La ruta del archivo almacenada en la base de datos (ej: user_id/request_id/file_type/file_name.pdf)
  * @returns La URL firmada o null si falla.
  */
 export const generateSignedUrl = async (filePath: string): Promise<string | null> => {
@@ -15,7 +15,11 @@ export const generateSignedUrl = async (filePath: string): Promise<string | null
   console.log(`[Storage] Attempting to generate signed URL for path: ${filePath}`);
 
   try {
-    // El cliente 'supabase' ya está configurado con el token de la sesión activa.
+    // El SDK de Supabase maneja la codificación de la ruta, pero a veces es mejor
+    // asegurarse de que la ruta esté limpia antes de pasarla.
+    // Sin embargo, para evitar doble codificación, confiaremos en el SDK.
+    // Si el problema persiste, es probable que el archivo no exista en la ruta exacta.
+    
     const { data, error } = await supabase.storage
       .from(BUCKET_NAME)
       .createSignedUrl(filePath, EXPIRATION_SECONDS);
