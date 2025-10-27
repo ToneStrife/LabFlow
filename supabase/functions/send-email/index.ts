@@ -33,7 +33,7 @@ serve(async (req) => {
     }
 
     // 3. Parsear el cuerpo de la solicitud
-    const { to, subject, body, attachments } = await req.json();
+    const { to, subject, body, attachments, fromName } = await req.json();
     if (!to || !subject || !body) {
       return new Response(JSON.stringify({ error: 'Missing required fields: to, subject, or body' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
@@ -78,7 +78,7 @@ serve(async (req) => {
     // 5. Construir el payload para la API de SendGrid
     const emailData = {
       personalizations: [{ to: [{ email: to }] }],
-      from: { email: sendgridFromEmail, name: "LabFlow" },
+      from: { email: sendgridFromEmail, name: fromName || "LabFlow" },
       subject: subject,
       content: [{ type: 'text/html', value: body }],
       attachments: processedAttachments.length > 0 ? processedAttachments : undefined,

@@ -34,6 +34,7 @@ const emailFormSchema = z.object({
   to: z.string().email({ message: "Debe ser una dirección de correo válida." }),
   subject: z.string().min(1, { message: "El asunto es obligatorio." }),
   body: z.string().min(1, { message: "El cuerpo del correo no puede estar vacío." }),
+  fromName: z.string().optional(),
   attachments: z.array(attachmentSchema).optional(), // Adjuntos para mostrar en el diálogo (usando URL firmada)
   attachmentsForSend: z.array(attachmentSchema).optional(), // Adjuntos para enviar (usando ruta de almacenamiento)
 });
@@ -61,6 +62,7 @@ const EmailDialog: React.FC<EmailDialogProps> = ({
       to: initialData.to || "",
       subject: initialData.subject || "",
       body: initialData.body || "",
+      fromName: initialData.fromName || "",
       attachments: initialData.attachments || [],
       attachmentsForSend: initialData.attachmentsForSend || [],
     },
@@ -68,6 +70,7 @@ const EmailDialog: React.FC<EmailDialogProps> = ({
       to: initialData.to || "",
       subject: initialData.subject || "",
       body: initialData.body || "",
+      fromName: initialData.fromName || "",
       attachments: initialData.attachments || [],
       attachmentsForSend: initialData.attachmentsForSend || [],
     },
@@ -138,6 +141,19 @@ const EmailDialog: React.FC<EmailDialogProps> = ({
                   <FormLabel>Cuerpo</FormLabel>
                   <FormControl>
                     <Textarea rows={8} {...field} disabled={isSending} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="fromName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nombre del Remitente (Opcional)</FormLabel>
+                  <FormControl>
+                    <Input {...field} disabled={isSending} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

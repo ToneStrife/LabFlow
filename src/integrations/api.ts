@@ -321,7 +321,7 @@ export const apiUpdateRequestStatus = async (
 
   // Lógica de inventario: Mover artículos al inventario cuando se marcan como "Recibido"
   // NOTA: Esta lógica se ha movido al hook useReceiveItems para manejar la recepción parcial y los albaranes.
-  // Si el estado se actualiza a 'Received' aquí, es una actualización manual y no debería afectar al inventario.
+  // El estado se actualiza a 'Received' aquí, es una actualización manual y no debería afectar al inventario.
   // La función RPC 'add_or_update_inventory_item' se llama en useReceiveItems.
 
   return updatedRequest as SupabaseRequest;
@@ -527,7 +527,9 @@ interface EmailData {
   to: string;
   subject: string;
   body: string;
-  attachments?: { name: string; url: string }[];
+  fromName?: string;
+  // La URL aquí debe ser la RUTA DE ALMACENAMIENTO (storage path) para que la función Edge pueda descargarla.
+  attachments?: { name: string; url: string }[]; 
 }
 
 export const apiSendEmail = async (email: EmailData): Promise<void> => {
