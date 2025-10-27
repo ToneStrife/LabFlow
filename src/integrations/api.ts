@@ -122,13 +122,27 @@ export const apiGetVendors = async (): Promise<Vendor[]> => {
 };
 
 export const apiAddVendor = async (data: Omit<Vendor, "id" | "created_at">): Promise<Vendor> => {
-  const { data: newVendor, error } = await supabase.from('vendors').insert(data).select().single();
+  const { data: newVendor, error } = await supabase.from('vendors').insert([{
+    name: data.name,
+    contact_person: data.contact_person, // Corrected casing
+    email: data.email,
+    phone: data.phone,
+    notes: data.notes,
+    brands: data.brands,
+  }]).select().single();
   if (error) throw new Error(error.message);
   return newVendor;
 };
 
 export const apiUpdateVendor = async (id: string, data: Partial<Omit<Vendor, "id" | "created_at">>): Promise<Vendor> => {
-  const { data: updatedVendor, error } = await supabase.from('vendors').update(data).eq('id', id).select().single();
+  const { data: updatedVendor, error } = await supabase.from('vendors').update({
+    name: data.name,
+    contact_person: data.contact_person, // Corrected casing
+    email: data.email,
+    phone: data.phone,
+    notes: data.notes,
+    brands: data.brands,
+  }).eq('id', id).select().single();
   if (error) throw new Error(error.message);
   return updatedVendor;
 };

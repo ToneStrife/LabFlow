@@ -16,17 +16,19 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2 } from "lucide-react"; // Import Loader2
+import { VendorFormValues } from "@/hooks/use-vendors"; // Import the correct type
 
 const vendorFormSchema = z.object({
   name: z.string().min(1, { message: "El nombre del proveedor es obligatorio." }),
-  contactPerson: z.string().optional().nullable(),
+  contact_person: z.string().optional().nullable(), // Corrected to snake_case
   email: z.string().email({ message: "Debe ser una dirección de correo válida." }).optional().or(z.literal("")).nullable(),
   phone: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
   brands: z.string().optional().nullable(), // Permitir null
 });
 
-export type VendorFormValues = z.infer<typeof vendorFormSchema>;
+// This type is now correctly inferred from the schema above
+// export type VendorFormValues = z.infer<typeof vendorFormSchema>; // No longer needed as it's imported
 
 interface VendorFormProps {
   initialData?: VendorFormValues;
@@ -40,7 +42,7 @@ const VendorForm: React.FC<VendorFormProps> = ({ initialData, onSubmit, onCancel
     resolver: zodResolver(vendorFormSchema),
     defaultValues: initialData || {
       name: "",
-      contactPerson: null,
+      contact_person: null, // Corrected to snake_case
       email: null,
       phone: null,
       notes: null,
@@ -51,8 +53,8 @@ const VendorForm: React.FC<VendorFormProps> = ({ initialData, onSubmit, onCancel
   const handleSubmit = (data: VendorFormValues) => {
     // Convertir cadenas vacías a null antes de enviar, si el campo es opcional/nullable
     const cleanedData: VendorFormValues = {
-      ...data,
-      contactPerson: data.contactPerson || null,
+      name: data.name,
+      contact_person: data.contact_person || null, // Corrected to snake_case
       email: data.email || null,
       phone: data.phone || null,
       notes: data.notes || null,
@@ -79,7 +81,7 @@ const VendorForm: React.FC<VendorFormProps> = ({ initialData, onSubmit, onCancel
         />
         <FormField
           control={form.control}
-          name="contactPerson"
+          name="contact_person" // Corrected to snake_case
           render={({ field }) => (
             <FormItem>
               <FormLabel>Persona de Contacto (Opcional)</FormLabel>

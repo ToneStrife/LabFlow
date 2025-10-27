@@ -2,7 +2,16 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { Vendor } from '@/data/types';
-import { VendorFormValues } from '@/components/VendorForm';
+
+// Updated to use contact_person
+export interface VendorFormValues {
+  name: string;
+  contact_person: string | null; // Corrected to snake_case
+  email: string | null;
+  phone: string | null;
+  notes: string | null;
+  brands: string[] | null;
+}
 
 // Hook to fetch all vendors
 export const useVendors = () => {
@@ -21,7 +30,18 @@ export const useAddVendor = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (vendor: VendorFormValues) => {
-      const { data, error } = await supabase.from('vendors').insert([vendor]).select().single();
+      const { data, error } = await supabase
+        .from('vendors')
+        .insert([{
+          name: vendor.name,
+          contact_person: vendor.contact_person, // Corrected casing
+          email: vendor.email,
+          phone: vendor.phone,
+          notes: vendor.notes,
+          brands: vendor.brands,
+        }])
+        .select()
+        .single();
       if (error) throw new Error(error.message);
       return data;
     },
@@ -40,7 +60,19 @@ export const useUpdateVendor = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, data }: { id: string; data: VendorFormValues }) => {
-      const { data: updatedData, error } = await supabase.from('vendors').update(data).eq('id', id).select().single();
+      const { data: updatedData, error } = await supabase
+        .from('vendors')
+        .update({
+          name: data.name,
+          contact_person: data.contact_person, // Corrected casing
+          email: data.email,
+          phone: data.phone,
+          notes: data.notes,
+          brands: data.brands,
+        })
+        .eq('id', id)
+        .select()
+        .single();
       if (error) throw new Error(error.message);
       return updatedData;
     },
