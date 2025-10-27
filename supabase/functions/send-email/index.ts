@@ -12,24 +12,28 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // 1. Obtener la configuración de SendGrid de los secretos
+  const sendgridApiKey = Deno.env.get('SENDGRID_API_KEY');
+  const sendgridFromEmail = Deno.env.get('SENDGRID_FROM_EMAIL');
+
+  if (!sendgridApiKey) {
+    return new Response(JSON.stringify({ error: 'Server Error: SENDGRID_API_KEY is missing in Supabase secrets.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+  }
+  
+  if (!sendgridFromEmail) {
+    return new Response(JSON.stringify({ error: 'Server Error: SENDGRID_FROM_EMAIL is missing in Supabase secrets or is invalid. Please set a verified sender email.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+  }
+
   try {
-    // 1. Autenticar al usuario que llama a la función
+    // 2. Autenticar al usuario que llama a la función
     const authClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
     );
-    const { data: { user }, error: authError } = await authClient.auth.getUser();
-    if (authError || !user) {
+    const { error: authError } = await authClient.auth.getUser();
+    if (authError) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-    }
-
-    // 2. Obtener la configuración de SendGrid de los secretos
-    const sendgridApiKey = Deno.env.get('SENDGRID_API_KEY');
-    const sendgridFromEmail = Deno.env.get('SENDGRID_FROM_EMAIL');
-
-    if (!sendgridApiKey || !sendgridFromEmail) {
-      throw new Error('SendGrid configuration is missing in Supabase secrets (SENDGRID_API_KEY, SENDGRID_FROM_EMAIL).');
     }
 
     // 3. Parsear el cuerpo de la solicitud
@@ -48,14 +52,13 @@ serve(async (req) => {
 
       for (const attachment of attachments) {
         try {
-          // CORRECCIÓN: attachment.url es la ruta de almacenamiento (storage path), no una URL completa.
           const filePath = attachment.url; 
           
           console.log(`Attempting to download attachment: ${attachment.name} from path: ${filePath}`);
 
           const { data: fileBlob, error: downloadError } = await supabaseAdmin.storage
             .from('LabFlow')
-            .download(filePath); // Usar la ruta directamente
+            .download(filePath);
 
           if (downloadError) {
             console.error(`Failed to download attachment: ${attachment.name} at path ${filePath}`, downloadError);
@@ -103,6 +106,7 @@ serve(async (req) => {
 
     if (!response.ok) {
       const errorBody = await response.text();
+      console.error('SendGrid API error response:', errorBody);
       throw new Error(`SendGrid API error (${response.status}): ${errorBody}`);
     }
 
