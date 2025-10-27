@@ -79,9 +79,9 @@ serve(async (req) => {
 
         const requestNumber = requestData?.request_number || requestId.substring(0, 8);
         
-        // 3. Generar el nuevo nombre de archivo
+        // 3. Generar el nuevo nombre de archivo (SIMPLIFICADO)
         const originalExtension = file.name.split('.').pop() || 'pdf';
-        const baseFileName = `${requestNumber}-${fileType.charAt(0).toUpperCase() + fileType.slice(1)}-${Date.now()}`;
+        const baseFileName = `${requestNumber}-${fileType.charAt(0).toUpperCase() + fileType.slice(1)}`; // Eliminar timestamp
         const fileName = `${sanitizeFilename(baseFileName)}.${originalExtension}`;
         
         // Organizar por user_id/request_id/file_name
