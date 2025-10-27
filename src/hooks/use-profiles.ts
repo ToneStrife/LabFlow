@@ -14,6 +14,16 @@ import { apiGetProfiles, apiUpdateProfile, apiDeleteProfile, apiInviteUser } fro
 //   });
 // };
 
+// Hook to fetch all profiles
+export const useAllProfiles = () => {
+  return useQuery<Profile[], Error>({
+    queryKey: ["allProfiles"],
+    queryFn: async () => {
+      return apiGetProfiles();
+    },
+  });
+};
+
 // --- Mutation Hooks for Profiles ---
 
 interface ProfileUpdateFormData { 
