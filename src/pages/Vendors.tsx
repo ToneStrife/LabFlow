@@ -53,7 +53,7 @@ const Vendors = () => {
   const openEditDialog = (vendor: Vendor) => {
     setEditingVendor({ 
       ...vendor, 
-      brands: Array.isArray(vendor.brands) ? vendor.brands.join(", ") : "",
+      brands: vendor.brands && Array.isArray(vendor.brands) ? vendor.brands.join(", ") : "",
       contact_person: vendor.contact_person || null, // Ensure contact_person is correctly mapped
     });
     setIsEditVendorDialogOpen(true);
@@ -116,7 +116,7 @@ const Vendors = () => {
             <VendorForm
               initialData={{ 
                 ...editingVendor, 
-                brands: editingVendor.brands?.join(", ") || "",
+                brands: editingVendor.brands && Array.isArray(editingVendor.brands) ? editingVendor.brands.join(", ") : "",
                 contact_person: editingVendor.contact_person || null, // Ensure correct mapping for initialData
               }}
               onSubmit={(data) => handleEditVendor(editingVendor.id, data)}
