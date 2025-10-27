@@ -51,12 +51,19 @@ serve(async (req) => {
           // CORRECCIÓN: attachment.url es la ruta de almacenamiento (storage path), no una URL completa.
           const filePath = attachment.url; 
           
+          console.log(`Attempting to download attachment: ${attachment.name} from path: ${filePath}`);
+
           const { data: fileBlob, error: downloadError } = await supabaseAdmin.storage
             .from('LabFlow')
             .download(filePath); // Usar la ruta directamente
 
           if (downloadError) {
             console.error(`Failed to download attachment: ${attachment.name} at path ${filePath}`, downloadError);
+            continue;
+          }
+
+          if (!fileBlob) {
+            console.error(`File blob is null for attachment: ${attachment.name} at path ${filePath}`);
             continue;
           }
 
