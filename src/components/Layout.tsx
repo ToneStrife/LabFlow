@@ -4,7 +4,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Menu, User, LogOut } from "lucide-react";
+import { Menu, User, LogOut, Loader2 } from "lucide-react"; // Importar Loader2
 import { SidebarNav } from "./SidebarNav";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MadeWithDyad } from "./made-with-dyad";
@@ -20,13 +20,22 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const isMobile = useIsMobile();
   const [isSheetOpen, setIsSheetOpen] = React.useState(false);
-  const { profile, logout } = useSession();
+  const { profile, logout, loading: sessionLoading } = useSession(); // Obtener sessionLoading
 
   const handleLinkClick = () => {
     if (isMobile) {
       setIsSheetOpen(false);
     }
   };
+
+  // Mostrar un estado de carga si la sesión está cargando
+  if (sessionLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin mr-2" /> Cargando interfaz...
+      </div>
+    );
+  }
 
   const userFullName = getFullName(profile);
   const userInitials = userFullName.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
@@ -41,7 +50,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               LabFlow
             </Link>
           </div>
-          <SidebarNav className="flex-grow" />
+          {/* Renderizar SidebarNav solo si el perfil está cargado */}
+          {profile ? <SidebarNav className="flex-grow" /> : (
+            <div className="flex items-center px-3 py-2 text-sm text-muted-foreground">
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Cargando navegación...
+            </div>
+          )}
           <MadeWithDyad />
         </aside>
       )}
@@ -62,7 +76,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     LabFlow
                   </Link>
                 </div>
-                <SidebarNav className="flex-grow" onLinkClick={handleLinkClick} />
+                {/* Renderizar SidebarNav solo si el perfil está cargado */}
+                {profile ? <SidebarNav className="flex-grow" onLinkClick={handleLinkClick} /> : (
+                  <div className="flex items-center px-3 py-2 text-sm text-muted-foreground">
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Cargando navegación...
+                  </div>
+                )}
                 <MadeWithDyad />
               </SheetContent>
             </Sheet>
@@ -71,37 +90,41 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           <h1 className="text-xl font-semibold text-gray-700 dark:text-gray-300 hidden sm:block">Gestión de Solicitudes de Laboratorio</h1>
 
           {/* User Profile Dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback className="bg-primary text-primary-foreground text-sm">{userInitials}</AvatarFallback>
-                </Avatar>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56" align="end" forceMount>
-              <DropdownMenuLabel className="font-normal">
-                <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">{userFullName}</p>
-                  <p className="text-xs leading-none text-muted-foreground">
-                    {profile?.email}
-                  </p>
-                </div>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => handleLinkClick()}>
-                <Link to="/profile" className="flex items-center w-full">
-                  <User className="mr-2 h-4 w-4" />
-                  Perfil
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={logout}>
-                <LogOut className="mr-2 h-4 w-4" />
-                Cerrar Sesión
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {profile ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                  <Avatar className="h-8 w-8">
+                    <AvatarFallback className="bg-primary text-primary-foreground text-sm">{userInitials}</AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56" align="end" forceMount>
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none">{userFullName}</p>
+                    <p className="text-xs leading-none text-muted-foreground">
+                      {profile?.email}
+                    </p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => handleLinkClick()}>
+                  <Link to="/profile" className="flex items-center w-full">
+                    <User className="mr-2 h-4 w-4" />
+                    Perfil
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={logout}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Cerrar Sesión
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          )}
         </header>
 
         {/* Main Content */}
