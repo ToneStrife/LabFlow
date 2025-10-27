@@ -32,7 +32,7 @@ const getFileNameFromPath = (filePath: string): string => {
       // Si la última parte contiene un punto (extensión) y la penúltima es un número largo (timestamp)
       if (timestampPart.includes('.') && !isNaN(Number(parts[parts.length - 2]))) {
         // Reconstruir el nombre sin el timestamp y la extensión
-        const extension = timestampPart.split('.').pop();
+        const extension = timestampPart.split('.');
         const nameWithoutTimestamp = parts.slice(0, parts.length - 2).join('-');
         
         // El nombre legible es [RequestNumber]-[FileType].[ext]
