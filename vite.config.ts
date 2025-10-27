@@ -15,5 +15,5 @@ export default defineConfig(({ mode }) => ({
     },
   },
   // Set base path for GitHub Pages deployment
-  base: mode === 'production' ? '/vite_react_shadcn_ts/' : '/',
+  base: mode === 'production' ? './' : '/',
 }));
