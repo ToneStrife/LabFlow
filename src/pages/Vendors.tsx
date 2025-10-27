@@ -53,7 +53,7 @@ const Vendors = () => {
   const openEditDialog = (vendor: Vendor) => {
     setEditingVendor({ 
       ...vendor, 
-      brands: vendor.brands?.join(", ") || "",
+      brands: Array.isArray(vendor.brands) ? vendor.brands.join(", ") : "",
       contact_person: vendor.contact_person || null, // Ensure contact_person is correctly mapped
     });
     setIsEditVendorDialogOpen(true);
