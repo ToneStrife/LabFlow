@@ -5,7 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Profile } from "@/hooks/use-profiles";
 import { supabase } from "@/integrations/supabase/client"; // Importar cliente de Supabase
 import { toast } from "sonner";
-import { Session } from '@supabase/supabase-js'; // Import Supabase Session type
+import { Session, User } from '@supabase/supabase-js'; // Import Supabase Session type
 
 interface SessionContextType {
   session: Session | null;
