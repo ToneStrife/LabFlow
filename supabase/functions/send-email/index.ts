@@ -88,7 +88,7 @@ serve(async (req) => {
     // 5. Construir el payload para la API de SendGrid
     const emailData = {
       personalizations: [{ to: [{ email: to }] }],
-      from: { email: sendgridFromEmail, name: fromName || "LabFlow" },
+      from: { email: sendgridFromEmail, name: fromName || "Carlos J Aranda" },
       subject: subject,
       content: [{ type: 'text/html', value: body }],
       attachments: processedAttachments.length > 0 ? processedAttachments : undefined,
