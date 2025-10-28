@@ -67,7 +67,7 @@ export const processTextTemplate = (templateString: string, context: EmailTempla
   const { request, vendor, requesterProfile, accountManager, projects, actorProfile, message, order } = context;
 
   // General request details
-  processedString = replacePlaceholder(processedString, 'request.id', request.id);
+  processedString = replacePlaceholder(processedString, 'request.id', request.request_number || request.id.substring(0, 8));
   processedString = replacePlaceholder(processedString, 'request.status', request.status);
   processedString = replacePlaceholder(processedString, 'request.notes', request.notes);
   processedString = replacePlaceholder(processedString, 'request.po_number', request.po_number);
@@ -108,7 +108,7 @@ export const processPlainTextTemplate = (templateString: string, context: EmailT
   const { request, vendor, requesterProfile, accountManager, projects, actorProfile, shippingAddress, billingAddress, message, order } = context;
 
   // General request details
-  processedString = replacePlaceholder(processedString, 'request.id', request.id);
+  processedString = replacePlaceholder(processedString, 'request.id', request.request_number || request.id.substring(0, 8));
   processedString = replacePlaceholder(processedString, 'request.status', request.status);
   processedString = replacePlaceholder(processedString, 'request.notes', request.notes);
   processedString = replacePlaceholder(processedString, 'request.quote_url', request.quote_url);
@@ -164,7 +164,7 @@ export const processEmailTemplate = (templateString: string, context: EmailTempl
   const { request, vendor, requesterProfile, accountManager, projects, actorProfile, shippingAddress, billingAddress, message, order } = context;
 
   // General request details
-  processedString = replacePlaceholder(processedString, 'request.id', request.id);
+  processedString = replacePlaceholder(processedString, 'request.id', request.request_number || request.id.substring(0, 8));
   processedString = replacePlaceholder(processedString, 'request.status', request.status);
   processedString = replacePlaceholder(processedString, 'request.notes', request.notes);
   processedString = replacePlaceholder(processedString, 'request.quote_url', request.quote_url);
