@@ -21,7 +21,7 @@ import { useAccountManagers } from "@/hooks/use-account-managers";
 import { useProjects } from "@/hooks/use-projects";
 import { useEmailTemplates } from "@/hooks/use-email-templates";
 import { useShippingAddresses, useBillingAddresses } from "@/hooks/use-addresses";
-import { processEmailTemplate, processTextTemplate, processPlainTextTemplate } from "@/utils/email-templating";
+import { processEmailTemplate, processTextTemplate } from "@/utils/email-templating"; // Changed import
 import EmailDialog, { EmailFormValues } from "@/components/EmailDialog";
 import ReceiveItemsDialog from "@/components/ReceiveItemsDialog";
 
@@ -171,7 +171,7 @@ const RequestDetails: React.FC = () => {
     setEmailInitialData({
       to: getAccountManagerEmail(request.account_manager_id),
       subject: processTextTemplate(poRequestTemplate.subject_template, context as any), // Cast to any to bypass deep type checking
-      body: processPlainTextTemplate(poRequestTemplate.body_template, context as any), // Cast to any
+      body: processEmailTemplate(poRequestTemplate.body_template, context as any), // Use processEmailTemplate
       attachments: attachmentsForDialog, // Usar URL firmada para el diálogo
       attachmentsForSend: attachmentsForSend, // Guardar la ruta original para el envío real
     });
@@ -220,7 +220,7 @@ const RequestDetails: React.FC = () => {
         setEmailInitialData({
           to: getVendorEmail(requestToApprove.vendor_id),
           subject: processTextTemplate(quoteTemplate.subject_template, context as any), // Cast to any
-          body: processPlainTextTemplate(quoteTemplate.body_template, context as any), // Cast to any
+          body: processEmailTemplate(quoteTemplate.body_template, context as any), // Use processEmailTemplate
         });
         setIsApproveRequestDialogOpen(false);
         setIsEmailDialogOpen(true);
@@ -333,7 +333,7 @@ const RequestDetails: React.FC = () => {
     setEmailInitialData({
       to: getVendorEmail(request.vendor_id),
       subject: processTextTemplate(orderConfirmationTemplate.subject_template, context as any), // Cast to any
-      body: processPlainTextTemplate(orderConfirmationTemplate.body_template, context as any), // Cast to any
+      body: processEmailTemplate(orderConfirmationTemplate.body_template, context as any), // Use processEmailTemplate
       attachments: attachmentsForDialog,
       attachmentsForSend: attachmentsForSend, // Guardar la ruta original para el envío real
     });

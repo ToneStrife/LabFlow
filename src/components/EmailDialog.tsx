@@ -140,7 +140,11 @@ const EmailDialog: React.FC<EmailDialogProps> = ({
                 <FormItem>
                   <FormLabel>Cuerpo</FormLabel>
                   <FormControl>
-                    <Textarea rows={8} {...field} disabled={isSending} />
+                    {/* Renderizar el cuerpo como HTML */}
+                    <div 
+                      className="min-h-[150px] max-h-[300px] overflow-y-auto border rounded-md p-3 text-sm bg-background"
+                      dangerouslySetInnerHTML={{ __html: field.value }} 
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
