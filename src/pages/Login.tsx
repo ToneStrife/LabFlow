@@ -50,6 +50,12 @@ const Login: React.FC = () => {
           }}
           theme="light"
           redirectTo={window.location.origin + '/dashboard'}
+          onError={(error) => {
+            console.error("Error during authentication:", error);
+            toast.error("Error durante la autenticación.", {
+              description: error.message,
+            });
+          }}
         />
       </div>
     </div>
