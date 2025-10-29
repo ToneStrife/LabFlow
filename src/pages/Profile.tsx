@@ -20,12 +20,14 @@ const Profile: React.FC = () => {
   const [firstName, setFirstName] = React.useState(profile?.first_name || "");
   const [lastName, setLastName] = React.useState(profile?.last_name || "");
   const [role, setRole] = React.useState(profile?.role || "");
+  const [phoneNumber, setPhoneNumber] = React.useState(profile?.phone_number || ""); // NEW STATE
 
   React.useEffect(() => {
     if (profile) {
       setFirstName(profile.first_name || "");
       setLastName(profile.last_name || "");
       setRole(profile.role || "");
+      setPhoneNumber(profile.phone_number || ""); // Update state from profile
     }
   }, [profile]);
 
@@ -35,13 +37,13 @@ const Profile: React.FC = () => {
       toast.error("Usuario no autenticado.");
       return;
     }
-    // Solo actualizar first_name, last_name y role en la tabla de perfiles
-    // El email es parte de auth.users y no se puede actualizar directamente desde este formulario de perfil.
+    // Solo actualizar first_name, last_name, phone_number (y role si fuera editable)
     updateProfileMutation.mutate({
       id: session.user.id,
       data: {
         first_name: firstName,
         last_name: lastName,
+        phone_number: phoneNumber || null, // Include phone number
         role: profile?.role || "Requester" // El rol no es editable por el usuario en este formulario, mantener el rol actual
       },
     });
@@ -100,6 +102,20 @@ const Profile: React.FC = () => {
                 disabled={updateProfileMutation.isPending}
               />
             </div>
+            {/* NEW FIELD: Phone Number */}
+            <div>
+              <Label htmlFor="phoneNumber">Número de Teléfono (WhatsApp)</Label>
+              <Input
+                id="phoneNumber"
+                type="tel"
+                placeholder="Ej. +34600123456"
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+                disabled={updateProfileMutation.isPending}
+              />
+              <p className="text-xs text-muted-foreground mt-1">Necesario para recibir notificaciones de WhatsApp.</p>
+            </div>
+            {/* END NEW FIELD */}
             <div>
               <Label htmlFor="role">Rol</Label>
               <Input id="role" value={role} disabled />

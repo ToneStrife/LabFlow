@@ -30,7 +30,7 @@ import {
 
 // --- API de Perfiles (Usuarios del sistema) ---
 export const apiGetProfiles = async (): Promise<Profile[]> => {
-  const { data, error } = await supabase.from('profiles').select('*');
+  const { data, error } = await supabase.from('profiles').select('*, phone_number');
   if (error) throw new Error(error.message);
   return data;
 };
@@ -114,14 +114,50 @@ export const apiInviteUser = async (data: InviteUserData): Promise<any> => {
 };
 
 
+// --- API de WhatsApp (NUEVO) ---
+interface WhatsAppData {
+  to: string; // Phone number with country code (e.g., +34600123456)
+  body: string;
+}
+
+export const apiSendWhatsApp = async (whatsappData: WhatsAppData): Promise<void> => {
+  // Asegurarse de que la sesión esté fresca antes de invocar la función Edge
+  const { data: { session }, error: refreshError } = await supabase.auth.refreshSession();
+  if (refreshError || !session) {
+    console.error("Error refreshing session before sending WhatsApp:", refreshError);
+    throw new Error("Failed to refresh session. Please log in again.");
+  }
+  
+  const { data, error } = await supabase.functions.invoke('send-whatsapp', {
+    body: JSON.stringify(whatsappData),
+    method: 'POST',
+  });
+
+  if (error) {
+    console.error("Error invoking send-whatsapp edge function:", error);
+    let errorMessage = 'Failed to send WhatsApp message via Edge Function.';
+    if (data && typeof data === 'object' && 'error' in data) {
+        errorMessage = (data as any).error;
+    } else if (error.message) {
+        errorMessage = error.message;
+    }
+    throw new Error(errorMessage);
+  }
+  
+  console.log("WhatsApp message successfully triggered:", data);
+};
+
+
 // --- API de Vendedores ---
 export const apiGetVendors = async (): Promise<Vendor[]> => {
+// ... existing apiGetVendors
   const { data, error } = await supabase.from('vendors').select('*');
   if (error) throw new Error(error.message);
   return data;
 };
 
 export const apiAddVendor = async (data: Omit<Vendor, "id" | "created_at">): Promise<Vendor> => {
+// ... existing apiAddVendor
   const { data: newVendor, error } = await supabase
         .from('vendors')
         .insert([{
@@ -139,6 +175,7 @@ export const apiAddVendor = async (data: Omit<Vendor, "id" | "created_at">): Pro
 };
 
 export const apiUpdateVendor = async (id: string, data: Partial<Omit<Vendor, "id" | "created_at">>): Promise<Vendor> => {
+// ... existing apiUpdateVendor
   const { data: updatedVendor, error } = await supabase
         .from('vendors')
         .update({
@@ -157,60 +194,70 @@ export const apiUpdateVendor = async (id: string, data: Partial<Omit<Vendor, "id
 };
 
 export const apiDeleteVendor = async (id: string): Promise<void> => {
+// ... existing apiDeleteVendor
   const { error } = await supabase.from('vendors').delete().eq('id', id);
   if (error) throw new Error(error.message);
 };
 
 // --- API de Account Managers (Contactos, no usuarios del sistema) ---
 export const apiGetAccountManagers = async (): Promise<AccountManager[]> => {
+// ... existing apiGetAccountManagers
   const { data, error } = await supabase.from('account_managers').select('*');
   if (error) throw new Error(error.message);
   return data;
 };
 
 export const apiAddAccountManager = async (data: Omit<AccountManager, "id" | "created_at">): Promise<AccountManager> => {
+// ... existing apiAddAccountManager
   const { data: newManager, error } = await supabase.from('account_managers').insert(data).select().single();
   if (error) throw new Error(error.message);
   return newManager;
 };
 
 export const apiUpdateAccountManager = async (id: string, data: Partial<Omit<AccountManager, "id" | "created_at">>): Promise<AccountManager> => {
+// ... existing apiUpdateAccountManager
   const { data: updatedManager, error } = await supabase.from('account_managers').update(data).eq('id', id).select().single();
   if (error) throw new Error(error.message);
   return updatedManager;
 };
 
 export const apiDeleteAccountManager = async (id: string): Promise<void> => {
+// ... existing apiDeleteAccountManager
   const { error } = await supabase.from('account_managers').delete().eq('id', id);
   if (error) throw new Error(error.message);
 };
 
 // --- API de Proyectos ---
 export const apiGetProjects = async (): Promise<Project[]> => {
+// ... existing apiGetProjects
   const { data, error } = await supabase.from('projects').select('*');
   if (error) throw new Error(error.message);
   return data;
 };
 
 export const apiAddProject = async (data: Omit<Project, "id" | "created_at">): Promise<Project> => {
+// ... existing apiAddProject
   const { data: newProject, error } = await supabase.from('projects').insert(data).select().single();
   if (error) throw new Error(error.message);
   return newProject;
 };
 
 export const apiUpdateProject = async (id: string, data: Partial<Omit<Project, "id" | "created_at">>): Promise<Project> => {
+// ... existing apiUpdateProject
   const { data: updatedProject, error } = await supabase.from('projects').update(data).eq('id', id).select().single();
   if (error) throw new Error(error.message);
   return updatedProject;
 };
 
 export const apiDeleteProject = async (id: string): Promise<void> => {
+// ... existing apiDeleteProject
   const { error } = await supabase.from('projects').delete().eq('id', id);
   if (error) throw new Error(error.message);
 };
 
 // --- API de Solicitudes (MIGRADO A SUPABASE REAL) ---
 export const apiGetRequests = async (): Promise<SupabaseRequest[]> => {
+// ... existing apiGetRequests
   // Selecciona la solicitud y une los ítems relacionados
   const { data: requestsData, error: requestsError } = await supabase
     .from('requests')
@@ -260,6 +307,34 @@ interface AddRequestData {
   items: RequestItem[];
 }
 
+// Helper para obtener Lab Managers (Admins)
+const getLabManagers = async (): Promise<Profile[]> => {
+    const { data, error } = await supabase
+        .from('profiles')
+        .select('first_name, last_name, phone_number')
+        .eq('role', 'Admin'); // Assuming 'Admin' acts as Lab Manager for notifications
+    if (error) {
+        console.error("Error fetching Admin profiles for WhatsApp:", error);
+        return [];
+    }
+    return data || [];
+};
+
+// Helper para obtener el Requester
+const getRequesterProfile = async (requesterId: string): Promise<Profile | null> => {
+    const { data, error } = await supabase
+        .from('profiles')
+        .select('first_name, last_name, phone_number')
+        .eq('id', requesterId)
+        .single();
+    if (error) {
+        console.error("Error fetching Requester profile for WhatsApp:", error);
+        return null;
+    }
+    return data;
+};
+
+
 export const apiAddRequest = async (data: AddRequestData): Promise<SupabaseRequest> => {
   // Usar la función RPC para manejar la inserción de la solicitud y sus ítems en una sola transacción
   const { vendorId, requesterId, accountManagerId, shippingAddressId, billingAddressId, notes, projectCodes, items } = data;
@@ -293,6 +368,26 @@ export const apiAddRequest = async (data: AddRequestData): Promise<SupabaseReque
     throw new Error(error.message);
   }
 
+  // --- WHATSAPP NOTIFICATION: New Request (To Lab Manager/Admin) ---
+  try {
+    const managers = await getLabManagers();
+    const vendor = (await supabase.from('vendors').select('name').eq('id', vendorId).single()).data;
+    const requester = await getRequesterProfile(requesterId);
+    const requesterName = requester ? `${requester.first_name || ''} ${requester.last_name || ''}`.trim() : 'Unkown Requester';
+    const vendorName = vendor?.name || 'Unknown Vendor';
+    const requestNumber = (newRequest as SupabaseRequest).request_number || (newRequest as SupabaseRequest).id.substring(0, 8);
+
+    for (const manager of managers) {
+      if (manager.phone_number) {
+        const body = `🔔 Nueva Solicitud #${requestNumber} de ${requesterName} para ${vendorName}. Estado: Pendiente.`;
+        await apiSendWhatsApp({ to: manager.phone_number, body });
+      }
+    }
+  } catch (e) {
+    console.error("Failed to send WhatsApp notification for new request:", e);
+  }
+  // -----------------------------------------------------------------
+
   // El RPC devuelve un objeto JSONB que ya incluye los ítems
   return newRequest as SupabaseRequest;
 };
@@ -303,6 +398,21 @@ export const apiUpdateRequestStatus = async (
   quoteUrl: string | null = null,
   poNumber: string | null = null
 ): Promise<SupabaseRequest> => {
+  
+  // 1. Fetch current request state before update
+  const { data: oldRequest, error: fetchError } = await supabase
+    .from('requests')
+    .select('status, requester_id, request_number')
+    .eq('id', id)
+    .single();
+
+  if (fetchError) throw new Error(fetchError.message);
+  
+  const oldStatus = oldRequest.status;
+  const requesterId = oldRequest.requester_id;
+  const requestNumber = oldRequest.request_number || id.substring(0, 8);
+
+  // 2. Perform the status update
   const updateData: Partial<SupabaseRequest> = { status };
   if (quoteUrl !== null) updateData.quote_url = quoteUrl;
   if (poNumber !== null) updateData.po_number = poNumber;
@@ -319,16 +429,43 @@ export const apiUpdateRequestStatus = async (
 
   if (error) throw new Error(error.message);
 
-  // Lógica de inventario: Mover artículos al inventario cuando se marcan como "Recibido"
-  // NOTA: Esta lógica se ha movido al hook useReceiveItems para manejar la recepción parcial y los albaranes.
-  // El estado se actualiza a 'Received' aquí, es una actualización manual y no debería afectar al inventario.
-  // La función RPC 'add_or_update_inventory_item' se llama en useReceiveItems.
+  // 3. --- WHATSAPP NOTIFICATION: Status Change ---
+  if (oldStatus !== status) {
+    try {
+      const requester = await getRequesterProfile(requesterId);
+      const managers = await getLabManagers();
+      
+      let requesterBody: string | null = null;
+      let managerBody: string | null = null;
+
+      // Notification 1: Requester (for any status change)
+      if (requester?.phone_number) {
+        requesterBody = `✅ Solicitud #${requestNumber} actualizada a: ${status}.`;
+        await apiSendWhatsApp({ to: requester.phone_number, body: requesterBody });
+      }
+
+      // Notification 2: Lab Manager/Admin (only for 'Received' status)
+      if (status === 'Received') {
+        managerBody = `📦 Recepción Registrada: Solicitud #${requestNumber} ha sido marcada como Recibida.`;
+        for (const manager of managers) {
+          if (manager.phone_number) {
+            await apiSendWhatsApp({ to: manager.phone_number, body: managerBody });
+          }
+        }
+      }
+      
+    } catch (e) {
+      console.error("Failed to send WhatsApp notification for status change:", e);
+    }
+  }
+  // -------------------------------------------------
 
   return updatedRequest as SupabaseRequest;
 };
 
 // NUEVA FUNCIÓN: Actualización completa de los detalles de la solicitud (solo para estado Pending)
 interface UpdateFullRequestData {
+// ... existing UpdateFullRequestData
   vendorId: string;
   shippingAddressId: string;
   billingAddressId: string;
@@ -338,6 +475,7 @@ interface UpdateFullRequestData {
 }
 
 export const apiUpdateFullRequest = async (id: string, data: UpdateFullRequestData): Promise<SupabaseRequest> => {
+// ... existing apiUpdateFullRequest
   const updateData: Partial<SupabaseRequest> = {
     vendor_id: data.vendorId,
     shipping_address_id: data.shippingAddressId,
@@ -365,11 +503,13 @@ export const apiUpdateFullRequest = async (id: string, data: UpdateFullRequestDa
 export const apiUpdateRequestMetadata = async (
   id: string,
   data: {
+// ... existing apiUpdateRequestMetadata
     accountManagerId?: string | null;
     notes?: string | null;
     projectCodes?: string[] | null;
   }
 ): Promise<SupabaseRequest> => {
+// ... existing apiUpdateRequestMetadata
   const updateData: Partial<SupabaseRequest> = {};
   if (data.accountManagerId !== undefined) updateData.account_manager_id = data.accountManagerId;
   if (data.notes !== undefined) updateData.notes = data.notes;
@@ -391,11 +531,13 @@ export const apiUpdateRequestMetadata = async (
 
 // ACTUALIZADO: apiUpdateRequestFile para usar la función Edge
 export const apiUpdateRequestFile = async (
+// ... existing apiUpdateRequestFile
   id: string,
   fileType: "quote" | "po" | "slip",
   file: File | null, // Aceptar File | null
   poNumber: string | null = null
 ): Promise<{ filePath: string | null; poNumber: string | null }> => {
+// ... existing apiUpdateRequestFile
   // Asegurarse de que la sesión esté fresca antes de invocar la función Edge
   const { data: { session }, error: refreshError } = await supabase.auth.refreshSession();
   if (refreshError || !session) {
@@ -477,12 +619,14 @@ export const apiUpdateRequestFile = async (
 };
 
 export const apiDeleteRequest = async (id: string): Promise<void> => {
+// ... existing apiDeleteRequest
   const { error } = await supabase.from('requests').delete().eq('id', id);
   if (error) throw new Error(error.message);
 };
 
 // NUEVA FUNCIÓN: Revertir la recepción de una solicitud
 export const apiRevertRequestReception = async (requestId: string): Promise<void> => {
+// ... existing apiRevertRequestReception
   const { error } = await supabase.rpc('revert_request_reception', { request_id_in: requestId });
   if (error) {
     console.error("Error invoking revert_request_reception RPC:", error);
@@ -493,12 +637,14 @@ export const apiRevertRequestReception = async (requestId: string): Promise<void
 
 // --- API de Inventario (usando mock data por ahora) ---
 export const apiGetInventory = async (): Promise<InventoryItem[]> => {
+// ... existing apiGetInventory
   const { data, error } = await supabase.from('inventory').select('*');
   if (error) throw new Error(error.message);
   return data;
 };
 
 export const apiAddInventoryItem = async (data: Omit<InventoryItem, "id" | "added_at" | "last_updated">): Promise<InventoryItem> => {
+// ... existing apiAddInventoryItem
   const { data: newItem, error } = await supabase.rpc('add_or_update_inventory_item', {
     product_name_in: data.product_name,
     catalog_number_in: data.catalog_number,
@@ -512,18 +658,21 @@ export const apiAddInventoryItem = async (data: Omit<InventoryItem, "id" | "adde
 };
 
 export const apiUpdateInventoryItem = async (id: string, data: Partial<Omit<InventoryItem, "id" | "added_at">>): Promise<InventoryItem> => {
+// ... existing apiUpdateInventoryItem
   const { data: updatedItem, error } = await supabase.from('inventory').update(data).eq('id', id).select().single();
   if (error) throw new Error(error.message);
   return updatedItem;
 };
 
 export const apiDeleteInventoryItem = async (id: string): Promise<void> => {
+// ... existing apiDeleteInventoryItem
   const { error } = await supabase.from('inventory').delete().eq('id', id);
   if (error) throw new Error(error.message);
 };
 
 // --- API de Envío de Correo Electrónico (REAL) ---
 interface EmailData {
+// ... existing EmailData
   to: string;
   subject: string;
   body: string;
@@ -533,6 +682,7 @@ interface EmailData {
 }
 
 export const apiSendEmail = async (email: EmailData): Promise<void> => {
+// ... existing apiSendEmail
   const { data, error } = await supabase.functions.invoke('send-email', {
     body: JSON.stringify(email),
     method: 'POST',
@@ -554,24 +704,28 @@ export const apiSendEmail = async (email: EmailData): Promise<void> => {
 
 // --- API de Plantillas de Correo Electrónico ---
 export const apiGetEmailTemplates = async (): Promise<EmailTemplate[]> => {
+// ... existing apiGetEmailTemplates
   const { data, error } = await supabase.from('email_templates').select('*');
   if (error) throw new Error(error.message);
   return data;
 };
 
 export const apiAddEmailTemplate = async (data: Omit<EmailTemplate, "id" | "created_at">): Promise<EmailTemplate> => {
+// ... existing apiAddEmailTemplate
   const { data: newTemplate, error } = await supabase.from('email_templates').insert(data).select().single();
   if (error) throw new Error(error.message);
   return newTemplate;
 };
 
 export const apiUpdateEmailTemplate = async (id: string, data: Partial<Omit<EmailTemplate, "id" | "created_at">>): Promise<EmailTemplate> => {
+// ... existing apiUpdateEmailTemplate
   const { data: updatedTemplate, error } = await supabase.from('email_templates').update(data).eq('id', id).select().single();
   if (error) throw new Error(error.message);
   return updatedTemplate;
 };
 
 export const apiDeleteEmailTemplate = async (id: string): Promise<void> => {
+// ... existing apiDeleteEmailTemplate
   const { error } = await supabase.from('email_templates').delete().eq('id', id);
   if (error) throw new Error(error.message);
 };
