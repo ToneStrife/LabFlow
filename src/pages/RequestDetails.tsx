@@ -213,7 +213,7 @@ const RequestDetails: React.FC = () => {
           accountManager: accountManagers?.find(am => am.id === requestToApprove.account_manager_id),
           projects: projects,
           actorProfile: profile,
-          shippingAddress: shippingAddresses?.find(a => a.id === requestToApprove.shipping_address_id),
+          shippingAddress: shippingAddresses?.find(a => a.id === requestToApp_id),
           billingAddress: billingAddresses?.find(a => a.id === requestToApprove.billing_address_id),
         };
         
@@ -426,6 +426,37 @@ const RequestDetails: React.FC = () => {
   };
   // FIN NUEVOS HANDLERS DE ACCIÓN
 
+  // NUEVO: Handler para el botón de "Solicitar Cotización" en la página de detalles
+  const handleSendQuoteRequest = async (request: SupabaseRequest) => {
+    // Primero, actualizamos el estado de la solicitud a "Quote Requested"
+    await updateStatusMutation.mutateAsync({ id: request.id, status: "Quote Requested" });
+
+    // Luego, preparamos y abrimos el diálogo de correo
+    const quoteTemplate = emailTemplates?.find(t => t.template_name === 'Quote Request');
+    if (!quoteTemplate) {
+      toast.error("Plantilla de correo electrónico 'Quote Request' no encontrada. Por favor, crea una en el panel de Admin.");
+      return;
+    }
+
+    const context = {
+      request: { ...request, status: "Quote Requested" as const }, // Usar el estado actualizado para el contexto
+      vendor: vendors?.find(v => v.id === request.vendor_id),
+      requesterProfile: profiles?.find(p => p.id === request.requester_id),
+      accountManager: accountManagers?.find(am => am.id === request.account_manager_id),
+      projects: projects,
+      actorProfile: profile,
+      shippingAddress: shippingAddresses?.find(a => a.id === request.shipping_address_id),
+      billingAddress: billingAddresses?.find(a => a.id === request.billing_address_id),
+    };
+    
+    setEmailInitialData({
+      to: getVendorEmail(request.vendor_id),
+      subject: processTextTemplate(quoteTemplate.subject_template, context),
+      body: processEmailTemplate(quoteTemplate.body_template, context),
+    });
+    setIsEmailDialogOpen(true);
+  };
+
 
   if (isLoadingRequests || isLoadingVendors || isLoadingProfiles || isLoadingAccountManagers || isLoadingProjects || isLoadingEmailTemplates || isLoadingShippingAddresses || isLoadingBillingAddresses || isLoadingAggregatedReceived) {
     return <div className="container mx-auto py-8 flex justify-center items-center"><Loader2 className="h-8 w-8 animate-spin mr-2" /> Cargando Detalles de la Solicitud...</div>;
@@ -523,6 +554,7 @@ const RequestDetails: React.FC = () => {
               handleMarkAsOrderedAndSendEmail={handleMarkAsOrderedAndSendEmail}
               openDenyRequestDialog={openDenyRequestDialog}
               openCancelRequestDialog={openCancelRequestDialog}
+              onSendQuoteRequest={handleSendQuoteRequest} {/* Pasar el nuevo handler */}
             />
           </div>
           

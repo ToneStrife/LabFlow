@@ -14,9 +14,9 @@ interface RequestActionsProps {
   handleUploadPOAndOrder: (request: SupabaseRequest) => void;
   handleMarkAsReceived: (request: SupabaseRequest) => void;
   handleMarkAsOrderedAndSendEmail: (request: SupabaseRequest) => void;
-  // Nuevas acciones
   openDenyRequestDialog: (request: SupabaseRequest) => void;
   openCancelRequestDialog: (request: SupabaseRequest) => void;
+  onSendQuoteRequest: (request: SupabaseRequest) => void; // Nueva prop
 }
 
 const RequestActions: React.FC<RequestActionsProps> = ({
@@ -30,11 +30,16 @@ const RequestActions: React.FC<RequestActionsProps> = ({
   handleMarkAsOrderedAndSendEmail,
   openDenyRequestDialog,
   openCancelRequestDialog,
+  onSendQuoteRequest, // Desestructurar la nueva prop
 }) => {
   return (
     <div className="flex flex-col space-y-2"> {/* Cambiado a columna vertical */}
       {request.status === "Pending" && (
         <>
+          {/* Nuevo botón para Solicitar Cotización */}
+          <Button onClick={() => onSendQuoteRequest(request)} disabled={isUpdatingStatus} variant="outline">
+            <Mail className="mr-2 h-4 w-4" /> Solicitar Cotización (Correo)
+          </Button>
           <Button onClick={() => openApproveRequestDialog(request)} disabled={isUpdatingStatus}>
             <CheckCircle className="mr-2 h-4 w-4" /> Aprobar Solicitud
           </Button>

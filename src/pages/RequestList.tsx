@@ -281,6 +281,38 @@ const RequestList: React.FC = () => {
   }, [sourceRequestToMerge, requests]);
   // FIN MANEJADOR DE MERGE
 
+  // NUEVO: Handler para el botón de "Solicitar Cotización" en la lista
+  const handleSendQuoteRequestFromList = async (request: SupabaseRequest) => {
+    // Primero, actualizamos el estado de la solicitud a "Quote Requested"
+    await updateStatusMutation.mutateAsync({ id: request.id, status: "Quote Requested" });
+
+    // Luego, preparamos y abrimos el diálogo de correo
+    const quoteTemplate = emailTemplates?.find(t => t.template_name === 'Quote Request');
+    if (!quoteTemplate) {
+      toast.error("Plantilla de correo electrónico 'Quote Request' no encontrada. Por favor, crea una en el panel de Admin.");
+      return;
+    }
+
+    const context = {
+      request: { ...request, status: "Quote Requested" as const }, // Usar el estado actualizado para el contexto
+      vendor: vendors?.find(v => v.id === request.vendor_id),
+      requesterProfile: profiles?.find(p => p.id === request.requester_id),
+      accountManager: accountManagers?.find(am => am.id === request.account_manager_id),
+      projects: projects,
+      actorProfile: profile,
+      shippingAddress: shippingAddresses?.find(a => a.id === request.shipping_address_id),
+      billingAddress: billingAddresses?.find(a => a.id === request.billing_address_id),
+    };
+    
+    setEmailInitialData({
+      to: getVendorEmail(request.vendor_id),
+      subject: processTextTemplate(quoteTemplate.subject_template, context),
+      body: processEmailTemplate(quoteTemplate.body_template, context),
+    });
+    setIsEmailDialogOpen(true);
+  };
+
+
   const filteredRequests = (requests || []).filter(request => {
     const vendorName = vendors?.find(v => v.id === request.vendor_id)?.name || "";
     const requesterName = getRequesterName(request.requester_id);
@@ -329,7 +361,7 @@ const RequestList: React.FC = () => {
         profiles={profiles}
         isUpdatingStatus={updateStatusMutation.isPending}
         onViewDetails={(id) => navigate(`/requests/${id}`)}
-        onApprove={handleOpenApproveDialogFromList} {/* Usar el nuevo handler */}
+        onApprove={handleOpenApproveDialogFromList}
         onEnterQuoteDetails={openQuoteAndPODetailsDialog}
         onSendPORequest={handleSendPORequest}
         onMarkAsOrdered={openOrderConfirmationDialog}
@@ -337,6 +369,7 @@ const RequestList: React.FC = () => {
         onDeny={handleDenyRequest}
         onCancel={handleCancelRequest}
         onMerge={handleMergeRequest}
+        onSendQuoteRequest={handleSendQuoteRequestFromList} {/* Pasar el nuevo handler */}
       />
 
       <EmailDialog

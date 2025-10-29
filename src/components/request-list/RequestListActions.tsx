@@ -17,6 +17,7 @@ interface RequestListActionsProps {
   onDeny: (request: SupabaseRequest) => void;
   onCancel: (request: SupabaseRequest) => void;
   onMerge: (request: SupabaseRequest) => void; // Nueva acción
+  onSendQuoteRequest: (request: SupabaseRequest) => void; // Nueva prop para solicitar cotización
 }
 
 const RequestListActions: React.FC<RequestListActionsProps> = ({
@@ -31,6 +32,7 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
   onDeny,
   onCancel,
   onMerge, // Desestructurar la nueva acción
+  onSendQuoteRequest, // Desestructurar la nueva prop
 }) => {
   // Permitir fusión solo en estado Pendiente
   const isMergeAllowed = request.status === "Pending";
@@ -61,6 +63,16 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
 
       {request.status === "Pending" && (
         <>
+          {/* Nuevo botón para Solicitar Cotización */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => onSendQuoteRequest(request)}
+            title="Solicitar Cotización (Correo)"
+            disabled={isUpdatingStatus}
+          >
+            <Mail className="h-4 w-4 text-blue-500" />
+          </Button>
           <Button
             variant="ghost"
             size="icon"
