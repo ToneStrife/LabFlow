@@ -554,7 +554,7 @@ const RequestDetails: React.FC = () => {
               handleMarkAsOrderedAndSendEmail={handleMarkAsOrderedAndSendEmail}
               openDenyRequestDialog={openDenyRequestDialog}
               openCancelRequestDialog={openCancelRequestDialog}
-              onSendQuoteRequest={handleSendQuoteRequest} {/* Pasar el nuevo handler */}
+              onSendQuoteRequest={handleSendQuoteRequest}
             />
           </div>
           

@@ -369,7 +369,7 @@ const RequestList: React.FC = () => {
         onDeny={handleDenyRequest}
         onCancel={handleCancelRequest}
         onMerge={handleMergeRequest}
-        onSendQuoteRequest={handleSendQuoteRequestFromList} {/* Pasar el nuevo handler */}
+        onSendQuoteRequest={handleSendQuoteRequestFromList}
       />
 
       <EmailDialog
