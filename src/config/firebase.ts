@@ -14,4 +14,4 @@ export const firebaseConfig = {
 
 // El VAPID Key es necesario para la autenticación de notificaciones push.
 // Genera esto en la configuración de FCM de tu proyecto de Firebase.
-export const VAPID_KEY = "YOUR_VAPID_KEY";
+export const VAPID_KEY = "BEPxPZAQQh5qHVKQ3FeIfC3arZHDVNbE3xxQ_ci-mE98mNc9FrD8oLke-Of7KqLClFBjvV7_Ci33rIAkeX2esrA";
