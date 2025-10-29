@@ -15,13 +15,13 @@ importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-com
 // Esta configuración debe ser accesible para el Service Worker.
 // Por ahora, usamos un placeholder.
 const firebaseConfig = {
-  // Reemplaza con tus claves de Firebase
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID", // CLAVE CRÍTICA PARA FCM
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyCDVNVyXwKFLRZSTFXgNkXJ0VK3j9jb4UQ",
+  authDomain: "labflow-af22c.firebaseapp.com",
+  projectId: "labflow-af22c",
+  storageBucket: "labflow-af22c.firebasestorage.app",
+  messagingSenderId: "969221893099", // CLAVE CRÍTICA PARA FCM
+  appId: "1:969221893099:web:f333a159c4c6e8b6e907ae",
+  measurementId: "G-4XF1FBDNL2"
 };
 
 // Inicializar Firebase
