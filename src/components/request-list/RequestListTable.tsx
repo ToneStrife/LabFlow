@@ -18,6 +18,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { getFullName } from "@/hooks/use-profiles";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Link } from "react-router-dom"; // Importar Link
 
 interface RequestListTableProps {
   requests: SupabaseRequest[];
@@ -69,7 +70,9 @@ const RequestCard: React.FC<{ request: SupabaseRequest; vendor?: Vendor; request
     <Card className="w-full shadow-md">
       <CardHeader className="p-4 pb-2 flex flex-row items-start justify-between">
         <CardTitle className="text-lg font-bold flex flex-col">
-          <span className="text-sm text-primary">Solicitud {displayRequestNumber}</span>
+          <Link to={`/requests/${request.id}`} className="text-sm text-primary hover:underline">
+            Solicitud {displayRequestNumber}
+          </Link>
           <span className="text-xs font-medium text-muted-foreground">{vendor?.name || "N/A"}</span>
         </CardTitle>
         <Badge variant={getStatusBadgeVariant(request.status)} className="text-xs">
@@ -172,10 +175,10 @@ const RequestListTable: React.FC<RequestListTableProps> = ({
               return (
                 <TableRow key={request.id}>
                   <TableCell className="font-medium">
-                    <div className="flex flex-col">
+                    <Link to={`/requests/${request.id}`} className="flex flex-col hover:underline">
                       <span className="font-bold text-primary">{displayRequestNumber}</span>
                       <span className="text-xs text-muted-foreground">{vendor?.name || "N/A"}</span>
-                    </div>
+                    </Link>
                   </TableCell>
                   <TableCell>{requesterName}</TableCell>
                   <TableCell className="max-w-[250px]">
