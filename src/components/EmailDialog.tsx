@@ -21,7 +21,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { Textarea } from "@/components/ui/textarea"; // Importar Textarea
 import { Loader2, Paperclip } from "lucide-react";
 import { Badge } from "@/components/ui/badge"; // Importación añadida
 
@@ -140,10 +140,12 @@ const EmailDialog: React.FC<EmailDialogProps> = ({
                 <FormItem>
                   <FormLabel>Cuerpo</FormLabel>
                   <FormControl>
-                    {/* Renderizar el cuerpo como HTML */}
-                    <div 
-                      className="min-h-[150px] max-h-[300px] overflow-y-auto border rounded-md p-3 text-sm bg-background"
-                      dangerouslySetInnerHTML={{ __html: field.value }} 
+                    {/* Usar Textarea para que el cuerpo sea editable */}
+                    <Textarea 
+                      rows={10} // Puedes ajustar el número de filas
+                      className="min-h-[150px] max-h-[300px] overflow-y-auto"
+                      {...field} 
+                      disabled={isSending} 
                     />
                   </FormControl>
                   <FormMessage />
