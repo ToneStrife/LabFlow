@@ -21,9 +21,10 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea"; // Importar Textarea
+import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Paperclip } from "lucide-react";
-import { Badge } from "@/components/ui/badge"; // Importación añadida
+import { Badge } from "@/components/ui/badge";
+import RichTextEditor from './RichTextEditor'; // Importar el nuevo componente
 
 const attachmentSchema = z.object({
   name: z.string(),
@@ -140,12 +141,12 @@ const EmailDialog: React.FC<EmailDialogProps> = ({
                 <FormItem>
                   <FormLabel>Cuerpo</FormLabel>
                   <FormControl>
-                    {/* Usar Textarea para que el cuerpo sea editable */}
-                    <Textarea 
-                      rows={10} // Puedes ajustar el número de filas
-                      className="min-h-[150px] max-h-[300px] overflow-y-auto"
-                      {...field} 
+                    {/* Usar el nuevo RichTextEditor */}
+                    <RichTextEditor 
+                      value={field.value} 
+                      onChange={field.onChange} 
                       disabled={isSending} 
+                      placeholder="Escribe el cuerpo del correo aquí..."
                     />
                   </FormControl>
                   <FormMessage />
