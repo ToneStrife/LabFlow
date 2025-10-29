@@ -9,7 +9,7 @@ interface RequestListActionsProps {
   request: SupabaseRequest;
   isUpdatingStatus: boolean;
   onViewDetails: (id: string) => void;
-  onApprove: (request: SupabaseRequest) => void;
+  onApprove: (request: SupabaseRequest) => void; // Cambiado a onOpenApproveDialog
   onEnterQuoteDetails: (request: SupabaseRequest) => void;
   onSendPORequest: (request: SupabaseRequest) => void;
   onMarkAsOrdered: (request: SupabaseRequest) => void;
@@ -23,7 +23,7 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
   request,
   isUpdatingStatus,
   onViewDetails,
-  onApprove,
+  onApprove, // Usar el nuevo nombre
   onEnterQuoteDetails,
   onSendPORequest,
   onMarkAsOrdered,
@@ -64,7 +64,7 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => onApprove(request)}
+            onClick={() => onApprove(request)} // Llamar al nuevo handler para abrir el diálogo
             title="Aprobar Solicitud"
             disabled={isUpdatingStatus}
           >
