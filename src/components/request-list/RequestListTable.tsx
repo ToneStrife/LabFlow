@@ -75,9 +75,10 @@ const RequestListTable: React.FC<RequestListTableProps> = ({
     const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
     
     if (isMobile) {
+      // En móvil, mostrar solo el número de artículos y unidades totales
       return (
         <div className="text-xs text-muted-foreground">
-          {items.length} artículos ({totalItems} uds)
+          {items.length} art. ({totalItems} uds)
         </div>
       );
     }

@@ -45,7 +45,7 @@ const InventoryTable: React.FC<InventoryTableProps> = ({ items, onEdit, onDelete
   const isIndeterminate = selectedItems.length > 0 && selectedItems.length < items.length;
 
   return (
-    <div className="rounded-md border">
+    <div className="rounded-md border overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow>
@@ -58,12 +58,12 @@ const InventoryTable: React.FC<InventoryTableProps> = ({ items, onEdit, onDelete
               />
             </TableHead>
             <TableHead>Nombre del Producto</TableHead>
-            <TableHead>Marca</TableHead>
+            <TableHead className="hidden sm:table-cell">Marca</TableHead>
             <TableHead>Catálogo #</TableHead>
             <TableHead>Cantidad</TableHead>
-            <TableHead>Precio Unitario</TableHead>
-            <TableHead className="hidden sm:table-cell">Formato</TableHead>
-            <TableHead className="hidden sm:table-cell">Añadido el</TableHead>
+            <TableHead className="hidden md:table-cell">Precio Unitario</TableHead>
+            <TableHead className="hidden lg:table-cell">Formato</TableHead>
+            <TableHead className="hidden lg:table-cell">Añadido el</TableHead>
             <TableHead className="text-right">Acciones</TableHead>
           </TableRow>
         </TableHeader>
@@ -87,12 +87,12 @@ const InventoryTable: React.FC<InventoryTableProps> = ({ items, onEdit, onDelete
                     />
                   </TableCell>
                   <TableCell className="font-medium">{item.product_name}</TableCell>
-                  <TableCell>{item.brand || "N/A"}</TableCell>
+                  <TableCell className="hidden sm:table-cell">{item.brand || "N/A"}</TableCell>
                   <TableCell>{item.catalog_number}</TableCell>
                   <TableCell>{item.quantity}</TableCell>
-                  <TableCell>{item.unit_price ? `€${Number(item.unit_price).toFixed(2)}` : "N/A"}</TableCell>
-                  <TableCell className="hidden sm:table-cell">{item.format || "N/A"}</TableCell>
-                  <TableCell className="hidden sm:table-cell">{format(new Date(item.added_at), 'yyyy-MM-dd')}</TableCell>
+                  <TableCell className="hidden md:table-cell">{item.unit_price ? `€${Number(item.unit_price).toFixed(2)}` : "N/A"}</TableCell>
+                  <TableCell className="hidden lg:table-cell">{item.format || "N/A"}</TableCell>
+                  <TableCell className="hidden lg:table-cell">{format(new Date(item.added_at), 'yyyy-MM-dd')}</TableCell>
                   <TableCell className="text-right">
                     <Button
                       variant="ghost"
