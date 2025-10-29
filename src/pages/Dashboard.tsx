@@ -19,12 +19,12 @@ interface SummaryCardProps {
 
 const SummaryCard: React.FC<SummaryCardProps> = ({ title, count, icon, colorClass }) => (
   <Card className="shadow-lg transition-all duration-300 hover:shadow-xl border-l-4" style={{ borderColor: `var(--${colorClass})` }}>
-    <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4">
-      <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-      <div className={cn("h-6 w-6", colorClass)}>{icon}</div>
+    <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 pb-1">
+      <CardTitle className="text-xs font-medium text-muted-foreground truncate">{title}</CardTitle>
+      <div className={cn("h-4 w-4", colorClass)}>{icon}</div>
     </CardHeader>
-    <CardContent className="p-4 pt-0">
-      <div className="text-3xl font-bold">{count}</div>
+    <CardContent className="p-3 pt-0">
+      <div className="text-xl font-bold">{count}</div>
     </CardContent>
   </Card>
 );
@@ -62,29 +62,29 @@ const Dashboard = () => {
 
   return (
     <div className="max-w-7xl mx-auto">
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Panel de Control</h1>
         <Button onClick={() => navigate("/new-request")}>
           <PlusCircle className="mr-2 h-4 w-4" /> Nueva Solicitud
         </Button>
       </div>
       
-      {/* Redesigned Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+      {/* Summary Cards: Usar grid-cols-3 en todas las vistas para máxima compacidad */}
+      <div className="grid grid-cols-3 gap-3 mb-8">
         <SummaryCard 
-          title="Solicitudes Pendientes" 
+          title="Pendientes" 
           count={pendingRequestsCount} 
           icon={<Clock className="text-orange-500" />} 
           colorClass="orange-500" 
         />
         <SummaryCard 
-          title="Artículos Pedidos" 
+          title="Pedidos" 
           count={orderedItemsCount} 
           icon={<Package className="text-primary" />} 
           colorClass="primary" 
         />
         <SummaryCard 
-          title="Artículos Recibidos" 
+          title="Recibidos" 
           count={receivedItemsCount} 
           icon={<CheckCircle className="text-green-600" />} 
           colorClass="green-600" 
