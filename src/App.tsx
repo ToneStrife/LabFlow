@@ -17,6 +17,7 @@ import React from "react";
 import Login from "./pages/Login";
 import { Loader2 } from "lucide-react";
 import { Profile as UserProfileType } from "@/data/types"; // Corrected import
+import FCMManager from "./components/FCMManager"; // Importar FCMManager
 
 const queryClient = new QueryClient();
 
@@ -78,6 +79,7 @@ const App = () => (
       <Sonner />
       <HashRouter future={{ v7_relativeSplatPath: true }}>
         <SessionContextProvider>
+          <FCMManager /> {/* Añadir FCMManager aquí */}
           <AppRoutes />
         </SessionContextProvider>
       </HashRouter>

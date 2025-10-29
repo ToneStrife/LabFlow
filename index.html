@@ -21,5 +21,20 @@
     <div id="root"></div>
     <!-- Changed to use a relative path for the script -->
     <script type="module" src="./src/main.tsx"></script>
+    
+    <!-- Registro del Service Worker para PWA/FCM -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/LabFlow/firebase-messaging-sw.js')
+            .then(registration => {
+              console.log('Service Worker registered with scope:', registration.scope);
+            })
+            .catch(error => {
+              console.error('Service Worker registration failed:', error);
+            });
+        });
+      }
+    </script>
   </body>
 </html>
