@@ -213,7 +213,7 @@ const RequestDetails: React.FC = () => {
           accountManager: accountManagers?.find(am => am.id === requestToApprove.account_manager_id),
           projects: projects,
           actorProfile: profile,
-          shippingAddress: shippingAddresses?.find(a => a.id === requestToApp_id),
+          shippingAddress: shippingAddresses?.find(a => a.id === requestToApprove.shipping_address_id),
           billingAddress: billingAddresses?.find(a => a.id === requestToApprove.billing_address_id),
         };
         

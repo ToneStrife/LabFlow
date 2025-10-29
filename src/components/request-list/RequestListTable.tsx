@@ -32,6 +32,7 @@ interface RequestListTableProps {
   onDeny: (request: SupabaseRequest) => void;
   onCancel: (request: SupabaseRequest) => void;
   onMerge: (request: SupabaseRequest) => void; // Nueva acción
+  onSendQuoteRequest: (request: SupabaseRequest) => void; // Nueva prop
 }
 
 const getStatusBadgeVariant = (status: RequestStatus) => {
@@ -57,6 +58,7 @@ const RequestListTable: React.FC<RequestListTableProps> = ({
   requests,
   vendors,
   profiles,
+  onSendQuoteRequest, // Desestructurar la nueva prop
   ...actionProps
 }) => {
   const { data: accountManagers } = useAccountManagers();
@@ -156,7 +158,7 @@ const RequestListTable: React.FC<RequestListTableProps> = ({
                   </TableCell>
                   {!isMobile && <TableCell>{date}</TableCell>}
                   <TableCell>
-                    <RequestListActions request={request} {...actionProps} />
+                    <RequestListActions request={request} onSendQuoteRequest={onSendQuoteRequest} {...actionProps} />
                   </TableCell>
                 </TableRow>
               );
