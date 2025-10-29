@@ -29,7 +29,6 @@ export interface Profile {
   avatar_url: string | null;
   updated_at: string | null;
   role: "Requester" | "Account Manager" | "Admin";
-  phone_number: string | null; // NUEVO CAMPO
 }
 
 export interface Vendor {

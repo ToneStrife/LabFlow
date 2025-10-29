@@ -31,7 +31,6 @@ interface ProfileUpdateFormData {
   last_name?: string | null;
   email?: string | null; 
   role?: "Requester" | "Account Manager" | "Admin";
-  phone_number?: string | null; // ADDED
 }
 
 interface InviteUserData {

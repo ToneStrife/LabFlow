@@ -30,7 +30,7 @@ import {
 
 // --- API de Perfiles (Usuarios del sistema) ---
 export const apiGetProfiles = async (): Promise<Profile[]> => {
-  const { data, error } = await supabase.from('profiles').select('*, phone_number');
+  const { data, error } = await supabase.from('profiles').select('*');
   if (error) throw new Error(error.message);
   return data;
 };
@@ -114,38 +114,15 @@ export const apiInviteUser = async (data: InviteUserData): Promise<any> => {
 };
 
 
-// --- API de WhatsApp (NUEVO) ---
-interface WhatsAppData {
-  to: string; // Phone number with country code (e.g., +34600123456)
-  body: string;
-}
+// --- API de WhatsApp (ELIMINADO) ---
+// interface WhatsAppData {
+//   to: string; 
+//   body: string;
+// }
 
-export const apiSendWhatsApp = async (whatsappData: WhatsAppData): Promise<void> => {
-  // Asegurarse de que la sesión esté fresca antes de invocar la función Edge
-  const { data: { session }, error: refreshError } = await supabase.auth.refreshSession();
-  if (refreshError || !session) {
-    console.error("Error refreshing session before sending WhatsApp:", refreshError);
-    throw new Error("Failed to refresh session. Please log in again.");
-  }
-  
-  const { data, error } = await supabase.functions.invoke('send-whatsapp', {
-    body: JSON.stringify(whatsappData),
-    method: 'POST',
-  });
-
-  if (error) {
-    console.error("Error invoking send-whatsapp edge function:", error);
-    let errorMessage = 'Failed to send WhatsApp message via Edge Function.';
-    if (data && typeof data === 'object' && 'error' in data) {
-        errorMessage = (data as any).error;
-    } else if (error.message) {
-        errorMessage = error.message;
-    }
-    throw new Error(errorMessage);
-  }
-  
-  console.log("WhatsApp message successfully triggered:", data);
-};
+// export const apiSendWhatsApp = async (whatsappData: WhatsAppData): Promise<void> => {
+//   // Logic removed
+// };
 
 
 // --- API de Vendedores ---
@@ -311,10 +288,10 @@ interface AddRequestData {
 const getLabManagers = async (): Promise<Profile[]> => {
     const { data, error } = await supabase
         .from('profiles')
-        .select('first_name, last_name, phone_number')
+        .select('first_name, last_name')
         .eq('role', 'Admin'); // Assuming 'Admin' acts as Lab Manager for notifications
     if (error) {
-        console.error("Error fetching Admin profiles for WhatsApp:", error);
+        console.error("Error fetching Admin profiles for notification:", error);
         return [];
     }
     return data || [];
@@ -324,11 +301,11 @@ const getLabManagers = async (): Promise<Profile[]> => {
 const getRequesterProfile = async (requesterId: string): Promise<Profile | null> => {
     const { data, error } = await supabase
         .from('profiles')
-        .select('first_name, last_name, phone_number')
+        .select('first_name, last_name')
         .eq('id', requesterId)
         .single();
     if (error) {
-        console.error("Error fetching Requester profile for WhatsApp:", error);
+        console.error("Error fetching Requester profile for notification:", error);
         return null;
     }
     return data;
@@ -368,7 +345,8 @@ export const apiAddRequest = async (data: AddRequestData): Promise<SupabaseReque
     throw new Error(error.message);
   }
 
-  // --- WHATSAPP NOTIFICATION: New Request (To Lab Manager/Admin) ---
+  // --- NOTIFICATION: New Request (To Lab Manager/Admin) ---
+  // Lógica de WhatsApp eliminada, solo logueamos o usamos email si se implementa
   try {
     const managers = await getLabManagers();
     const vendor = (await supabase.from('vendors').select('name').eq('id', vendorId).single()).data;
@@ -377,14 +355,10 @@ export const apiAddRequest = async (data: AddRequestData): Promise<SupabaseReque
     const vendorName = vendor?.name || 'Unknown Vendor';
     const requestNumber = (newRequest as SupabaseRequest).request_number || (newRequest as SupabaseRequest).id.substring(0, 8);
 
-    for (const manager of managers) {
-      if (manager.phone_number) {
-        const body = `🔔 Nueva Solicitud #${requestNumber} de ${requesterName} para ${vendorName}. Estado: Pendiente.`;
-        await apiSendWhatsApp({ to: manager.phone_number, body });
-      }
-    }
+    console.log(`[Notification] New Request #${requestNumber} created by ${requesterName} for ${vendorName}. Admins notified.`);
+    
   } catch (e) {
-    console.error("Failed to send WhatsApp notification for new request:", e);
+    console.error("Failed to log notification for new request:", e);
   }
   // -----------------------------------------------------------------
 
@@ -429,33 +403,24 @@ export const apiUpdateRequestStatus = async (
 
   if (error) throw new Error(error.message);
 
-  // 3. --- WHATSAPP NOTIFICATION: Status Change ---
+  // 3. --- NOTIFICATION: Status Change ---
   if (oldStatus !== status) {
     try {
       const requester = await getRequesterProfile(requesterId);
       const managers = await getLabManagers();
       
-      let requesterBody: string | null = null;
-      let managerBody: string | null = null;
+      const requesterName = requester ? `${requester.first_name || ''} ${requester.last_name || ''}`.trim() : 'Unkown Requester';
 
       // Notification 1: Requester (for any status change)
-      if (requester?.phone_number) {
-        requesterBody = `✅ Solicitud #${requestNumber} actualizada a: ${status}.`;
-        await apiSendWhatsApp({ to: requester.phone_number, body: requesterBody });
-      }
+      console.log(`[Notification] Requester ${requesterName} notified: Request #${requestNumber} updated to: ${status}.`);
 
       // Notification 2: Lab Manager/Admin (only for 'Received' status)
       if (status === 'Received') {
-        managerBody = `📦 Recepción Registrada: Solicitud #${requestNumber} ha sido marcada como Recibida.`;
-        for (const manager of managers) {
-          if (manager.phone_number) {
-            await apiSendWhatsApp({ to: manager.phone_number, body: managerBody });
-          }
-        }
+        console.log(`[Notification] Admins notified: Reception Registered: Request #${requestNumber} has been marked as Received.`);
       }
       
     } catch (e) {
-      console.error("Failed to send WhatsApp notification for status change:", e);
+      console.error("Failed to log notification for status change:", e);
     }
   }
   // -------------------------------------------------

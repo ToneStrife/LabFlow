@@ -66,7 +66,6 @@ export let mockProfiles: Profile[] = [
     avatar_url: null,
     updated_at: new Date().toISOString(),
     role: "Requester",
-    phone_number: "+34600111222", // Added mock phone number
   },
   {
     id: "manager-id-456",
@@ -76,7 +75,6 @@ export let mockProfiles: Profile[] = [
     avatar_url: null,
     updated_at: new Date().toISOString(),
     role: "Account Manager",
-    phone_number: "+34600333444", // Added mock phone number
   },
   {
     id: "manager-id-789",
@@ -86,7 +84,6 @@ export let mockProfiles: Profile[] = [
     avatar_url: null,
     updated_at: new Date().toISOString(),
     role: "Admin", // Assuming Admin is the Lab Manager
-    phone_number: "+34600555666", // Added mock phone number
   },
 ];
 
