@@ -479,16 +479,20 @@ const RequestForm: React.FC = () => {
         <div className="space-y-6">
           {fields.map((field, index) => (
             <div key={field.id} className="border p-4 rounded-md relative bg-muted/20 pt-16 sm:pt-4">
-              <h3 className="text-lg font-medium mb-4 text-primary hidden sm:block">Artículo #{index + 1}</h3>
+              
+              {/* Encabezado de Artículo para Móvil/Escritorio */}
+              <div className="flex justify-between items-center mb-4 absolute top-4 left-4 right-4 sm:relative sm:top-0 sm:left-0 sm:right-0 sm:mb-4">
+                <h3 className="text-lg font-medium text-primary">Artículo #{index + 1}</h3>
+                {fields.length > 1 && (
+                  <Button type="button" variant="destructive" size="icon" onClick={() => remove(index)} className="h-8 w-8">
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
               
               {/* Autofill Component */}
               <ItemAutofill index={index} form={form} />
 
-              {fields.length > 1 && (
-                <Button type="button" variant="destructive" size="icon" onClick={() => remove(index)} className="absolute top-4 left-4 h-8 w-8">
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              )}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {/* Fila 1: Marca, Catálogo, Nombre, Cantidad */}
                 <FormField
@@ -517,7 +521,7 @@ const RequestForm: React.FC = () => {
                   control={form.control}
                   name={`items.${index}.productName`}
                   render={({ field: itemField }) => (
-                    <FormItem className="lg:col-span-2">
+                    <FormItem className="sm:col-span-2 lg:col-span-2">
                       <FormLabel>Nombre del Producto</FormLabel>
                       <FormControl><Input placeholder="ej. Células Competentes E. coli DH5a" {...itemField} /></FormControl>
                       <FormMessage />
@@ -578,7 +582,7 @@ const RequestForm: React.FC = () => {
                   control={form.control}
                   name={`items.${index}.notes`}
                   render={({ field: itemField }) => (
-                    <FormItem className="lg:col-span-4">
+                    <FormItem className="sm:col-span-2 lg:col-span-4">
                       <FormLabel>Notas (Opcional)</FormLabel>
                       <FormControl><Textarea placeholder="Cualquier requisito o detalle específico..." {...itemField} /></FormControl>
                       <FormMessage />
