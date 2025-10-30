@@ -67,6 +67,7 @@ const SpendingByVendorChart: React.FC<SpendingByVendorChartProps> = ({ data }) =
               <Tooltip content={<CustomTooltip />} />
               <Legend layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{ fontSize: '12px' }} />
             </PieChart>
+          </ResponsiveContainer>
         )}
       </CardContent>
     </Card>
