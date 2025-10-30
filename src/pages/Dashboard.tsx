@@ -4,10 +4,11 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import RequestList from "@/components/RequestList";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Loader2, Clock, Package, CheckCircle } from "lucide-react";
+import { PlusCircle, Loader2, Clock, Package, CheckCircle, Bell } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useRequests } from "@/hooks/use-requests";
 import { cn } from "@/lib/utils";
+import { useSendTestNotification } from "@/hooks/use-fcm-test"; // Importar el nuevo hook
 
 // Componente de Tarjeta de Resumen Compacta
 interface SummaryCardProps {
@@ -32,6 +33,7 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ title, count, icon, colorClas
 const Dashboard = () => {
   const navigate = useNavigate();
   const { data: requests, isLoading, error } = useRequests();
+  const sendTestNotificationMutation = useSendTestNotification(); // Usar el hook
 
   const allRequests = requests || [];
 
@@ -43,6 +45,10 @@ const Dashboard = () => {
   const receivedItemsCount = allRequests
     .filter(req => req.status === "Received")
     .reduce((total, req) => total + (req.items?.length || 0), 0);
+
+  const handleTestNotification = () => {
+    sendTestNotificationMutation.mutate();
+  };
 
   if (isLoading) {
     return (
@@ -62,11 +68,25 @@ const Dashboard = () => {
 
   return (
     <div className="max-w-7xl mx-auto">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
         <h1 className="text-3xl font-bold">Panel de Control</h1>
-        <Button onClick={() => navigate("/new-request")}>
-          <PlusCircle className="mr-2 h-4 w-4" /> Nueva Solicitud
-        </Button>
+        <div className="flex space-x-2">
+          <Button 
+            onClick={handleTestNotification} 
+            variant="outline" 
+            disabled={sendTestNotificationMutation.isPending}
+          >
+            {sendTestNotificationMutation.isPending ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Bell className="mr-2 h-4 w-4" />
+            )}
+            Probar Notificación
+          </Button>
+          <Button onClick={() => navigate("/new-request")}>
+            <PlusCircle className="mr-2 h-4 w-4" /> Nueva Solicitud
+          </Button>
+        </div>
       </div>
       
       {/* Summary Cards: Usar grid-cols-3 en todas las vistas para máxima compacidad */}
