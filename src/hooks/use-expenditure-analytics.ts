@@ -12,6 +12,7 @@ export interface ExpenditureAnalytics {
   totalSpent: number;
   spendingByProject: ChartData[];
   spendingByVendor: ChartData[];
+  spendingByYear: ChartData[]; // Nuevo campo
 }
 
 /**
@@ -36,12 +37,28 @@ export const useExpenditureAnalytics = (
         totalSpent: 0,
         spendingByProject: [],
         spendingByVendor: [],
+        spendingByYear: [],
       };
     }
 
     const totalSpent = expenditures.reduce((sum, exp) => sum + exp.amount, 0);
 
-    // --- 1. Gasto por Proyecto ---
+    // --- 1. Gasto por Año ---
+    const yearMap = new Map<string, number>();
+    expenditures.forEach(exp => {
+      // Asumiendo que exp.date es una cadena de fecha válida (e.g., 'YYYY-MM-DD')
+      const year = new Date(exp.date).getFullYear().toString();
+      const currentTotal = yearMap.get(year) || 0;
+      yearMap.set(year, currentTotal + exp.amount);
+    });
+
+    const spendingByYear: ChartData[] = Array.from(yearMap.entries()).map(([year, value]) => ({
+      id: year,
+      name: year,
+      value,
+    })).sort((a, b) => a.name.localeCompare(b.name)); // Ordenar cronológicamente
+
+    // --- 2. Gasto por Proyecto ---
     const projectMap = new Map<string, number>();
     expenditures.forEach(exp => {
       const projectId = exp.project_id || 'unassigned';
@@ -55,7 +72,7 @@ export const useExpenditureAnalytics = (
       return { id, name, value };
     }).sort((a, b) => b.value - a.value); // Ordenar de mayor a menor
 
-    // --- 2. Gasto por Proveedor ---
+    // --- 3. Gasto por Proveedor ---
     const vendorMap = new Map<string, number>();
     
     // Crear un mapa de solicitud a proveedor para búsquedas rápidas
@@ -94,6 +111,7 @@ export const useExpenditureAnalytics = (
       totalSpent,
       spendingByProject,
       spendingByVendor,
+      spendingByYear,
     };
   }, [expenditures, projects, vendors, requests, isLoading]);
 

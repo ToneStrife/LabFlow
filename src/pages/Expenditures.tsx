@@ -8,20 +8,21 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useExpenditures, useAddExpenditure, useUpdateExpenditure, useDeleteExpenditure, ExpenditureFormValues, useUnaccountedReceivedRequests } from "@/hooks/use-expenditures";
 import { useProjects } from "@/hooks/use-projects";
 import { useVendors } from "@/hooks/use-vendors";
-import { useRequests } from "@/hooks/use-requests"; // Importar useRequests
-import { useExpenditureAnalytics } from "@/hooks/use-expenditure-analytics"; // Importar el nuevo hook de análisis
+import { useRequests } from "@/hooks/use-requests";
+import { useExpenditureAnalytics } from "@/hooks/use-expenditure-analytics";
 import ExpenditureTable from "@/components/ExpenditureTable";
 import ExpenditureForm from "@/components/ExpenditureForm";
 import ImportExpendituresDialog from "@/components/ImportExpendituresDialog";
-import SpendingByProjectChart from "@/components/charts/SpendingByProjectChart"; // Importar gráfico de proyecto
-import SpendingByVendorChart from "@/components/charts/SpendingByVendorChart"; // Importar gráfico de proveedor
+import SpendingByProjectChart from "@/components/charts/SpendingByProjectChart";
+import SpendingByVendorChart from "@/components/charts/SpendingByVendorChart";
+import SpendingByYearChart from "@/components/charts/SpendingByYearChart"; // Importar nuevo gráfico
 import { Expenditure } from "@/data/types";
 
 const Expenditures = () => {
   const { data: expenditures, isLoading: isLoadingExpenditures, error: expendituresError } = useExpenditures();
   const { data: projects, isLoading: isLoadingProjects } = useProjects();
   const { data: vendors, isLoading: isLoadingVendors } = useVendors();
-  const { data: requests, isLoading: isLoadingRequests } = useRequests(); // Obtener solicitudes
+  const { data: requests, isLoading: isLoadingRequests } = useRequests();
   const { data: unaccountedRequests, isLoading: isLoadingUnaccountedRequests } = useUnaccountedReceivedRequests();
   
   // Hook de análisis
@@ -114,9 +115,26 @@ const Expenditures = () => {
         Rastrea los gastos incurridos, vinculándolos a proyectos y solicitudes específicas.
       </p>
       
-      {/* Sección de Análisis y Gráficos */}
+      {/* 1. Gasto Total por Años (Nuevo) */}
+      <div className="mb-8">
+        <SpendingByYearChart data={analytics.spendingByYear} />
+      </div>
+
+      {/* 2. Detalle de Gastos (Tabla) */}
+      <h2 className="text-2xl font-bold mb-4">Detalle de Gastos</h2>
+      <div className="mb-8">
+        <ExpenditureTable
+          expenditures={expenditures || []}
+          projects={projects}
+          onEdit={openEditDialog}
+          onDelete={handleDeleteExpenditure}
+        />
+      </div>
+
+      {/* 3. Gráficos de Distribución y Total */}
+      <h2 className="text-2xl font-bold mb-4">Análisis de Distribución</h2>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <Card className="md:col-span-1">
+        <Card className="md:col-span-1 h-full">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Gasto Total Registrado</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
@@ -139,14 +157,6 @@ const Expenditures = () => {
           <SpendingByProjectChart data={analytics.spendingByProject} />
         </div>
       </div>
-
-      <h2 className="text-2xl font-bold mb-4">Detalle de Gastos</h2>
-      <ExpenditureTable
-        expenditures={expenditures || []}
-        projects={projects}
-        onEdit={openEditDialog}
-        onDelete={handleDeleteExpenditure}
-      />
 
       {/* Edit Expenditure Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
