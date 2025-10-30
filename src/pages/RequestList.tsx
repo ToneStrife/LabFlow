@@ -354,10 +354,11 @@ const RequestList: React.FC = () => {
       const statusB = STATUS_ORDER[b.status] || 99;
 
       if (statusA !== statusB) {
-        return statusA - statusB; // Ordenar por prioridad de estado
+        return statusA - statusB; // Ordenar por prioridad de estado (1, 2, 3...)
       }
 
       // Si los estados son iguales, ordenar por fecha de creación (más reciente primero)
+      // Esto asegura que dentro de un mismo estado, el más reciente aparezca primero.
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
   }, [requests, searchTerm, filterStatus, vendors, profiles, accountManagers]);
