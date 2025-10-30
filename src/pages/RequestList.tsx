@@ -50,9 +50,9 @@ const STATUS_ORDER: Record<RequestStatus, number> = {
   "Quote Requested": 2,
   "PO Requested": 3,
   "Ordered": 4,
-  "Received": 5,
-  "Denied": 6,
-  "Cancelled": 7,
+  "Received": 10, // Aumentar la prioridad para que vaya al final
+  "Denied": 11,
+  "Cancelled": 12,
 };
 
 const RequestList: React.FC = () => {
