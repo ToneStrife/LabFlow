@@ -146,14 +146,19 @@ const ExpenditureForm: React.FC<ExpenditureFormProps> = ({ initialData, onSubmit
           render={({ field }) => (
             <FormItem>
               <FormLabel>Vincular a Solicitud (Opcional)</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value || ""} disabled={isLoadingRequests || isSubmitting}>
+              <Select 
+                onValueChange={(value) => field.onChange(value === "null-request" ? null : value)} 
+                value={field.value || "null-request"} 
+                disabled={isLoadingRequests || isSubmitting}
+              >
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder={isLoadingRequests ? "Cargando solicitudes..." : "Selecciona una solicitud (ID)"} />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="">Sin Solicitud</SelectItem>
+                  {/* Usamos un valor de cadena no vacía para representar null */}
+                  <SelectItem value="null-request">Sin Solicitud</SelectItem>
                   {requests?.map((req) => (
                     <SelectItem key={req.id} value={req.id}>
                       {req.request_number || req.id.substring(0, 8)} ({req.status})
