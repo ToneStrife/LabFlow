@@ -44,6 +44,16 @@ const getFileNameFromPath = (filePath: string): string => {
   }
 };
 
+// Definir el orden de prioridad de los estados
+const STATUS_ORDER: Record<RequestStatus, number> = {
+  "Pending": 1,
+  "Quote Requested": 2,
+  "PO Requested": 3,
+  "Ordered": 4,
+  "Received": 5,
+  "Denied": 6,
+  "Cancelled": 7,
+};
 
 const RequestList: React.FC = () => {
   const navigate = useNavigate();
@@ -196,7 +206,7 @@ const RequestList: React.FC = () => {
       }
 
       const context = {
-        request,
+        request: { ...request, status: "Quote Requested" as const }, // Usar el estado actualizado para el contexto
         vendor: vendors?.find(v => v.id === request.vendor_id),
         requesterProfile: profiles?.find(p => p.id === request.requester_id),
         accountManager: accountManagers?.find(am => am.id === request.account_manager_id),
@@ -313,27 +323,45 @@ const RequestList: React.FC = () => {
   };
 
 
-  const filteredRequests = (requests || []).filter(request => {
-    const vendorName = vendors?.find(v => v.id === request.vendor_id)?.name || "";
-    const requesterName = getRequesterName(request.requester_id);
-    const accountManagerName = getAccountManagerName(request.account_manager_id);
+  const filteredAndSortedRequests = React.useMemo(() => {
+    if (!requests) return [];
 
-    const matchesSearchTerm = searchTerm.toLowerCase() === "" ||
-      request.items?.some(item =>
-        item.product_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.catalog_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (item.brand && item.brand.toLowerCase().includes(searchTerm.toLowerCase()))
-      ) ||
-      vendorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      requesterName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      accountManagerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (request.quote_url && request.quote_url.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (request.po_number && request.po_number.toLowerCase().includes(searchTerm.toLowerCase()));
+    const filtered = requests.filter(request => {
+      const vendorName = vendors?.find(v => v.id === request.vendor_id)?.name || "";
+      const requesterName = getRequesterName(request.requester_id);
+      const accountManagerName = getAccountManagerName(request.account_manager_id);
 
-    const matchesStatus = filterStatus === "All" || request.status === filterStatus;
+      const matchesSearchTerm = searchTerm.toLowerCase() === "" ||
+        request.items?.some(item =>
+          item.product_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          item.catalog_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (item.brand && item.brand.toLowerCase().includes(searchTerm.toLowerCase()))
+        ) ||
+        vendorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        requesterName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        accountManagerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (request.quote_url && request.quote_url.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (request.po_number && request.po_number.toLowerCase().includes(searchTerm.toLowerCase()));
 
-    return matchesSearchTerm && matchesStatus;
-  });
+      const matchesStatus = filterStatus === "All" || request.status === filterStatus;
+
+      return matchesSearchTerm && matchesStatus;
+    });
+
+    // Aplicar ordenación por estado y luego por fecha de creación (más reciente primero)
+    return filtered.sort((a, b) => {
+      const statusA = STATUS_ORDER[a.status] || 99;
+      const statusB = STATUS_ORDER[b.status] || 99;
+
+      if (statusA !== statusB) {
+        return statusA - statusB; // Ordenar por prioridad de estado
+      }
+
+      // Si los estados son iguales, ordenar por fecha de creación (más reciente primero)
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
+  }, [requests, searchTerm, filterStatus, vendors, profiles, accountManagers]);
+
 
   if (isLoadingRequests || isLoadingVendors || isLoadingProfiles || isLoadingAccountManagers || isLoadingProjects || isLoadingEmailTemplates || isLoadingShippingAddresses || isLoadingBillingAddresses) {
     return (
@@ -356,7 +384,7 @@ const RequestList: React.FC = () => {
         onStatusChange={setFilterStatus}
       />
       <RequestListTable
-        requests={filteredRequests}
+        requests={filteredAndSortedRequests} // Usar la lista ordenada
         vendors={vendors}
         profiles={profiles}
         isUpdatingStatus={updateStatusMutation.isPending}
