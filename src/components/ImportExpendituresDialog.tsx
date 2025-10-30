@@ -14,6 +14,7 @@ import { Loader2, CheckCheck, DollarSign } from "lucide-react";
 import { SupabaseRequest } from "@/data/types";
 import { useAddExpenditure, ExpenditureFormValues } from "@/hooks/use-expenditures";
 import { useProjects } from "@/hooks/use-projects";
+import { useVendors } from "@/hooks/use-vendors"; // Importar useVendors
 import { toast } from "sonner";
 import { format } from "date-fns";
 import {
@@ -55,7 +56,7 @@ const useImportRequestsAsExpenditures = () => {
       const expenditureData: ExpenditureFormValues = {
         project_id: projectId,
         amount: totalAmount,
-        description: `Costo de la Solicitud #${requestNumber} (${request.vendor_id})`,
+        description: `Costo de la Solicitud #${requestNumber}`, // Descripción más limpia
         date_incurred: format(new Date(), 'yyyy-MM-dd'), // Fecha de hoy
         request_id: request.id,
       };
@@ -74,6 +75,7 @@ const ImportExpendituresDialog: React.FC<ImportExpendituresDialogProps> = ({
   requests,
 }) => {
   const { data: projects, isLoading: isLoadingProjects } = useProjects();
+  const { data: vendors, isLoading: isLoadingVendors } = useVendors(); // Usar useVendors
   const importRequests = useImportRequestsAsExpenditures();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   
@@ -125,6 +127,23 @@ const ImportExpendituresDialog: React.FC<ImportExpendituresDialogProps> = ({
   
   const totalImportAmount = requests.reduce((sum, req) => sum + calculateRequestTotal(req), 0);
   const isReadyToImport = requests.length > 0 && Object.keys(projectSelections).length === requests.length && Object.values(projectSelections).every(id => !!id);
+  const isLoading = isLoadingProjects || isLoadingVendors;
+
+  const getVendorName = (vendorId: string) => {
+    return vendors?.find(v => v.id === vendorId)?.name || vendorId.substring(0, 8);
+  };
+
+  if (isLoading) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-[800px]">
+          <div className="flex justify-center items-center h-40">
+            <Loader2 className="h-6 w-6 animate-spin mr-2" /> Cargando datos de importación...
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -156,7 +175,7 @@ const ImportExpendituresDialog: React.FC<ImportExpendituresDialogProps> = ({
                 return (
                   <TableRow key={req.id}>
                     <TableCell className="font-medium">{requestNumber}</TableCell>
-                    <TableCell>{req.vendor_id}</TableCell> {/* Usar ID de vendor por simplicidad */}
+                    <TableCell>{getVendorName(req.vendor_id)}</TableCell> {/* Mostrar nombre del proveedor */}
                     <TableCell className="text-right font-semibold">€{total.toFixed(2)}</TableCell>
                     <TableCell>
                       <Select 

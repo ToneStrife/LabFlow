@@ -26,11 +26,11 @@ import {
   updateMockInventoryItem,
   deleteMockInventoryItem,
   sendMockEmail,
-  // NUEVAS IMPORTACIONES DE GASTOS
-  getMockExpenditures,
-  addMockExpenditure,
-  updateMockExpenditure,
-  deleteMockExpenditure,
+  // NUEVAS IMPORTACIONES DE GASTOS (ELIMINADAS)
+  // getMockExpenditures,
+  // addMockExpenditure,
+  // updateMockExpenditure,
+  // deleteMockExpenditure,
 } from "@/data/crud";
 
 
@@ -632,42 +632,30 @@ export const apiDeleteInventoryItem = async (id: string): Promise<void> => {
 
 // --- API de Gastos (Expenditures) ---
 export const apiGetExpenditures = async (): Promise<Expenditure[]> => {
-  // Usar mock data por ahora, ya que la tabla no existe en Supabase
-  return getMockExpenditures();
-  /*
-  const { data, error } = await supabase.from('expenditures').select('*');
+  // MIGRADO A SUPABASE REAL
+  const { data, error } = await supabase.from('expenditures').select('*').order('date_incurred', { ascending: false });
   if (error) throw new Error(error.message);
   return data;
-  */
 };
 
 export const apiAddExpenditure = async (data: Omit<Expenditure, "id" | "created_at">): Promise<Expenditure> => {
-  // Usar mock data
-  return addMockExpenditure(data);
-  /*
+  // MIGRADO A SUPABASE REAL
   const { data: newExpenditure, error } = await supabase.from('expenditures').insert(data).select().single();
   if (error) throw new Error(error.message);
   return newExpenditure;
-  */
 };
 
 export const apiUpdateExpenditure = async (id: string, data: Partial<Omit<Expenditure, "id" | "created_at">>): Promise<Expenditure> => {
-  // Usar mock data
-  return updateMockExpenditure(id, data);
-  /*
+  // MIGRADO A SUPABASE REAL
   const { data: updatedExpenditure, error } = await supabase.from('expenditures').update(data).eq('id', id).select().single();
   if (error) throw new Error(error.message);
   return updatedExpenditure;
-  */
 };
 
 export const apiDeleteExpenditure = async (id: string): Promise<void> => {
-  // Usar mock data
-  return deleteMockExpenditure(id);
-  /*
+  // MIGRADO A SUPABASE REAL
   const { error } = await supabase.from('expenditures').delete().eq('id', id);
   if (error) throw new Error(error.message);
-  */
 };
 
 
