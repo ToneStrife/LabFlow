@@ -15,12 +15,27 @@
     <link rel="icon" type="image/png" href="/LabFlow/favicon.png" />
     <!-- Fallback para navegadores antiguos (si tuvieras un .ico) -->
     <!-- <link rel="icon" href="/LabFlow/favicon.ico" /> -->
-    <script type="module" crossorigin src="/LabFlow/assets/index-jne_PtQH.js"></script>
-    <link rel="stylesheet" crossorigin href="/LabFlow/assets/index-PThM2arA.css">
+    <script type="module" crossorigin src="/LabFlow/assets/index-BywyB9sd.js"></script>
+    <link rel="stylesheet" crossorigin href="/LabFlow/assets/index-Dk3kAcjH.css">
   </head>
 
   <body>
     <div id="root"></div>
     <!-- Changed to use a relative path for the script -->
+    
+    <!-- Registro del Service Worker para PWA/FCM -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/LabFlow/firebase-messaging-sw.js')
+            .then(registration => {
+              console.log('Service Worker registered with scope:', registration.scope);
+            })
+            .catch(error => {
+              console.error('Service Worker registration failed:', error);
+            });
+        });
+      }
+    </script>
   </body>
 </html>
