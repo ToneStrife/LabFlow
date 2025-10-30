@@ -7,15 +7,30 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useExpenditures, useAddExpenditure, useUpdateExpenditure, useDeleteExpenditure, ExpenditureFormValues, useUnaccountedReceivedRequests } from "@/hooks/use-expenditures";
 import { useProjects } from "@/hooks/use-projects";
+import { useVendors } from "@/hooks/use-vendors";
+import { useRequests } from "@/hooks/use-requests"; // Importar useRequests
+import { useExpenditureAnalytics } from "@/hooks/use-expenditure-analytics"; // Importar el nuevo hook de análisis
 import ExpenditureTable from "@/components/ExpenditureTable";
 import ExpenditureForm from "@/components/ExpenditureForm";
-import ImportExpendituresDialog from "@/components/ImportExpendituresDialog"; // Importar el nuevo diálogo
+import ImportExpendituresDialog from "@/components/ImportExpendituresDialog";
+import SpendingByProjectChart from "@/components/charts/SpendingByProjectChart"; // Importar gráfico de proyecto
+import SpendingByVendorChart from "@/components/charts/SpendingByVendorChart"; // Importar gráfico de proveedor
 import { Expenditure } from "@/data/types";
 
 const Expenditures = () => {
   const { data: expenditures, isLoading: isLoadingExpenditures, error: expendituresError } = useExpenditures();
   const { data: projects, isLoading: isLoadingProjects } = useProjects();
-  const { data: unaccountedRequests, isLoading: isLoadingUnaccountedRequests } = useUnaccountedReceivedRequests(); // Nuevo hook
+  const { data: vendors, isLoading: isLoadingVendors } = useVendors();
+  const { data: requests, isLoading: isLoadingRequests } = useRequests(); // Obtener solicitudes
+  const { data: unaccountedRequests, isLoading: isLoadingUnaccountedRequests } = useUnaccountedReceivedRequests();
+  
+  // Hook de análisis
+  const { analytics, isLoading: isLoadingAnalytics } = useExpenditureAnalytics(
+    expenditures,
+    projects,
+    vendors,
+    requests
+  );
   
   const addExpenditureMutation = useAddExpenditure();
   const updateExpenditureMutation = useUpdateExpenditure();
@@ -24,7 +39,7 @@ const Expenditures = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
   const [editingExpenditure, setEditingExpenditure] = React.useState<Expenditure | undefined>(undefined);
-  const [isImportDialogOpen, setIsImportDialogOpen] = React.useState(false); // Nuevo estado para el diálogo de importación
+  const [isImportDialogOpen, setIsImportDialogOpen] = React.useState(false);
 
   const handleAddExpenditure = async (data: ExpenditureFormValues) => {
     await addExpenditureMutation.mutateAsync(data);
@@ -46,7 +61,7 @@ const Expenditures = () => {
     setIsEditDialogOpen(true);
   };
 
-  const isLoading = isLoadingExpenditures || isLoadingProjects || isLoadingUnaccountedRequests;
+  const isLoading = isLoadingExpenditures || isLoadingProjects || isLoadingUnaccountedRequests || isLoadingVendors || isLoadingRequests || isLoadingAnalytics;
 
   if (isLoading) {
     return (
@@ -60,8 +75,6 @@ const Expenditures = () => {
     return <div className="p-4 sm:p-6 text-red-600">Error: {expendituresError.message}</div>;
   }
   
-  // Calcular el total de gastos
-  const totalSpent = expenditures?.reduce((sum, exp) => sum + exp.amount, 0) || 0;
   const unaccountedCount = unaccountedRequests?.length || 0;
 
   return (
@@ -101,16 +114,33 @@ const Expenditures = () => {
         Rastrea los gastos incurridos, vinculándolos a proyectos y solicitudes específicas.
       </p>
       
-      <Card className="mb-8">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Gasto Total Registrado</CardTitle>
-          <DollarSign className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">€{totalSpent.toFixed(2)}</div>
-        </CardContent>
-      </Card>
+      {/* Sección de Análisis y Gráficos */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <Card className="md:col-span-1">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Gasto Total Registrado</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-red-600">€{analytics.totalSpent.toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Total acumulado de todos los gastos.
+            </p>
+          </CardContent>
+        </Card>
+        
+        <div className="md:col-span-2">
+          <SpendingByVendorChart data={analytics.spendingByVendor} />
+        </div>
+      </div>
+      
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        <div className="lg:col-span-3">
+          <SpendingByProjectChart data={analytics.spendingByProject} />
+        </div>
+      </div>
 
+      <h2 className="text-2xl font-bold mb-4">Detalle de Gastos</h2>
       <ExpenditureTable
         expenditures={expenditures || []}
         projects={projects}
