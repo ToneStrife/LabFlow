@@ -70,7 +70,7 @@ const Inventory = () => {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto py-8 flex justify-center items-center">
+      <div className="p-4 sm:p-6 flex justify-center items-center">
         <Loader2 className="h-8 w-8 animate-spin mr-2" /> Cargando Inventario...
       </div>
     );
@@ -78,14 +78,14 @@ const Inventory = () => {
 
   if (error) {
     return (
-      <div className="container mx-auto py-8 text-red-600">
+      <div className="p-4 sm:p-6 text-red-600">
         Error al cargar el inventario: {error.message}
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto py-8">
+    <div className="p-4 sm:p-6 max-w-full mx-auto">
       <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
         <h1 className="text-3xl font-bold">Inventario</h1>
         <Dialog open={isAddInventoryDialogOpen} onOpenChange={setIsAddInventoryDialogOpen}>

@@ -468,12 +468,12 @@ const RequestDetails: React.FC = () => {
 
 
   if (isLoadingRequests || isLoadingVendors || isLoadingProfiles || isLoadingAccountManagers || isLoadingProjects || isLoadingEmailTemplates || isLoadingShippingAddresses || isLoadingBillingAddresses || isLoadingAggregatedReceived) {
-    return <div className="container mx-auto py-8 flex justify-center items-center"><Loader2 className="h-8 w-8 animate-spin mr-2" /> Cargando Detalles de la Solicitud...</div>;
+    return <div className="p-4 sm:p-6 flex justify-center items-center"><Loader2 className="h-8 w-8 animate-spin mr-2" /> Cargando Detalles de la Solicitud...</div>;
   }
 
   if (!request) {
     return (
-      <div className="container mx-auto py-8 text-center">
+      <div className="p-4 sm:p-6 text-center">
         <h1 className="text-3xl font-bold mb-4">Solicitud No Encontrada</h1>
         <Button onClick={() => navigate("/dashboard")} className="mt-6"><ArrowLeft className="mr-2 h-4 w-4" /> Volver al Panel de Control</Button>
       </div>
@@ -501,7 +501,7 @@ const RequestDetails: React.FC = () => {
 
 
   return (
-    <div className="max-w-7xl mx-auto py-8 space-y-6">
+    <div className="p-4 sm:p-6 max-w-full mx-auto space-y-6">
       <div className="flex items-center justify-between mb-6">
         <Button variant="outline" onClick={() => navigate("/dashboard")}><ArrowLeft className="mr-2 h-4 w-4" /> Volver al Panel de Control</Button>
         

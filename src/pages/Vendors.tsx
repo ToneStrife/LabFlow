@@ -61,7 +61,7 @@ const Vendors = () => {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto py-8 flex justify-center items-center">
+      <div className="p-4 sm:p-6 flex justify-center items-center">
         <Loader2 className="h-8 w-8 animate-spin mr-2" /> Cargando Proveedores...
       </div>
     );
@@ -69,15 +69,15 @@ const Vendors = () => {
 
   if (error) {
     return (
-      <div className="container mx-auto py-8 text-red-600">
+      <div className="p-4 sm:p-6 text-red-600">
         Error al cargar proveedores: {error.message}
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto py-8">
-      <div className="flex justify-between items-center mb-6">
+    <div className="p-4 sm:p-6 max-w-full mx-auto">
+      <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
         <h1 className="text-3xl font-bold">Directorio de Proveedores</h1>
         <Dialog open={isAddVendorDialogOpen} onOpenChange={setIsAddVendorDialogOpen}>
           <DialogTrigger asChild>

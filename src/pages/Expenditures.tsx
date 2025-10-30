@@ -50,14 +50,14 @@ const Expenditures = () => {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto py-8 flex justify-center items-center">
+      <div className="p-4 sm:p-6 flex justify-center items-center">
         <Loader2 className="h-8 w-8 animate-spin mr-2" /> Cargando Gastos...
       </div>
     );
   }
 
   if (expendituresError) {
-    return <div className="container mx-auto py-8 text-red-600">Error: {expendituresError.message}</div>;
+    return <div className="p-4 sm:p-6 text-red-600">Error: {expendituresError.message}</div>;
   }
   
   // Calcular el total de gastos
@@ -65,7 +65,7 @@ const Expenditures = () => {
   const unaccountedCount = unaccountedRequests?.length || 0;
 
   return (
-    <div className="container mx-auto py-8">
+    <div className="p-4 sm:p-6 max-w-full mx-auto">
       <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
         <h1 className="text-3xl font-bold">Gestión de Gastos</h1>
         <div className="flex space-x-2">

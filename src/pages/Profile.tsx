@@ -53,7 +53,7 @@ const Profile: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="container mx-auto py-8 flex justify-center items-center">
+      <div className="p-4 sm:p-6 flex justify-center items-center">
         <Loader2 className="h-8 w-8 animate-spin mr-2" /> Cargando Perfil...
       </div>
     );
@@ -61,7 +61,7 @@ const Profile: React.FC = () => {
 
   if (!session) {
     return (
-      <div className="container mx-auto py-8 text-center">
+      <div className="p-4 sm:p-6 text-center">
         <h1 className="text-3xl font-bold mb-4">No Has Iniciado Sesión</h1>
         <p className="text-lg text-muted-foreground">Por favor, inicia sesión para ver tu perfil.</p>
         <Button onClick={() => navigate("/login")} className="mt-4">Ir a Iniciar Sesión</Button>
@@ -70,7 +70,7 @@ const Profile: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto py-8">
+    <div className="p-4 sm:p-6 max-w-full mx-auto">
       <Card className="max-w-lg mx-auto">
         <CardHeader>
           <CardTitle className="text-2xl font-bold">Tu Perfil</CardTitle>

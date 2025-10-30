@@ -262,11 +262,11 @@ const AdminPage = () => {
   }
 
   if (error) {
-    return <div className="container mx-auto py-8 text-red-600">Error: {error.message}</div>;
+    return <div className="p-4 sm:p-6 text-red-600">Error: {error.message}</div>;
   }
 
   return (
-    <div className="container mx-auto py-8">
+    <div className="p-4 sm:p-6 max-w-full mx-auto">
       <h1 className="text-3xl font-bold mb-6">Panel de Administración</h1>
       <p className="text-lg text-muted-foreground mb-8">
         Gestiona gerentes de cuenta, proyectos, usuarios, direcciones y plantillas de correo electrónico.
@@ -295,7 +295,7 @@ const AdminPage = () => {
         {/* Users Tab */}
         <TabsContent value="users" className="mt-6">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-2">
               <CardTitle className="text-xl">Gestión de Usuarios</CardTitle>
               <Dialog open={isInviteUserDialogOpen} onOpenChange={setIsInviteUserDialogOpen}>
                 <DialogTrigger asChild><Button size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Invitar Nuevo Usuario</Button></DialogTrigger>
@@ -314,7 +314,7 @@ const AdminPage = () => {
         {/* Account Managers Tab */}
         <TabsContent value="account-managers" className="mt-6">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-2">
               <CardTitle className="text-xl">Gerentes de Cuenta</CardTitle>
               <Dialog open={isAddManagerDialogOpen} onOpenChange={setIsAddManagerDialogOpen}>
                 <DialogTrigger asChild><Button size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Añadir Nuevo Gerente</Button></DialogTrigger>
@@ -339,7 +339,7 @@ const AdminPage = () => {
         {/* Projects Tab */}
         <TabsContent value="projects" className="mt-6">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-2">
               <CardTitle className="text-xl">Proyectos</CardTitle>
               <Dialog open={isAddProjectDialogOpen} onOpenChange={setIsAddProjectDialogOpen}>
                 <DialogTrigger asChild><Button size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Añadir Nuevo Proyecto</Button></DialogTrigger>
@@ -365,7 +365,7 @@ const AdminPage = () => {
         <TabsContent value="addresses" className="mt-6 space-y-8">
           {/* Shipping Addresses */}
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-2">
               <CardTitle className="text-xl flex items-center"><MapPin className="mr-2 h-5 w-5" /> Direcciones de Envío</CardTitle>
               <Button size="sm" onClick={() => openAddAddressDialog('shipping')}><PlusCircle className="mr-2 h-4 w-4" /> Añadir Dirección de Envío</Button>
             </CardHeader>
@@ -380,7 +380,7 @@ const AdminPage = () => {
 
           {/* Billing Addresses */}
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-2">
               <CardTitle className="text-xl flex items-center"><DollarSign className="mr-2 h-5 w-5" /> Direcciones de Facturación</CardTitle>
               <Button size="sm" onClick={() => openAddAddressDialog('billing')}><PlusCircle className="mr-2 h-4 w-4" /> Añadir Dirección de Facturación</Button>
             </CardHeader>
