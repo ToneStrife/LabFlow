@@ -45,14 +45,15 @@ const getFileNameFromPath = (filePath: string): string => {
 };
 
 // Definir el orden de prioridad de los estados
+// Los números más bajos van ARRIBA (mayor prioridad de acción)
 const STATUS_ORDER: Record<RequestStatus, number> = {
   "Pending": 1,
   "Quote Requested": 2,
   "PO Requested": 3,
   "Ordered": 4,
-  "Received": 10, // Aumentar la prioridad para que vaya al final
-  "Denied": 11,
-  "Cancelled": 12,
+  "Received": 90, // Estados finales, muy baja prioridad
+  "Denied": 91,
+  "Cancelled": 92,
 };
 
 const RequestList: React.FC = () => {
@@ -354,7 +355,7 @@ const RequestList: React.FC = () => {
       const statusB = STATUS_ORDER[b.status] || 99;
 
       if (statusA !== statusB) {
-        return statusA - statusB; // Ordenar por prioridad de estado (1, 2, 3...)
+        return statusA - statusB; // Ordenar por prioridad de estado (1, 2, 3... arriba)
       }
 
       // Si los estados son iguales, ordenar por fecha de creación (más reciente primero)
