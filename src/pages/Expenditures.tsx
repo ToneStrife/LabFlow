@@ -15,7 +15,7 @@ import ExpenditureForm from "@/components/ExpenditureForm";
 import ImportExpendituresDialog from "@/components/ImportExpendituresDialog";
 import SpendingByProjectChart from "@/components/charts/SpendingByProjectChart";
 import SpendingByVendorChart from "@/components/charts/SpendingByVendorChart";
-import SpendingByYearChart from "@/components/charts/SpendingByYearChart"; // Importar nuevo gráfico
+import SpendingByYearChart from "@/components/charts/SpendingByYearChart";
 import { Expenditure } from "@/data/types";
 
 const Expenditures = () => {
@@ -115,12 +115,7 @@ const Expenditures = () => {
         Rastrea los gastos incurridos, vinculándolos a proyectos y solicitudes específicas.
       </p>
       
-      {/* 1. Gasto Total por Años (Nuevo) */}
-      <div className="mb-8">
-        <SpendingByYearChart data={analytics.spendingByYear} />
-      </div>
-
-      {/* 2. Detalle de Gastos (Tabla) */}
+      {/* 1. Detalle de Gastos (Tabla) */}
       <h2 className="text-2xl font-bold mb-4">Detalle de Gastos</h2>
       <div className="mb-8">
         <ExpenditureTable
@@ -131,7 +126,7 @@ const Expenditures = () => {
         />
       </div>
 
-      {/* 3. Gráficos de Distribución y Total */}
+      {/* 2. Gráficos de Distribución y Total */}
       <h2 className="text-2xl font-bold mb-4">Análisis de Distribución</h2>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <Card className="md:col-span-1 h-full">
@@ -156,6 +151,12 @@ const Expenditures = () => {
         <div className="lg:col-span-3">
           <SpendingByProjectChart data={analytics.spendingByProject} />
         </div>
+      </div>
+      
+      {/* 3. Gasto Total por Años (Movido al final) */}
+      <h2 className="text-2xl font-bold mb-4">Gasto Histórico</h2>
+      <div className="mb-8">
+        <SpendingByYearChart data={analytics.spendingByYear} />
       </div>
 
       {/* Edit Expenditure Dialog */}
