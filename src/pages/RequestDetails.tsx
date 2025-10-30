@@ -383,8 +383,17 @@ const RequestDetails: React.FC = () => {
         return;
     }
     
+    if (newStatus === "Received" && request.status !== "Received") {
+        // BLOQUEAR CAMBIO MANUAL A 'RECEIVED'
+        toast.error("Usa el botón 'Recibir Artículos'.", {
+            description: "El estado 'Recibido' debe registrarse a través del diálogo de recepción para actualizar el inventario y los albaranes correctamente.",
+        });
+        setIsStatusOverrideDialogOpen(false);
+        return;
+    }
+    
     if (request.status === "Received" && newStatus !== "Received") {
-        // If trying to change from Received to another state, open the reversion confirmation dialog
+        // Si intentamos cambiar de Received a otro estado, abrimos el diálogo de reversión
         setIsStatusOverrideDialogOpen(false);
         setIsRevertReceptionDialogOpen(true);
         return;
