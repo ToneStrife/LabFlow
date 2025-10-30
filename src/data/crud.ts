@@ -4,11 +4,11 @@ import {
   Profile,
   Vendor,
   SupabaseRequest,
-  RequestItem,
-  RequestStatus,
+  SupabaseRequestItem,
+  ProductDetails,
   InventoryItem,
   MockEmail,
-  SupabaseRequestItem,
+  Expenditure, // Importar Expenditure
 } from "./types";
 import {
   generateId,
@@ -21,6 +21,28 @@ import {
 
 // Función para simular un retraso de red
 const simulateNetworkDelay = (ms = 300) => new Promise(resolve => setTimeout(resolve, ms));
+
+// --- Mock Data Storage for Expenditures ---
+export let mockExpenditures: Expenditure[] = [
+  {
+    id: "exp1",
+    created_at: new Date().toISOString(),
+    project_id: "p1", // Assuming p1 exists in mockProjects
+    amount: 500.00,
+    description: "Initial budget allocation for Project Alpha",
+    date_incurred: new Date().toISOString().split('T')[0],
+    request_id: null,
+  },
+  {
+    id: "exp2",
+    created_at: new Date().toISOString(),
+    project_id: "p2", // Assuming p2 exists
+    amount: 185.50,
+    description: "Cost of Request 2024-0002 (Antibody)",
+    date_incurred: new Date().toISOString().split('T')[0],
+    request_id: "req2",
+  },
+];
 
 // --- CRUD Functions for Profiles ---
 export const getMockProfiles = async (): Promise<Profile[]> => {
@@ -232,6 +254,36 @@ export const updateMockInventoryItem = async (id: string, data: Partial<Omit<Inv
 export const deleteMockInventoryItem = async (id: string): Promise<void> => {
   await simulateNetworkDelay();
   mockInventory = mockInventory.filter(item => item.id !== id);
+};
+
+// --- CRUD Functions for Expenditures ---
+export const getMockExpenditures = async (): Promise<Expenditure[]> => {
+  await simulateNetworkDelay();
+  return mockExpenditures;
+};
+
+export const addMockExpenditure = async (data: Omit<Expenditure, "id" | "created_at">): Promise<Expenditure> => {
+  await simulateNetworkDelay();
+  const newExpenditure: Expenditure = {
+    id: generateId(),
+    created_at: new Date().toISOString(),
+    ...data,
+  };
+  mockExpenditures.push(newExpenditure);
+  return newExpenditure;
+};
+
+export const updateMockExpenditure = async (id: string, data: Partial<Omit<Expenditure, "id" | "created_at">>): Promise<Expenditure> => {
+  await simulateNetworkDelay();
+  const index = mockExpenditures.findIndex(exp => exp.id === id);
+  if (index === -1) throw new Error("Expenditure not found");
+  mockExpenditures[index] = { ...mockExpenditures[index], ...data };
+  return mockExpenditures[index];
+};
+
+export const deleteMockExpenditure = async (id: string): Promise<void> => {
+  await simulateNetworkDelay();
+  mockExpenditures = mockExpenditures.filter(exp => exp.id !== id);
 };
 
 // --- Mock Email Sending Function ---

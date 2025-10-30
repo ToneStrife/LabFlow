@@ -11,6 +11,7 @@ import {
   MockEmail,
   ProductDetails, // Importar ProductDetails para la búsqueda externa
   EmailTemplate, // Importar el nuevo tipo EmailTemplate
+  Expenditure, // Importar Expenditure
 } from "@/data/types";
 
 // Mantener las importaciones de mock data para otras tablas hasta que se conviertan
@@ -25,6 +26,11 @@ import {
   updateMockInventoryItem,
   deleteMockInventoryItem,
   sendMockEmail,
+  // NUEVAS IMPORTACIONES DE GASTOS
+  getMockExpenditures,
+  addMockExpenditure,
+  updateMockExpenditure,
+  deleteMockExpenditure,
 } from "@/data/crud";
 
 
@@ -112,17 +118,6 @@ export const apiInviteUser = async (data: InviteUserData): Promise<any> => {
   }
   return edgeFunctionData;
 };
-
-
-// --- API de WhatsApp (ELIMINADO) ---
-// interface WhatsAppData {
-//   to: string; 
-//   body: string;
-// }
-
-// export const apiSendWhatsApp = async (whatsappData: WhatsAppData): Promise<void> => {
-//   // Logic removed
-// };
 
 
 // --- API de Vendedores ---
@@ -634,6 +629,47 @@ export const apiDeleteInventoryItem = async (id: string): Promise<void> => {
   const { error } = await supabase.from('inventory').delete().eq('id', id);
   if (error) throw new Error(error.message);
 };
+
+// --- API de Gastos (Expenditures) ---
+export const apiGetExpenditures = async (): Promise<Expenditure[]> => {
+  // Usar mock data por ahora, ya que la tabla no existe en Supabase
+  return getMockExpenditures();
+  /*
+  const { data, error } = await supabase.from('expenditures').select('*');
+  if (error) throw new Error(error.message);
+  return data;
+  */
+};
+
+export const apiAddExpenditure = async (data: Omit<Expenditure, "id" | "created_at">): Promise<Expenditure> => {
+  // Usar mock data
+  return addMockExpenditure(data);
+  /*
+  const { data: newExpenditure, error } = await supabase.from('expenditures').insert(data).select().single();
+  if (error) throw new Error(error.message);
+  return newExpenditure;
+  */
+};
+
+export const apiUpdateExpenditure = async (id: string, data: Partial<Omit<Expenditure, "id" | "created_at">>): Promise<Expenditure> => {
+  // Usar mock data
+  return updateMockExpenditure(id, data);
+  /*
+  const { data: updatedExpenditure, error } = await supabase.from('expenditures').update(data).eq('id', id).select().single();
+  if (error) throw new Error(error.message);
+  return updatedExpenditure;
+  */
+};
+
+export const apiDeleteExpenditure = async (id: string): Promise<void> => {
+  // Usar mock data
+  return deleteMockExpenditure(id);
+  /*
+  const { error } = await supabase.from('expenditures').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+  */
+};
+
 
 // --- API de Envío de Correo Electrónico (REAL) ---
 interface EmailData {

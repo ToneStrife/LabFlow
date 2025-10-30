@@ -3,7 +3,7 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { Package, ShoppingCart, Users, User, Warehouse, Shield } from "lucide-react";
+import { Package, ShoppingCart, Users, User, Warehouse, Shield, DollarSign } from "lucide-react";
 import { useSession } from "@/components/SessionContextProvider";
 import { Profile } from "@/data/types"; // Corrected import
 
@@ -42,6 +42,12 @@ const navItems: NavItem[] = [
     title: "Inventario",
     href: "/inventory",
     icon: <Warehouse className="mr-2 h-4 w-4" />,
+    roles: ["Account Manager", "Admin"],
+  },
+  {
+    title: "Gastos",
+    href: "/expenditures",
+    icon: <DollarSign className="mr-2 h-4 w-4" />,
     roles: ["Account Manager", "Admin"],
   },
   {

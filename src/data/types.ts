@@ -171,3 +171,14 @@ export interface MockEmail {
   body: string;
   attachments?: { name: string; url: string }[];
 }
+
+// NUEVA INTERFAZ: Gasto
+export interface Expenditure {
+  id: string;
+  created_at: string;
+  project_id: string;
+  amount: number;
+  description: string;
+  date_incurred: string; // ISO date string
+  request_id: string | null;
+}
