@@ -2,18 +2,20 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Loader2, DollarSign } from "lucide-react";
+import { PlusCircle, Loader2, DollarSign, Download } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useExpenditures, useAddExpenditure, useUpdateExpenditure, useDeleteExpenditure, ExpenditureFormValues } from "@/hooks/use-expenditures";
+import { useExpenditures, useAddExpenditure, useUpdateExpenditure, useDeleteExpenditure, ExpenditureFormValues, useUnaccountedReceivedRequests } from "@/hooks/use-expenditures";
 import { useProjects } from "@/hooks/use-projects";
 import ExpenditureTable from "@/components/ExpenditureTable";
 import ExpenditureForm from "@/components/ExpenditureForm";
+import ImportExpendituresDialog from "@/components/ImportExpendituresDialog"; // Importar el nuevo diálogo
 import { Expenditure } from "@/data/types";
 
 const Expenditures = () => {
   const { data: expenditures, isLoading: isLoadingExpenditures, error: expendituresError } = useExpenditures();
   const { data: projects, isLoading: isLoadingProjects } = useProjects();
+  const { data: unaccountedRequests, isLoading: isLoadingUnaccountedRequests } = useUnaccountedReceivedRequests(); // Nuevo hook
   
   const addExpenditureMutation = useAddExpenditure();
   const updateExpenditureMutation = useUpdateExpenditure();
@@ -22,6 +24,7 @@ const Expenditures = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
   const [editingExpenditure, setEditingExpenditure] = React.useState<Expenditure | undefined>(undefined);
+  const [isImportDialogOpen, setIsImportDialogOpen] = React.useState(false); // Nuevo estado para el diálogo de importación
 
   const handleAddExpenditure = async (data: ExpenditureFormValues) => {
     await addExpenditureMutation.mutateAsync(data);
@@ -43,7 +46,7 @@ const Expenditures = () => {
     setIsEditDialogOpen(true);
   };
 
-  const isLoading = isLoadingExpenditures || isLoadingProjects;
+  const isLoading = isLoadingExpenditures || isLoadingProjects || isLoadingUnaccountedRequests;
 
   if (isLoading) {
     return (
@@ -59,28 +62,40 @@ const Expenditures = () => {
   
   // Calcular el total de gastos
   const totalSpent = expenditures?.reduce((sum, exp) => sum + exp.amount, 0) || 0;
+  const unaccountedCount = unaccountedRequests?.length || 0;
 
   return (
     <div className="container mx-auto py-8">
       <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
         <h1 className="text-3xl font-bold">Gestión de Gastos</h1>
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <PlusCircle className="mr-2 h-4 w-4" /> Registrar Nuevo Gasto
+        <div className="flex space-x-2">
+          {unaccountedCount > 0 && (
+            <Button 
+              variant="secondary" 
+              onClick={() => setIsImportDialogOpen(true)}
+              disabled={isLoadingUnaccountedRequests}
+            >
+              <Download className="mr-2 h-4 w-4" /> Importar ({unaccountedCount})
             </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Registrar Nuevo Gasto</DialogTitle>
-            </DialogHeader>
-            <ExpenditureForm
-              onSubmit={handleAddExpenditure}
-              onCancel={() => setIsAddDialogOpen(false)}
-              isSubmitting={addExpenditureMutation.isPending}
-            />
-          </DialogContent>
-        </Dialog>
+          )}
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <PlusCircle className="mr-2 h-4 w-4" /> Registrar Nuevo Gasto
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>Registrar Nuevo Gasto</DialogTitle>
+              </DialogHeader>
+              <ExpenditureForm
+                onSubmit={handleAddExpenditure}
+                onCancel={() => setIsAddDialogOpen(false)}
+                isSubmitting={addExpenditureMutation.isPending}
+              />
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
       <p className="text-lg text-muted-foreground mb-8">
         Rastrea los gastos incurridos, vinculándolos a proyectos y solicitudes específicas.
@@ -119,6 +134,15 @@ const Expenditures = () => {
           )}
         </DialogContent>
       </Dialog>
+      
+      {/* Import Expenditures Dialog */}
+      {unaccountedRequests && (
+        <ImportExpendituresDialog
+          isOpen={isImportDialogOpen}
+          onOpenChange={setIsImportDialogOpen}
+          requests={unaccountedRequests}
+        />
+      )}
     </div>
   );
 };
