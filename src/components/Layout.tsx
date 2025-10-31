@@ -55,7 +55,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         </aside>
       )}
 
-      <div className="flex flex-col flex-1">
+      {/* FIX: Añadir overflow-x-hidden aquí para prevenir el desbordamiento horizontal en el móvil */}
+      <div className="flex flex-col flex-1 overflow-x-hidden">
         {/* Header */}
         <header className="sticky top-0 z-40 w-full border-b bg-card shadow-sm p-4 flex items-center justify-between">
           {isMobile && (
@@ -121,8 +122,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           )}
         </header>
 
-        {/* Main Content */}
-        <main className="flex-1 p-4 sm:p-6 overflow-auto bg-gray-50 dark:bg-gray-900">
+        {/* Main Content: Eliminar overflow-auto aquí ya que el padre lo maneja */}
+        <main className="flex-1 p-4 sm:p-6 bg-gray-50 dark:bg-gray-900">
           {children}
         </main>
       </div>
