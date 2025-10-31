@@ -45,7 +45,7 @@ const ExpenditureTable: React.FC<ExpenditureTableProps> = ({ expenditures, proje
               </TableRow>
             ) : (
               expenditures.map((expenditure) => {
-                const dateObj = new Date(expenditure.date);
+                const dateObj = new Date(expenditure.date_incurred); // Corregido: usar date_incurred
                 const formattedDate = isValid(dateObj) 
                   ? format(dateObj, 'dd/MM/yyyy') 
                   : 'Fecha Inválida';
