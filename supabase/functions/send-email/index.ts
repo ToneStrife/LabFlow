@@ -30,8 +30,13 @@ serve(async (req) => {
   let logStatus = 'failed';
   let logErrorMessage: string | undefined;
   let sentByUserId: string | undefined;
+  let requestBody: any; // Variable para almacenar el cuerpo de la solicitud
 
   try {
+    // Leer el cuerpo de la solicitud UNA SOLA VEZ
+    requestBody = await req.json();
+    const { to, subject, body, attachments, fromName } = requestBody;
+
     // 2. Autenticar al usuario que llama a la función
     const authClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -45,8 +50,7 @@ serve(async (req) => {
     }
     sentByUserId = user?.id;
 
-    // 3. Parsear el cuerpo de la solicitud
-    const { to, subject, body, attachments, fromName } = await req.json();
+    // 3. Parsear el cuerpo de la solicitud (ya hecho, usar variables)
     if (!to || !subject || !body) {
       logErrorMessage = 'Missing required fields: to, subject, or body';
       return new Response(JSON.stringify({ error: logErrorMessage }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
@@ -145,8 +149,12 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
     
-    const { to, subject, body } = await req.json(); // Re-parse body for logging
-    const bodyPreview = body.length > 250 ? body.substring(0, 247) + '...' : body;
+    // Usar la variable requestBody que ya contiene los datos
+    const to = requestBody?.to;
+    const subject = requestBody?.subject;
+    const body = requestBody?.body;
+
+    const bodyPreview = body && body.length > 250 ? body.substring(0, 247) + '...' : body;
 
     const { error: logError } = await supabaseAdmin
       .from('email_logs')
