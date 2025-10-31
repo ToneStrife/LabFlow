@@ -8,8 +8,8 @@ import { RequestStatus } from "@/data/types";
 interface RequestListToolbarProps {
   searchTerm: string;
   onSearchChange: (term: string) => void;
-  filterStatus: RequestStatus | "All";
-  onStatusChange: (status: RequestStatus | "All") => void;
+  filterStatus: RequestStatus | "All" | "Active"; // Added "Active"
+  onStatusChange: (status: RequestStatus | "All" | "Active") => void; // Added "Active"
 }
 
 const RequestListToolbar: React.FC<RequestListToolbarProps> = ({
@@ -32,6 +32,7 @@ const RequestListToolbar: React.FC<RequestListToolbarProps> = ({
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="All">Todos los Estados</SelectItem>
+          <SelectItem value="Active">Activas (Excl. Recibidas)</SelectItem> {/* Nuevo filtro */}
           <SelectItem value="Pending">Pendiente</SelectItem>
           <SelectItem value="Quote Requested">Cotización Solicitada</SelectItem>
           <SelectItem value="PO Requested">PO Solicitado (Cómprame)</SelectItem>

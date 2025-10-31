@@ -72,7 +72,7 @@ const RequestList: React.FC = () => {
   const sendEmailMutation = useSendEmail();
 
   const [searchTerm, setSearchTerm] = React.useState<string>("");
-  const [filterStatus, setFilterStatus] = React.useState<RequestStatus | "All">("All");
+  const [filterStatus, setFilterStatus] = React.useState<RequestStatus | "All" | "Active">("Active"); // Default to "Active"
 
   const [isEmailDialogOpen, setIsEmailDialogOpen] = React.useState(false);
   const [emailInitialData, setEmailInitialData] = React.useState<Partial<EmailFormValues>>({});
@@ -344,7 +344,15 @@ const RequestList: React.FC = () => {
         (request.quote_url && request.quote_url.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (request.po_number && request.po_number.toLowerCase().includes(searchTerm.toLowerCase()));
 
-      const matchesStatus = filterStatus === "All" || request.status === filterStatus;
+      let matchesStatus = true;
+      if (filterStatus === "All") {
+        matchesStatus = true;
+      } else if (filterStatus === "Active") {
+        // Excluir Received, Denied, Cancelled
+        matchesStatus = !["Received", "Denied", "Cancelled"].includes(request.status);
+      } else {
+        matchesStatus = request.status === filterStatus;
+      }
 
       return matchesSearchTerm && matchesStatus;
     });
