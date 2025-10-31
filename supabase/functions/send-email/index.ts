@@ -7,6 +7,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Dirección de correo electrónico para añadir en CC
+const CC_EMAIL = 'cjaranda@go.ugr.es';
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -93,8 +96,10 @@ serve(async (req) => {
     }
 
     // 5. Construir el payload para la API de SendGrid
+    const personalizations = [{ to: [{ email: to }], cc: [{ email: CC_EMAIL }] }]; // Añadir CC aquí
+
     const emailData = {
-      personalizations: [{ to: [{ email: to }] }],
+      personalizations: personalizations,
       from: { email: sendgridFromEmail, name: fromName || "LabFlow" },
       subject: subject,
       content: [{ type: 'text/html', value: body }],
