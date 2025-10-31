@@ -3,7 +3,7 @@
 import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Loader2, MapPin, DollarSign, Users, Briefcase, Shield, Mail } from "lucide-react"; // Añadir iconos para pestañas
+import { PlusCircle, Loader2, MapPin, DollarSign, Users, Briefcase, Shield, Mail, History } from "lucide-react"; // Añadir iconos para pestañas
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
@@ -53,6 +53,10 @@ import {
   useUpdateBillingAddress,
   useDeleteBillingAddress,
 } from "@/hooks/use-addresses";
+
+// Email Logs imports
+import EmailLogTable from "@/components/EmailLogTable";
+import { useEmailLogs } from "@/hooks/use-email-logs";
 
 
 // --- Email Template Form Schema and Placeholders ---
@@ -131,6 +135,10 @@ const AdminPage = () => {
   const [isEditAddressDialogOpen, setIsEditAddressDialogOpen] = React.useState(false);
   const [editingAddress, setEditingAddress] = React.useState<Address | undefined>(undefined);
   const [currentAddressType, setCurrentAddressType] = React.useState<'shipping' | 'billing'>('shipping');
+
+  // --- Hooks for Email Logs ---
+  const { data: emailLogs, isLoading: isLoadingEmailLogs, error: emailLogsError } = useEmailLogs();
+
 
   // --- Handlers for Account Managers ---
   const handleAddManager = async (data: AccountManagerFormValues) => {
@@ -250,8 +258,8 @@ const AdminPage = () => {
   };
 
   // --- Loading and Error States ---
-  const isLoading = isLoadingManagers || isLoadingProjects || isLoadingUsers || isLoadingTemplates || sessionLoading || isLoadingShipping || isLoadingBilling;
-  const error = managersError || projectsError || usersError || templatesError;
+  const isLoading = isLoadingManagers || isLoadingProjects || isLoadingUsers || isLoadingTemplates || sessionLoading || isLoadingShipping || isLoadingBilling || isLoadingEmailLogs;
+  const error = managersError || projectsError || usersError || templatesError || emailLogsError;
 
   if (isLoading) {
     return (
@@ -289,6 +297,9 @@ const AdminPage = () => {
           </TabsTrigger>
           <TabsTrigger value="email-templates" className="flex items-center gap-2 px-4 py-2">
             <Mail className="h-4 w-4" /> Plantillas de Email
+          </TabsTrigger>
+          <TabsTrigger value="email-logs" className="flex items-center gap-2 px-4 py-2">
+            <History className="h-4 w-4" /> Registros de Email
           </TabsTrigger>
         </TabsList>
 
@@ -427,6 +438,18 @@ const AdminPage = () => {
                   </form>
                 </Form>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Email Logs Tab */}
+        <TabsContent value="email-logs" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-xl">Registros de Correos Electrónicos Enviados</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <EmailLogTable emailLogs={emailLogs || []} />
             </CardContent>
           </Card>
         </TabsContent>

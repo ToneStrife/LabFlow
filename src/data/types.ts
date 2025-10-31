@@ -182,3 +182,16 @@ export interface Expenditure {
   date_incurred: string; // ISO date string
   request_id: string | null;
 }
+
+// NUEVA INTERFAZ: SentEmail
+export interface SentEmail {
+  id: string;
+  created_at: string;
+  to_email: string;
+  subject: string;
+  body_preview: string | null;
+  attachments_count: number;
+  status: 'success' | 'failed';
+  error_message: string | null;
+  sent_by: string | null; // User ID from auth.users
+}
