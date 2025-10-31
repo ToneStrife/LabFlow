@@ -3,27 +3,26 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
-import { RequestStatus, SupabaseRequest, Vendor, Profile, AccountManager, Project, ShippingAddress, BillingAddress } from "@/data/types"; // Corrected imports
-import { useRequests, useUpdateRequestStatus, SupabaseRequest as SupabaseRequestType, useSendEmail } from "@/hooks/use-requests";
+import { RequestStatus, SupabaseRequest, Vendor, Profile, AccountManager, Project, ShippingAddress, BillingAddress } from "@/data/types";
+import { useRequests, useUpdateRequestStatus, useSendEmail } from "@/hooks/use-requests";
 import { useVendors } from "@/hooks/use-vendors";
 import { useAllProfiles, getFullName } from "@/hooks/use-profiles";
-import { useAccountManagers } from "@/hooks/use-account-managers"; // Usar el nuevo hook
-import EmailDialog, { EmailFormValues } from "./EmailDialog";
+import { useAccountManagers } from "@/hooks/use-account-managers";
+import EmailDialog, { EmailFormValues } from "@/components/EmailDialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import RequestListToolbar from "./request-list/RequestListToolbar";
-import RequestListTable from "./request-list/RequestListTable";
+import RequestListToolbar from "@/components/request-list/RequestListToolbar";
+import RequestListTable from "@/components/request-list/RequestListTable";
 import { toast } from "sonner";
 import { generateSignedUrl } from "@/utils/supabase-storage";
 import { useSession } from "@/components/SessionContextProvider";
 import { useProjects } from "@/hooks/use-projects";
 import { useEmailTemplates } from "@/hooks/use-email-templates";
-import { processTextTemplate, processEmailTemplate } from "@/utils/email-templating"; // Changed import
-import ReceiveItemsDialog from "@/components/ReceiveItemsDialog"; // Importar el diálogo de recepción
-import MergeRequestsDialog from "./MergeRequestsDialog"; // Importar Merge Dialog
+import { processTextTemplate, processEmailTemplate } from "@/utils/email-templating";
+import ReceiveItemsDialog from "@/components/ReceiveItemsDialog";
+import MergeRequestsDialog from "@/components/MergeRequestsDialog";
 import { useShippingAddresses, useBillingAddresses } from "@/hooks/use-addresses";
+import ApproveRequestListDialog from "@/components/request-list/ApproveRequestListDialog";
 
 
 // Función auxiliar para obtener el nombre de archivo legible (copiada de RequestFilesCard.tsx)
@@ -43,6 +42,17 @@ const getFileNameFromPath = (filePath: string): string => {
   }
 };
 
+// Definir el orden de prioridad de los estados
+// Los números más bajos van ARRIBA (mayor prioridad de acción)
+const STATUS_ORDER: Record<RequestStatus, number> = {
+  "Pending": 1,
+  "Quote Requested": 2,
+  "PO Requested": 3,
+  "Ordered": 4,
+  "Received": 90, // Estados finales, muy baja prioridad
+  "Denied": 91,
+  "Cancelled": 92,
+};
 
 const RequestList: React.FC = () => {
   const navigate = useNavigate();
@@ -50,7 +60,7 @@ const RequestList: React.FC = () => {
   const { data: requests, isLoading: isLoadingRequests, error: requestsError } = useRequests();
   const { data: vendors, isLoading: isLoadingVendors } = useVendors();
   const { data: profiles, isLoading: isLoadingProfiles } = useAllProfiles();
-  const { data: accountManagers, isLoading: isLoadingAccountManagers } = useAccountManagers(); // Usar el nuevo hook
+  const { data: accountManagers, isLoading: isLoadingAccountManagers } = useAccountManagers();
   const { data: projects, isLoading: isLoadingProjects } = useProjects();
   const { data: emailTemplates, isLoading: isLoadingEmailTemplates } = useEmailTemplates();
   const { data: shippingAddresses, isLoading: isLoadingShippingAddresses } = useShippingAddresses();
@@ -60,21 +70,23 @@ const RequestList: React.FC = () => {
   const sendEmailMutation = useSendEmail();
 
   const [searchTerm, setSearchTerm] = React.useState<string>("");
-  const [filterStatus, setFilterStatus] = React.useState<RequestStatus | "All">("All");
+  const [filterStatus, setFilterStatus] = React.useState<RequestStatus | "All" | "Active">("Active"); // Default to "Active"
 
   const [isEmailDialogOpen, setIsEmailDialogOpen] = React.useState(false);
   const [emailInitialData, setEmailInitialData] = React.useState<Partial<EmailFormValues>>({});
   
-  const [isReceiveItemsDialogOpen, setIsReceiveItemsDialogOpen] = React.useState(false); // Nuevo estado
-  const [requestToReceive, setRequestToReceive] = React.useState<SupabaseRequest | null>(null); // Nuevo estado
+  const [isReceiveItemsDialogOpen, setIsReceiveItemsDialogOpen] = React.useState(false);
+  const [requestToReceive, setRequestToReceive] = React.useState<SupabaseRequest | null>(null);
   
   const [isDenyDialogOpen, setIsDenyDialogOpen] = React.useState(false);
   const [isCancelDialogOpen, setIsCancelDialogOpen] = React.useState(false);
   const [requestToModify, setRequestToModify] = React.useState<SupabaseRequest | null>(null);
   
-  // Estados para Merge
   const [isMergeDialogOpen, setIsMergeDialogOpen] = React.useState(false);
   const [sourceRequestToMerge, setSourceRequestToMerge] = React.useState<SupabaseRequest | null>(null);
+
+  const [isApproveListDialogOpen, setIsApproveListDialogOpen] = React.useState(false);
+  const [requestToApproveFromList, setRequestToApproveFromList] = React.useState<SupabaseRequest | null>(null);
 
 
   const getRequesterName = (requesterId: string) => {
@@ -97,11 +109,10 @@ const RequestList: React.FC = () => {
   };
 
   const handleSendEmail = async (emailData: EmailFormValues) => {
-    // Usar los adjuntos de la propiedad 'attachmentsForSend' si existen, si no, usar 'attachments'
     const attachmentsToSend = (emailData as any).attachmentsForSend || emailData.attachments;
     
     await sendEmailMutation.mutateAsync({
-      to: emailData.to!, // Ensure 'to' is not undefined
+      to: emailData.to!,
       subject: emailData.subject,
       body: emailData.body,
       attachments: attachmentsToSend,
@@ -136,14 +147,12 @@ const RequestList: React.FC = () => {
       billingAddress: billingAddresses?.find(a => a.id === request.billing_address_id),
     };
 
-    // Preparar adjuntos:
     let attachmentsForDialog = [];
     let attachmentsForSend = [];
     
     if (request.quote_url) {
       const fileName = getFileNameFromPath(request.quote_url);
       
-      // 1. Generar URL firmada para el diálogo (visualización)
       const signedUrl = await generateSignedUrl(request.quote_url);
       if (signedUrl) {
         attachmentsForDialog.push({ name: fileName, url: signedUrl });
@@ -151,22 +160,62 @@ const RequestList: React.FC = () => {
         toast.warning("No se pudo generar la URL firmada para el archivo de cotización. El enlace adjunto en el diálogo podría estar roto.");
       }
       
-      // 2. Usar la ruta de almacenamiento original para el envío (Edge Function)
       attachmentsForSend.push({ name: fileName, url: request.quote_url });
     }
 
     setEmailInitialData({
       to: getAccountManagerEmail(request.account_manager_id),
       subject: processTextTemplate(poRequestTemplate.subject_template, context),
-      body: processEmailTemplate(poRequestTemplate.body_template, context), // Use processEmailTemplate
+      body: processEmailTemplate(poRequestTemplate.body_template, context),
       attachments: attachmentsForDialog,
       attachmentsForSend: attachmentsForSend,
     });
     setIsEmailDialogOpen(true);
   };
 
-  const handleApproveRequest = async (request: SupabaseRequest) => {
-    await updateStatusMutation.mutateAsync({ id: request.id, status: "Quote Requested" });
+  const handleOpenApproveDialogFromList = (request: SupabaseRequest) => {
+    setRequestToApproveFromList(request);
+    setIsApproveListDialogOpen(true);
+  };
+
+  const handleApproveOnlyFromList = async (request: SupabaseRequest) => {
+    const nextStatus = request.quote_url ? "PO Requested" : "Quote Requested";
+    await updateStatusMutation.mutateAsync({ id: request.id, status: nextStatus });
+    setIsApproveListDialogOpen(false);
+  };
+
+  const handleApproveAndSendEmailFromList = async (request: SupabaseRequest) => {
+    const nextStatus = request.quote_url ? "PO Requested" : "Quote Requested";
+    await updateStatusMutation.mutateAsync({ id: request.id, status: nextStatus });
+
+    if (nextStatus === "Quote Requested") {
+      const quoteTemplate = emailTemplates?.find(t => t.template_name === 'Quote Request');
+      if (!quoteTemplate) {
+        toast.error("Plantilla de correo electrónico 'Quote Request' no encontrada. Por favor, crea una en el panel de Admin.");
+        return;
+      }
+
+      const context = {
+        request: { ...request, status: "Quote Requested" as const },
+        vendor: vendors?.find(v => v.id === request.vendor_id),
+        requesterProfile: profiles?.find(p => p.id === request.requester_id),
+        accountManager: accountManagers?.find(am => am.id === request.account_manager_id),
+        projects: projects,
+        actorProfile: profile,
+        shippingAddress: shippingAddresses?.find(a => a.id === request.shipping_address_id),
+        billingAddress: billingAddresses?.find(a => a.id === request.billing_address_id),
+      };
+      
+      setEmailInitialData({
+        to: getVendorEmail(request.vendor_id),
+        subject: processTextTemplate(quoteTemplate.subject_template, context),
+        body: processEmailTemplate(quoteTemplate.body_template, context),
+      });
+      setIsApproveListDialogOpen(false);
+      setIsEmailDialogOpen(true);
+    } else {
+      setIsApproveListDialogOpen(false);
+    }
   };
 
   const openQuoteAndPODetailsDialog = (request: SupabaseRequest) => {
@@ -186,7 +235,6 @@ const RequestList: React.FC = () => {
     setIsReceiveItemsDialogOpen(true);
   };
   
-  // NUEVOS MANEJADORES
   const handleDenyRequest = (request: SupabaseRequest) => {
     setRequestToModify(request);
     setIsDenyDialogOpen(true);
@@ -213,46 +261,98 @@ const RequestList: React.FC = () => {
     }
   };
   
-  // MANEJADOR DE MERGE
   const handleMergeRequest = (request: SupabaseRequest) => {
     setSourceRequestToMerge(request);
     setIsMergeDialogOpen(true);
   };
   
-  // Solicitudes fusionables (mismo proveedor, no la solicitud de origen)
   const mergeableRequests = React.useMemo(() => {
     if (!sourceRequestToMerge || !requests) return [];
     
-    // Filtramos por proveedor y solo permitimos estados activos
     return requests.filter(req => 
       req.id !== sourceRequestToMerge.id && 
       req.vendor_id === sourceRequestToMerge.vendor_id &&
       (req.status === "Pending" || req.status === "Quote Requested" || req.status === "PO Requested")
     );
   }, [sourceRequestToMerge, requests]);
-  // FIN MANEJADOR DE MERGE
 
-  const filteredRequests = (requests || []).filter(request => {
-    const vendorName = vendors?.find(v => v.id === request.vendor_id)?.name || "";
-    const requesterName = getRequesterName(request.requester_id);
-    const accountManagerName = getAccountManagerName(request.account_manager_id);
+  const handleSendQuoteRequestFromList = async (request: SupabaseRequest) => {
+    await updateStatusMutation.mutateAsync({ id: request.id, status: "Quote Requested" });
 
-    const matchesSearchTerm = searchTerm.toLowerCase() === "" ||
-      request.items?.some(item =>
-        item.product_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.catalog_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (item.brand && item.brand.toLowerCase().includes(searchTerm.toLowerCase()))
-      ) ||
-      vendorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      requesterName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      accountManagerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (request.quote_url && request.quote_url.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (request.po_number && request.po_number.toLowerCase().includes(searchTerm.toLowerCase()));
+    const quoteTemplate = emailTemplates?.find(t => t.template_name === 'Quote Request');
+    if (!quoteTemplate) {
+      toast.error("Plantilla de correo electrónico 'Quote Request' no encontrada. Por favor, crea una en el panel de Admin.");
+      return;
+    }
 
-    const matchesStatus = filterStatus === "All" || request.status === filterStatus;
+    const context = {
+      request: { ...request, status: "Quote Requested" as const },
+      vendor: vendors?.find(v => v.id === request.vendor_id),
+      requesterProfile: profiles?.find(p => p.id === request.requester_id),
+      accountManager: accountManagers?.find(am => am.id === request.account_manager_id),
+      projects: projects,
+      actorProfile: profile,
+      shippingAddress: shippingAddresses?.find(a => a.id === request.shipping_address_id),
+      billingAddress: billingAddresses?.find(a => a.id === request.billing_address_id),
+    };
+    
+    setEmailInitialData({
+      to: getVendorEmail(request.vendor_id),
+      subject: processTextTemplate(quoteTemplate.subject_template, context),
+      body: processEmailTemplate(quoteTemplate.body_template, context),
+    });
+    setIsEmailDialogOpen(true);
+  };
 
-    return matchesSearchTerm && matchesStatus;
-  });
+
+  const filteredAndSortedRequests = React.useMemo(() => {
+    if (!requests) return [];
+
+    const filtered = requests.filter(request => {
+      const vendorName = vendors?.find(v => v.id === request.vendor_id)?.name || "";
+      const requesterName = getRequesterName(request.requester_id);
+      const accountManagerName = getAccountManagerName(request.account_manager_id);
+
+      const matchesSearchTerm = searchTerm.toLowerCase() === "" ||
+        request.items?.some(item =>
+          item.product_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          item.catalog_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (item.brand && item.brand.toLowerCase().includes(searchTerm.toLowerCase()))
+        ) ||
+        vendorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        requesterName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        accountManagerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (request.quote_url && request.quote_url.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (request.po_number && request.po_number.toLowerCase().includes(searchTerm.toLowerCase()));
+
+      let matchesStatus = true;
+      if (filterStatus === "All") {
+        matchesStatus = true;
+      } else if (filterStatus === "Active") {
+        // Excluir Received, Denied, Cancelled
+        matchesStatus = !["Received", "Denied", "Cancelled"].includes(request.status);
+      } else {
+        matchesStatus = request.status === filterStatus;
+      }
+
+      return matchesSearchTerm && matchesStatus;
+    });
+
+    // Aplicar ordenación por estado y luego por fecha de creación (más reciente primero)
+    return filtered.sort((a, b) => {
+      const statusA = STATUS_ORDER[a.status] || 99;
+      const statusB = STATUS_ORDER[b.status] || 99;
+
+      if (statusA !== statusB) {
+        return statusA - statusB; // Ordenar por prioridad de estado (1, 2, 3... arriba)
+      }
+
+      // Si los estados son iguales, ordenar por fecha de creación (más reciente primero)
+      // Esto asegura que dentro de un mismo estado, el más reciente aparezca primero.
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
+  }, [requests, searchTerm, filterStatus, vendors, profiles, accountManagers]);
+
 
   if (isLoadingRequests || isLoadingVendors || isLoadingProfiles || isLoadingAccountManagers || isLoadingProjects || isLoadingEmailTemplates || isLoadingShippingAddresses || isLoadingBillingAddresses) {
     return (
@@ -275,12 +375,12 @@ const RequestList: React.FC = () => {
         onStatusChange={setFilterStatus}
       />
       <RequestListTable
-        requests={filteredRequests}
+        requests={filteredAndSortedRequests}
         vendors={vendors}
         profiles={profiles}
         isUpdatingStatus={updateStatusMutation.isPending}
         onViewDetails={(id) => navigate(`/requests/${id}`)}
-        onApprove={handleApproveRequest}
+        onApprove={handleOpenApproveDialogFromList}
         onEnterQuoteDetails={openQuoteAndPODetailsDialog}
         onSendPORequest={handleSendPORequest}
         onMarkAsOrdered={openOrderConfirmationDialog}
@@ -288,6 +388,7 @@ const RequestList: React.FC = () => {
         onDeny={handleDenyRequest}
         onCancel={handleCancelRequest}
         onMerge={handleMergeRequest}
+        onSendQuoteRequest={handleSendQuoteRequestFromList}
       />
 
       <EmailDialog
@@ -298,7 +399,6 @@ const RequestList: React.FC = () => {
         isSending={sendEmailMutation.isPending}
       />
       
-      {/* Diálogo de Recepción de Ítems */}
       {requestToReceive && requestToReceive.items && (
         <ReceiveItemsDialog
           isOpen={isReceiveItemsDialogOpen}
@@ -308,7 +408,6 @@ const RequestList: React.FC = () => {
         />
       )}
       
-      {/* Diálogo de Fusión de Solicitudes */}
       {sourceRequestToMerge && (
         <MergeRequestsDialog
           isOpen={isMergeDialogOpen}
@@ -318,7 +417,6 @@ const RequestList: React.FC = () => {
         />
       )}
       
-      {/* Diálogo de Denegación */}
       <Dialog open={isDenyDialogOpen} onOpenChange={setIsDenyDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
@@ -338,7 +436,6 @@ const RequestList: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Diálogo de Cancelación */}
       <Dialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
@@ -357,6 +454,15 @@ const RequestList: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ApproveRequestListDialog
+        isOpen={isApproveListDialogOpen}
+        onOpenChange={setIsApproveListDialogOpen}
+        request={requestToApproveFromList}
+        onApproveOnly={handleApproveOnlyFromList}
+        onApproveAndSendEmail={handleApproveAndSendEmailFromList}
+        isSubmitting={updateStatusMutation.isPending || sendEmailMutation.isPending}
+      />
     </div>
   );
 };
