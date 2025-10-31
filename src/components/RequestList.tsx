@@ -70,7 +70,7 @@ const RequestList: React.FC = () => {
   const sendEmailMutation = useSendEmail();
 
   const [searchTerm, setSearchTerm] = React.useState<string>("");
-  const [filterStatus, setFilterStatus] = React.useState<RequestStatus | "All" | "Active">("Active"); // Default to "Active"
+  const [filterStatus, setFilterStatus] = React.useState<RequestStatus | "All" | "Active">("All"); // Changed default to "All"
 
   const [isEmailDialogOpen, setIsEmailDialogOpen] = React.useState(false);
   const [emailInitialData, setEmailInitialData] = React.useState<Partial<EmailFormValues>>({});
