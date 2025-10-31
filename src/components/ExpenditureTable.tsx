@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Edit, Trash2 } from 'lucide-react';
 import { Expenditure, Project } from '@/data/types';
-import { format } from 'date-fns';
+import { format, isValid } from 'date-fns'; // Importar isValid
 
 interface ExpenditureTableProps {
   expenditures: Expenditure[];
@@ -44,41 +44,48 @@ const ExpenditureTable: React.FC<ExpenditureTableProps> = ({ expenditures, proje
                 </TableCell>
               </TableRow>
             ) : (
-              expenditures.map((expenditure) => (
-                <TableRow key={expenditure.id}>
-                  <TableCell className="font-medium">
-                    {format(new Date(expenditure.date), 'dd/MM/yyyy')}
-                  </TableCell>
-                  <TableCell>{getProjectCode(expenditure.project_id)}</TableCell>
-                  <TableCell className="max-w-[200px] truncate">{expenditure.description}</TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
-                    {expenditure.request_id ? expenditure.request_id.substring(0, 8) : 'N/A'}
-                  </TableCell>
-                  <TableCell className="text-right font-semibold text-red-600">
-                    {expenditure.amount.toFixed(2)}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <div className="flex justify-center space-x-2">
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        onClick={() => onEdit(expenditure)}
-                        aria-label="Editar"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        onClick={() => onDelete(expenditure.id)}
-                        aria-label="Eliminar"
-                      >
-                        <Trash2 className="h-4 w-4 text-red-500" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
+              expenditures.map((expenditure) => {
+                const dateObj = new Date(expenditure.date);
+                const formattedDate = isValid(dateObj) 
+                  ? format(dateObj, 'dd/MM/yyyy') 
+                  : 'Fecha Inválida';
+
+                return (
+                  <TableRow key={expenditure.id}>
+                    <TableCell className="font-medium">
+                      {formattedDate}
+                    </TableCell>
+                    <TableCell>{getProjectCode(expenditure.project_id)}</TableCell>
+                    <TableCell className="max-w-[200px] truncate">{expenditure.description}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {expenditure.request_id ? expenditure.request_id.substring(0, 8) : 'N/A'}
+                    </TableCell>
+                    <TableCell className="text-right font-semibold text-red-600">
+                      {expenditure.amount.toFixed(2)}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <div className="flex justify-center space-x-2">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => onEdit(expenditure)}
+                          aria-label="Editar"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => onDelete(expenditure.id)}
+                          aria-label="Eliminar"
+                        >
+                          <Trash2 className="h-4 w-4 text-red-500" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
             )}
           </TableBody>
         </Table>
