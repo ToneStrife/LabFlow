@@ -24,6 +24,10 @@ serve(async (req) => {
     return new Response(JSON.stringify({ error: 'Server Error: SENDGRID_FROM_EMAIL is missing in Supabase secrets or is invalid. Please set a verified sender email.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 
+  let logStatus = 'failed';
+  let logErrorMessage: string | undefined;
+  let sentByUserId: string | undefined;
+
   try {
     // 2. Autenticar al usuario que llama a la función
     const authClient = createClient(
@@ -31,15 +35,18 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
     );
-    const { error: authError } = await authClient.auth.getUser();
+    const { data: { user }, error: authError } = await authClient.auth.getUser();
     if (authError) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      logErrorMessage = `Unauthorized: ${authError.message}`;
+      return new Response(JSON.stringify({ error: logErrorMessage }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
+    sentByUserId = user?.id;
 
     // 3. Parsear el cuerpo de la solicitud
     const { to, subject, body, attachments, fromName } = await req.json();
     if (!to || !subject || !body) {
-      return new Response(JSON.stringify({ error: 'Missing required fields: to, subject, or body' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      logErrorMessage = 'Missing required fields: to, subject, or body';
+      return new Response(JSON.stringify({ error: logErrorMessage }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     // 4. Procesar los archivos adjuntos si existen
@@ -107,21 +114,48 @@ serve(async (req) => {
     if (!response.ok) {
       const errorBody = await response.text();
       console.error('SendGrid API error response:', errorBody);
-      throw new Error(`SendGrid API error (${response.status}): ${errorBody}`);
+      logErrorMessage = `SendGrid API error (${response.status}): ${errorBody}`;
+      throw new Error(logErrorMessage);
     }
 
     console.log('Email sent successfully via SendGrid.');
+    logStatus = 'success'; // Mark as success if no error was thrown
 
     return new Response(JSON.stringify({ message: "Email sent successfully." }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Unhandled error in send-email function:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    logErrorMessage = error.message || 'An unexpected error occurred in the Edge Function.';
+    return new Response(JSON.stringify({ error: logErrorMessage }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
     });
+  } finally {
+    // 7. Log the email attempt to Supabase
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+    
+    const { to, subject, body } = await req.json(); // Re-parse body for logging
+    const bodyPreview = body.length > 250 ? body.substring(0, 247) + '...' : body;
+
+    const { error: logError } = await supabaseAdmin
+      .from('email_logs')
+      .insert({
+        to_email: to,
+        subject: subject,
+        body_preview: bodyPreview,
+        status: logStatus,
+        error_message: logErrorMessage,
+        sent_by: sentByUserId,
+      });
+
+    if (logError) {
+      console.error('Error logging email to Supabase:', logError);
+    }
   }
 });

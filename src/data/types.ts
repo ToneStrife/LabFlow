@@ -23,6 +23,7 @@ export interface RequestItem {
 
 export interface Profile {
   id: string;
+// ... (rest of Profile interface)
   first_name: string | null;
   last_name: string | null;
   email: string | null;
@@ -181,4 +182,17 @@ export interface Expenditure {
   description: string;
   date_incurred: string; // ISO date string
   request_id: string | null;
+}
+
+// NUEVA INTERFAZ: Registro de Correo Electrónico
+export interface EmailLog {
+  id: string;
+  created_at: string;
+  to_email: string;
+  subject: string;
+  body_preview: string | null;
+  status: 'success' | 'failed';
+  error_message: string | null;
+  sent_by: string | null; // User ID
+  sent_by_name?: string; // Joined from profiles table for display
 }
