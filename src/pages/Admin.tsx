@@ -3,7 +3,7 @@
 import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Loader2, MapPin, DollarSign, Users, Briefcase, Shield, Mail, ScrollText } from "lucide-react"; // Añadir iconos para pestañas
+import { PlusCircle, Loader2, MapPin, DollarSign, Users, Briefcase, Shield, Mail, ScrollText, Bell } from "lucide-react"; // Añadir iconos para pestañas
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
@@ -56,6 +56,9 @@ import {
 
 // Email Logs import
 import EmailLogs from "@/components/EmailLogs";
+
+// Notifications import
+import { useSendTestNotification } from "@/hooks/use-notifications";
 
 
 // --- Email Template Form Schema and Placeholders ---
@@ -134,6 +137,10 @@ const AdminPage = () => {
   const [isEditAddressDialogOpen, setIsEditAddressDialogOpen] = React.useState(false);
   const [editingAddress, setEditingAddress] = React.useState<Address | undefined>(undefined);
   const [currentAddressType, setCurrentAddressType] = React.useState<'shipping' | 'billing'>('shipping');
+  
+  // --- Hooks for Notifications ---
+  const sendTestNotificationMutation = useSendTestNotification();
+
 
   // --- Handlers for Account Managers ---
   const handleAddManager = async (data: AccountManagerFormValues) => {
@@ -251,6 +258,12 @@ const AdminPage = () => {
     if (!currentTemplate) return;
     await updateTemplateMutation.mutateAsync({ id: currentTemplate.id, data });
   };
+  
+  // --- Handler for Notifications ---
+  const handleSendTestNotification = async () => {
+    await sendTestNotificationMutation.mutateAsync();
+  };
+
 
   // --- Loading and Error States ---
   const isLoading = isLoadingManagers || isLoadingProjects || isLoadingUsers || isLoadingTemplates || sessionLoading || isLoadingShipping || isLoadingBilling;
@@ -295,6 +308,9 @@ const AdminPage = () => {
           </TabsTrigger>
           <TabsTrigger value="email-logs" className="flex items-center gap-2 px-4 py-2">
             <ScrollText className="h-4 w-4" /> Registros de Email
+          </TabsTrigger>
+          <TabsTrigger value="notifications" className="flex items-center gap-2 px-4 py-2">
+            <Bell className="h-4 w-4" /> Notificaciones
           </TabsTrigger>
         </TabsList>
 
@@ -440,6 +456,37 @@ const AdminPage = () => {
         {/* Email Logs Tab */}
         <TabsContent value="email-logs" className="mt-6">
           <EmailLogs />
+        </TabsContent>
+        
+        {/* Notifications Tab (NEW) */}
+        <TabsContent value="notifications" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-xl">Configuración de Notificaciones Push (FCM)</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-muted-foreground">
+                El sistema de notificaciones utiliza Firebase Cloud Messaging (FCM). Asegúrate de haber concedido permisos de notificación en tu navegador o dispositivo.
+              </p>
+              <Button 
+                onClick={handleSendTestNotification} 
+                disabled={sendTestNotificationMutation.isPending}
+              >
+                {sendTestNotificationMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Enviando Prueba...
+                  </>
+                ) : (
+                  <>
+                    <Bell className="mr-2 h-4 w-4" /> Enviar Notificación de Prueba
+                  </>
+                )}
+              </Button>
+              <p className="text-sm text-red-500">
+                Nota: Si no recibes la notificación, verifica que tu clave `FIREBASE_SERVER_KEY` esté configurada correctamente en los secretos de Supabase y que hayas aceptado los permisos de notificación.
+              </p>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 

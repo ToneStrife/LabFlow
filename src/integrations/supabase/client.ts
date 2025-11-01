@@ -1,13 +1,15 @@
-import { createClient } from '@supabase/supabase-js';
+import { createBrowserClient } from '@supabase/ssr';
 
-// Intenta leer desde las variables de entorno (Vite)
-const envUrl = import.meta.env.VITE_SUPABASE_URL;
-const envAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// Las variables de entorno deben tener el prefijo NEXT_PUBLIC_ para ser accesibles en el cliente.
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-if (!envUrl || !envAnonKey) {
-  console.error("❌ Missing Supabase environment variables. Check your .env.local file.");
-  throw new Error('Supabase URL or Anon Key is missing.');
+if (!supabaseUrl || !supabaseAnonKey) {
+  // Este es el error que estás viendo.
+  throw new Error('Error Supabase URL or Anon Key is missing.');
 }
 
-// Inicializa y exporta el cliente
-export const supabase = createClient(envUrl, envAnonKey);
+export const supabase = createBrowserClient(
+  supabaseUrl,
+  supabaseAnonKey
+);

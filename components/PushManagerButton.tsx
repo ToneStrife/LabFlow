@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { supabase } from '@/src/integrations/supabase/client'; // Importamos el cliente que acabamos de verificar
 
 export default function PushManagerButton() {
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoggedIn, setIsLoggedIn] = useState(false); // Nuevo estado para la autenticación
   const [subscription, setSubscription] = useState<PushSubscription | null>(null);
   const [registration, setRegistration] = useState<ServiceWorkerRegistration | null>(null);
 
@@ -21,29 +23,44 @@ export default function PushManagerButton() {
   }
 
   useEffect(() => {
-    if ('serviceWorker' in navigator && 'PushManager' in window) {
-      navigator.serviceWorker.register('/sw.js')
-        .then(swReg => {
-          console.log('Service Worker is registered', swReg);
-          setRegistration(swReg);
-          // Check for existing subscription
-          swReg.pushManager.getSubscription().then(sub => {
-            if (sub) {
-              console.log('User IS subscribed.');
-              setIsSubscribed(true);
-              setSubscription(sub);
-            }
+    const checkAuthAndPush = async () => {
+      // 1. Check Supabase Authentication
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setIsLoggedIn(true);
+      } else {
+        setIsLoggedIn(false);
+        setIsLoading(false);
+        return; // Stop if not logged in
+      }
+
+      // 2. Check Push Manager compatibility and registration
+      if ('serviceWorker' in navigator && 'PushManager' in window) {
+        navigator.serviceWorker.register('/sw.js')
+          .then(swReg => {
+            console.log('Service Worker is registered', swReg);
+            setRegistration(swReg);
+            // Check for existing subscription
+            swReg.pushManager.getSubscription().then(sub => {
+              if (sub) {
+                console.log('User IS subscribed.');
+                setIsSubscribed(true);
+                setSubscription(sub);
+              }
+              setIsLoading(false);
+            });
+          })
+          .catch(error => {
+            console.error('Service Worker Error', error);
             setIsLoading(false);
           });
-        })
-        .catch(error => {
-          console.error('Service Worker Error', error);
-          setIsLoading(false);
-        });
-    } else {
-      console.warn('Push messaging is not supported');
-      setIsLoading(false);
-    }
+      } else {
+        console.warn('Push messaging is not supported');
+        setIsLoading(false);
+      }
+    };
+
+    checkAuthAndPush();
   }, []);
 
   const subscribeUser = async () => {
@@ -61,13 +78,17 @@ export default function PushManagerButton() {
       console.log('User is subscribed:', sub);
       
       // Send subscription to the backend
-      await fetch('/api/push/subscribe', {
+      const response = await fetch('/api/push/subscribe', {
         method: 'POST',
         body: JSON.stringify(sub),
         headers: {
           'Content-Type': 'application/json',
         },
       });
+
+      if (!response.ok) {
+        throw new Error('Failed to save subscription on server.');
+      }
 
       setSubscription(sub);
       setIsSubscribed(true);
@@ -81,10 +102,8 @@ export default function PushManagerButton() {
     if (!subscription) return;
     setIsLoading(true);
     try {
-      await subscription.unsubscribe();
-      
-      // Optional: Send unsubscription info to the backend to remove it
-      await fetch('/api/push/unsubscribe', {
+      // Send unsubscription info to the backend to remove it
+      const response = await fetch('/api/push/unsubscribe', {
         method: 'POST',
         body: JSON.stringify({ endpoint: subscription.endpoint }),
         headers: {
@@ -92,6 +111,11 @@ export default function PushManagerButton() {
         },
       });
 
+      if (!response.ok) {
+        throw new Error('Failed to delete subscription on server.');
+      }
+
+      await subscription.unsubscribe();
       console.log('User is unsubscribed.');
       setSubscription(null);
       setIsSubscribed(false);
@@ -109,9 +133,17 @@ export default function PushManagerButton() {
     }
   };
 
+  if (isLoading) {
+    return <button disabled>Cargando...</button>;
+  }
+
+  if (!isLoggedIn) {
+    return <p>Inicia sesión para activar las notificaciones.</p>;
+  }
+
   return (
     <button onClick={handleClick} disabled={isLoading}>
-      {isLoading ? 'Cargando...' : (isSubscribed ? 'Desactivar Notificaciones' : 'Activar Notificaciones')}
+      {isSubscribed ? 'Desactivar Notificaciones' : 'Activar Notificaciones'}
     </button>
   );
 }
