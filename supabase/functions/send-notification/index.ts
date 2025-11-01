@@ -1,105 +1,122 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
-import { getFCMToken } from '../_shared/fcm-auth.ts'; // Import the auth helper
+import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
+import { initializeApp, cert } from 'https://esm.sh/firebase-admin@11.11.1/app';
+import { getMessaging } from 'https://esm.sh/firebase-admin@11.11.1/messaging';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+// Obtener las variables de entorno de Firebase
+const FIREBASE_PRIVATE_KEY = Deno.env.get('FIREBASE_PRIVATE_KEY');
+const FIREBASE_CLIENT_EMAIL = Deno.env.get('FIREBASE_CLIENT_EMAIL');
+const FIREBASE_PROJECT_ID = Deno.env.get('FIREBASE_PROJECT_ID');
+
+if (!FIREBASE_PRIVATE_KEY || !FIREBASE_CLIENT_EMAIL || !FIREBASE_PROJECT_ID) {
+  console.error('Firebase secrets are not set.');
+  // Devolver un error 500 si las credenciales no están disponibles
+  serve(async () => new Response(JSON.stringify({ error: 'Firebase secrets missing' }), { status: 500, headers: { 'Content-Type': 'application/json' } }));
+}
+
+// Inicializar Firebase Admin SDK
+const serviceAccount = {
+  projectId: FIREBASE_PROJECT_ID,
+  clientEmail: FIREBASE_CLIENT_EMAIL,
+  // La clave privada debe ser decodificada ya que Deno.env.get la devuelve como una sola línea con \n
+  privateKey: FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
 };
 
+const app = initializeApp({
+  credential: cert(serviceAccount),
+});
+
+const messaging = getMessaging(app);
+
+// Inicializar Supabase Client para acceder a la base de datos
+const supabase = createClient(
+  Deno.env.get('SUPABASE_URL') ?? '',
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+  {
+    auth: {
+      persistSession: false,
+    },
+  },
+);
+
+// Función para manejar la solicitud
 serve(async (req) => {
+  // Manejar la solicitud OPTIONS (CORS Preflight)
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, {
+      status: 204,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+      },
+    });
   }
 
-  let logErrorMessage: string | undefined;
-  let sentByUserId: string | undefined;
-  let requestBody: any;
-
   try {
-    // 1. Authenticate the caller
-    const authClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
-    );
-    const { data: { user }, error: authError } = await authClient.auth.getUser();
-    if (authError || !user) {
-      logErrorMessage = `Unauthorized: ${authError.message}`;
-      return new Response(JSON.stringify({ error: logErrorMessage }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-    }
-    sentByUserId = user.id;
+    const { title, body } = await req.json();
 
-    // 2. Get request body (FCM message payload)
-    requestBody = await req.json();
-    const { token, title, body, data } = requestBody;
+    // 1. Obtener todos los tokens de la base de datos
+    const { data: tokensData, error: tokensError } = await supabase
+      .from('fcm_tokens')
+      .select('token');
 
-    if (!token || !title || !body) {
-      logErrorMessage = 'Missing required fields: token, title, or body in payload.';
-      return new Response(JSON.stringify({ error: logErrorMessage }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-    }
+    if (tokensError) throw tokensError;
 
-    // 3. Obtain FCM Access Token using OAuth 2.0 JWT Assertion
-    const accessToken = await getFCMToken();
-    const firebaseProjectId = Deno.env.get('FIREBASE_PROJECT_ID');
+    const tokens = tokensData.map((t) => t.token);
 
-    if (!firebaseProjectId) {
-        logErrorMessage = 'Server Error: FIREBASE_PROJECT_ID is missing in Supabase secrets.';
-        return new Response(JSON.stringify({ error: logErrorMessage }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-    }
-
-    // 4. Construct FCM HTTP v1 Payload
-    const fcmPayload = {
-      message: {
-        token: token,
-        notification: {
-          title: title,
-          body: body,
+    if (tokens.length === 0) {
+      return new Response(JSON.stringify({ message: 'No tokens registered.' }), {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
         },
-        data: data,
-        webpush: {
-          headers: {
-            Urgency: 'high',
-          },
-          notification: {
-            // Usar una URL pública para el icono (reemplaza con tu URL de almacenamiento si es diferente)
-            icon: 'https://syuulozqwzveujlgppml.supabase.co/storage/v1/object/public/LabFlow/favicon.png', 
-          },
+      });
+    }
+
+    // 2. Crear el mensaje de notificación
+    const message = {
+      notification: {
+        title: title || 'Notificación de LabFlow',
+        body: body || 'Mensaje de prueba enviado desde el administrador.',
+      },
+      webpush: {
+        headers: {
+          Urgency: 'high',
         },
-      }
+      },
+      tokens: tokens,
     };
 
-    // 5. Send the notification via FCM HTTP v1 API
-    const fcmResponse = await fetch(`https://fcm.googleapis.com/v1/projects/${firebaseProjectId}/messages:send`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(fcmPayload),
-    });
+    // 3. Enviar la notificación
+    const response = await messaging.sendMulticast(message);
 
-    if (!fcmResponse.ok) {
-      const errorBody = await fcmResponse.json();
-      console.error('FCM API error response:', errorBody);
-      logErrorMessage = `FCM API error (${fcmResponse.status}): ${JSON.stringify(errorBody)}`;
-      throw new Error(logErrorMessage);
+    // 4. Manejar tokens inválidos (opcional: limpiar la base de datos)
+    const failedTokens = response.responses
+      .filter((r) => !r.success)
+      .map((r, index) => tokens[index]);
+
+    if (failedTokens.length > 0) {
+      console.log(`Failed to send to ${failedTokens.length} tokens. Consider removing them.`);
+      // Lógica para eliminar tokens inválidos de la base de datos si es necesario
     }
 
-    console.log('Notification sent successfully via FCM v1.');
-
-    return new Response(JSON.stringify({ message: "Notification sent successfully." }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    return new Response(JSON.stringify({ success: true, response }), {
       status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+      },
     });
-
-  } catch (error: any) {
-    console.error('Unhandled error in send-notification function:', error);
-    logErrorMessage = error.message || 'An unexpected error occurred in the Edge Function.';
-    return new Response(JSON.stringify({ error: logErrorMessage }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  } catch (error) {
+    console.error('Error sending notification:', error);
+    return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+      },
     });
   }
 });
