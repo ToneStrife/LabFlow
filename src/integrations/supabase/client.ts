@@ -1,8 +1,9 @@
 import { createBrowserClient } from '@supabase/ssr';
 
-// Las variables de entorno deben tener el prefijo NEXT_PUBLIC_ para ser accesibles en el cliente.
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+// En entornos Vite, las variables de entorno públicas deben usar el prefijo VITE_
+// y ser accedidas a través de import.meta.env.
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
   // Este es el error que estás viendo.
