@@ -1,7 +1,7 @@
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
-import { initializeApp, cert } from 'https://esm.sh/firebase-admin@11.11.1/app';
-import { getMessaging } from 'https://esm.sh/firebase-admin@11.11.1/messaging';
+import { initializeApp, cert } from 'https://esm.sh/firebase-admin@10.2.0/app?bundle';
+import { getMessaging } from 'https://esm.sh/firebase-admin@10.2.0/messaging?bundle';
 
 // Obtener las variables de entorno de Firebase
 const FIREBASE_PRIVATE_KEY = Deno.env.get('FIREBASE_PRIVATE_KEY');
@@ -54,19 +54,26 @@ serve(async (req) => {
   }
 
   try {
-    const { title, body } = await req.json();
+    const { token, title, body, data: payloadData } = await req.json();
 
-    // 1. Obtener todos los tokens de la base de datos
-    const { data: tokensData, error: tokensError } = await supabase
-      .from('fcm_tokens')
-      .select('token');
+    // Si se proporciona un token específico, solo enviar a ese token.
+    // Si no se proporciona, enviar a todos los tokens registrados (comportamiento anterior).
+    let tokensToSend: string[] = [];
+    if (token) {
+        tokensToSend = [token];
+    } else {
+        // 1. Obtener todos los tokens de la base de datos
+        const { data: tokensData, error: tokensError } = await supabase
+            .from('fcm_tokens')
+            .select('token');
 
-    if (tokensError) throw tokensError;
+        if (tokensError) throw tokensError;
+        tokensToSend = tokensData.map((t) => t.token);
+    }
 
-    const tokens = tokensData.map((t) => t.token);
 
-    if (tokens.length === 0) {
-      return new Response(JSON.stringify({ message: 'No tokens registered.' }), {
+    if (tokensToSend.length === 0) {
+      return new Response(JSON.stringify({ message: 'No tokens registered or provided.' }), {
         status: 200,
         headers: {
           'Content-Type': 'application/json',
@@ -81,12 +88,13 @@ serve(async (req) => {
         title: title || 'Notificación de LabFlow',
         body: body || 'Mensaje de prueba enviado desde el administrador.',
       },
+      data: payloadData, // Datos personalizados para el Service Worker
       webpush: {
         headers: {
           Urgency: 'high',
         },
       },
-      tokens: tokens,
+      tokens: tokensToSend,
     };
 
     // 3. Enviar la notificación
@@ -95,7 +103,7 @@ serve(async (req) => {
     // 4. Manejar tokens inválidos (opcional: limpiar la base de datos)
     const failedTokens = response.responses
       .filter((r) => !r.success)
-      .map((r, index) => tokens[index]);
+      .map((r, index) => tokensToSend[index]);
 
     if (failedTokens.length > 0) {
       console.log(`Failed to send to ${failedTokens.length} tokens. Consider removing them.`);
