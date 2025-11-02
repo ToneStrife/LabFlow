@@ -32,9 +32,15 @@ export interface Profile {
   role: "Requester" | "Account Manager" | "Admin";
   
   // Preferencias de Notificación (NUEVOS CAMPOS)
-  notify_on_status_change: boolean;
+  notify_on_status_change: boolean; // Interruptor maestro para notificaciones de estado
   notify_on_new_request: boolean;
-  // notify_on_inventory_low: boolean; <-- ELIMINADO
+}
+
+// NUEVA INTERFAZ
+export interface UserNotificationPreferences {
+  user_id: string;
+  notified_statuses: RequestStatus[];
+  created_at: string;
 }
 
 export interface Vendor {

@@ -12,6 +12,7 @@ import {
   ProductDetails, // Importar ProductDetails para la búsqueda externa
   EmailTemplate, // Importar el nuevo tipo EmailTemplate
   Expenditure, // Importar Expenditure
+  UserNotificationPreferences, // Importar la nueva interfaz
 } from "@/data/types";
 
 // Mantener las importaciones de mock data para otras tablas hasta que se conviertan
@@ -373,6 +374,24 @@ export const apiAddRequest = async (data: AddRequestData): Promise<SupabaseReque
   return newRequest as SupabaseRequest;
 };
 
+// Helper para obtener las preferencias de estado de un usuario
+const getUserStatusPreferences = async (userId: string): Promise<RequestStatus[]> => {
+    const { data, error } = await supabase
+        .from('user_notification_preferences')
+        .select('notified_statuses')
+        .eq('user_id', userId)
+        .single();
+
+    if (error && error.code !== 'PGRST116') {
+        console.error("Error fetching user status preferences:", error);
+        return [];
+    }
+    
+    // Si no hay preferencias, devolvemos un array vacío (o el valor por defecto de la tabla si existe)
+    return data?.notified_statuses || [];
+};
+
+
 export const apiUpdateRequestStatus = async (
   id: string,
   status: RequestStatus,
@@ -424,68 +443,65 @@ export const apiUpdateRequestStatus = async (
       
       const link = `/requests/${id}`;
 
-      switch (status) {
-        case 'Quote Requested':
-        case 'PO Requested':
-        case 'Ordered':
-        case 'Denied':
-        case 'Cancelled':
-          // Notificar al solicitante si tiene la preferencia activada
-          const requesterProfile = allProfiles.find(p => p.id === requesterId);
-          if (requesterProfile?.notify_on_status_change) {
+      // --- Lógica de Notificación para el Solicitante ---
+      const requesterProfile = allProfiles.find(p => p.id === requesterId);
+      if (requesterProfile?.notify_on_status_change) {
+          const preferredStatuses = await getUserStatusPreferences(requesterId);
+          if (preferredStatuses.includes(status)) {
               targetUserIds.push(requesterId);
           }
-          
-          // Notificar al gerente de cuenta si está asignado y es Admin/AM (y tiene la preferencia activada)
-          if (accountManagerId) {
-              const managerProfile = allProfiles.find(p => p.id === accountManagerId);
-              if (managerProfile?.notify_on_status_change) {
+      }
+      
+      // --- Lógica de Notificación para el Gerente de Cuenta ---
+      if (accountManagerId) {
+          const managerProfile = allProfiles.find(p => p.id === accountManagerId);
+          if (managerProfile?.notify_on_status_change) {
+              const preferredStatuses = await getUserStatusPreferences(accountManagerId);
+              if (preferredStatuses.includes(status)) {
                   targetUserIds.push(accountManagerId);
               }
           }
-          
-          // Definir mensajes
-          if (status === 'Quote Requested') {
-              title = `✅ Solicitud #${requestNumber} Aprobada`;
-              body = `Tu solicitud ha sido aprobada y se ha solicitado una cotización.`;
-          } else if (status === 'PO Requested') {
-              title = `📝 Cotización Recibida para #${requestNumber}`;
-              body = `La cotización ha sido recibida. Se requiere la emisión de una Orden de Compra (PO).`;
-          } else if (status === 'Ordered') {
-              title = `📦 Solicitud #${requestNumber} Pedida`;
-              body = `Tu solicitud ha sido marcada como 'Pedido'. Esperando la recepción.`;
-          } else if (status === 'Denied') {
-              title = `❌ Solicitud #${requestNumber} Denegada`;
-              body = `Tu solicitud ha sido denegada. Revisa los detalles para más información.`;
-          } else { // Cancelled
-              title = `🚫 Solicitud #${requestNumber} Cancelada`;
-              body = `Tu solicitud ha sido cancelada.`;
-          }
-          break;
-          
-        case 'Received':
-          // Notificar al solicitante si tiene la preferencia activada
-          const requesterProfileRec = allProfiles.find(p => p.id === requesterId);
-          if (requesterProfileRec?.notify_on_status_change) {
-              targetUserIds.push(requesterId);
-          }
-          
-          // Notificar a Admins/AMs que tienen activada la notificación de nuevas solicitudes (o una nueva preferencia específica si la tuviéramos)
+      }
+      
+      // --- Lógica de Notificación para Admins (Nuevas Solicitudes) ---
+      if (status === 'Pending') {
+          // Esto no debería ocurrir en un cambio de estado, pero si ocurre, notificamos a los admins
           const adminRecipients = allProfiles.filter(p => 
-              (p.role === 'Admin' || p.role === 'Account Manager') && p.notify_on_new_request // Reutilizamos notify_on_new_request para 'Received' por simplicidad
+              (p.role === 'Admin' || p.role === 'Account Manager') && p.notify_on_new_request
           ).map(p => p.id);
-          
           targetUserIds.push(...adminRecipients);
-          
-          title = `🎉 Solicitud #${requestNumber} Recibida`;
-          body = `Los artículos de tu solicitud han sido recibidos y añadidos al inventario.`;
-          break;
-          
+      }
+      
+      // Definir mensajes (basados en el nuevo estado)
+      switch (status) {
+        case 'Quote Requested':
+            title = `✅ Solicitud #${requestNumber} Aprobada`;
+            body = `Tu solicitud ha sido aprobada y se ha solicitado una cotización.`;
+            break;
+        case 'PO Requested':
+            title = `📝 Cotización Recibida para #${requestNumber}`;
+            body = `La cotización ha sido recibida. Se requiere la emisión de una Orden de Compra (PO).`;
+            break;
+        case 'Ordered':
+            title = `📦 Solicitud #${requestNumber} Pedida`;
+            body = `Tu solicitud ha sido marcada como 'Pedido'. Esperando la recepción.`;
+            break;
+        case 'Received':
+            title = `🎉 Solicitud #${requestNumber} Recibida`;
+            body = `Los artículos de tu solicitud han sido recibidos y añadidos al inventario.`;
+            break;
+        case 'Denied':
+            title = `❌ Solicitud #${requestNumber} Denegada`;
+            body = `Tu solicitud ha sido denegada. Revisa los detalles para más información.`;
+            break;
+        case 'Cancelled':
+            title = `🚫 Solicitud #${requestNumber} Cancelada`;
+            body = `Tu solicitud ha sido cancelada.`;
+            break;
         default:
-          // No enviar notificación para otros estados o si no hay cambio significativo
-          targetUserIds = [];
-          title = '';
-          body = '';
+            title = `Cambio de Estado en Solicitud #${requestNumber}`;
+            body = `El estado ha cambiado a ${status}.`;
+            break;
       }
       
       // Enviar la notificación si hay destinatarios

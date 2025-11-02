@@ -9,36 +9,49 @@ import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useUpdateProfile, getFullName } from "@/hooks/use-profiles";
-import { useNavigate } from "react-router-dom"; // Importar useNavigate
-import { Profile as ProfileType } from "@/data/types"; // Corrected import
-import { Switch } from "@/components/ui/switch"; // Importar Switch
-import { Separator } from "@/components/ui/separator"; // Importar Separator
+import { useNavigate } from "react-router-dom";
+import { Profile as ProfileType, RequestStatus } from "@/data/types";
+import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useUserNotificationPreferences, useUpdateNotificationPreferences, availableStatusNotifications } from "@/hooks/use-notification-preferences"; // Importar nuevos hooks
 
 const Profile: React.FC = () => {
-  const { session, profile, loading, logout, login } = useSession(); // Añadir login al hook
+  const { session, profile, loading, logout } = useSession();
   const updateProfileMutation = useUpdateProfile();
-  const navigate = useNavigate(); // Inicializar useNavigate
+  const navigate = useNavigate();
+  
+  // Hooks para preferencias de notificación de estado
+  const { data: prefs, isLoading: isLoadingPrefs } = useUserNotificationPreferences(session?.user?.id);
+  const updatePrefsMutation = useUpdateNotificationPreferences();
 
   const [firstName, setFirstName] = React.useState(profile?.first_name || "");
   const [lastName, setLastName] = React.useState(profile?.last_name || "");
   const [role, setRole] = React.useState(profile?.role || "");
   
-  // Estados para preferencias de notificación
-  const [notifyStatusChange, setNotifyStatusChange] = React.useState(profile?.notify_on_status_change ?? true);
+  // Estados de Profile (tabla profiles)
+  const [notifyStatusChangeMaster, setNotifyStatusChangeMaster] = React.useState(profile?.notify_on_status_change ?? true);
   const [notifyNewRequest, setNotifyNewRequest] = React.useState(profile?.notify_on_new_request ?? true);
-  // const [notifyInventoryLow, setNotifyInventoryLow] = React.useState(profile?.notify_on_inventory_low ?? true); // ELIMINADO
+  
+  // Estado para la selección granular (tabla user_notification_preferences)
+  const [selectedStatuses, setSelectedStatuses] = React.useState<RequestStatus[]>(prefs?.notified_statuses || []);
 
-
+  // Sincronizar estados locales con datos de hooks
   React.useEffect(() => {
     if (profile) {
       setFirstName(profile.first_name || "");
       setLastName(profile.last_name || "");
       setRole(profile.role || "");
-      setNotifyStatusChange(profile.notify_on_status_change ?? true);
+      setNotifyStatusChangeMaster(profile.notify_on_status_change ?? true);
       setNotifyNewRequest(profile.notify_on_new_request ?? true);
-      // setNotifyInventoryLow(profile.notify_on_inventory_low ?? true); // ELIMINADO
     }
   }, [profile]);
+  
+  React.useEffect(() => {
+    if (prefs) {
+      setSelectedStatuses(prefs.notified_statuses || []);
+    }
+  }, [prefs]);
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,24 +63,42 @@ const Profile: React.FC = () => {
     const dataToUpdate = {
       first_name: firstName,
       last_name: lastName,
-      role: profile?.role || "Requester", // El rol no es editable por el usuario en este formulario, mantener el rol actual
-      notify_on_status_change: notifyStatusChange,
+      role: profile?.role || "Requester",
+      notify_on_status_change: notifyStatusChangeMaster, // Guardar el interruptor maestro
       notify_on_new_request: notifyNewRequest,
-      // notify_on_inventory_low: notifyInventoryLow, // ELIMINADO
     };
 
-    updateProfileMutation.mutate({
+    // 1. Actualizar la tabla profiles (nombre, rol, interruptores maestros)
+    await updateProfileMutation.mutateAsync({
       id: session.user.id,
       data: dataToUpdate,
+    });
+    
+    // 2. Actualizar la tabla user_notification_preferences (estados seleccionados)
+    await updatePrefsMutation.mutateAsync({
+        userId: session.user.id,
+        statuses: selectedStatuses,
+    });
+  };
+  
+  const handleStatusToggle = (status: RequestStatus, checked: boolean) => {
+    setSelectedStatuses(prev => {
+      if (checked) {
+        return Array.from(new Set([...prev, status]));
+      } else {
+        return prev.filter(s => s !== status);
+      }
     });
   };
 
   const handleLogout = async () => {
     await logout();
-    navigate("/login"); // Redirigir a la página de login después de cerrar sesión
+    navigate("/login");
   };
 
-  if (loading) {
+  const isSubmitting = updateProfileMutation.isPending || updatePrefsMutation.isPending;
+
+  if (loading || isLoadingPrefs) {
     return (
       <div className="p-4 sm:p-6 flex justify-center items-center">
         <Loader2 className="h-8 w-8 animate-spin mr-2" /> Cargando Perfil...
@@ -107,7 +138,7 @@ const Profile: React.FC = () => {
                     id="firstName"
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
-                    disabled={updateProfileMutation.isPending}
+                    disabled={isSubmitting}
                   />
                 </div>
                 <div>
@@ -116,7 +147,7 @@ const Profile: React.FC = () => {
                     id="lastName"
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
-                    disabled={updateProfileMutation.isPending}
+                    disabled={isSubmitting}
                   />
                 </div>
                 <div>
@@ -131,42 +162,54 @@ const Profile: React.FC = () => {
             <div className="space-y-4">
                 <h3 className="text-lg font-semibold">Preferencias de Notificación Push</h3>
                 
-                <div className="flex items-center justify-between">
-                    <Label htmlFor="notifyStatusChange">Notificar cambios de estado de mis solicitudes</Label>
+                {/* Interruptor Maestro */}
+                <div className="flex items-center justify-between border p-3 rounded-md bg-muted/50">
+                    <Label htmlFor="notifyStatusChangeMaster" className="font-bold">
+                        Activar Notificaciones de Estado de Solicitud
+                    </Label>
                     <Switch
-                        id="notifyStatusChange"
-                        checked={notifyStatusChange}
-                        onCheckedChange={setNotifyStatusChange}
-                        disabled={updateProfileMutation.isPending}
+                        id="notifyStatusChangeMaster"
+                        checked={notifyStatusChangeMaster}
+                        onCheckedChange={setNotifyStatusChangeMaster}
+                        disabled={isSubmitting}
                     />
                 </div>
                 
+                {/* Selección Granular de Estados */}
+                <div className="space-y-2 pl-4 pt-2">
+                    <p className="text-sm font-medium text-muted-foreground">Notificarme cuando el estado de mi solicitud cambie a:</p>
+                    <div className="grid grid-cols-2 gap-3">
+                        {availableStatusNotifications.map((status) => (
+                            <div key={status} className="flex items-center space-x-2">
+                                <Checkbox
+                                    id={status}
+                                    checked={selectedStatuses.includes(status)}
+                                    onCheckedChange={(checked) => handleStatusToggle(status, !!checked)}
+                                    disabled={isSubmitting || !notifyStatusChangeMaster}
+                                />
+                                <Label htmlFor={status} className="text-sm">
+                                    {status}
+                                </Label>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+                
                 {profile?.role === 'Admin' && (
-                    <>
-                        <div className="flex items-center justify-between">
-                            <Label htmlFor="notifyNewRequest">Notificar nuevas solicitudes pendientes (Solo Admin)</Label>
-                            <Switch
-                                id="notifyNewRequest"
-                                checked={notifyNewRequest}
-                                onCheckedChange={setNotifyNewRequest}
-                                disabled={updateProfileMutation.isPending}
-                            />
-                        </div>
-                        {/* <div className="flex items-center justify-between">
-                            <Label htmlFor="notifyInventoryLow">Notificar inventario bajo (Solo Admin)</Label>
-                            <Switch
-                                id="notifyInventoryLow"
-                                checked={notifyInventoryLow}
-                                onCheckedChange={setNotifyInventoryLow}
-                                disabled={updateProfileMutation.isPending}
-                            />
-                        </div> */}
-                    </>
+                    <div className="flex items-center justify-between pt-4">
+                        <Label htmlFor="notifyNewRequest">Notificar nuevas solicitudes pendientes (Solo Admin)</Label>
+                        <Switch
+                            id="notifyNewRequest"
+                            checked={notifyNewRequest}
+                            onCheckedChange={setNotifyNewRequest}
+                            disabled={isSubmitting}
+                        />
+                    </div>
                 )}
             </div>
 
-            <Button type="submit" className="w-full" disabled={updateProfileMutation.isPending}>
-              {updateProfileMutation.isPending ? (
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando...
                 </>
