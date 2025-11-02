@@ -36,28 +36,40 @@ serve(async (req) => {
 
   try {
     // Autenticación manual (opcional, pero buena práctica si se necesita el usuario)
-    // Aunque esta función usa el rol de servicio, es bueno verificar que la llamada venga de un usuario autenticado.
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
         return new Response(JSON.stringify({ error: 'Unauthorized: Missing Authorization header' }), { status: 401, headers: cors });
     }
     
     const { user_ids, title, body, link, data: payloadData } = await req.json();
+    
+    console.log('Edge Function: Received notification request.');
+    console.log('Target user_ids:', user_ids);
 
     // 2) Carga tokens desde tu tabla
     let tokens: string[] = [];
     if (user_ids?.length) {
+      console.log(`Fetching tokens for ${user_ids.length} specific users.`);
       const { data, error } = await supabaseAdmin.from('fcm_tokens')
         .select('token')
         .in('user_id', user_ids);
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error fetching specific tokens:', error);
+        throw error;
+      }
       tokens = (data ?? []).map(d => d.token);
     } else {
+      console.log('Fetching all tokens.');
       const { data, error } = await supabaseAdmin.from('fcm_tokens')
         .select('token');
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error fetching all tokens:', error);
+        throw error;
+      }
       tokens = (data ?? []).map(d => d.token);
     }
+    
+    console.log(`Found ${tokens.length} tokens to send to.`);
 
     if (!tokens.length) {
       return new Response(JSON.stringify({ message: 'No hay tokens registrados.' }), {
