@@ -32,6 +32,8 @@
           
           console.log('Registering Service Worker at path:', swPath);
 
+          // CRÍTICO: Asegurar que el Service Worker se registre con el scope correcto.
+          // Si el Service Worker está en /LabFlow/firebase-messaging-sw.js, su scope debe ser /LabFlow/
           navigator.serviceWorker.register(swPath, { scope: basePath })
             .then(registration => {
               console.log('Service Worker registered with scope:', registration.scope);
