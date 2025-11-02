@@ -18,7 +18,8 @@ const Vendors = () => {
 
   const [isAddVendorDialogOpen, setIsAddVendorDialogOpen] = React.useState(false);
   const [isEditVendorDialogOpen, setIsEditVendorDialogOpen] = React.useState(false);
-  const [editingVendor, setEditingVendor] = React.useState<Vendor | undefined>(undefined);
+  // Cambiado el tipo de estado a VendorFormValues para que coincida con lo que se pasa al formulario
+  const [editingVendorInitialData, setEditingVendorInitialData] = React.useState<VendorFormValues | undefined>(undefined);
 
   // NOTE: parseBrandsString is now handled inside use-vendors.ts mutations.
   // We only need to map the array back to a string for the form's initial data.
@@ -34,7 +35,7 @@ const Vendors = () => {
       data: updatedData,
     });
     setIsEditVendorDialogOpen(false);
-    setEditingVendor(undefined);
+    setEditingVendorInitialData(undefined);
   };
 
   const handleDeleteVendor = async (vendorId: string) => {
@@ -42,12 +43,17 @@ const Vendors = () => {
   };
 
   const openEditDialog = (vendor: Vendor) => {
-    setEditingVendor({ 
-      ...vendor, 
-      // Convertir array a string para el formulario (string | null)
-      brands: vendor.brands && Array.isArray(vendor.brands) ? vendor.brands.join(", ") : null,
+    // Mapear el tipo Vendor (con brands: string[] | null) al tipo VendorFormValues (con brands: string | null)
+    const initialData: VendorFormValues = { 
+      name: vendor.name,
       contact_person: vendor.contact_person || null,
-    });
+      email: vendor.email || null,
+      phone: vendor.phone || null,
+      notes: vendor.notes || null,
+      // Conversión de array a string para el formulario
+      brands: vendor.brands && Array.isArray(vendor.brands) ? vendor.brands.join(", ") : null,
+    };
+    setEditingVendorInitialData(initialData);
     setIsEditVendorDialogOpen(true);
   };
 
@@ -104,15 +110,10 @@ const Vendors = () => {
           <DialogHeader>
             <DialogTitle>Editar Proveedor</DialogTitle>
           </DialogHeader>
-          {editingVendor && (
+          {editingVendorInitialData && (
             <VendorForm
-              initialData={{ 
-                ...editingVendor, 
-                // Convertir array a string para el formulario
-                brands: editingVendor.brands && Array.isArray(editingVendor.brands) ? editingVendor.brands.join(", ") : null,
-                contact_person: editingVendor.contact_person || null, // Ensure correct mapping for initialData
-              }}
-              onSubmit={(data) => handleEditVendor(editingVendor.id, data)}
+              initialData={editingVendorInitialData}
+              onSubmit={(data) => handleEditVendor(editingVendorInitialData.id, data)}
               onCancel={() => setIsEditVendorDialogOpen(false)}
               isSubmitting={updateVendorMutation.isPending}
             />
