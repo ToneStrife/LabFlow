@@ -2,7 +2,7 @@
 // Debe estar en public/ para tener scope raíz
 
 // 1) Config pública generada en build (ver más abajo)
-importScripts('/firebase-config.js');
+importScripts('./firebase-config.js');
 
 // 2) SDKs (compat para onBackgroundMessage)
 importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
