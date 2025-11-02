@@ -99,6 +99,10 @@ serve(async (req) => {
 
     // 3. Enviar la notificación
     const response = await messaging.sendMulticast(message);
+    
+    // --- LOGGING AÑADIDO PARA DEPURACIÓN ---
+    console.log('FCM Multicast Response:', JSON.stringify(response, null, 2));
+    // ---------------------------------------
 
     // 4. Manejar tokens inválidos (opcional: limpiar la base de datos)
     const failedTokens = response.responses
