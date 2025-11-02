@@ -12,6 +12,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  // FormDescription, <-- Eliminado para evitar el ReferenceError
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -164,9 +165,10 @@ const NotificationSenderForm: React.FC = () => {
                     <FormLabel className="text-base">
                       Enviar a todos los usuarios registrados
                     </FormLabel>
-                    <FormDescription>
+                    {/* Reemplazo de FormDescription */}
+                    <p className="text-[0.8rem] text-muted-foreground">
                       Si está marcado, se ignorará la selección individual.
-                    </FormDescription>
+                    </p>
                   </div>
                 </FormItem>
               )}

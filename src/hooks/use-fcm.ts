@@ -16,6 +16,21 @@ const initializeFirebase = () => {
   return getApp();
 };
 
+// Función para guardar el token en Supabase
+const saveTokenToSupabase = async (fcmToken: string, userId: string) => {
+  // Usaremos una tabla simple 'fcm_tokens' con (user_id, token)
+  const { error } = await supabase
+    .from('fcm_tokens')
+    .upsert({ user_id: userId, token: fcmToken, last_used: new Date().toISOString() }, { onConflict: 'token' });
+
+  if (error) {
+    console.error('Error saving FCM token to Supabase:', error);
+    // No mostramos un toast al usuario final, solo registramos el error.
+  } else {
+    console.log('FCM token saved/updated successfully in Supabase.');
+  }
+};
+
 // Hook para gestionar el token de FCM
 export const useFCM = () => {
   const { session, profile } = useSession();
@@ -23,7 +38,9 @@ export const useFCM = () => {
   const [isSupported, setIsSupported] = useState(false);
 
   useEffect(() => {
-    if ('Notification' in window && 'serviceWorker' in navigator) {
+    // Verificar si estamos en un entorno que soporta notificaciones y no estamos en un iframe (Dyad)
+    const isIframe = window.self !== window.top;
+    if ('Notification' in window && 'serviceWorker' in navigator && !isIframe) {
       setIsSupported(true);
     }
   }, []);
@@ -84,25 +101,7 @@ export const useFCM = () => {
 
     requestPermissionAndGetToken();
     
-    // Cleanup: Si el usuario cierra sesión, podríamos querer eliminar el token.
-    // Esto se maneja mejor en el backend con un trigger de auth.
-    
   }, [session, isSupported]);
 
   return { token, isSupported };
-};
-
-// Función para guardar el token en Supabase
-const saveTokenToSupabase = async (fcmToken: string, userId: string) => {
-  // Usaremos una tabla simple 'fcm_tokens' con (user_id, token)
-  const { error } = await supabase
-    .from('fcm_tokens')
-    .upsert({ user_id: userId, token: fcmToken, last_used: new Date().toISOString() }, { onConflict: 'token' });
-
-  if (error) {
-    console.error('Error saving FCM token to Supabase:', error);
-    // No mostramos un toast al usuario final, solo registramos el error.
-  } else {
-    console.log('FCM token saved/updated successfully in Supabase.');
-  }
 };
