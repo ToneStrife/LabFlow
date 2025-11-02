@@ -30,6 +30,11 @@ export interface Profile {
   avatar_url: string | null;
   updated_at: string | null;
   role: "Requester" | "Account Manager" | "Admin";
+  
+  // Preferencias de Notificación (NUEVOS CAMPOS)
+  notify_on_status_change: boolean;
+  notify_on_new_request: boolean;
+  notify_on_inventory_low: boolean;
 }
 
 export interface Vendor {

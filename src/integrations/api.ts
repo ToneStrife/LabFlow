@@ -279,24 +279,26 @@ interface AddRequestData {
   items: RequestItem[];
 }
 
-// Helper para obtener Lab Managers (Admins)
-const getLabManagers = async (): Promise<Profile[]> => {
+// Helper para obtener Lab Managers (Admins) que desean notificaciones de nuevas solicitudes
+const getNotificationRecipients = async (preferenceField: keyof Profile, roles: Profile['role'][] = ['Admin']): Promise<Profile[]> => {
     const { data, error } = await supabase
         .from('profiles')
-        .select('id, first_name, last_name')
-        .eq('role', 'Admin'); // Assuming 'Admin' acts as Lab Manager for notifications
+        .select(`id, first_name, last_name, role, ${preferenceField}`)
+        .in('role', roles)
+        .eq(preferenceField, true); // Filtrar por la preferencia activada
+
     if (error) {
-        console.error("Error fetching Admin profiles for notification:", error);
+        console.error(`Error fetching profiles for notification preference ${preferenceField}:`, error);
         return [];
     }
     return data || [];
 };
 
-// Helper para obtener el Requester
+// Helper para obtener el Requester (ahora incluye preferencias)
 const getRequesterProfile = async (requesterId: string): Promise<Profile | null> => {
     const { data, error } = await supabase
         .from('profiles')
-        .select('id, first_name, last_name')
+        .select('*')
         .eq('id', requesterId)
         .single();
     if (error) {
@@ -340,20 +342,21 @@ export const apiAddRequest = async (data: AddRequestData): Promise<SupabaseReque
     throw new Error(error.message);
   }
 
-  // --- NOTIFICATION: New Request (To Lab Manager/Admin) ---
+  // --- NOTIFICATION: New Request (To Admins/Account Managers) ---
   try {
-    const managers = await getLabManagers();
+    // Obtener Admins y Account Managers que quieren notificaciones de nuevas solicitudes
+    const recipients = await getNotificationRecipients('notify_on_new_request', ['Admin', 'Account Manager']);
+    
+    const recipientIds = recipients.map(m => m.id);
     const requester = await getRequesterProfile(requesterId);
     const requesterName = requester ? `${requester.first_name || ''} ${requester.last_name || ''}`.trim() : 'Unkown Requester';
     const requestNumber = (newRequest as SupabaseRequest).request_number || (newRequest as SupabaseRequest).id.substring(0, 8);
     
-    const adminIds = managers.map(m => m.id);
-    
-    if (adminIds.length > 0) {
+    if (recipientIds.length > 0) {
         await supabase.functions.invoke('send-notification', {
             method: 'POST',
             body: JSON.stringify({
-                user_ids: adminIds,
+                user_ids: recipientIds,
                 title: `🔔 Nueva Solicitud #${requestNumber}`,
                 body: `El usuario ${requesterName} ha enviado una nueva solicitud pendiente.`,
                 link: `/requests/${(newRequest as SupabaseRequest).id}`,
@@ -411,8 +414,8 @@ export const apiUpdateRequestStatus = async (
   // 3. --- NOTIFICATION: Status Change ---
   if (oldStatus !== status) {
     try {
-      const managers = await getLabManagers();
-      const adminIds = managers.map(m => m.id);
+      // Obtener todos los perfiles para filtrar por preferencia
+      const allProfiles = await apiGetProfiles();
       
       // Determinar destinatarios y mensaje
       let targetUserIds: string[] = [];
@@ -423,43 +426,61 @@ export const apiUpdateRequestStatus = async (
 
       switch (status) {
         case 'Quote Requested':
-          // Notificar al solicitante y al gerente (si está asignado)
-          targetUserIds = [requesterId];
-          if (accountManagerId) targetUserIds.push(accountManagerId);
-          title = `✅ Solicitud #${requestNumber} Aprobada`;
-          body = `Tu solicitud ha sido aprobada y se ha solicitado una cotización.`;
-          break;
         case 'PO Requested':
-          // Notificar al solicitante y al gerente (si está asignado)
-          targetUserIds = [requesterId];
-          if (accountManagerId) targetUserIds.push(accountManagerId);
-          title = `📝 Cotización Recibida para #${requestNumber}`;
-          body = `La cotización ha sido recibida. Se requiere la emisión de una Orden de Compra (PO).`;
-          break;
         case 'Ordered':
-          // Notificar al solicitante
-          targetUserIds = [requesterId];
-          title = `📦 Solicitud #${requestNumber} Pedida`;
-          body = `Tu solicitud ha sido marcada como 'Pedido'. Esperando la recepción.`;
+        case 'Denied':
+        case 'Cancelled':
+          // Notificar al solicitante si tiene la preferencia activada
+          const requesterProfile = allProfiles.find(p => p.id === requesterId);
+          if (requesterProfile?.notify_on_status_change) {
+              targetUserIds.push(requesterId);
+          }
+          
+          // Notificar al gerente de cuenta si está asignado y es Admin/AM (y tiene la preferencia activada)
+          if (accountManagerId) {
+              const managerProfile = allProfiles.find(p => p.id === accountManagerId);
+              if (managerProfile?.notify_on_status_change) {
+                  targetUserIds.push(accountManagerId);
+              }
+          }
+          
+          // Definir mensajes
+          if (status === 'Quote Requested') {
+              title = `✅ Solicitud #${requestNumber} Aprobada`;
+              body = `Tu solicitud ha sido aprobada y se ha solicitado una cotización.`;
+          } else if (status === 'PO Requested') {
+              title = `📝 Cotización Recibida para #${requestNumber}`;
+              body = `La cotización ha sido recibida. Se requiere la emisión de una Orden de Compra (PO).`;
+          } else if (status === 'Ordered') {
+              title = `📦 Solicitud #${requestNumber} Pedida`;
+              body = `Tu solicitud ha sido marcada como 'Pedido'. Esperando la recepción.`;
+          } else if (status === 'Denied') {
+              title = `❌ Solicitud #${requestNumber} Denegada`;
+              body = `Tu solicitud ha sido denegada. Revisa los detalles para más información.`;
+          } else { // Cancelled
+              title = `🚫 Solicitud #${requestNumber} Cancelada`;
+              body = `Tu solicitud ha sido cancelada.`;
+          }
           break;
+          
         case 'Received':
-          // Notificar al solicitante y a los administradores (para seguimiento de inventario/gastos)
-          targetUserIds = [requesterId, ...adminIds];
+          // Notificar al solicitante si tiene la preferencia activada
+          const requesterProfileRec = allProfiles.find(p => p.id === requesterId);
+          if (requesterProfileRec?.notify_on_status_change) {
+              targetUserIds.push(requesterId);
+          }
+          
+          // Notificar a Admins/AMs que tienen activada la notificación de nuevas solicitudes (o una nueva preferencia específica si la tuviéramos)
+          const adminRecipients = allProfiles.filter(p => 
+              (p.role === 'Admin' || p.role === 'Account Manager') && p.notify_on_new_request // Reutilizamos notify_on_new_request para 'Received' por simplicidad
+          ).map(p => p.id);
+          
+          targetUserIds.push(...adminRecipients);
+          
           title = `🎉 Solicitud #${requestNumber} Recibida`;
           body = `Los artículos de tu solicitud han sido recibidos y añadidos al inventario.`;
           break;
-        case 'Denied':
-          // Notificar solo al solicitante
-          targetUserIds = [requesterId];
-          title = `❌ Solicitud #${requestNumber} Denegada`;
-          body = `Tu solicitud ha sido denegada. Revisa los detalles para más información.`;
-          break;
-        case 'Cancelled':
-          // Notificar solo al solicitante
-          targetUserIds = [requesterId];
-          title = `🚫 Solicitud #${requestNumber} Cancelada`;
-          body = `Tu solicitud ha sido cancelada.`;
-          break;
+          
         default:
           // No enviar notificación para otros estados o si no hay cambio significativo
           targetUserIds = [];

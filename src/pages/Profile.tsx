@@ -11,6 +11,8 @@ import { toast } from "sonner";
 import { useUpdateProfile, getFullName } from "@/hooks/use-profiles";
 import { useNavigate } from "react-router-dom"; // Importar useNavigate
 import { Profile as ProfileType } from "@/data/types"; // Corrected import
+import { Switch } from "@/components/ui/switch"; // Importar Switch
+import { Separator } from "@/components/ui/separator"; // Importar Separator
 
 const Profile: React.FC = () => {
   const { session, profile, loading, logout, login } = useSession(); // Añadir login al hook
@@ -20,12 +22,21 @@ const Profile: React.FC = () => {
   const [firstName, setFirstName] = React.useState(profile?.first_name || "");
   const [lastName, setLastName] = React.useState(profile?.last_name || "");
   const [role, setRole] = React.useState(profile?.role || "");
+  
+  // Estados para preferencias de notificación
+  const [notifyStatusChange, setNotifyStatusChange] = React.useState(profile?.notify_on_status_change ?? true);
+  const [notifyNewRequest, setNotifyNewRequest] = React.useState(profile?.notify_on_new_request ?? true);
+  const [notifyInventoryLow, setNotifyInventoryLow] = React.useState(profile?.notify_on_inventory_low ?? true);
+
 
   React.useEffect(() => {
     if (profile) {
       setFirstName(profile.first_name || "");
       setLastName(profile.last_name || "");
       setRole(profile.role || "");
+      setNotifyStatusChange(profile.notify_on_status_change ?? true);
+      setNotifyNewRequest(profile.notify_on_new_request ?? true);
+      setNotifyInventoryLow(profile.notify_on_inventory_low ?? true);
     }
   }, [profile]);
 
@@ -35,14 +46,19 @@ const Profile: React.FC = () => {
       toast.error("Usuario no autenticado.");
       return;
     }
-    // Solo actualizar first_name, last_name, phone_number (y role si fuera editable)
+    
+    const dataToUpdate = {
+      first_name: firstName,
+      last_name: lastName,
+      role: profile?.role || "Requester", // El rol no es editable por el usuario en este formulario, mantener el rol actual
+      notify_on_status_change: notifyStatusChange,
+      notify_on_new_request: notifyNewRequest,
+      notify_on_inventory_low: notifyInventoryLow,
+    };
+
     updateProfileMutation.mutate({
       id: session.user.id,
-      data: {
-        first_name: firstName,
-        last_name: lastName,
-        role: profile?.role || "Requester" // El rol no es editable por el usuario en este formulario, mantener el rol actual
-      },
+      data: dataToUpdate,
     });
   };
 
@@ -76,40 +92,86 @@ const Profile: React.FC = () => {
           <CardTitle className="text-2xl font-bold">Tu Perfil</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          <form onSubmit={handleUpdateProfile} className="space-y-4">
-            <div>
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" value={session.user.email || ''} disabled />
+          <form onSubmit={handleUpdateProfile} className="space-y-6">
+            
+            {/* Sección de Información Básica */}
+            <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Información Personal</h3>
+                <div>
+                  <Label htmlFor="email">Email</Label>
+                  <Input id="email" type="email" value={session.user.email || ''} disabled />
+                </div>
+                <div>
+                  <Label htmlFor="firstName">Nombre</Label>
+                  <Input
+                    id="firstName"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    disabled={updateProfileMutation.isPending}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="lastName">Apellido</Label>
+                  <Input
+                    id="lastName"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    disabled={updateProfileMutation.isPending}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="role">Rol</Label>
+                  <Input id="role" value={role} disabled />
+                </div>
             </div>
-            <div>
-              <Label htmlFor="firstName">Nombre</Label>
-              <Input
-                id="firstName"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                disabled={updateProfileMutation.isPending}
-              />
+            
+            <Separator />
+
+            {/* Sección de Preferencias de Notificación */}
+            <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Preferencias de Notificación Push</h3>
+                
+                <div className="flex items-center justify-between">
+                    <Label htmlFor="notifyStatusChange">Notificar cambios de estado de mis solicitudes</Label>
+                    <Switch
+                        id="notifyStatusChange"
+                        checked={notifyStatusChange}
+                        onCheckedChange={setNotifyStatusChange}
+                        disabled={updateProfileMutation.isPending}
+                    />
+                </div>
+                
+                {profile?.role === 'Admin' && (
+                    <>
+                        <div className="flex items-center justify-between">
+                            <Label htmlFor="notifyNewRequest">Notificar nuevas solicitudes pendientes (Solo Admin)</Label>
+                            <Switch
+                                id="notifyNewRequest"
+                                checked={notifyNewRequest}
+                                onCheckedChange={setNotifyNewRequest}
+                                disabled={updateProfileMutation.isPending}
+                            />
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <Label htmlFor="notifyInventoryLow">Notificar inventario bajo (Solo Admin)</Label>
+                            <Switch
+                                id="notifyInventoryLow"
+                                checked={notifyInventoryLow}
+                                onCheckedChange={setNotifyInventoryLow}
+                                disabled={updateProfileMutation.isPending}
+                            />
+                        </div>
+                    </>
+                )}
             </div>
-            <div>
-              <Label htmlFor="lastName">Apellido</Label>
-              <Input
-                id="lastName"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                disabled={updateProfileMutation.isPending}
-              />
-            </div>
-            <div>
-              <Label htmlFor="role">Rol</Label>
-              <Input id="role" value={role} disabled />
-            </div>
+
             <Button type="submit" className="w-full" disabled={updateProfileMutation.isPending}>
               {updateProfileMutation.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando...
                 </>
               ) : (
-                "Actualizar Perfil"
+                "Actualizar Perfil y Preferencias"
               )}
             </Button>
           </form>
