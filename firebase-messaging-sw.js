@@ -1,10 +1,8 @@
-// public/firebase-messaging-sw.js
 importScripts('./firebase-config.js');
 importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js');
 
 const cfg = self.__FIREBASE_CONFIG__;
-
 if (!firebase.apps.length) {
   firebase.initializeApp({
     apiKey: cfg.apiKey,
@@ -17,50 +15,39 @@ if (!firebase.apps.length) {
 }
 
 const messaging = firebase.messaging();
+const basePath = () => new URL(self.registration.scope).pathname;
+const abs = (u) => new URL(u || '.', self.registration.scope).toString();
 
-const getBasePath = () => new URL(self.registration.scope).pathname;
-const resolveUrl = (maybeRelative) => new URL(maybeRelative || '.', self.registration.scope).toString();
-
-messaging.onBackgroundMessage(async ({ data }) => {
-  console.log('[SW] DATA:', data);
-
-  // ELIMINADO: payload.notification
+messaging.onBackgroundMessage(({ data }) => {
   const title = data?.title || 'LabFlow';
   const body  = data?.body  || '';
-  const icon  = data?.icon  ? resolveUrl(data.icon) : resolveUrl(getBasePath() + 'favicon.png');
-  const url   = data?.url   ? resolveUrl(data.url)  : resolveUrl(getBasePath());
-  const tag   = data?.tag   || 'labflow-single';
+  const icon  = data?.icon  ? abs(data.icon) : abs(basePath() + 'favicon.png');
+  const url   = data?.url   ? abs(data.url)  : abs(basePath());
+  const tag   = data?.tag   || 'labflow';        // reemplaza, no acumula
 
-  // Cerrar cualquier notificación previa
-  const existing = await self.registration.getNotifications({});
-  existing.forEach(n => n.close());
-
-  await self.registration.showNotification(title, {
+  // No cerramos nada, no vibrate, no renotify
+  return self.registration.showNotification(title, {
     body,
     icon,
     tag,
     renotify: false,
-    vibrate: [], // menos sugerencias del sistema
     data: { url }
   });
 });
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const targetUrl = event.notification.data.url;
-
+  const targetUrl = event.notification?.data?.url || abs(basePath());
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true })
-      .then((clientsList) => {
-        for (const client of clientsList) {
-          if ('focus' in client) {
-            const current = new URL(client.url);
-            const target  = new URL(targetUrl);
-            const samePath = (current.pathname + current.hash) === (target.pathname + target.hash);
-            if (!samePath && 'navigate' in client) {
-              return client.navigate(targetUrl).then(c => c.focus());
+      .then((list) => {
+        for (const c of list) {
+          if ('focus' in c) {
+            const cur = new URL(c.url), tar = new URL(targetUrl);
+            if (cur.pathname + cur.hash !== tar.pathname + tar.hash && 'navigate' in c) {
+              return c.navigate(targetUrl).then(x => x.focus());
             }
-            return client.focus();
+            return c.focus();
           }
         }
         return clients.openWindow(targetUrl);
