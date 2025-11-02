@@ -18,7 +18,7 @@ import React from "react";
 import Login from "./pages/Login";
 import { Loader2 } from "lucide-react";
 import { Profile as UserProfileType } from "@/data/types"; // Corrected import
-// import FCMManager from "./components/FCMManager"; // Importar FCMManager
+import FirebaseInitializer from "./components/FirebaseInitializer"; // Importar el inicializador
 
 const queryClient = new QueryClient();
 
@@ -81,7 +81,7 @@ const App = () => (
       <Sonner />
       <HashRouter future={{ v7_relativeSplatPath: true }}>
         <SessionContextProvider>
-          {/* <FCMManager /> */}
+          <FirebaseInitializer /> {/* Inicializar Firebase aquí */}
           <AppRoutes />
         </SessionContextProvider>
       </HashRouter>
