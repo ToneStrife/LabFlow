@@ -37,7 +37,8 @@ export async function registerPushToken(userId: string) {
     }
 
     // 2) Obtener token FCM, especificando el Service Worker
-    const swRegistration = await navigator.serviceWorker.getRegistration('/LabFlow/firebase-messaging-sw.js');
+    // CORRECCIÓN: Usar la ruta base para obtener el registro
+    const swRegistration = await navigator.serviceWorker.getRegistration('/LabFlow/');
     
     if (!swRegistration) {
         toast.error("Error de Service Worker", { description: "No se pudo obtener el registro del Service Worker en la ruta esperada." });
@@ -90,10 +91,7 @@ export async function unregisterPushToken(token: string) {
   if (!messaging) return;
 
   try {
-    // 1. Eliminar el token de Firebase
-    // Ya no necesitamos getToken aquí, solo necesitamos eliminar el token de la DB y desuscribir el SW
-    
-    // 2. Eliminar el token de la base de datos (usando la función Edge)
+    // 1. Eliminar el token de la base de datos (usando la función Edge)
     const { error: edgeError } = await supabase.functions.invoke('delete-fcm-token', { 
       method: 'POST',
       body: JSON.stringify({ token }),
@@ -104,8 +102,9 @@ export async function unregisterPushToken(token: string) {
         // Continuar con la desuscripción local aunque la eliminación de la DB haya fallado
     }
 
-    // 3. Desuscribir el Service Worker localmente
-    const swRegistration = await navigator.serviceWorker.getRegistration('/LabFlow/firebase-messaging-sw.js');
+    // 2. Desuscribir el Service Worker localmente
+    // CORRECCIÓN: Usar la ruta base para obtener el registro
+    const swRegistration = await navigator.serviceWorker.getRegistration('/LabFlow/');
     if (swRegistration) {
         const subscription = await swRegistration.pushManager.getSubscription();
         if (subscription) {
