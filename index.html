@@ -15,7 +15,7 @@
     <link rel="icon" type="image/png" href="/LabFlow/favicon.png" />
     <!-- Fallback para navegadores antiguos (si tuvieras un .ico) -->
     <!-- <link rel="icon" href="/LabFlow/favicon.ico" /> -->
-    <script type="module" crossorigin src="/LabFlow/assets/index-DFYLQpYa.js"></script>
+    <script type="module" crossorigin src="/LabFlow/assets/index-DgcnjXBp.js"></script>
     <link rel="stylesheet" crossorigin href="/LabFlow/assets/index-gXhh2rDd.css">
   </head>
 
@@ -27,9 +27,13 @@
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          // CORRECCIÓN: Registrar el Service Worker de Firebase en la ruta base /LabFlow/
-          // Esto asegura que el Service Worker tenga el alcance correcto para GitHub Pages.
-          navigator.serviceWorker.register('/LabFlow/firebase-messaging-sw.js', { scope: '/LabFlow/' })
+          // Determinar la ruta base dinámicamente
+          const basePath = window.location.pathname.includes('/LabFlow/') ? '/LabFlow/' : '/';
+          const swPath = basePath + 'firebase-messaging-sw.js';
+          
+          console.log('Registering Service Worker at path:', swPath);
+
+          navigator.serviceWorker.register(swPath, { scope: basePath })
             .then(registration => {
               console.log('Service Worker registered with scope:', registration.scope);
             })
