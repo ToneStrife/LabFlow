@@ -135,10 +135,21 @@ serve(async (req) => {
       try { bodyJson = await res.json() } catch {}
       results.push({ token: fcmToken, success: res.ok, status: res.status, body: bodyJson })
       
-      // Si falla con 400/404, es probable que el token sea inválido o haya expirado.
+      // Lógica de limpieza de tokens inválidos
       if (!res.ok && (res.status === 400 || res.status === 404)) {
-          console.warn(`FCM token ${fcmToken} failed with status ${res.status}. Marking for deletion.`);
-          // Aquí podríamos añadir lógica para eliminar el token de la DB si es inválido
+          console.warn(`FCM token ${fcmToken} failed with status ${res.status}. Deleting from DB.`);
+          
+          // Eliminar el token de la base de datos
+          const { error: deleteError } = await supabase
+            .from('fcm_tokens')
+            .delete()
+            .eq('token', fcmToken);
+            
+          if (deleteError) {
+              console.error(`Failed to delete invalid token ${fcmToken}:`, deleteError);
+          } else {
+              console.log(`Successfully deleted invalid token: ${fcmToken}`);
+          }
       }
     }
 
