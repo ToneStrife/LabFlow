@@ -51,10 +51,24 @@ export const useFCM = () => {
             // 3. Manejar mensajes en primer plano
             onMessage(messaging, (payload) => {
               console.log('Received foreground message:', payload);
-              toast.info(payload.notification?.title || "Nueva Notificación", {
-                description: payload.notification?.body,
+              
+              const title = payload.notification?.title || "Nueva Notificación";
+              const body = payload.notification?.body;
+              
+              // Mostrar un toast dentro de la aplicación (UI)
+              toast.info(title, {
+                description: body,
                 duration: 5000,
               });
+              
+              // Mostrar una notificación nativa del sistema (banner)
+              if (Notification.permission === 'granted') {
+                new Notification(title, {
+                  body: body,
+                  icon: '/LabFlow/favicon.png', // Usar el icono de la PWA
+                  data: payload.data,
+                });
+              }
             });
             
           } else {
