@@ -16,9 +16,9 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Send, Users } from "lucide-react";
+import { Loader2, Send, Users, Bell } from "lucide-react";
 import { useAllProfiles, getFullName } from "@/hooks/use-profiles";
-import { useSendNotification } from "@/hooks/use-notifications";
+import { useSendNotification, useSendTestNotification } from "@/hooks/use-notifications";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
@@ -36,6 +36,7 @@ type NotificationFormValues = z.infer<typeof notificationFormSchema>;
 const NotificationSenderForm: React.FC = () => {
   const { data: profiles, isLoading: isLoadingProfiles } = useAllProfiles();
   const sendNotificationMutation = useSendNotification();
+  const sendTestNotificationMutation = useSendTestNotification(); // Hook de prueba
 
   const form = useForm<NotificationFormValues>({
     resolver: zodResolver(notificationFormSchema),
@@ -96,9 +97,12 @@ const NotificationSenderForm: React.FC = () => {
     }
   };
   
+  const handleSendTest = async () => {
+    await sendTestNotificationMutation.mutateAsync();
+  };
+  
   const isAllSelected = profiles && targetUserIds && profiles.length > 0 && targetUserIds.length === profiles.length;
-  const isIndeterminate = profiles && targetUserIds && targetUserIds.length > 0 && targetUserIds.length < profiles.length;
-  const isSubmitting = sendNotificationMutation.isPending;
+  const isSubmitting = sendNotificationMutation.isPending || sendTestNotificationMutation.isPending;
 
   return (
     <Form {...form}>
@@ -213,7 +217,23 @@ const NotificationSenderForm: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex justify-end pt-4">
+        <div className="flex justify-end space-x-4 pt-4">
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={handleSendTest} 
+            disabled={isSubmitting}
+          >
+            {sendTestNotificationMutation.isPending ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Probando...
+              </>
+            ) : (
+              <>
+                <Bell className="mr-2 h-4 w-4" /> Enviar Prueba (Solo yo)
+              </>
+            )}
+          </Button>
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? (
               <>
