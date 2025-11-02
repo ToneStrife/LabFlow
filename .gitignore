@@ -11,6 +11,9 @@ node_modules
 dist
 dist-ssr
 *.local
+.env
+.env.*
+!.env.production # Permitir que .env.production se suba en este entorno de desarrollo, pero en un entorno real, se ignoraría.
 
 # Editor directories and files
 .vscode/*
