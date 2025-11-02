@@ -1,15 +1,14 @@
 // src/config/firebase.ts
 
-// NOTA: DEBES REEMPLAZAR ESTOS VALORES CON LA CONFIGURACIÓN REAL DE TU PROYECTO DE FIREBASE.
-// En un entorno real, estos valores se cargarían desde variables de entorno.
+// NOTA: Los valores se cargan desde variables de entorno de Vite (VITE_FIREBASE_*)
 export const firebaseConfig = {
-  apiKey: "AIzaSyCDVNVyXwKFLRZSTFXgNkXJ0VK3j9jb4UQ",
-  authDomain: "labflow-af22c.firebaseapp.com",
-  projectId: "labflow-af22c",
-  storageBucket: "labflow-af22c.firebasestorage.app",
-  messagingSenderId: "969221893099",
-  appId: "1:969221893099:web:f333a159c4c6e8b6e907ae",
-  measurementId: "G-4XF1FBDNL2"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
 // El VAPID Key es necesario para la autenticación de notificaciones push.

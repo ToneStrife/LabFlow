@@ -2,26 +2,18 @@
 // Debe estar en el directorio raíz (public/) para tener el alcance correcto.
 
 // Importar y configurar el SDK de Firebase (solo para Service Worker)
-// Nota: Reemplaza 'YOUR_FIREBASE_CONFIG' con tu configuración real.
-// En un entorno real, esta configuración se inyectaría aquí.
-// Por ahora, usaremos un placeholder y asumiremos que el SDK de Firebase se carga
-// a través de un script en index.html o que la configuración se pasa de otra manera.
-
-// Importar el script de Firebase Messaging (versión 9 o superior)
 importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js');
 
-// Configuración de Firebase (DEBE SER LA CONFIGURACIÓN REAL DE TU PROYECTO)
-// Esta configuración debe ser accesible para el Service Worker.
-// Por ahora, usamos un placeholder.
+// Configuración de Firebase (Cargada desde variables de entorno inyectadas por Vite)
 const firebaseConfig = {
-  apiKey: "AIzaSyCDVNVyXwKFLRZSTFXgNkXJ0VK3j9jb4UQ",
-  authDomain: "labflow-af22c.firebaseapp.com",
-  projectId: "labflow-af22c",
-  storageBucket: "labflow-af22c.firebasestorage.app",
-  messagingSenderId: "969221893099", // CLAVE CRÍTICA PARA FCM
-  appId: "1:969221893099:web:f333a159c4c6e8b6e907ae",
-  measurementId: "G-4XF1FBDNL2"
+  apiKey: process.env.VITE_FIREBASE_API_KEY,
+  authDomain: process.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.VITE_FIREBASE_MESSAGING_SENDER_ID, // CLAVE CRÍTICA PARA FCM
+  appId: process.env.VITE_FIREBASE_APP_ID,
+  measurementId: process.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
 // Inicializar Firebase
