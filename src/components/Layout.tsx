@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Menu, User, LogOut, Loader2 } from "lucide-react";
 import { SidebarNav } from "./SidebarNav";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { MadeWithDyad } from "./made-with-dyad";
 import { useSession } from "./SessionContextProvider";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";

@@ -68,7 +68,7 @@ const NotificationPreferences: React.FC<NotificationPreferencesProps> = ({ profi
     if (session?.user?.id) {
         updateProfileMutation.mutate({
             id: session.user.id,
-            data: { notify_on_status_change: checked },
+            data: { notify_on_status_change: checked }, // Corrected property name
         });
     }
   };
@@ -78,7 +78,7 @@ const NotificationPreferences: React.FC<NotificationPreferencesProps> = ({ profi
     if (session?.user?.id) {
         updateProfileMutation.mutate({
             id: session.user.id,
-            data: { notify_on_new_request: checked },
+            data: { notify_on_new_request: checked }, // Corrected property name
         });
     }
   };

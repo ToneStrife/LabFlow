@@ -18,8 +18,8 @@ import { Loader2 } from "lucide-react";
 
 const inviteUserFormSchema = z.object({
   email: z.string().email({ message: "Debe ser una dirección de correo válida." }).min(1, { message: "El email es obligatorio." }),
-  first_name: z.string().optional(),
-  last_name: z.string().optional(),
+  first_name: z.string().optional().nullable(), // Changed to nullable
+  last_name: z.string().optional().nullable(), // Changed to nullable
 });
 
 export type InviteUserFormValues = z.infer<typeof inviteUserFormSchema>;
@@ -35,8 +35,8 @@ const InviteUserDialog: React.FC<InviteUserDialogProps> = ({ onSubmit, onCancel,
     resolver: zodResolver(inviteUserFormSchema),
     defaultValues: {
       email: "",
-      first_name: "",
-      last_name: "",
+      first_name: null,
+      last_name: null,
     },
   });
 
@@ -69,7 +69,7 @@ const InviteUserDialog: React.FC<InviteUserDialogProps> = ({ onSubmit, onCancel,
             <FormItem>
               <FormLabel>Nombre (Opcional)</FormLabel>
               <FormControl>
-                <Input placeholder="ej. Jane" {...field} disabled={isSubmitting} />
+                <Input placeholder="ej. Jane" {...field} disabled={isSubmitting} value={field.value || ""} onChange={(e) => field.onChange(e.target.value || null)} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -82,7 +82,7 @@ const InviteUserDialog: React.FC<InviteUserDialogProps> = ({ onSubmit, onCancel,
             <FormItem>
               <FormLabel>Apellido (Opcional)</FormLabel>
               <FormControl>
-                <Input placeholder="ej. Doe" {...field} disabled={isSubmitting} />
+                <Input placeholder="ej. Doe" {...field} disabled={isSubmitting} value={field.value || ""} onChange={(e) => field.onChange(e.target.value || null)} />
               </FormControl>
               <FormMessage />
             </FormItem>

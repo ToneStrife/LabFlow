@@ -46,8 +46,8 @@ export const useExpenditureAnalytics = (
     // --- 1. Gasto por Año ---
     const yearMap = new Map<string, number>();
     expenditures.forEach(exp => {
-      // Asumiendo que exp.date es una cadena de fecha válida (e.g., 'YYYY-MM-DD')
-      const year = new Date(exp.date).getFullYear().toString();
+      // Corregido: usar exp.date_incurred
+      const year = new Date(exp.date_incurred).getFullYear().toString();
       const currentTotal = yearMap.get(year) || 0;
       yearMap.set(year, currentTotal + exp.amount);
     });

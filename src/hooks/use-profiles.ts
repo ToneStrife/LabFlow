@@ -31,6 +31,8 @@ interface ProfileUpdateFormData {
   last_name?: string | null;
   email?: string | null; 
   role?: "Requester" | "Account Manager" | "Admin";
+  notify_on_status_change?: boolean; // Added
+  notify_on_new_request?: boolean; // Added
 }
 
 interface InviteUserData {
@@ -102,7 +104,7 @@ export const useDeleteProfile = () => {
   });
 };
 
-export const getFullName = (profile: Profile | undefined): string => {
+export const getFullName = (profile: Profile | undefined | null): string => {
   if (!profile) return "N/A";
   const name = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
   return name || profile.id;

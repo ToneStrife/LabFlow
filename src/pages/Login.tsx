@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/components/SessionContextProvider";
 import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner"; // Import toast
 
 const Login: React.FC = () => {
   const { session, loading } = useSession();
@@ -50,12 +51,7 @@ const Login: React.FC = () => {
           }}
           theme="light"
           redirectTo={window.location.origin + '/dashboard'}
-          onError={(error) => {
-            console.error("Error during authentication:", error);
-            toast.error("Error durante la autenticación.", {
-              description: error.message,
-            });
-          }}
+          // onError prop is not supported by the Auth component
         />
       </div>
     </div>

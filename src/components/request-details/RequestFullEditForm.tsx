@@ -21,12 +21,12 @@ import { Badge } from "@/components/ui/badge";
 import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input"; // Importación corregida
 import { cn } from "@/lib/utils";
-import { SupabaseRequest } from "@/data/types"; // Corrected import
+import { SupabaseRequest, Profile } from "@/data/types"; // Corrected import source
 import { useAccountManagers } from "@/hooks/use-account-managers";
 import { useProjects } from "@/hooks/use-projects";
 import { useVendors } from "@/hooks/use-vendors";
 import { useShippingAddresses, useBillingAddresses } from "@/hooks/use-addresses";
-import { getFullName, Profile } from "@/hooks/use-profiles";
+import { getFullName } from "@/hooks/use-profiles"; // Only import getFullName
 
 const fullEditSchema = z.object({
   vendorId: z.string().min(1, { message: "El proveedor es obligatorio." }),

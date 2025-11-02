@@ -10,8 +10,15 @@ export interface VendorFormValues {
   email: string | null;
   phone: string | null;
   notes: string | null;
-  brands: string[] | null;
+  brands: string | null; // CHANGED: Now accepts string | null from the form
 }
+
+// Helper function to convert comma-separated string to array
+const parseBrandsString = (brandsString: string | null | undefined): string[] | null => {
+  if (!brandsString) return null;
+  const brandsArray = brandsString.split(",").map((brand) => brand.trim()).filter(Boolean);
+  return brandsArray.length > 0 ? brandsArray : null;
+};
 
 // Hook to fetch all vendors
 export const useVendors = () => {
@@ -38,7 +45,7 @@ export const useAddVendor = () => {
           email: vendor.email,
           phone: vendor.phone,
           notes: vendor.notes,
-          brands: vendor.brands,
+          brands: parseBrandsString(vendor.brands), // Conversion here
         }])
         .select()
         .single();
@@ -68,7 +75,7 @@ export const useUpdateVendor = () => {
           email: data.email,
           phone: data.phone,
           notes: data.notes,
-          brands: data.brands,
+          brands: parseBrandsString(data.brands), // Conversion here
         })
         .eq('id', id)
         .select()

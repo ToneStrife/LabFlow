@@ -20,8 +20,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "
 import { Badge } from "@/components/ui/badge";
 import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { SupabaseRequest } from "@/data/types"; // Corrected import
-import { Profile } from "@/hooks/use-profiles";
+import { SupabaseRequest, Profile } from "@/data/types"; // Corrected import source
 import { useAccountManagers } from "@/hooks/use-account-managers";
 import { useProjects } from "@/hooks/use-projects";
 

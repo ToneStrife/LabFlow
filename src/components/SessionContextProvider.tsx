@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Profile } from "@/hooks/use-profiles";
+import { Profile } from "@/data/types"; // Corrected import source
 import { supabase } from "@/integrations/supabase/client"; // Importar cliente de Supabase
 import { toast } from "sonner";
 import { Session, User } from '@supabase/supabase-js'; // Import Supabase Session type
@@ -41,7 +41,7 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
           setProfile(null);
           toast.error("Error fetching user profile.", { description: error.message });
         } else if (profileData) {
-          setProfile(profileData);
+          setProfile(profileData as Profile); // Cast to Profile
         } else {
           // Si no se encuentra el perfil, crear uno básico.
           // Esto debería ser manejado por el trigger `handle_new_user` en Supabase.
@@ -54,6 +54,8 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
               last_name: session.user.user_metadata?.last_name || 'User',
               role: 'Requester', // Rol por defecto
               email: session.user.email, // Include email
+              notify_on_status_change: true, // Default value
+              notify_on_new_request: true, // Default value
             })
             .select()
             .single();
@@ -62,7 +64,7 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
             setProfile(null);
             toast.error("Error creating default user profile.", { description: insertError.message });
           } else {
-            setProfile(newProfile);
+            setProfile(newProfile as Profile); // Cast to Profile
             toast.success("Default profile created for new user.");
           }
         }

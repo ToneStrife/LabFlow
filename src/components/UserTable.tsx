@@ -11,7 +11,8 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Trash2, Loader2 } from "lucide-react";
-import { Profile, getFullName } from "@/hooks/use-profiles";
+import { getFullName } from "@/hooks/use-profiles";
+import { Profile } from "@/data/types"; // Corrected import source
 import {
   Select,
   SelectContent,

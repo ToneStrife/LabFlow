@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { PlusCircle, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import VendorForm from "@/components/VendorForm";
-import { useVendors, useAddVendor, useUpdateVendor, useDeleteVendor } from "@/hooks/use-vendors";
+import { useVendors, useAddVendor, useUpdateVendor, useDeleteVendor, VendorFormValues } from "@/hooks/use-vendors";
 import { Vendor } from "@/data/types"; // Corrected import
 import { toast } from "sonner";
 
@@ -20,27 +20,18 @@ const Vendors = () => {
   const [isEditVendorDialogOpen, setIsEditVendorDialogOpen] = React.useState(false);
   const [editingVendor, setEditingVendor] = React.useState<Vendor | undefined>(undefined);
 
-  const parseBrandsString = (brandsString: string | undefined): string[] => {
-    return brandsString
-      ? brandsString.split(",").map((brand) => brand.trim()).filter(Boolean)
-      : [];
-  };
+  // NOTE: parseBrandsString is now handled inside use-vendors.ts mutations.
+  // We only need to map the array back to a string for the form's initial data.
 
-  const handleAddVendor = async (newVendorData: any) => { // Changed type to any for now to avoid immediate type errors
-    await addVendorMutation.mutateAsync({
-      ...newVendorData,
-      brands: parseBrandsString(newVendorData.brands),
-    });
+  const handleAddVendor = async (newVendorData: VendorFormValues) => {
+    await addVendorMutation.mutateAsync(newVendorData);
     setIsAddVendorDialogOpen(false);
   };
 
-  const handleEditVendor = async (vendorId: string, updatedData: any) => { // Changed type to any for now
+  const handleEditVendor = async (vendorId: string, updatedData: VendorFormValues) => {
     await updateVendorMutation.mutateAsync({
       id: vendorId,
-      data: {
-        ...updatedData,
-        brands: parseBrandsString(updatedData.brands),
-      },
+      data: updatedData,
     });
     setIsEditVendorDialogOpen(false);
     setEditingVendor(undefined);
@@ -53,8 +44,9 @@ const Vendors = () => {
   const openEditDialog = (vendor: Vendor) => {
     setEditingVendor({ 
       ...vendor, 
-      brands: vendor.brands && Array.isArray(vendor.brands) ? vendor.brands.join(", ") : "",
-      contact_person: vendor.contact_person || null, // Ensure contact_person is correctly mapped
+      // Convertir array a string para el formulario
+      brands: vendor.brands && Array.isArray(vendor.brands) ? vendor.brands.join(", ") : null,
+      contact_person: vendor.contact_person || null,
     });
     setIsEditVendorDialogOpen(true);
   };
@@ -116,7 +108,8 @@ const Vendors = () => {
             <VendorForm
               initialData={{ 
                 ...editingVendor, 
-                brands: editingVendor.brands && Array.isArray(editingVendor.brands) ? editingVendor.brands.join(", ") : "",
+                // Convertir array a string para el formulario
+                brands: editingVendor.brands && Array.isArray(editingVendor.brands) ? editingVendor.brands.join(", ") : null,
                 contact_person: editingVendor.contact_person || null, // Ensure correct mapping for initialData
               }}
               onSubmit={(data) => handleEditVendor(editingVendor.id, data)}

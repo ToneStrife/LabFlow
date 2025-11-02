@@ -4,14 +4,15 @@ import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
 import {
   Controller,
-  FormProvider,
+  ControllerProps, // Import ControllerProps
+  ControllerRenderProps,
+  FieldPath,
+  FieldValues,
   useFormContext,
-  type FieldPath,
-  type FieldValues,
 } from "react-hook-form";
 
-import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 
 const Form = FormProvider;
 
@@ -31,7 +32,7 @@ function FormField<
   TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
 >({
   ...props
-}: React.PropsWithChildren<Controller<TFieldValues, TName>>) {
+}: React.PropsWithChildren<ControllerProps<TFieldValues, TName>>) { // Use ControllerProps
   return (
     <FormFieldContext.Provider value={{ name: props.name }}>
       <Controller {...props} />
@@ -39,7 +40,7 @@ function FormField<
   );
 }
 
-function useFormField() {
+const useFormField = () => {
   const fieldContext = React.useContext(FormFieldContext);
   const itemContext = React.useContext(FormItemContext);
   const { getFieldState, formState } = useFormContext();
@@ -50,17 +51,15 @@ function useFormField() {
     throw new Error("useFormField should be used within <FormField>");
   }
 
-  const { id } = itemContext;
-
   return {
-    id,
+    id: itemContext.id,
     name: fieldContext.name,
-    formItemId: `${id}-form-item`,
-    formDescriptionId: `${id}-form-item-description`,
-    formMessageId: `${id}-form-item-message`,
+    formItemId: `${itemContext.id}-form-item`,
+    formDescriptionId: `${itemContext.id}-form-item-description`,
+    formMessageId: `${itemContext.id}-form-item-message`,
     ...fieldState,
   };
-}
+};
 
 type FormItemContextValue = {
   id: string;
@@ -105,7 +104,8 @@ const FormControl = React.forwardRef<
   React.ElementRef<typeof Slot>,
   React.ComponentPropsWithoutRef<typeof Slot>
 >(({ ...props }, ref) => {
-  const { error, formItemId, formDescriptionId, formMessageId } = useFormField();
+  const { error, formItemId, formDescriptionId, formMessageId } =
+    useFormField();
 
   return (
     <Slot

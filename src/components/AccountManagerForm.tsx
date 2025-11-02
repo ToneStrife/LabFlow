@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Loader2 } from "lucide-react";
-import { Profile } from "@/data/types"; // Corrected import
+import { AccountManager } from "@/data/types"; // Corrected import to AccountManager
 
 const accountManagerFormSchema = z.object({
   first_name: z.string().min(1, { message: "El nombre es obligatorio." }),
@@ -26,7 +26,7 @@ const accountManagerFormSchema = z.object({
 export type AccountManagerFormValues = z.infer<typeof accountManagerFormSchema>;
 
 interface AccountManagerFormProps {
-  initialData?: Profile;
+  initialData?: AccountManager; // Changed from Profile to AccountManager
   onSubmit: (data: AccountManagerFormValues) => void;
   onCancel?: () => void;
   isSubmitting: boolean;

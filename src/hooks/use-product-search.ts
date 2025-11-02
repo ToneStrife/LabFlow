@@ -13,6 +13,16 @@ export interface ProductSearchResult {
   source: 'Inventory' | 'Request Item';
 }
 
+// Definir tipos de datos devueltos por la consulta con score
+interface InventoryFuzzyResult extends InventoryItem {
+    score: number;
+}
+
+interface RequestItemFuzzyResult extends SupabaseRequestItem {
+    score: number;
+}
+
+
 /**
  * Busca productos en el inventario y en artículos de solicitudes anteriores.
  * @param catalogNumber Número de catálogo para búsqueda exacta.
@@ -62,15 +72,6 @@ const fetchProductSearch = async (
   if (productName && productName.length > 3 && results.length === 0) {
     const similarityThreshold = 0.3; // Umbral de similitud (0.3 es un buen punto de partida)
 
-    // CORRECCIÓN: Usar nombres de argumentos genéricos para evitar el error de clave duplicada.
-    // Asumimos que la función 'similarity(text, text)' toma la columna y el término de búsqueda.
-    // Para usar RPC functions with .order and .gte, you need to call the RPC directly and then filter.
-    // However, Postgrest doesn't directly support ordering by RPC results in a single query.
-    // A common workaround is to fetch all, then filter/sort in client, or use a view/function on DB side.
-    // For simplicity and to fix the compile error, we'll adjust the RPC call.
-    // The schema shows `similarity(text, text)` which implies `similarity(column_value, search_term)`.
-    // We need to select the similarity score and then filter/order.
-
     // Fetch inventory items with similarity score
     const { data: invFuzzyData, error: invFuzzyError } = await supabase
       .from('inventory')
@@ -82,9 +83,17 @@ const fetchProductSearch = async (
     if (invFuzzyError) console.error("Error fetching fuzzy inventory:", invFuzzyError);
 
     if (invFuzzyData && invFuzzyData.length > 0) {
-      invFuzzyData.forEach(item => {
+      (invFuzzyData as InventoryFuzzyResult[]).forEach(item => { // Cast to expected type
         if (!results.some(r => r.catalog_number === item.catalog_number && r.brand === item.brand)) {
-          results.push({ ...item, source: 'Inventory', link: null });
+          results.push({ 
+            product_name: item.product_name,
+            catalog_number: item.catalog_number,
+            brand: item.brand,
+            unit_price: item.unit_price,
+            format: item.format,
+            link: null, // Inventory items don't have a link field in the search result structure
+            source: 'Inventory' 
+          });
         }
       });
     }
@@ -101,9 +110,17 @@ const fetchProductSearch = async (
         if (reqFuzzyError) console.error("Error fetching fuzzy request items:", reqFuzzyError);
 
         if (reqFuzzyData && reqFuzzyData.length > 0) {
-            reqFuzzyData.forEach(item => {
+            (reqFuzzyData as RequestItemFuzzyResult[]).forEach(item => { // Cast to expected type
                 if (!results.some(r => r.catalog_number === item.catalog_number && r.brand === item.brand)) {
-                    results.push({ ...item, source: 'Request Item' });
+                    results.push({ 
+                        product_name: item.product_name,
+                        catalog_number: item.catalog_number,
+                        brand: item.brand,
+                        unit_price: item.unit_price,
+                        format: item.format,
+                        link: item.link,
+                        source: 'Request Item' 
+                    });
                 }
             });
         }
