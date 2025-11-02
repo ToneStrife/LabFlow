@@ -36,6 +36,15 @@ try {
   console.error('[firebase-messaging-sw.js] Firebase init error:', e);
 }
 
+// Función auxiliar para obtener la ruta base (ej: /LabFlow/)
+const getBasePath = () => {
+    // self.registration.scope siempre termina en /
+    const scope = self.registration.scope;
+    // Si el scope es solo el origen (ej: https://domain.com/), la ruta base es '/'
+    const url = new URL(scope);
+    return url.pathname;
+};
+
 // 5) Instancia de Messaging y mensajes en background
 let messaging;
 try {
@@ -43,11 +52,16 @@ try {
   messaging.onBackgroundMessage((payload) => {
     console.log('[firebase-messaging-sw.js] Background message:', payload);
 
+    const basePath = getBasePath();
     const n = payload.notification || {};
     const notificationTitle = n.title || 'Notificación';
+    
+    // Asegurar que el icono use la ruta base
+    const iconPath = basePath + 'favicon.png'; 
+    
     const notificationOptions = {
       body: n.body || '',
-      icon: n.icon || './favicon.png',
+      icon: iconPath,
       image: n.image,
       data: payload.data || {},
     };
@@ -61,16 +75,25 @@ try {
 // 6) Click en notificación
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
+  
+  // El link viene en payload.data.link (establecido en send-notification edge function)
   const clickAction = event.notification.data?.link || '/dashboard';
 
-  const base = self.registration.scope; // p.ej. "https://tu-dominio/"
+  const base = self.registration.scope; // p.ej. "https://tu-dominio/LabFlow/"
+  
+  // Si clickAction es una ruta relativa (ej: /dashboard), la URL se resuelve correctamente
   const targetUrl = new URL(clickAction, base).toString();
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
       for (const client of clientList) {
         if ('focus' in client) {
-          if (client.url !== targetUrl && 'navigate' in client) {
+          // Si la URL del cliente actual es diferente a la URL de destino, navegamos
+          // Nota: client.url puede incluir el hash (#/...) si estamos usando HashRouter
+          const clientPath = new URL(client.url).pathname + new URL(client.url).hash;
+          const targetPath = new URL(targetUrl).pathname + new URL(targetUrl).hash;
+          
+          if (clientPath !== targetPath && 'navigate' in client) {
             return client.navigate(targetUrl).then(c => c.focus());
           }
           return client.focus();
