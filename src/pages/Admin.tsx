@@ -59,6 +59,7 @@ import EmailLogs from "@/components/EmailLogs";
 
 // Notifications import
 import { useSendTestNotification } from "@/hooks/use-notifications";
+import NotificationSenderForm from "@/components/NotificationSenderForm"; // Importar el nuevo componente
 
 
 // --- Email Template Form Schema and Placeholders ---
@@ -260,6 +261,7 @@ const AdminPage = () => {
   };
   
   // --- Handler for Notifications ---
+  // El botón de prueba se reemplaza por el formulario completo, pero mantenemos el hook de prueba por si acaso.
   const handleSendTestNotification = async () => {
     await sendTestNotificationMutation.mutateAsync();
   };
@@ -331,6 +333,12 @@ const AdminPage = () => {
               <UserTable users={allProfiles || []} onRoleChange={handleUpdateUserRole} onDelete={handleDeleteUser} currentUserId={currentUserProfile?.id} isUpdatingRole={updateProfileMutation.isPending} isDeletingUser={deleteProfileMutation.isPending} />
             </CardContent>
           </Card>
+          <Dialog open={isEditAddressDialogOpen} onOpenChange={setIsEditAddressDialogOpen}>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader><DialogTitle>Editar Dirección</DialogTitle></DialogHeader>
+              {editingAddress && <AddressForm initialData={editingAddress} onSubmit={(data) => handleEditAddress(editingAddress.id, data)} onCancel={() => setIsEditAddressDialogOpen(false)} isSubmitting={updateShippingMutation.isPending || updateBillingMutation.isPending} />}
+            </DialogContent>
+          </Dialog>
         </TabsContent>
 
         {/* Account Managers Tab */}
@@ -462,26 +470,10 @@ const AdminPage = () => {
         <TabsContent value="notifications" className="mt-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-xl">Configuración de Notificaciones Push (FCM)</CardTitle>
+              <CardTitle className="text-xl">Enviar Notificación Push Dirigida</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p className="text-muted-foreground">
-                El sistema de notificaciones utiliza Firebase Cloud Messaging (FCM). Asegúrate de haber concedido permisos de notificación en tu navegador o dispositivo.
-              </p>
-              <Button 
-                onClick={handleSendTestNotification} 
-                disabled={sendTestNotificationMutation.isPending}
-              >
-                {sendTestNotificationMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Enviando Prueba...
-                  </>
-                ) : (
-                  <>
-                    <Bell className="mr-2 h-4 w-4" /> Enviar Notificación de Prueba
-                  </>
-                )}
-              </Button>
+              <NotificationSenderForm />
               <p className="text-sm text-red-500">
                 Nota: Si no recibes la notificación, verifica que tu clave `FIREBASE_SERVER_KEY` esté configurada correctamente en los secretos de Supabase y que hayas aceptado los permisos de notificación.
               </p>
