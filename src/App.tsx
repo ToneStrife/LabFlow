@@ -26,6 +26,7 @@ const PrivateRoute: React.FC<{ children: React.ReactNode; requiredRoles?: UserPr
   const { session, profile, loading } = useSession();
 
   if (loading) {
+    // Si el contexto está cargando (incluyendo la carga inicial de sesión/perfil)
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin mr-2" /> Loading authentication...
@@ -34,9 +35,20 @@ const PrivateRoute: React.FC<{ children: React.ReactNode; requiredRoles?: UserPr
   }
 
   if (!session) {
+    // Si no hay sesión, redirigir a login
     return <Navigate to="/login" replace />;
   }
+  
+  // CRÍTICO: Si hay sesión pero el perfil aún no se ha cargado (lo cual debería ser raro si SessionContextProvider funciona bien, pero es un buen fallback)
+  if (session && !profile) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin mr-2" /> Loading user profile...
+      </div>
+    );
+  }
 
+  // Si se requieren roles y el perfil existe, verificar el rol
   if (requiredRoles && profile && !requiredRoles.includes(profile.role)) {
     return <Navigate to="/dashboard" replace />;
   }
@@ -48,6 +60,7 @@ const AppRoutes = () => {
   const { loading } = useSession();
 
   if (loading) {
+    // Si el contexto está cargando, mostramos un loader global antes de renderizar el Layout
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin mr-2" /> Loading application...

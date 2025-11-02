@@ -15,11 +15,14 @@ const Login: React.FC = () => {
 
   React.useEffect(() => {
     if (session) {
-      navigate("/dashboard");
+      // Redirección inmediata si la sesión está activa
+      navigate("/dashboard", { replace: true });
     }
   }, [session, navigate]);
 
-  if (loading) {
+  if (loading || session) {
+    // Si estamos cargando O la sesión ya existe (y estamos esperando la redirección),
+    // mostramos un loader para evitar el parpadeo del formulario de login.
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin mr-2" /> Cargando autenticación...
@@ -50,7 +53,8 @@ const Login: React.FC = () => {
             },
           }}
           theme="light"
-          redirectTo={window.location.origin + '/dashboard'}
+          // Usamos window.location.origin + '/#/dashboard' para HashRouter
+          redirectTo={window.location.origin + '/#/dashboard'} 
           // onError prop is not supported by the Auth component
         />
       </div>
