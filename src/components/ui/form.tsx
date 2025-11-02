@@ -4,17 +4,18 @@ import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
 import {
   Controller,
-  ControllerProps, // Import ControllerProps
+  ControllerProps,
   ControllerRenderProps,
   FieldPath,
   FieldValues,
   useFormContext,
+  FormProvider, // Importar FormProvider
 } from "react-hook-form";
 
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
-const Form = FormProvider;
+const Form = FormProvider; // Usar FormProvider como el componente Form
 
 type FormFieldContextValue<
   TFieldValues extends FieldValues = FieldValues,
@@ -32,7 +33,7 @@ function FormField<
   TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
 >({
   ...props
-}: React.PropsWithChildren<ControllerProps<TFieldValues, TName>>) { // Use ControllerProps
+}: React.PropsWithChildren<ControllerProps<TFieldValues, TName>>) {
   return (
     <FormFieldContext.Provider value={{ name: props.name }}>
       <Controller {...props} />
