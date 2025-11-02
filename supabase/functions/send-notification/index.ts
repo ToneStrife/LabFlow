@@ -1,7 +1,8 @@
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
-import { initializeApp, cert } from 'https://esm.sh/firebase-admin@10.2.0/app?bundle';
-import { getMessaging } from 'https://esm.sh/firebase-admin@10.2.0/messaging?bundle';
+// Actualizar a una versión más reciente de firebase-admin
+import { initializeApp, cert } from 'https://esm.sh/firebase-admin@12.1.0/app?bundle';
+import { getMessaging } from 'https://esm.sh/firebase-admin@12.1.0/messaging?bundle';
 
 // Obtener las variables de entorno de Firebase
 const FIREBASE_PRIVATE_KEY = Deno.env.get('FIREBASE_PRIVATE_KEY');
@@ -22,11 +23,20 @@ const serviceAccount = {
   privateKey: FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
 };
 
-const app = initializeApp({
-  credential: cert(serviceAccount),
-});
+// Inicializar la aplicación de Firebase
+try {
+    const app = initializeApp({
+      credential: cert(serviceAccount),
+    });
+} catch (e) {
+    // Si la aplicación ya está inicializada (por ejemplo, en un entorno de prueba), ignorar el error.
+    if (!e.message.includes('already exists')) {
+        console.error('Error initializing Firebase Admin App:', e);
+        throw e;
+    }
+}
 
-const messaging = getMessaging(app);
+const messaging = getMessaging(); // getMessaging() ahora se llama sin el argumento 'app' si solo hay una app inicializada.
 
 // Inicializar Supabase Client para acceder a la base de datos
 const supabase = createClient(
