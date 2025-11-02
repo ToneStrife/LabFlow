@@ -48,28 +48,10 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
     } else if (profileData) {
       setProfile(profileData as Profile);
     } else {
-      // 2. Fallback: Crear perfil si no existe (debería ser manejado por trigger)
-      const { data: newProfile, error: insertError } = await supabase
-        .from('profiles')
-        .insert({
-          id: currentSession.user.id,
-          first_name: currentSession.user.user_metadata?.first_name || 'New',
-          last_name: currentSession.user.user_metadata?.last_name || 'User',
-          role: 'Requester',
-          email: currentSession.user.email,
-          notify_on_status_change: true,
-          notify_on_new_request: true,
-        })
-        .select()
-        .single();
-      if (insertError) {
-        console.error("Error creating default profile:", insertError);
-        setProfile(null);
-        toast.error("Error creating default user profile.", { description: insertError.message });
-      } else {
-        setProfile(newProfile as Profile);
-        toast.success("Default profile created for new user.");
-      }
+      // Si el perfil no se encuentra (PGRST116), asumimos que el trigger lo está creando
+      // o que el usuario no tiene un perfil. No intentamos insertarlo desde el cliente
+      // para evitar violaciones de RLS.
+      setProfile(null);
     }
     
     // Solo establecer loading en false después de que el perfil haya sido procesado
