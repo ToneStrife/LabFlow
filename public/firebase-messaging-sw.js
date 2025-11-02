@@ -7,6 +7,7 @@ importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-com
 
 // Configuración de Firebase (Cargada desde variables de entorno inyectadas por Vite)
 // NOTA: Vite reemplaza estas referencias con los valores de cadena reales durante la construcción.
+// Usamos la sintaxis process.env.VITE_... para que Vite las reemplace con cadenas literales.
 const firebaseConfig = {
   apiKey: process.env.VITE_FIREBASE_API_KEY,
   authDomain: process.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -18,14 +19,25 @@ const firebaseConfig = {
 };
 
 // --- VERIFICACIÓN CRÍTICA ---
-console.log('[firebase-messaging-sw.js] Initializing Firebase with config:', firebaseConfig);
+// Convertir los valores a cadenas para asegurar que no sean 'undefined' si la inyección falla
+const config = {
+    apiKey: String(firebaseConfig.apiKey),
+    authDomain: String(firebaseConfig.authDomain),
+    projectId: String(firebaseConfig.projectId),
+    storageBucket: String(firebaseConfig.storageBucket),
+    messagingSenderId: String(firebaseConfig.messagingSenderId),
+    appId: String(firebaseConfig.appId),
+    measurementId: String(firebaseConfig.measurementId),
+};
+
+console.log('[firebase-messaging-sw.js] Initializing Firebase with config:', config);
 // -----------------------------
 
 // Inicializar Firebase
-// Solo inicializar si todos los campos críticos están presentes
-if (firebaseConfig.apiKey && firebaseConfig.projectId && firebaseConfig.appId && firebaseConfig.messagingSenderId) {
+// Solo inicializar si todos los campos críticos están presentes y no son la cadena 'undefined'
+if (config.apiKey !== 'undefined' && config.projectId !== 'undefined' && config.appId !== 'undefined' && config.messagingSenderId !== 'undefined') {
   if (!firebase.apps.length) {
-    firebase.initializeApp(firebaseConfig);
+    firebase.initializeApp(config);
   }
 
   // Obtener la instancia de Messaging
@@ -46,7 +58,7 @@ if (firebaseConfig.apiKey && firebaseConfig.projectId && firebaseConfig.appId &&
     self.registration.showNotification(notificationTitle, notificationOptions);
   });
 } else {
-    console.error('[firebase-messaging-sw.js] Firebase initialization skipped due to missing critical configuration values.');
+    console.error('[firebase-messaging-sw.js] Firebase initialization skipped due to missing critical configuration values. Check VITE_FIREBASE_* variables in build environment.');
 }
 
 
