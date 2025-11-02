@@ -26,6 +26,7 @@
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
+          // CORRECCIÓN: Registrar el Service Worker de Firebase en la ruta correcta
           navigator.serviceWorker.register('/LabFlow/firebase-messaging-sw.js')
             .then(registration => {
               console.log('Service Worker registered with scope:', registration.scope);

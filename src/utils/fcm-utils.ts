@@ -36,8 +36,19 @@ export async function registerPushToken(userId: string) {
       return null;
     }
 
-    // 2) Obtener token FCM
-    const token = await getToken(messaging, { vapidKey: VAPID_KEY });
+    // 2) Obtener token FCM, especificando el Service Worker
+    const swRegistration = await navigator.serviceWorker.getRegistration('/LabFlow/firebase-messaging-sw.js');
+    
+    if (!swRegistration) {
+        toast.error("Error de Service Worker", { description: "No se pudo obtener el registro del Service Worker en la ruta esperada." });
+        return null;
+    }
+    
+    const token = await getToken(messaging, { 
+        vapidKey: VAPID_KEY,
+        serviceWorkerRegistration: swRegistration, // Pasar el registro del SW
+    });
+    
     if (!token) {
       toast.error("Fallo al obtener token FCM.", { description: "Revisa el Service Worker, VAPID Key y la conexión HTTPS." });
       return null;
@@ -80,20 +91,26 @@ export async function unregisterPushToken(token: string) {
 
   try {
     // 1. Eliminar el token de Firebase
-    await getToken(messaging, { vapidKey: VAPID_KEY }); // Refrescar token antes de eliminar
-    await supabase.functions.invoke('delete-fcm-token', { // Usaremos una función Edge para eliminar de la DB
+    // Ya no necesitamos getToken aquí, solo necesitamos eliminar el token de la DB y desuscribir el SW
+    
+    // 2. Eliminar el token de la base de datos (usando la función Edge)
+    const { error: edgeError } = await supabase.functions.invoke('delete-fcm-token', { 
       method: 'POST',
       body: JSON.stringify({ token }),
     });
     
-    // 2. Eliminar el token de la base de datos (si la función Edge falla, lo intentamos aquí)
-    const { error: dbError } = await supabase
-      .from('fcm_tokens')
-      .delete()
-      .eq('token', token);
-      
-    if (dbError) {
-        console.error("Error deleting token from DB:", dbError);
+    if (edgeError) {
+        console.error("Error deleting token via Edge Function:", edgeError);
+        // Continuar con la desuscripción local aunque la eliminación de la DB haya fallado
+    }
+
+    // 3. Desuscribir el Service Worker localmente
+    const swRegistration = await navigator.serviceWorker.getRegistration('/LabFlow/firebase-messaging-sw.js');
+    if (swRegistration) {
+        const subscription = await swRegistration.pushManager.getSubscription();
+        if (subscription) {
+            await subscription.unsubscribe();
+        }
     }
 
     toast.info("Notificaciones desactivadas.");
