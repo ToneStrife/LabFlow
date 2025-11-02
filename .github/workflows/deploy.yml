@@ -5,6 +5,11 @@ on:
     branches:
       - main # Cambia a 'master' si esa es tu rama principal
 
+# Añadir concurrencia para cancelar ejecuciones anteriores en la misma rama
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
