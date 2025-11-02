@@ -10,6 +10,11 @@ import { useVendors, useAddVendor, useUpdateVendor, useDeleteVendor, VendorFormV
 import { Vendor } from "@/data/types"; // Corrected import
 import { toast } from "sonner";
 
+// Definir un tipo que incluya el ID para el estado de edición
+interface EditingVendorData extends VendorFormValues {
+  id: string;
+}
+
 const Vendors = () => {
   const { data: vendors, isLoading, error } = useVendors();
   const addVendorMutation = useAddVendor();
@@ -18,8 +23,8 @@ const Vendors = () => {
 
   const [isAddVendorDialogOpen, setIsAddVendorDialogOpen] = React.useState(false);
   const [isEditVendorDialogOpen, setIsEditVendorDialogOpen] = React.useState(false);
-  // Cambiado el tipo de estado a VendorFormValues para que coincida con lo que se pasa al formulario
-  const [editingVendorInitialData, setEditingVendorInitialData] = React.useState<VendorFormValues | undefined>(undefined);
+  // Cambiado el tipo de estado para incluir el ID
+  const [editingVendorInitialData, setEditingVendorInitialData] = React.useState<EditingVendorData | undefined>(undefined);
 
   // NOTE: parseBrandsString is now handled inside use-vendors.ts mutations.
   // We only need to map the array back to a string for the form's initial data.
@@ -43,8 +48,9 @@ const Vendors = () => {
   };
 
   const openEditDialog = (vendor: Vendor) => {
-    // Mapear el tipo Vendor (con brands: string[] | null) al tipo VendorFormValues (con brands: string | null)
-    const initialData: VendorFormValues = { 
+    // Mapear el tipo Vendor (con brands: string[] | null) al tipo EditingVendorData
+    const initialData: EditingVendorData = { 
+      id: vendor.id, // Incluir el ID
       name: vendor.name,
       contact_person: vendor.contact_person || null,
       email: vendor.email || null,
@@ -112,7 +118,9 @@ const Vendors = () => {
           </DialogHeader>
           {editingVendorInitialData && (
             <VendorForm
+              // Pasamos solo los datos del formulario (sin ID)
               initialData={editingVendorInitialData}
+              // Usamos el ID almacenado en el estado para la mutación
               onSubmit={(data) => handleEditVendor(editingVendorInitialData.id, data)}
               onCancel={() => setIsEditVendorDialogOpen(false)}
               isSubmitting={updateVendorMutation.isPending}
