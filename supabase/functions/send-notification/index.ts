@@ -54,20 +54,29 @@ serve(async (req) => {
   }
 
   try {
-    const { token, title, body, data: payloadData } = await req.json();
+    const { user_ids, title, body, link, data: payloadData } = await req.json();
 
-    // Si se proporciona un token específico, solo enviar a ese token.
-    // Si no se proporciona, enviar a todos los tokens registrados (comportamiento anterior).
     let tokensToSend: string[] = [];
-    if (token) {
-        tokensToSend = [token];
-    } else {
-        // 1. Obtener todos los tokens de la base de datos
+    let allTokens: { token: string, user_id: string }[] = [];
+
+    // 1. Obtener tokens basados en user_ids o todos los tokens
+    if (user_ids && user_ids.length > 0) {
         const { data: tokensData, error: tokensError } = await supabase
             .from('fcm_tokens')
-            .select('token');
+            .select('token, user_id')
+            .in('user_id', user_ids);
 
         if (tokensError) throw tokensError;
+        allTokens = tokensData;
+        tokensToSend = tokensData.map((t) => t.token);
+    } else {
+        // Si no se especifican user_ids, enviar a todos (comportamiento de broadcast)
+        const { data: tokensData, error: tokensError } = await supabase
+            .from('fcm_tokens')
+            .select('token, user_id');
+
+        if (tokensError) throw tokensError;
+        allTokens = tokensData;
         tokensToSend = tokensData.map((t) => t.token);
     }
 
@@ -88,7 +97,10 @@ serve(async (req) => {
         title: title || 'Notificación de LabFlow',
         body: body || 'Mensaje de prueba enviado desde el administrador.',
       },
-      data: payloadData, // Datos personalizados para el Service Worker
+      data: {
+        ...payloadData,
+        link: link || '/dashboard', // Asegurar que el link esté en los datos para el click handler del SW
+      },
       webpush: {
         headers: {
           Urgency: 'high',
@@ -100,21 +112,31 @@ serve(async (req) => {
     // 3. Enviar la notificación
     const response = await messaging.sendMulticast(message);
     
-    // --- LOGGING AÑADIDO PARA DEPURACIÓN ---
     console.log('FCM Multicast Response:', JSON.stringify(response, null, 2));
-    // ---------------------------------------
 
-    // 4. Manejar tokens inválidos (opcional: limpiar la base de datos)
+    // 4. Manejar tokens inválidos (Limpieza de la base de datos)
     const failedTokens = response.responses
-      .filter((r) => !r.success)
-      .map((r, index) => tokensToSend[index]);
+      .map((r, index) => ({ response: r, token: tokensToSend[index] }))
+      .filter((item) => !item.response.success)
+      .map(item => item.token);
 
     if (failedTokens.length > 0) {
-      console.log(`Failed to send to ${failedTokens.length} tokens. Consider removing them.`);
-      // Lógica para eliminar tokens inválidos de la base de datos si es necesario
+      console.log(`Attempting to remove ${failedTokens.length} failed tokens from DB.`);
+      
+      // Eliminar los tokens fallidos de la base de datos
+      const { error: deleteError } = await supabase
+        .from('fcm_tokens')
+        .delete()
+        .in('token', failedTokens);
+
+      if (deleteError) {
+        console.error('Error deleting failed FCM tokens:', deleteError);
+      } else {
+        console.log(`${failedTokens.length} failed tokens removed successfully.`);
+      }
     }
 
-    return new Response(JSON.stringify({ success: true, response }), {
+    return new Response(JSON.stringify({ success: true, response, failedTokens }), {
       status: 200,
       headers: {
         'Content-Type': 'application/json',
