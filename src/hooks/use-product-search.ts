@@ -83,7 +83,8 @@ const fetchProductSearch = async (
     if (invFuzzyError) console.error("Error fetching fuzzy inventory:", invFuzzyError);
 
     if (invFuzzyData && invFuzzyData.length > 0) {
-      (invFuzzyData as InventoryFuzzyResult[]).forEach(item => { // Cast seguro
+      // Usar as unknown as para forzar el tipado y evitar el error de ParserError
+      (invFuzzyData as unknown as InventoryFuzzyResult[]).forEach(item => { 
         if (!results.some(r => r.catalog_number === item.catalog_number && r.brand === item.brand)) {
           results.push({ 
             product_name: item.product_name,
@@ -110,7 +111,8 @@ const fetchProductSearch = async (
         if (reqFuzzyError) console.error("Error fetching fuzzy request items:", reqFuzzyError);
 
         if (reqFuzzyData && reqFuzzyData.length > 0) {
-            (reqFuzzyData as RequestItemFuzzyResult[]).forEach(item => { // Cast seguro
+            // Usar as unknown as para forzar el tipado y evitar el error de ParserError
+            (reqFuzzyData as unknown as RequestItemFuzzyResult[]).forEach(item => { 
                 if (!results.some(r => r.catalog_number === item.catalog_number && r.brand === item.brand)) {
                     results.push({ 
                         product_name: item.product_name,
