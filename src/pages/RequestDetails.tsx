@@ -44,13 +44,20 @@ import { RequestStatus as RequestStatusType, Vendor, Profile, AccountManager, Pr
 const getFileNameFromPath = (filePath: string): string => {
   if (!filePath) return "Archivo";
   try {
+    // 1. Obtener el nombre de archivo codificado (última parte de la ruta)
     const pathParts = filePath.split('/');
     const encodedFileName = pathParts[pathParts.length - 1];
     const decodedFileName = decodeURIComponent(encodedFileName);
     
-    // Eliminar el prefijo de timestamp (ej. "1678886400000_")
-    const nameWithoutPrefix = decodedFileName.substring(decodedFileName.indexOf('_') + 1);
-    return nameWithoutPrefix || decodedFileName || "Archivo"; // Fallback si algo sale mal
+    // 2. Eliminar el prefijo de timestamp (ej. 1721937600000_my_file.pdf)
+    const parts = decodedFileName.split('_');
+    if (parts.length > 1 && !isNaN(Number(parts[0]))) {
+      // Si la primera parte es un número (timestamp), devolver el resto
+      return parts.slice(1).join('_');
+    }
+    
+    // Fallback si el formato no coincide o si es el formato antiguo
+    return decodedFileName.substring(decodedFileName.indexOf('_') + 1) || decodedFileName || "Archivo";
   } catch (e) {
     console.error("Could not parse filename from path", e);
     return "Archivo";
@@ -113,11 +120,14 @@ const RequestDetails: React.FC = () => {
   };
 
   const handleSendEmail = async (emailData: EmailFormValues) => {
+    // Asegurar que attachmentsForSend y attachments tengan el tipo correcto
+    const attachmentsToSend = (emailData.attachmentsForSend || emailData.attachments || []) as { name: string; url: string }[];
+    
     await sendEmailMutation.mutateAsync({
       to: emailData.to!, // Ensure 'to' is not undefined
       subject: emailData.subject,
       body: emailData.body,
-      attachments: emailData.attachmentsForSend || emailData.attachments, // Use attachmentsForSend if available
+      attachments: attachmentsToSend,
     });
     setIsEmailDialogOpen(false);
   };
@@ -150,8 +160,8 @@ const RequestDetails: React.FC = () => {
     };
 
     // Preparar adjuntos:
-    let attachmentsForDialog = [];
-    let attachmentsForSend = [];
+    let attachmentsForDialog: { name: string; url: string }[] = [];
+    let attachmentsForSend: { name: string; url: string }[] = [];
     
     if (request.quote_url) {
       const fileName = getFileNameFromPath(request.quote_url); // Usar el nombre de archivo real
@@ -311,8 +321,8 @@ const RequestDetails: React.FC = () => {
       billingAddress: billingAddresses?.find(a => a.id === request.billing_address_id),
     };
     
-    let attachmentsForDialog = [];
-    let attachmentsForSend = [];
+    let attachmentsForDialog: { name: string; url: string }[] = [];
+    let attachmentsForSend: { name: string; url: string }[] = [];
     
     // Generar URL firmada para Quote (para el diálogo)
     if (request.quote_url) {

@@ -175,7 +175,13 @@ const AdminPage = () => {
 
   // --- Handlers for Users ---
   const handleInviteUser = async (data: InviteUserFormValues) => {
-    await inviteUserMutation.mutateAsync(data);
+    // Asegurar que los campos opcionales sean null si son undefined o cadena vacía
+    const dataToSend = {
+        email: data.email,
+        first_name: data.first_name || undefined,
+        last_name: data.last_name || undefined,
+    };
+    await inviteUserMutation.mutateAsync(dataToSend);
     setIsInviteUserDialogOpen(false);
   };
   const handleUpdateUserRole = async (userId: string, newRole: Profile['role']) => {

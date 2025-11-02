@@ -75,7 +75,7 @@ const fetchProductSearch = async (
     // Fetch inventory items with similarity score
     const { data: invFuzzyData, error: invFuzzyError } = await supabase
       .from('inventory')
-      .select(`*, similarity(product_name, '${productName}') as score`)
+      .select(`*, score:similarity(product_name, '${productName}')`) // Seleccionar score explícitamente
       .gte('similarity(product_name, \'' + productName + '\')', similarityThreshold)
       .order('score', { ascending: false })
       .limit(5);
@@ -83,7 +83,7 @@ const fetchProductSearch = async (
     if (invFuzzyError) console.error("Error fetching fuzzy inventory:", invFuzzyError);
 
     if (invFuzzyData && invFuzzyData.length > 0) {
-      (invFuzzyData as InventoryFuzzyResult[]).forEach(item => { // Cast to expected type
+      (invFuzzyData as InventoryFuzzyResult[]).forEach(item => { // Cast seguro
         if (!results.some(r => r.catalog_number === item.catalog_number && r.brand === item.brand)) {
           results.push({ 
             product_name: item.product_name,
@@ -102,7 +102,7 @@ const fetchProductSearch = async (
     if (results.length < 5) {
         const { data: reqFuzzyData, error: reqFuzzyError } = await supabase
             .from('request_items')
-            .select(`product_name, catalog_number, brand, unit_price, format, link, similarity(product_name, '${productName}') as score`)
+            .select(`product_name, catalog_number, brand, unit_price, format, link, score:similarity(product_name, '${productName}')`) // Seleccionar score explícitamente
             .gte('similarity(product_name, \'' + productName + '\')', similarityThreshold)
             .order('score', { ascending: false })
             .limit(5);
@@ -110,7 +110,7 @@ const fetchProductSearch = async (
         if (reqFuzzyError) console.error("Error fetching fuzzy request items:", reqFuzzyError);
 
         if (reqFuzzyData && reqFuzzyData.length > 0) {
-            (reqFuzzyData as RequestItemFuzzyResult[]).forEach(item => { // Cast to expected type
+            (reqFuzzyData as RequestItemFuzzyResult[]).forEach(item => { // Cast seguro
                 if (!results.some(r => r.catalog_number === item.catalog_number && r.brand === item.brand)) {
                     results.push({ 
                         product_name: item.product_name,

@@ -46,7 +46,7 @@ export const updateMockProfile = (id: string, data: Partial<Profile>): void => {
 
 export const deleteMockProfile = async (id: string): Promise<void> => {
   await simulateNetworkDelay();
-  storage.mockProfiles = storage.mockProfiles.filter(p => p.id !== id);
+  storage.deleteMockProfileById(id);
 };
 
 // --- CRUD Functions for Requests ---
@@ -71,8 +71,8 @@ export const addMockRequest = async (data: Omit<SupabaseRequest, "id" | "created
     po_number: null,
     po_url: null,
     slip_url: null,
-    shipping_address_id: data.shippingAddressId, // Added missing fields
-    billing_address_id: data.billingAddressId, // Added missing fields
+    shipping_address_id: data.shipping_address_id, // Corregido
+    billing_address_id: data.billing_address_id, // Corregido
     ...data,
     items: [], // Will be populated after item insertion
   };
@@ -185,8 +185,7 @@ export const updateMockRequestFile = async (
 
 export const deleteMockRequest = async (id: string): Promise<void> => {
   await simulateNetworkDelay();
-  storage.mockRequests = storage.mockRequests.filter(req => req.id !== id);
-  storage.mockRequestItems = storage.mockRequestItems.filter(item => item.request_id !== id);
+  storage.deleteMockRequestById(id);
 };
 
 // --- CRUD Functions for Inventory ---
@@ -230,7 +229,7 @@ export const updateMockInventoryItem = async (id: string, data: Partial<Omit<Inv
 
 export const deleteMockInventoryItem = async (id: string): Promise<void> => {
   await simulateNetworkDelay();
-  storage.mockInventory = storage.mockInventory.filter(item => item.id !== id);
+  storage.deleteMockInventoryItemById(id);
 };
 
 // --- CRUD Functions for Expenditures (REMOVED) ---

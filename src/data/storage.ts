@@ -235,3 +235,28 @@ export let mockInventory: InventoryItem[] = [
     last_updated: new Date(Date.now() - 86400000 * 15).toISOString(),
   },
 ];
+
+// --- Funciones auxiliares para modificar las matrices exportadas ---
+
+export const deleteMockProfileById = (id: string) => {
+  const index = mockProfiles.findIndex(p => p.id === id);
+  if (index !== -1) {
+    mockProfiles.splice(index, 1);
+  }
+};
+
+export const deleteMockRequestById = (id: string) => {
+  const requestIndex = mockRequests.findIndex(req => req.id === id);
+  if (requestIndex !== -1) {
+    mockRequests.splice(requestIndex, 1);
+    // Eliminar ítems asociados
+    mockRequestItems = mockRequestItems.filter(item => item.request_id !== id);
+  }
+};
+
+export const deleteMockInventoryItemById = (id: string) => {
+  const index = mockInventory.findIndex(item => item.id === id);
+  if (index !== -1) {
+    mockInventory.splice(index, 1);
+  }
+};

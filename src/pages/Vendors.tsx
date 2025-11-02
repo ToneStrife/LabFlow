@@ -44,7 +44,7 @@ const Vendors = () => {
   const openEditDialog = (vendor: Vendor) => {
     setEditingVendor({ 
       ...vendor, 
-      // Convertir array a string para el formulario
+      // Convertir array a string para el formulario (string | null)
       brands: vendor.brands && Array.isArray(vendor.brands) ? vendor.brands.join(", ") : null,
       contact_person: vendor.contact_person || null,
     });

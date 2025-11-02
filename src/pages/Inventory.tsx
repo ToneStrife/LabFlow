@@ -5,7 +5,7 @@ import InventoryTable from "@/components/InventoryTable";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { useInventory, useAddInventoryItem, useUpdateInventoryItem, useDeleteInventoryItem, InventoryItem } from "@/hooks/use-inventory";
+import { useInventory, useAddInventoryItem, useUpdateInventoryItem, useDeleteInventoryItem, InventoryItem, InventoryItemFormData } from "@/hooks/use-inventory";
 import InventoryForm, { InventoryFormValues } from "@/components/InventoryForm";
 import InventoryToolbar from "@/components/InventoryToolbar"; // Importar Toolbar
 import ReorderDialog from "@/components/ReorderDialog"; // Importar ReorderDialog
@@ -26,7 +26,9 @@ const Inventory = () => {
   const [isReorderDialogOpen, setIsReorderDialogOpen] = React.useState(false);
 
   const handleAddInventoryItem = async (newItemData: InventoryFormValues) => {
-    await addInventoryItemMutation.mutateAsync(newItemData);
+    // InventoryFormValues es compatible con InventoryItemFormData, pero debemos asegurar que los campos requeridos estén presentes.
+    // El formulario ya garantiza que product_name, catalog_number y quantity existen.
+    await addInventoryItemMutation.mutateAsync(newItemData as InventoryItemFormData);
     setIsAddInventoryDialogOpen(false);
   };
 
