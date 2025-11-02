@@ -481,7 +481,7 @@ const AdminPage = () => {
             <CardContent className="space-y-4">
               <NotificationSenderForm />
               <p className="text-sm text-red-500">
-                Nota: Si no recibes la notificación, verifica que tu clave `FIREBASE_SERVER_KEY` esté configurada correctamente en los secretos de Supabase y que hayas aceptado los permisos de notificación.
+                Nota: Si no recibes la notificación, verifica que las claves `FIREBASE_PRIVATE_KEY`, `FIREBASE_CLIENT_EMAIL` y `FIREBASE_PROJECT_ID` estén configuradas correctamente en los secretos de Supabase y que hayas aceptado los permisos de notificación en tu navegador.
               </p>
             </CardContent>
           </Card>
