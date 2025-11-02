@@ -10,8 +10,11 @@ const FirebaseInitializer: React.FC = () => {
     if (typeof window !== 'undefined') {
       if (!getApps().length) {
         try {
+          // Determinar la ruta base dinámicamente
+          const basePath = window.location.pathname.includes('/LabFlow/') ? '/LabFlow/' : '/';
+          
           // 1. Obtener el registro del Service Worker en la ruta base
-          navigator.serviceWorker.getRegistration('/LabFlow/').then(registration => {
+          navigator.serviceWorker.getRegistration(basePath).then(registration => {
             // 2. Clonar la configuración para añadir la ruta del Service Worker
             const configWithSW = {
               ...firebaseConfig,

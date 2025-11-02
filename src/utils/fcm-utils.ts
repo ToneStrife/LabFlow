@@ -21,6 +21,10 @@ function isMobileUA() {
   return /Android|iPhone|iPad|iPod/i.test(ua);
 }
 
+// Helper para obtener la ruta base dinámica
+const getBasePath = () => window.location.pathname.includes('/LabFlow/') ? '/LabFlow/' : '/';
+
+
 export async function registerPushToken(userId: string) {
   const messaging = getFirebaseMessaging();
   if (!messaging) {
@@ -37,8 +41,8 @@ export async function registerPushToken(userId: string) {
     }
 
     // 2) Obtener token FCM, especificando el Service Worker
-    // CORRECCIÓN: Usar la ruta base para obtener el registro
-    const swRegistration = await navigator.serviceWorker.getRegistration('/LabFlow/');
+    const basePath = getBasePath();
+    const swRegistration = await navigator.serviceWorker.getRegistration(basePath);
     
     if (!swRegistration) {
         toast.error("Error de Service Worker", { description: "No se pudo obtener el registro del Service Worker en la ruta esperada." });
@@ -103,8 +107,8 @@ export async function unregisterPushToken(token: string) {
     }
 
     // 2. Desuscribir el Service Worker localmente
-    // CORRECCIÓN: Usar la ruta base para obtener el registro
-    const swRegistration = await navigator.serviceWorker.getRegistration('/LabFlow/');
+    const basePath = getBasePath();
+    const swRegistration = await navigator.serviceWorker.getRegistration(basePath);
     if (swRegistration) {
         const subscription = await swRegistration.pushManager.getSubscription();
         if (subscription) {
