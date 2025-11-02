@@ -1,5 +1,3 @@
-// Edge-safe: sin firebase-admin. Envía FCM por HTTP (legacy API).
-
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 
@@ -13,8 +11,9 @@ const cors = {
   'Content-Type': 'application/json',
 };
 
-// Inicializar el cliente de servicio fuera del handler para eficiencia
-const supabaseAdmin = createClient(
+// Inicializar el cliente de servicio dentro del handler para asegurar que Deno.env.get se resuelva correctamente
+// y evitar problemas de inicialización global.
+const getSupabaseAdminClient = () => createClient(
   Deno.env.get('SUPABASE_URL') ?? '',
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
   { auth: { persistSession: false } },
@@ -45,6 +44,8 @@ serve(async (req) => {
     
     console.log('Edge Function: Received notification request.');
     console.log('Target user_ids:', user_ids);
+
+    const supabaseAdmin = getSupabaseAdminClient();
 
     // 2) Carga tokens desde tu tabla
     let tokens: string[] = [];
@@ -113,7 +114,10 @@ serve(async (req) => {
       });
 
       if (!res.ok) {
-        throw new Error(`FCM error: ${res.status} ${await res.text()}`);
+        // Si la respuesta no es OK, intentamos leer el cuerpo para obtener el error de FCM
+        const errorText = await res.text();
+        console.error(`FCM API Error (${res.status}):`, errorText);
+        throw new Error(`FCM API Error: ${res.status} - ${errorText.substring(0, 100)}...`);
       }
       const json = await res.json();
       results.push(json);
