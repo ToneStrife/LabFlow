@@ -16,6 +16,10 @@ const firebaseConfig = {
   measurementId: process.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
+// --- VERIFICACIÓN CRÍTICA ---
+console.log('[firebase-messaging-sw.js] Initializing Firebase with config:', firebaseConfig);
+// -----------------------------
+
 // Inicializar Firebase
 if (!firebase.apps.length) {
   firebase.initializeApp(firebaseConfig);
