@@ -10,6 +10,9 @@ const cors = {
   'Content-Type': 'application/json',
 };
 
+// Usar la versión 2.45.0 para consistencia
+const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2.45.0');
+
 Deno.serve(async (req) => {
   // 1) CORS preflight
   if (req.method === 'OPTIONS') {
@@ -27,7 +30,6 @@ Deno.serve(async (req) => {
     const { user_ids, title, body, link, data: payloadData } = await req.json();
 
     // Cliente supabase dentro del handler
-    const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2.38.4');
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
