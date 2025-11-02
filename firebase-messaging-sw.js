@@ -39,7 +39,8 @@ messaging.onBackgroundMessage((payload) => {
   const notificationTitle = payload.notification.title;
   const notificationOptions = {
     body: payload.notification.body,
-    icon: '/LabFlow/favicon.png', // Usar un icono de la PWA
+    // Usar ruta relativa al Service Worker (que está en /LabFlow/)
+    icon: './favicon.png', 
     data: payload.data,
   };
 
@@ -54,11 +55,13 @@ self.addEventListener('notificationclick', (event) => {
   event.waitUntil(
     clients.matchAll({ type: 'window' }).then((clientList) => {
       for (const client of clientList) {
+        // Si la URL del cliente incluye la base, enfocarla
         if (client.url.includes('/LabFlow/') && 'focus' in client) {
           return client.focus();
         }
       }
       if (clients.openWindow) {
+        // Abrir la URL base si no se encuentra ninguna ventana
         return clients.openWindow('/LabFlow/dashboard');
       }
     })
