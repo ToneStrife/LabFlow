@@ -1,6 +1,9 @@
 // Edge-safe: sin firebase-admin. Envía FCM por HTTP (legacy API).
 
-const ALLOWED_ORIGIN = '*'; // Cambiado a '*' para permitir localhost y despliegues
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+
+const ALLOWED_ORIGIN = '*'; 
 
 const cors = {
   'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
@@ -10,10 +13,15 @@ const cors = {
   'Content-Type': 'application/json',
 };
 
-// Usar la versión 2.45.0 para consistencia
-const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2.45.0');
+// Inicializar el cliente de servicio fuera del handler para eficiencia
+const supabaseAdmin = createClient(
+  Deno.env.get('SUPABASE_URL') ?? '',
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+  { auth: { persistSession: false } },
+);
 
-Deno.serve(async (req) => {
+
+serve(async (req) => {
   // 1) CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response('ok', { status: 200, headers: cors });
@@ -27,25 +35,25 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Autenticación manual (opcional, pero buena práctica si se necesita el usuario)
+    // Aunque esta función usa el rol de servicio, es bueno verificar que la llamada venga de un usuario autenticado.
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+        return new Response(JSON.stringify({ error: 'Unauthorized: Missing Authorization header' }), { status: 401, headers: cors });
+    }
+    
     const { user_ids, title, body, link, data: payloadData } = await req.json();
-
-    // Cliente supabase dentro del handler
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-      { auth: { persistSession: false } },
-    );
 
     // 2) Carga tokens desde tu tabla
     let tokens: string[] = [];
     if (user_ids?.length) {
-      const { data, error } = await supabase.from('fcm_tokens')
+      const { data, error } = await supabaseAdmin.from('fcm_tokens')
         .select('token')
         .in('user_id', user_ids);
       if (error) throw error;
       tokens = (data ?? []).map(d => d.token);
     } else {
-      const { data, error } = await supabase.from('fcm_tokens')
+      const { data, error } = await supabaseAdmin.from('fcm_tokens')
         .select('token');
       if (error) throw error;
       tokens = (data ?? []).map(d => d.token);
@@ -99,7 +107,6 @@ Deno.serve(async (req) => {
       results.push(json);
 
       // Marcar tokens fallidos (si los hay)
-      // Respuesta legacy: results[i] puede tener { error: 'NotRegistered' | 'InvalidRegistration' | ... }
       if (Array.isArray(json.results)) {
         json.results.forEach((r: any, i: number) => {
           if (r && r.error) failedTokens.push(batch[i]);
@@ -109,15 +116,17 @@ Deno.serve(async (req) => {
 
     // 4) Limpieza de tokens inválidos
     if (failedTokens.length) {
-      await supabase.from('fcm_tokens').delete().in('token', failedTokens);
+      await supabaseAdmin.from('fcm_tokens').delete().in('token', failedTokens);
     }
 
     return new Response(JSON.stringify({
       success: true,
       batches: results.length,
       failedTokensCount: failedTokens.length,
+      results: results, // Devolver resultados para depuración
     }), { status: 200, headers: cors });
   } catch (err: any) {
+    console.error('Edge Function: Unhandled error:', err);
     return new Response(JSON.stringify({ error: String(err?.message || err) }), {
       status: 500,
       headers: cors,
