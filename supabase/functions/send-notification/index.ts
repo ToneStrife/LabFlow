@@ -1,6 +1,6 @@
-import { serve } from 'https://deno.land/std@0.190.0/http/server.ts' // Usar la versión actual de Deno
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0' // Usar la versión actual de Supabase JS
-import { SignJWT, importPKCS8 } from 'https://deno.land/x/jose@v5.2.4/index.ts' // Usar la versión actual de jose
+import { serve } from 'https://deno.land/std@0.190.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
+import { SignJWT, importPKCS8 } from 'https://esm.sh/jose@5.8.0'
 
 async function getAccessToken(clientEmail: string, privateKeyPem: string) {
   const scope = 'https://www.googleapis.com/auth/firebase.messaging'
@@ -75,6 +75,7 @@ serve(async (req) => {
     if (token) {
       tokensToSend = [token]
     } else if (user_ids?.length) {
+      // Enviar a IDs de usuario específicos
       const { data: tokensData, error: tokensError } = await supabase
         .from('fcm_tokens')
         .select('token')
@@ -82,7 +83,7 @@ serve(async (req) => {
       if (tokensError) throw tokensError
       tokensToSend = tokensData.map((t: { token: string }) => t.token)
     } else {
-      // Si no se especifica token ni user_ids, enviar a todos (si el cliente lo permite)
+      // Si no se especifica token ni user_ids (o user_ids es []), enviar a todos
       const { data: tokensData, error: tokensError } = await supabase
         .from('fcm_tokens')
         .select('token')
