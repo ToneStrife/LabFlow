@@ -1,105 +1,113 @@
 // public/firebase-messaging-sw.js
-// Debe estar en public/ para tener scope raíz
+// Debe estar en /public para que se sirva como /<repo>/firebase-messaging-sw.js
 
-// 1) Config pública generada en build (ver más abajo)
+// 1) Config pública (inyectada en build)
 importScripts('./firebase-config.js');
 
-// 2) SDKs (compat para onBackgroundMessage)
+// 2) SDKs compat (necesario para onBackgroundMessage en SW)
 importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js');
 
-// 3) Tomar la config del objeto global inyectado por firebase-config.js
-const config = self.__FIREBASE_CONFIG__;
-if (!config) {
-  console.error('[firebase-messaging-sw.js] __FIREBASE_CONFIG__ not found. Did you generate public/firebase-config.js at build time?');
+// 3) Inicializar Firebase
+const cfg = self.__FIREBASE_CONFIG__;
+if (!cfg) {
+  console.error('[SW] __FIREBASE_CONFIG__ no encontrado. ¿Generaste public/firebase-config.js?');
 }
-
-// 4) Inicializar Firebase (para SW de FCM con senderId basta)
 try {
   if (!firebase.apps.length) {
-    // Mínimo necesario:
-    // firebase.initializeApp({ messagingSenderId: String(config.messagingSenderId) });
-
-    // O toda la config (también válido):
     firebase.initializeApp({
-      apiKey: String(config.apiKey),
-      authDomain: String(config.authDomain),
-      projectId: String(config.projectId),
-      storageBucket: String(config.storageBucket),
-      messagingSenderId: String(config.messagingSenderId),
-      appId: String(config.appId),
-      measurementId: String(config.measurementId),
+      apiKey: String(cfg.apiKey),
+      authDomain: String(cfg.authDomain),
+      projectId: String(cfg.projectId),
+      storageBucket: String(cfg.storageBucket),
+      messagingSenderId: String(cfg.messagingSenderId),
+      appId: String(cfg.appId),
+      measurementId: String(cfg.measurementId),
     });
   }
-  console.log('[firebase-messaging-sw.js] Firebase initialized for FCM');
+  console.log('[SW] Firebase inicializado');
 } catch (e) {
-  console.error('[firebase-messaging-sw.js] Firebase init error:', e);
+  console.error('[SW] Error init Firebase:', e);
 }
 
-// Función auxiliar para obtener la ruta base (ej: /LabFlow/)
-const getBasePath = () => {
-    // self.registration.scope siempre termina en /
-    const scope = self.registration.scope;
-    // Si el scope es solo el origen (ej: https://domain.com/), la ruta base es '/'
-    const url = new URL(scope);
-    return url.pathname;
-};
+// 4) Utilidades de ruta y dedupe
+const getBasePath = () => new URL(self.registration.scope).pathname; // p.ej. "/LabFlow/"
+const resolveUrl = (maybeRelative) => new URL(maybeRelative || '.', self.registration.scope).toString();
 
-// 5) Instancia de Messaging y mensajes en background
+self.__lastShown = { key: null, ts: 0 }; // dedupe suave por 1s
+
+// 5) Mensajes en background: ***DATA-ONLY***
+//    IMPORTANTE: usamos payload.data (NO payload.notification)
 let messaging;
 try {
   messaging = firebase.messaging();
-  messaging.onBackgroundMessage((payload) => {
-    console.log('[firebase-messaging-sw.js] Background message:', payload);
+
+  messaging.onBackgroundMessage(async ({ data }) => {
+    // data esperada desde tu Edge Function:
+    // { title, body, icon, url, tag, ... }
+    console.log('[SW] Background DATA:', data);
 
     const basePath = getBasePath();
-    const n = payload.notification || {};
-    const notificationTitle = n.title || 'Notificación';
-    
-    // Asegurar que el icono use la ruta base
-    const iconPath = basePath + 'favicon.png'; 
-    
-    const notificationOptions = {
-      body: n.body || '',
-      icon: iconPath,
-      image: n.image,
-      data: payload.data || {},
-    };
 
-    self.registration.showNotification(notificationTitle, notificationOptions);
+    const title = data?.title || 'Notificación';
+    const body  = data?.body  || '';
+    const icon  = data?.icon  ? resolveUrl(data.icon) : resolveUrl(basePath + 'favicon.png');
+    const url   = data?.url   ? resolveUrl(data.url) : resolveUrl(basePath);
+
+    // Dedupe: si llega duplicado en <1s con misma firma, ignora
+    const now = Date.now();
+    const key = `${title}|${body}`;
+    if (self.__lastShown.key === key && (now - self.__lastShown.ts) < 1000) {
+      console.warn('[SW] Dedupe por tiempo/clave:', key);
+      return;
+    }
+    self.__lastShown = { key, ts: now };
+
+    // Dedupe por tag: si ya existe una notificación con el mismo tag, no repitas
+    const tag = data?.tag || key;
+    const existing = await self.registration.getNotifications({ tag });
+    if (existing.length) {
+      console.warn('[SW] Dedupe por tag existente:', tag);
+      return;
+    }
+
+    await self.registration.showNotification(title, {
+      body,
+      icon,
+      tag,              // colapsa/evita duplicadas iguales
+      renotify: false,  // no “revibre” si se reusa el tag
+      data: { url },    // usado en el click
+    });
   });
 } catch (e) {
-  console.error('[firebase-messaging-sw.js] messaging init error:', e);
+  console.error('[SW] Error init messaging:', e);
 }
 
-// 6) Click en notificación
+// 6) Click en notificación → abrir / enfocar
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  
-  // El link viene en payload.data.link (establecido en send-notification edge function)
-  const clickAction = event.notification.data?.link || '/dashboard';
-
-  const base = self.registration.scope; // p.ej. "https://tu-dominio/LabFlow/"
-  
-  // Si clickAction es una ruta relativa (ej: /dashboard), la URL se resuelve correctamente
-  const targetUrl = new URL(clickAction, base).toString();
+  const targetUrl = event.notification?.data?.url || resolveUrl(getBasePath());
 
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      for (const client of clientList) {
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+      for (const client of list) {
+        // si ya hay una pestaña, navega/focus
         if ('focus' in client) {
-          // Si la URL del cliente actual es diferente a la URL de destino, navegamos
-          // Nota: client.url puede incluir el hash (#/...) si estamos usando HashRouter
-          const clientPath = new URL(client.url).pathname + new URL(client.url).hash;
-          const targetPath = new URL(targetUrl).pathname + new URL(targetUrl).hash;
-          
-          if (clientPath !== targetPath && 'navigate' in client) {
+          const current = new URL(client.url);
+          const target  = new URL(targetUrl);
+          const samePath = (current.pathname + current.hash) === (target.pathname + target.hash);
+          if (!samePath && 'navigate' in client) {
             return client.navigate(targetUrl).then(c => c.focus());
           }
           return client.focus();
         }
       }
+      // si no hay ventana, abre nueva
       if (clients.openWindow) return clients.openWindow(targetUrl);
     })
   );
 });
+
+// 7) Tomar control rápido de pestañas (reemplazo de SWs antiguos)
+self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('activate', (e) => e.waitUntil(clients.claim()));
