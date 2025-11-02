@@ -1,6 +1,6 @@
 // Edge-safe: sin firebase-admin. Envía FCM por HTTP (legacy API).
 
-const ALLOWED_ORIGIN = 'https://tonestrife.github.io';
+const ALLOWED_ORIGIN = '*'; // Cambiado a '*' para permitir localhost y despliegues
 
 const cors = {
   'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
