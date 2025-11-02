@@ -34,7 +34,7 @@ export interface Profile {
   // Preferencias de Notificación (NUEVOS CAMPOS)
   notify_on_status_change: boolean;
   notify_on_new_request: boolean;
-  notify_on_inventory_low: boolean;
+  // notify_on_inventory_low: boolean; <-- ELIMINADO
 }
 
 export interface Vendor {

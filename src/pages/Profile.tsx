@@ -26,7 +26,7 @@ const Profile: React.FC = () => {
   // Estados para preferencias de notificación
   const [notifyStatusChange, setNotifyStatusChange] = React.useState(profile?.notify_on_status_change ?? true);
   const [notifyNewRequest, setNotifyNewRequest] = React.useState(profile?.notify_on_new_request ?? true);
-  const [notifyInventoryLow, setNotifyInventoryLow] = React.useState(profile?.notify_on_inventory_low ?? true);
+  // const [notifyInventoryLow, setNotifyInventoryLow] = React.useState(profile?.notify_on_inventory_low ?? true); // ELIMINADO
 
 
   React.useEffect(() => {
@@ -36,7 +36,7 @@ const Profile: React.FC = () => {
       setRole(profile.role || "");
       setNotifyStatusChange(profile.notify_on_status_change ?? true);
       setNotifyNewRequest(profile.notify_on_new_request ?? true);
-      setNotifyInventoryLow(profile.notify_on_inventory_low ?? true);
+      // setNotifyInventoryLow(profile.notify_on_inventory_low ?? true); // ELIMINADO
     }
   }, [profile]);
 
@@ -53,7 +53,7 @@ const Profile: React.FC = () => {
       role: profile?.role || "Requester", // El rol no es editable por el usuario en este formulario, mantener el rol actual
       notify_on_status_change: notifyStatusChange,
       notify_on_new_request: notifyNewRequest,
-      notify_on_inventory_low: notifyInventoryLow,
+      // notify_on_inventory_low: notifyInventoryLow, // ELIMINADO
     };
 
     updateProfileMutation.mutate({
@@ -152,7 +152,7 @@ const Profile: React.FC = () => {
                                 disabled={updateProfileMutation.isPending}
                             />
                         </div>
-                        <div className="flex items-center justify-between">
+                        {/* <div className="flex items-center justify-between">
                             <Label htmlFor="notifyInventoryLow">Notificar inventario bajo (Solo Admin)</Label>
                             <Switch
                                 id="notifyInventoryLow"
@@ -160,7 +160,7 @@ const Profile: React.FC = () => {
                                 onCheckedChange={setNotifyInventoryLow}
                                 disabled={updateProfileMutation.isPending}
                             />
-                        </div>
+                        </div> */}
                     </>
                 )}
             </div>
