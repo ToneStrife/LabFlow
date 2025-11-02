@@ -283,7 +283,7 @@ interface AddRequestData {
 const getLabManagers = async (): Promise<Profile[]> => {
     const { data, error } = await supabase
         .from('profiles')
-        .select('first_name, last_name')
+        .select('id, first_name, last_name')
         .eq('role', 'Admin'); // Assuming 'Admin' acts as Lab Manager for notifications
     if (error) {
         console.error("Error fetching Admin profiles for notification:", error);
@@ -296,7 +296,7 @@ const getLabManagers = async (): Promise<Profile[]> => {
 const getRequesterProfile = async (requesterId: string): Promise<Profile | null> => {
     const { data, error } = await supabase
         .from('profiles')
-        .select('first_name, last_name')
+        .select('id, first_name, last_name')
         .eq('id', requesterId)
         .single();
     if (error) {
@@ -341,19 +341,28 @@ export const apiAddRequest = async (data: AddRequestData): Promise<SupabaseReque
   }
 
   // --- NOTIFICATION: New Request (To Lab Manager/Admin) ---
-  // Lógica de WhatsApp eliminada, solo logueamos o usamos email si se implementa
   try {
     const managers = await getLabManagers();
-    const vendor = (await supabase.from('vendors').select('name').eq('id', vendorId).single()).data;
     const requester = await getRequesterProfile(requesterId);
     const requesterName = requester ? `${requester.first_name || ''} ${requester.last_name || ''}`.trim() : 'Unkown Requester';
-    const vendorName = vendor?.name || 'Unknown Vendor';
     const requestNumber = (newRequest as SupabaseRequest).request_number || (newRequest as SupabaseRequest).id.substring(0, 8);
-
-    console.log(`[Notification] New Request #${requestNumber} created by ${requesterName} for ${vendorName}. Admins notified.`);
+    
+    const adminIds = managers.map(m => m.id);
+    
+    if (adminIds.length > 0) {
+        await supabase.functions.invoke('send-notification', {
+            method: 'POST',
+            body: JSON.stringify({
+                user_ids: adminIds,
+                title: `🔔 Nueva Solicitud #${requestNumber}`,
+                body: `El usuario ${requesterName} ha enviado una nueva solicitud pendiente.`,
+                link: `/requests/${(newRequest as SupabaseRequest).id}`,
+            }),
+        });
+    }
     
   } catch (e) {
-    console.error("Failed to log notification for new request:", e);
+    console.error("Failed to send notification for new request:", e);
   }
   // -----------------------------------------------------------------
 
@@ -371,7 +380,7 @@ export const apiUpdateRequestStatus = async (
   // 1. Fetch current request state before update
   const { data: oldRequest, error: fetchError } = await supabase
     .from('requests')
-    .select('status, requester_id, request_number')
+    .select('status, requester_id, account_manager_id, request_number')
     .eq('id', id)
     .single();
 
@@ -379,6 +388,7 @@ export const apiUpdateRequestStatus = async (
   
   const oldStatus = oldRequest.status;
   const requesterId = oldRequest.requester_id;
+  const accountManagerId = oldRequest.account_manager_id;
   const requestNumber = oldRequest.request_number || id.substring(0, 8);
 
   // 2. Perform the status update
@@ -401,21 +411,80 @@ export const apiUpdateRequestStatus = async (
   // 3. --- NOTIFICATION: Status Change ---
   if (oldStatus !== status) {
     try {
-      const requester = await getRequesterProfile(requesterId);
       const managers = await getLabManagers();
+      const adminIds = managers.map(m => m.id);
       
-      const requesterName = requester ? `${requester.first_name || ''} ${requester.last_name || ''}`.trim() : 'Unkown Requester';
+      // Determinar destinatarios y mensaje
+      let targetUserIds: string[] = [];
+      let title: string;
+      let body: string;
+      
+      const link = `/requests/${id}`;
 
-      // Notification 1: Requester (for any status change)
-      console.log(`[Notification] Requester ${requesterName} notified: Request #${requestNumber} updated to: ${status}.`);
-
-      // Notification 2: Lab Manager/Admin (only for 'Received' status)
-      if (status === 'Received') {
-        console.log(`[Notification] Admins notified: Reception Registered: Request #${requestNumber} has been marked as Received.`);
+      switch (status) {
+        case 'Quote Requested':
+          // Notificar al solicitante y al gerente (si está asignado)
+          targetUserIds = [requesterId];
+          if (accountManagerId) targetUserIds.push(accountManagerId);
+          title = `✅ Solicitud #${requestNumber} Aprobada`;
+          body = `Tu solicitud ha sido aprobada y se ha solicitado una cotización.`;
+          break;
+        case 'PO Requested':
+          // Notificar al solicitante y al gerente (si está asignado)
+          targetUserIds = [requesterId];
+          if (accountManagerId) targetUserIds.push(accountManagerId);
+          title = `📝 Cotización Recibida para #${requestNumber}`;
+          body = `La cotización ha sido recibida. Se requiere la emisión de una Orden de Compra (PO).`;
+          break;
+        case 'Ordered':
+          // Notificar al solicitante
+          targetUserIds = [requesterId];
+          title = `📦 Solicitud #${requestNumber} Pedida`;
+          body = `Tu solicitud ha sido marcada como 'Pedido'. Esperando la recepción.`;
+          break;
+        case 'Received':
+          // Notificar al solicitante y a los administradores (para seguimiento de inventario/gastos)
+          targetUserIds = [requesterId, ...adminIds];
+          title = `🎉 Solicitud #${requestNumber} Recibida`;
+          body = `Los artículos de tu solicitud han sido recibidos y añadidos al inventario.`;
+          break;
+        case 'Denied':
+          // Notificar solo al solicitante
+          targetUserIds = [requesterId];
+          title = `❌ Solicitud #${requestNumber} Denegada`;
+          body = `Tu solicitud ha sido denegada. Revisa los detalles para más información.`;
+          break;
+        case 'Cancelled':
+          // Notificar solo al solicitante
+          targetUserIds = [requesterId];
+          title = `🚫 Solicitud #${requestNumber} Cancelada`;
+          body = `Tu solicitud ha sido cancelada.`;
+          break;
+        default:
+          // No enviar notificación para otros estados o si no hay cambio significativo
+          targetUserIds = [];
+          title = '';
+          body = '';
+      }
+      
+      // Enviar la notificación si hay destinatarios
+      if (targetUserIds.length > 0) {
+          // Eliminar duplicados de IDs de usuario
+          const uniqueTargetIds = Array.from(new Set(targetUserIds));
+          
+          await supabase.functions.invoke('send-notification', {
+              method: 'POST',
+              body: JSON.stringify({
+                  user_ids: uniqueTargetIds,
+                  title: title,
+                  body: body,
+                  link: link,
+              }),
+          });
       }
       
     } catch (e) {
-      console.error("Failed to log notification for status change:", e);
+      console.error("Failed to send notification for status change:", e);
     }
   }
   // -------------------------------------------------
@@ -679,7 +748,7 @@ export const apiSendEmail = async (email: EmailData): Promise<void> => {
 
   if (error) {
     console.error("Error invoking send-email edge function:", error);
-    let errorMessage = 'Failed to send email via Edge Function.';
+    let errorMessage = 'Fallo al enviar correo via Edge Function.';
     if (data && typeof data === 'object' && 'error' in data) {
         errorMessage = (data as any).error;
     } else if (error.message) {
