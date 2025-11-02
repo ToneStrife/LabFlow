@@ -40,18 +40,35 @@ export async function registerPushToken(userId: string) {
       return null;
     }
 
-    // 2) Obtener token FCM, especificando el Service Worker
+    // 2) Obtener token FCM, asegurando que el Service Worker esté registrado
     const basePath = getBasePath();
+    
+    // Intentamos obtener el registro. Si falla, getToken puede fallar, pero es necesario para el scope.
     const swRegistration = await navigator.serviceWorker.getRegistration(basePath);
     
     if (!swRegistration) {
-        toast.error("Error de Service Worker", { description: "No se pudo obtener el registro del Service Worker en la ruta esperada." });
-        return null;
+        // Si no hay registro, intentamos registrarlo de nuevo (aunque index.html ya lo hace)
+        console.warn("Service Worker registration not found, attempting to register now.");
+        try {
+            const newRegistration = await navigator.serviceWorker.register(basePath + 'firebase-messaging-sw.js', { scope: basePath });
+            console.log('Service Worker registered successfully during token fetch.');
+            // Usamos el nuevo registro
+            // Nota: Si el Service Worker no está en la raíz, el scope puede ser un problema.
+            // Asumimos que el registro en index.html es suficiente. Si falla aquí, es un problema de ruta/scope.
+        } catch (e) {
+            console.error("Failed to register Service Worker during token fetch:", e);
+            toast.error("Error de Service Worker", { description: "Fallo al registrar el Service Worker." });
+            return null;
+        }
     }
+    
+    // Usamos el registro encontrado o el nuevo (si se pudo registrar)
+    const finalRegistration = swRegistration || await navigator.serviceWorker.getRegistration(basePath);
     
     const token = await getToken(messaging, { 
         vapidKey: VAPID_KEY,
-        serviceWorkerRegistration: swRegistration, // Pasar el registro del SW
+        // Pasamos el registro si lo tenemos, si no, Firebase intentará usar el registro activo.
+        serviceWorkerRegistration: finalRegistration, 
     });
     
     if (!token) {

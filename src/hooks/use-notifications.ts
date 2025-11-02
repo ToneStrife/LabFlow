@@ -39,21 +39,31 @@ export const useSendNotification = () => {
       
       // La función Edge devuelve un objeto con 'results'
       const results = (data as any).results || [];
+      const totalAttempts = results.length;
       const failedCount = results.filter((r: any) => !r.success).length;
+      const successCount = totalAttempts - failedCount;
       
-      if (failedCount > 0) {
-          throw new Error(`Fallo al enviar a ${failedCount} de ${results.length} tokens.`);
+      // Si todos fallaron, lanzamos un error
+      if (totalAttempts > 0 && successCount === 0) {
+          throw new Error(`Fallo al enviar a todos los ${totalAttempts} tokens.`);
       }
       
-      return data;
+      // Devolvemos el conteo para usarlo en onSuccess
+      return { totalAttempts, successCount, failedCount };
     },
     onSuccess: (data, variables) => {
-      const totalSent = (data as any).results?.length || 0;
-      toast.success('Notificación enviada exitosamente!', {
-        description: variables.user_ids && variables.user_ids.length > 0 
-          ? `Enviada a ${variables.user_ids.length} usuarios (${totalSent} tokens).`
-          : `Enviada a todos los usuarios (${totalSent} tokens).`,
-      });
+      const { totalAttempts, successCount, failedCount } = data;
+      
+      if (successCount > 0) {
+        toast.success('Notificación enviada exitosamente!', {
+          description: `Enviada a ${successCount} de ${totalAttempts} tokens. ${failedCount > 0 ? `(${failedCount} fallos limpiados)` : ''}`,
+        });
+      } else {
+        // Esto no debería ocurrir si la lógica de error funciona, pero es un fallback
+        toast.warning('Intento de envío completado, pero sin tokens exitosos.', {
+            description: `Total de intentos: ${totalAttempts}.`,
+        });
+      }
     },
     onError: (error) => {
       toast.error('Fallo al enviar la notificación.', {
