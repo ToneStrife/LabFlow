@@ -40,7 +40,6 @@ serve(async (req) => {
     }
 
     const genAI = new GoogleGenerativeAI(geminiApiKey);
-    // CAMBIO CRÍTICO: Usar 'gemini-2.5-flash-lite'
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
 
     // 3. Parsear el cuerpo de la solicitud del frontend
@@ -141,6 +140,8 @@ Si no encuentras información fiable sobre este producto, devuelve un objeto con
         });
       } else {
         console.warn('Gemini did not return the expected function call.');
+        // Log adicional para ver el contenido de la respuesta cuando no hay la función esperada
+        console.log('Gemini response content (no expected function call):', JSON.stringify(response.candidates?.[0]?.content?.parts));
         return new Response(JSON.stringify({ error: 'No se pudo extraer información del producto de la IA.' }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 500,
@@ -148,6 +149,8 @@ Si no encuentras información fiable sobre este producto, devuelve un objeto con
       }
     } else {
       console.warn('Gemini did not return any function calls.');
+      // Log adicional para ver el contenido de la respuesta cuando no hay ninguna función
+      console.log('Gemini response content (no function calls at all):', JSON.stringify(response.candidates?.[0]?.content?.parts));
       return new Response(JSON.stringify({ error: 'No se pudo extraer información del producto de la IA.' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
