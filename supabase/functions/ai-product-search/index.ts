@@ -52,21 +52,21 @@ Información de búsqueda:
 **Instrucciones CRÍTICAS:**
 1.  **Prioridad de Búsqueda:** Utiliza la MARCA y el NÚMERO DE CATÁLOGO como identificadores principales para una búsqueda precisa. El NOMBRE DEL PRODUCTO es secundario y solo para refinar.
 2.  **Precisión:** Solo devuelve información de la que estés **altamente seguro y que sea directamente verificable**.
-3.  **No Inventar:** **Nunca inventes datos**, especialmente URLs, números de catálogo o precios. Si no encuentras un dato, indícalo como 'No disponible' o `null`.
+3.  **No Inventar:** **Nunca inventes datos**, especialmente URLs, números de catálogo o precios. Si no encuentras un dato, indícalo como 'No disponible' o 'null'.
 
 Extrae la siguiente información clave:
 
 1.  **Nombre completo del producto**: El nombre oficial y completo del producto tal como aparece en el catálogo del fabricante o distribuidor. Si no lo encuentras con alta confianza, devuelve 'No disponible'.
-2.  **Tamaño/formato del paquete**: Información crucial sobre el contenido del paquete (ej: "100 tubos/paquete", "500 ml", "50 reacciones", "1 kit", "25 g"). Sé específico sobre las unidades y cantidad. Si no lo encuentras, devuelve `null`.
-3.  **Precio estimado**: El precio exacto en EUROS (€) si lo encuentras y es directamente verificable. Si no hay un precio exacto y verificable, establece este campo como `null`.
-4.  **URL del producto**: Un enlace **directo y verificable** a la página del producto (preferiblemente del fabricante o de un distribuidor oficial). Si no encuentras una URL fiable, establece este campo como `null`.
+2.  **Tamaño/formato del paquete**: Información crucial sobre el contenido del paquete (ej: "100 tubos/paquete", "500 ml", "50 reacciones", "1 kit", "25 g"). Sé específico sobre las unidades y cantidad. Si no lo encuentras, devuelve 'null'.
+3.  **Precio estimado**: El precio exacto en EUROS (€) si lo encuentras y es directamente verificable. Si no hay un precio exacto y verificable, establece este campo como 'null'.
+4.  **URL del producto**: Un enlace **directo y verificable** a la página del producto (preferiblemente del fabricante o de un distribuidor oficial). Si no encuentras una URL fiable, establece este campo como 'null'.
 5.  **Notas técnicas**: Información breve pero relevante como:
     -   Especificaciones técnicas principales
     -   Condiciones de almacenamiento recomendadas
     -   Aplicaciones principales
-    -   Cualquier información crítica para el usuario. Si no hay notas, establece este campo como `null`.
+    -   Cualquier información crítica para el usuario. Si no hay notas, establece este campo como 'null'.
 
-Si no puedes encontrar información fiable para el producto solicitado (especialmente si el número de catálogo y la marca no coinciden con una entrada real), devuelve un objeto JSON donde `product_name` sea 'No disponible' y el resto de los campos sean `null`, con `technical_notes` conteniendo una explicación detallada de por qué no se encontró la información o qué se recomienda hacer.
+Si no puedes encontrar información fiable para el producto solicitado (especialmente si el número de catálogo y la marca no coinciden con una entrada real), devuelve un objeto JSON donde `product_name` sea 'No disponible' y el resto de los campos sean 'null', con `technical_notes` conteniendo una explicación detallada de por qué no se encontró la información o qué se recomienda hacer.
 
 Devuelve la respuesta como un objeto JSON que se ajuste al siguiente esquema:
 {
