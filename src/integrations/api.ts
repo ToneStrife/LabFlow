@@ -13,6 +13,7 @@ import {
   EmailTemplate, // Importar el nuevo tipo EmailTemplate
   Expenditure, // Importar Expenditure
   UserNotificationPreferences, // Importar la nueva interfaz
+  SupabaseRequestItem, // Importar SupabaseRequestItem
 } from "@/data/types";
 
 // Mantener las importaciones de mock data para otras tablas hasta que se conviertan
@@ -34,6 +35,66 @@ import {
   // deleteMockExpenditure,
 } from "@/data/crud";
 import { InventoryItemFormData } from "@/hooks/use-inventory"; // Importar el tipo de datos del formulario
+
+// --- Tipos de datos para la búsqueda ---
+interface AIProductInfo {
+  product_name: string;
+  catalog_number: string;
+  brand: string | null;
+  unit_price: number | null;
+  format: string | null;
+  link: string | null;
+  source: 'AI' | 'DB' | 'AI+DB';
+  notes: string | null;
+}
+
+interface FuzzySearchResult {
+  inv: InventoryItem[];
+  req: SupabaseRequestItem[];
+}
+
+// --- API de Búsqueda de Productos ---
+
+export const apiFetchAIProductInfo = async (data: { brand: string | null; catalogNumber: string | null; productName: string | null }): Promise<AIProductInfo> => {
+  const { data: aiData, error } = await supabase.functions.invoke('ai-product-search', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+
+  if (error) {
+    console.error("Error invoking ai-product-search:", error);
+    let errorMessage = 'Fallo al obtener información del producto de la IA.';
+    if (aiData && typeof aiData === 'object' && 'error' in aiData) {
+        errorMessage = (aiData as any).error;
+    } else if (error.message) {
+        errorMessage = error.message;
+    }
+    throw new Error(errorMessage);
+  }
+  
+  return aiData as AIProductInfo;
+};
+
+export const apiFuzzySearchInternal = async (searchTerm: string): Promise<FuzzySearchResult> => {
+  const [inventoryResult, requestItemsResult] = await Promise.all([
+    supabase.rpc('search_inventory', { search_term: searchTerm }),
+    supabase.rpc('search_request_items', { search_term: searchTerm }),
+  ]);
+
+  if (inventoryResult.error) {
+    console.error("Error searching inventory:", inventoryResult.error);
+    throw new Error(inventoryResult.error.message);
+  }
+  if (requestItemsResult.error) {
+    console.error("Error searching request items:", requestItemsResult.error);
+    throw new Error(requestItemsResult.error.message);
+  }
+
+  return {
+    inv: inventoryResult.data as InventoryItem[],
+    req: requestItemsResult.data as SupabaseRequestItem[],
+  };
+};
 
 
 // --- API de Perfiles (Usuarios del sistema) ---
@@ -124,14 +185,12 @@ export const apiInviteUser = async (data: InviteUserData): Promise<any> => {
 
 // --- API de Vendedores ---
 export const apiGetVendors = async (): Promise<Vendor[]> => {
-// ... existing apiGetVendors
   const { data, error } = await supabase.from('vendors').select('*');
   if (error) throw new Error(error.message);
   return data;
 };
 
 export const apiAddVendor = async (data: Omit<Vendor, "id" | "created_at">): Promise<Vendor> => {
-// ... existing apiAddVendor
   const { data: newVendor, error } = await supabase
         .from('vendors')
         .insert([{
@@ -149,7 +208,6 @@ export const apiAddVendor = async (data: Omit<Vendor, "id" | "created_at">): Pro
 };
 
 export const apiUpdateVendor = async (id: string, data: Partial<Omit<Vendor, "id" | "created_at">>): Promise<Vendor> => {
-// ... existing apiUpdateVendor
   const { data: updatedVendor, error } = await supabase
         .from('vendors')
         .update({
@@ -168,70 +226,60 @@ export const apiUpdateVendor = async (id: string, data: Partial<Omit<Vendor, "id
 };
 
 export const apiDeleteVendor = async (id: string): Promise<void> => {
-// ... existing apiDeleteVendor
   const { error } = await supabase.from('vendors').delete().eq('id', id);
   if (error) throw new Error(error.message);
 };
 
 // --- API de Account Managers (Contactos, no usuarios del sistema) ---
 export const apiGetAccountManagers = async (): Promise<AccountManager[]> => {
-// ... existing apiGetAccountManagers
   const { data, error } = await supabase.from('account_managers').select('*');
   if (error) throw new Error(error.message);
   return data;
 };
 
 export const apiAddAccountManager = async (data: Omit<AccountManager, "id" | "created_at">): Promise<AccountManager> => {
-// ... existing apiAddAccountManager
   const { data: newManager, error } = await supabase.from('account_managers').insert(data).select().single();
   if (error) throw new Error(error.message);
   return newManager as AccountManager;
 };
 
 export const apiUpdateAccountManager = async (id: string, data: Partial<Omit<AccountManager, "id" | "created_at">>): Promise<AccountManager> => {
-// ... existing apiUpdateAccountManager
   const { data: updatedManager, error } = await supabase.from('account_managers').update(data).eq('id', id).select().single();
   if (error) throw new Error(error.message);
   return updatedManager as AccountManager;
 };
 
 export const apiDeleteAccountManager = async (id: string): Promise<void> => {
-// ... existing apiDeleteAccountManager
   const { error } = await supabase.from('account_managers').delete().eq('id', id);
   if (error) throw new Error(error.message);
 };
 
 // --- API de Proyectos ---
 export const apiGetProjects = async (): Promise<Project[]> => {
-// ... existing apiGetProjects
   const { data, error } = await supabase.from('projects').select('*');
   if (error) throw new Error(error.message);
   return data;
 };
 
 export const apiAddProject = async (data: Omit<Project, "id" | "created_at">): Promise<Project> => {
-// ... existing apiAddProject
   const { data: newProject, error } = await supabase.from('projects').insert(data).select().single();
   if (error) throw new Error(error.message);
   return newProject as Project;
 };
 
 export const apiUpdateProject = async (id: string, data: Partial<Omit<Project, "id" | "created_at">>): Promise<Project> => {
-// ... existing apiUpdateProject
   const { data: updatedProject, error } = await supabase.from('projects').update(data).eq('id', id).select().single();
   if (error) throw new Error(error.message);
   return updatedProject as Project;
 };
 
 export const apiDeleteProject = async (id: string): Promise<void> => {
-// ... existing apiDeleteProject
   const { error } = await supabase.from('projects').delete().eq('id', id);
   if (error) throw new Error(error.message);
 };
 
 // --- API de Solicitudes (MIGRADO A SUPABASE REAL) ---
 export const apiGetRequests = async (): Promise<SupabaseRequest[]> => {
-// ... existing apiGetRequests
   // Selecciona la solicitud y une los ítems relacionados
   const { data: requestsData, error: requestsError } = await supabase
     .from('requests')
@@ -532,7 +580,6 @@ export const apiUpdateRequestStatus = async (
 
 // NUEVA FUNCIÓN: Actualización completa de los detalles de la solicitud (solo para estado Pending)
 interface UpdateFullRequestData {
-// ... existing UpdateFullRequestData
   vendorId: string;
   shippingAddressId: string;
   billingAddressId: string;
@@ -542,7 +589,6 @@ interface UpdateFullRequestData {
 }
 
 export const apiUpdateFullRequest = async (id: string, data: UpdateFullRequestData): Promise<SupabaseRequest> => {
-// ... existing apiUpdateFullRequest
   const updateData: Partial<SupabaseRequest> = {
     vendor_id: data.vendorId,
     shipping_address_id: data.shippingAddressId,
@@ -570,13 +616,11 @@ export const apiUpdateFullRequest = async (id: string, data: UpdateFullRequestDa
 export const apiUpdateRequestMetadata = async (
   id: string,
   data: {
-// ... existing apiUpdateRequestMetadata
     accountManagerId?: string | null;
     notes?: string | null;
     projectCodes?: string[] | null;
   }
 ): Promise<SupabaseRequest> => {
-// ... existing apiUpdateRequestMetadata
   const updateData: Partial<SupabaseRequest> = {};
   if (data.accountManagerId !== undefined) updateData.account_manager_id = data.accountManagerId;
   if (data.notes !== undefined) updateData.notes = data.notes;
@@ -598,13 +642,11 @@ export const apiUpdateRequestMetadata = async (
 
 // ACTUALIZADO: apiUpdateRequestFile para usar la función Edge
 export const apiUpdateRequestFile = async (
-// ... existing apiUpdateRequestFile
   id: string,
   fileType: "quote" | "po" | "slip",
   file: File | null, // Aceptar File | null
   poNumber: string | null = null
 ): Promise<{ filePath: string | null; poNumber: string | null }> => {
-// ... existing apiUpdateRequestFile
   // Asegurarse de que la sesión esté fresca antes de invocar la función Edge
   const { data: { session }, error: refreshError } = await supabase.auth.refreshSession();
   if (refreshError || !session) {
@@ -686,14 +728,12 @@ export const apiUpdateRequestFile = async (
 };
 
 export const apiDeleteRequest = async (id: string): Promise<void> => {
-// ... existing apiDeleteRequest
   const { error } = await supabase.from('requests').delete().eq('id', id);
   if (error) throw new Error(error.message);
 };
 
 // NUEVA FUNCIÓN: Revertir la recepción de una solicitud
 export const apiRevertRequestReception = async (requestId: string): Promise<void> => {
-// ... existing apiRevertRequestReception
   const { error } = await supabase.rpc('revert_request_reception', { request_id_in: requestId });
   if (error) {
     console.error("Error invoking revert_request_reception RPC:", error);
@@ -704,14 +744,12 @@ export const apiRevertRequestReception = async (requestId: string): Promise<void
 
 // --- API de Inventario (usando mock data por ahora) ---
 export const apiGetInventory = async (): Promise<InventoryItem[]> => {
-// ... existing apiGetInventory
   const { data, error } = await supabase.from('inventory').select('*');
   if (error) throw new Error(error.message);
   return data;
 };
 
 export const apiAddInventoryItem = async (data: InventoryItemFormData): Promise<InventoryItem> => {
-// ... existing apiAddInventoryItem
   const { data: newItem, error } = await supabase.rpc('add_or_update_inventory_item', {
     product_name_in: data.product_name,
     catalog_number_in: data.catalog_number,
@@ -725,14 +763,12 @@ export const apiAddInventoryItem = async (data: InventoryItemFormData): Promise<
 };
 
 export const apiUpdateInventoryItem = async (id: string, data: Partial<InventoryItemFormData>): Promise<InventoryItem> => {
-// ... existing apiUpdateInventoryItem
   const { data: updatedItem, error } = await supabase.from('inventory').update(data).eq('id', id).select().single();
   if (error) throw new Error(error.message);
   return updatedItem as InventoryItem;
 };
 
 export const apiDeleteInventoryItem = async (id: string): Promise<void> => {
-// ... existing apiDeleteInventoryItem
   const { error } = await supabase.from('inventory').delete().eq('id', id);
   if (error) throw new Error(error.message);
 };
@@ -768,7 +804,6 @@ export const apiDeleteExpenditure = async (id: string): Promise<void> => {
 
 // --- API de Envío de Correo Electrónico (REAL) ---
 interface EmailData {
-// ... existing EmailData
   to: string;
   subject: string;
   body: string;
@@ -778,7 +813,6 @@ interface EmailData {
 }
 
 export const apiSendEmail = async (email: EmailData): Promise<void> => {
-// ... existing apiSendEmail
   const { data, error } = await supabase.functions.invoke('send-email', {
     body: JSON.stringify(email),
     method: 'POST',
@@ -800,28 +834,24 @@ export const apiSendEmail = async (email: EmailData): Promise<void> => {
 
 // --- API de Plantillas de Correo Electrónico ---
 export const apiGetEmailTemplates = async (): Promise<EmailTemplate[]> => {
-// ... existing apiGetEmailTemplates
   const { data, error } = await supabase.from('email_templates').select('*');
   if (error) throw new Error(error.message);
   return data;
 };
 
 export const apiAddEmailTemplate = async (data: Omit<EmailTemplate, "id" | "created_at">): Promise<EmailTemplate> => {
-// ... existing apiAddEmailTemplate
   const { data: newTemplate, error } = await supabase.from('email_templates').insert(data).select().single();
   if (error) throw new Error(error.message);
   return newTemplate as EmailTemplate;
 };
 
 export const apiUpdateEmailTemplate = async (id: string, data: Partial<Omit<EmailTemplate, "id" | "created_at">>): Promise<EmailTemplate> => {
-// ... existing apiUpdateEmailTemplate
   const { data: updatedTemplate, error } = await supabase.from('email_templates').update(data).eq('id', id).select().single();
   if (error) throw new Error(error.message);
   return updatedTemplate as EmailTemplate;
 };
 
 export const apiDeleteEmailTemplate = async (id: string): Promise<void> => {
-// ... existing apiDeleteEmailTemplate
   const { error } = await supabase.from('email_templates').delete().eq('id', id);
   if (error) throw new Error(error.message);
 };
