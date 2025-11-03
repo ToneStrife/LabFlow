@@ -39,7 +39,7 @@ serve(async (req) => {
     }
 
     const genAI = new GoogleGenerativeAI(geminiApiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" }); // CAMBIADO: Usamos gemini-pro
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" }); // CAMBIADO: Usamos gemini-2.5-flash-lite
 
     // 3. Parsear el cuerpo de la solicitud del frontend
     const { brand, catalogNumber, productName } = await req.json();
