@@ -50,9 +50,9 @@ Información de búsqueda:
 - NOMBRE DEL PRODUCTO (si se conoce): ${productName || 'No especificado'}
 
 **Instrucciones CRÍTICAS:**
-1.  **Prioridad de Búsqueda:** Utiliza la MARCA y el NÚMERO DE CATÁLOGO como identificadores principales para una búsqueda precisa. El NOMBRE DEL PRODUCTO es secundario y solo para refinar.
-2.  **Precisión:** Solo devuelve información de la que estés **altamente seguro y que sea directamente verificable**.
-3.  **No Inventar:** **Nunca inventes datos**, especialmente URLs, números de catálogo o precios. Si no encuentras un dato, indícalo como 'No disponible' o 'null'.
+1.  **Prioridad de Búsqueda:** Utiliza MARCA y NÚMERO DE CATÁLOGO como identificadores clave para una búsqueda precisa. El NOMBRE DEL PRODUCTO es para complementar y refinar la búsqueda.
+2.  **Fuentes Confiables:** Realiza una búsqueda exhaustiva en tu base de conocimientos o en la web. Prioriza la información de sitios web de fabricantes o distribuidores oficiales.
+3.  **No Inventar:** Si un dato específico (precio, URL, formato) no se encuentra o no es verificable, establece ese campo como 'null'. **Nunca inventes información.**
 
 Extrae la siguiente información clave:
 
@@ -66,7 +66,7 @@ Extrae la siguiente información clave:
     -   Aplicaciones principales
     -   Cualquier información crítica para el usuario. Si no hay notas, establece este campo como 'null'.
 
-Si no puedes encontrar información fiable para el producto solicitado (especialmente si el número de catálogo y la marca no coinciden con una entrada real), devuelve un objeto JSON donde \`product_name\` sea 'No disponible' y el resto de los campos sean \`null\`, con \`technical_notes\` conteniendo una explicación detallada de por qué no se encontró la información o qué se recomienda hacer.
+Si, después de una búsqueda exhaustiva, no puedes identificar un producto que coincida razonablemente con los criterios proporcionados, devuelve un objeto JSON donde `product_name` sea 'No disponible' y el resto de los campos sean 'null', con `technical_notes` explicando la falta de resultados.
 
 Devuelve la respuesta como un objeto JSON que se ajuste al siguiente esquema:
 {
