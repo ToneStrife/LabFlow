@@ -101,7 +101,7 @@ Si no encuentras información fiable sobre este producto, devuelve un objeto con
     // 6. Invocar la API de Groq
     const chatCompletion = await groq.chat.completions.create({
       messages: [{ role: "user", content: prompt }],
-      model: "llama3-8b-8192", // Puedes elegir otro modelo de Groq si lo prefieres
+      model: "llama-3.1-8b-instant", // ¡MODELO ACTUALIZADO!
       response_format: { type: "json_object" }, // Solicitar respuesta en formato JSON
     });
 
