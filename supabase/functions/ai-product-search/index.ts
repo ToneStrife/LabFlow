@@ -42,32 +42,35 @@ serve(async (req) => {
     const { brand, catalogNumber, productName } = await req.json();
 
     // 4. Construir el prompt para la IA
-    const prompt = `Busca información sobre el siguiente producto de laboratorio/científico:
+    const prompt = `Actúa como un experto en compras de laboratorio con acceso a bases de datos de productos científicos y herramientas de búsqueda en línea. Tu objetivo es encontrar la información más precisa y completa posible para el siguiente producto.
 
-MARCA: ${brand || 'No especificada'}
-NÚMERO DE CATÁLOGO: ${catalogNumber || 'No especificado'}
-NOMBRE DEL PRODUCTO (si se conoce): ${productName || 'No especificado'}
+Información de búsqueda:
+- MARCA: ${brand || 'No especificada'}
+- NÚMERO DE CATÁLOGO: ${catalogNumber || 'No especificado'}
+- NOMBRE DEL PRODUCTO (si se conoce): ${productName || 'No especificado'}
 
-Tu tarea es buscar este producto específico en internet (sitios web de proveedores científicos, catálogos de laboratorio, etc.) y extraer la siguiente información:
+Prioriza la búsqueda utilizando la MARCA y el NÚMERO DE CATÁLOGO como identificadores principales. Si el NOMBRE DEL PRODUCTO es muy específico, úsalo para refinar la búsqueda.
 
-1. **Nombre completo del producto**: El nombre oficial y completo del producto tal como aparece en el catálogo del fabricante.
-2. **Tamaño/formato del paquete**: Información crucial sobre el contenido del paquete (ej: "100 tubos/paquete", "500 ml", "50 reacciones", "1 kit", "25 g"). Sé específico sobre las unidades y cantidad.
-3. **Precio estimado**: Precio aproximado del producto en EUROS (€). Si encuentras el precio en otra moneda, conviértelo a euros usando tasas de cambio actuales.
-4. **URL del producto**: Un enlace directo y fiable a la página del producto (preferiblemente del fabricante o de un distribuidor oficial).
-5. **Notas técnicas**: Información breve pero relevante como:
-   - Especificaciones técnicas principales
-   - Condiciones de almacenamiento recomendadas
-   - Aplicaciones principales
-   - Cualquier información crítica para el usuario
+Extrae la siguiente información clave:
+
+1.  **Nombre completo del producto**: El nombre oficial y completo del producto tal como aparece en el catálogo del fabricante o distribuidor.
+2.  **Tamaño/formato del paquete**: Información crucial sobre el contenido del paquete (ej: "100 tubos/paquete", "500 ml", "50 reacciones", "1 kit", "25 g"). Sé específico sobre las unidades y cantidad.
+3.  **Precio estimado**: Precio aproximado del producto en EUROS (€). Si encuentras el precio en otra moneda, conviértelo a euros usando tasas de cambio actuales. Si no encuentras un precio exacto, proporciona una estimación razonable o un rango si es posible, o indica 'No disponible' si no hay ninguna pista.
+4.  **URL del producto**: Un enlace directo y fiable a la página del producto (preferiblemente del fabricante o de un distribuidor oficial).
+5.  **Notas técnicas**: Información breve pero relevante como:
+    -   Especificaciones técnicas principales
+    -   Condiciones de almacenamiento recomendadas
+    -   Aplicaciones principales
+    -   Cualquier información crítica para el usuario
 
 IMPORTANTE:
-- Sé preciso y exacto. Solo devuelve información de la que estés seguro.
-- Si no puedes encontrar algún dato específico, indica claramente "No disponible" o null.
-- Prioriza fuentes oficiales (fabricante, distribuidores autorizados).
-- El precio debe ser en EUROS.
-- El tamaño del paquete es CRÍTICO - no lo omitas.
+-   Sé preciso y exacto. Solo devuelve información de la que estés razonablemente seguro.
+-   Si no puedes encontrar algún dato específico, indica claramente "No disponible" o null.
+-   Prioriza fuentes oficiales (fabricante, distribuidores autorizados).
+-   El precio debe ser en EUROS.
+-   El tamaño del paquete es CRÍTICO - no lo omitas si lo encuentras.
 
-Si no encuentras información fiable sobre este producto, devuelve un objeto con los campos en null y una nota explicativa.
+Si no encuentras información fiable sobre este producto, devuelve un objeto JSON con los campos en null y una nota explicativa detallada sobre por qué no se encontró la información o qué se recomienda hacer.
 
 Devuelve la respuesta como un objeto JSON que se ajuste al siguiente esquema:
 {
