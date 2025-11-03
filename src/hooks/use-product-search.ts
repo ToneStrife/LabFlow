@@ -76,7 +76,8 @@ const fetchProductSearch = async (
     // Fetch inventory items with similarity score
     const { data: invFuzzyData, error: invFuzzyError } = await supabase
       .from('inventory')
-      .select(`*, score:similarity(product_name, '${productName}')`) // Seleccionar score explícitamente
+      // CORRECCIÓN: Usar 'similarity(...) as score' para el alias
+      .select(`*, similarity(product_name, '${productName}') as score`) 
       .gte('similarity(product_name, \'' + productName + '\')', similarityThreshold)
       .order('score', { ascending: false })
       .limit(5);
@@ -104,7 +105,8 @@ const fetchProductSearch = async (
     if (results.length < 5) {
         const { data: reqFuzzyData, error: reqFuzzyError } = await supabase
             .from('request_items')
-            .select(`product_name, catalog_number, brand, unit_price, format, link, score:similarity(product_name, '${productName}')`) // Seleccionar score explícitamente
+            // CORRECCIÓN: Usar 'similarity(...) as score' para el alias
+            .select(`product_name, catalog_number, brand, unit_price, format, link, similarity(product_name, '${productName}') as score`) 
             .gte('similarity(product_name, \'' + productName + '\')', similarityThreshold)
             .order('score', { ascending: false })
             .limit(5);
