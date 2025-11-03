@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import { createClient }
+from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 
 // Importar el SDK de Google Gemini
 import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai@0.15.0";
@@ -39,7 +40,7 @@ serve(async (req) => {
     }
 
     const genAI = new GoogleGenerativeAI(geminiApiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" }); // CAMBIADO: Usamos gemini-2.5-flash-lite
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
 
     // 3. Parsear el cuerpo de la solicitud del frontend
     const { brand, catalogNumber, productName } = await req.json();
@@ -112,30 +113,40 @@ Si no encuentras información fiable sobre este producto, devuelve un objeto con
     });
 
     const response = result.response;
-    const functionCall = response.functionCall();
+    const functionCalls = response.functionCalls(); // CAMBIADO: Usamos functionCalls()
 
-    if (functionCall && functionCall.name === "extract_product_info") {
-      const productInfo = functionCall.args;
-      console.log('Gemini Product Info:', productInfo);
+    if (functionCalls && functionCalls.length > 0) {
+      const functionCall = functionCalls[0]; // Tomamos la primera llamada a la función
 
-      // 7. Formatear la respuesta al tipo ProductSearchResult
-      const formattedResult = {
-        product_name: productInfo.product_name || productName || 'No disponible',
-        catalog_number: catalogNumber || 'No disponible',
-        brand: brand || null,
-        unit_price: productInfo.estimated_price || null,
-        format: productInfo.pack_size || null,
-        link: productInfo.product_url || null,
-        source: 'AI',
-        notes: productInfo.technical_notes || null, // Añadir notas técnicas
-      };
+      if (functionCall && functionCall.name === "extract_product_info") {
+        const productInfo = functionCall.args;
+        console.log('Gemini Product Info:', productInfo);
 
-      return new Response(JSON.stringify(formattedResult), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      });
+        // 7. Formatear la respuesta al tipo ProductSearchResult
+        const formattedResult = {
+          product_name: productInfo.product_name || productName || 'No disponible',
+          catalog_number: catalogNumber || 'No disponible',
+          brand: brand || null,
+          unit_price: productInfo.estimated_price || null,
+          format: productInfo.pack_size || null,
+          link: productInfo.product_url || null,
+          source: 'AI',
+          notes: productInfo.technical_notes || null, // Añadir notas técnicas
+        };
+
+        return new Response(JSON.stringify(formattedResult), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        });
+      } else {
+        console.warn('Gemini did not return the expected function call.');
+        return new Response(JSON.stringify({ error: 'No se pudo extraer información del producto de la IA.' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500,
+        });
+      }
     } else {
-      console.warn('Gemini did not return a function call or the expected function call.');
+      console.warn('Gemini did not return any function calls.');
       return new Response(JSON.stringify({ error: 'No se pudo extraer información del producto de la IA.' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
