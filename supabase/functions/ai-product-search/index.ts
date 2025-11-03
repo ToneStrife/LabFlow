@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
-import Groq from 'https://esm.sh/groq-sdk@0.4.0'; // Importar el SDK de Groq
+import { GoogleGenAI } from 'https://esm.sh/@google/genai@0.16.0'; // Usar el SDK de Gemini
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -14,7 +14,7 @@ serve(async (req) => {
   }
 
   try {
-    // 1. Verificar la sesión del usuario (opcional, pero buena práctica)
+    // 1. Verificar la sesión del usuario
     const authClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -30,19 +30,20 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Unauthorized: Invalid session' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // 2. Obtener la clave de API de Groq de los secretos de Supabase
-    const groqApiKey = Deno.env.get('GROQ_API_KEY');
-    if (!groqApiKey) {
-      return new Response(JSON.stringify({ error: 'Server Error: GROQ_API_KEY is missing in Supabase secrets.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    // 2. Obtener la clave de API de Gemini de los secretos de Supabase
+    const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
+    if (!geminiApiKey) {
+      return new Response(JSON.stringify({ error: 'Server Error: GEMINI_API_KEY is missing in Supabase secrets.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    const groq = new Groq({ apiKey: groqApiKey });
+    // Inicializar el cliente de Gemini
+    const ai = new GoogleGenAI({ apiKey: geminiApiKey });
 
     // 3. Parsear el cuerpo de la solicitud del frontend
     const { brand, catalogNumber, productName } = await req.json();
 
-    // 4. Construir el prompt para la IA
-    const prompt = `Actúa como un experto en búsqueda de productos de laboratorio. Tu objetivo es encontrar información **exacta y verificable** para el siguiente producto, utilizando tu vasto conocimiento entrenado.
+    // 4. Construir el prompt y la configuración para la IA
+    const prompt = `Actúa como un experto en búsqueda de productos de laboratorio. Tu objetivo es encontrar información **exacta y verificable** para el siguiente producto. Utiliza la herramienta de búsqueda web si es necesario para obtener información actualizada sobre precios y enlaces.
 
 Información de búsqueda:
 - MARCA: ${brand || 'No especificada'}
@@ -50,25 +51,22 @@ Información de búsqueda:
 - NOMBRE DEL PRODUCTO (si se conoce): ${productName || 'No especificado'}
 
 **Instrucciones CRÍTICAS:**
-1.  **Identificación Principal:** Utiliza el **NÚMERO DE CATÁLOGO** y la **MARCA** como los identificadores más importantes para encontrar el producto. El NOMBRE DEL PRODUCTO es un criterio secundario para confirmar o refinar la búsqueda.
-2.  **Fuentes Confiables:** Accede a tu conocimiento entrenado que proviene de sitios web de fabricantes o distribuidores oficiales. Prioriza la información consistente y de alta confianza.
-3.  **No Inventar:** Si un dato específico (precio, URL, formato) no se encuentra o no es verificable con alta confianza en tu conocimiento, establece ese campo como 'null'. **Nunca inventes información.**
+1.  **Identificación Principal:** Utiliza el **NÚMERO DE CATÁLOGO** y la **MARCA** como los identificadores más importantes.
+2.  **Fuentes Confiables:** Prioriza la información de sitios web de fabricantes o distribuidores oficiales.
+3.  **No Inventar:** Si un dato específico (precio, URL, formato) no se encuentra o no es verificable con alta confianza, establece ese campo como 'null'.
+4.  **Respuesta JSON:** Devuelve la respuesta **SOLO** como un objeto JSON que se ajuste al esquema proporcionado.
 
 Extrae la siguiente información clave:
 
-1.  **Nombre completo del producto**: El nombre oficial y completo del producto tal como aparece en el catálogo del fabricante. Si no puedes identificar el producto con alta confianza basándote en los criterios, devuelve 'No disponible'.
-2.  **Tamaño/formato del paquete**: Información crucial sobre el contenido del paquete (ej: "100 tubos/paquete", "500 ml", "50 reacciones", "1 kit", "25 g"). Sé específico sobre las unidades y cantidad. Si no lo encuentras, devuelve 'null'.
-3.  **Precio estimado**: El precio exacto en EUROS (€) si lo encuentras y es directamente verificable. Si no hay un precio exacto y verificable, establece este campo como 'null'.
-4.  **URL del producto**: Un enlace **directo y verificable** a la página del producto (preferiblemente del fabricante o de un distribuidor oficial). Si no encuentras una URL fiable, establece este campo como 'null'.
-5.  **Notas técnicas**: Información breve pero relevante como:
-    -   Especificaciones técnicas principales
-    -   Condiciones de almacenamiento recomendadas
-    -   Aplicaciones principales
-    -   Cualquier información crítica para el usuario. Si no hay notas, establece este campo como 'null'.
+1.  **Nombre completo del producto**: El nombre oficial y completo del producto. Si no puedes identificar el producto con alta confianza, devuelve 'No disponible'.
+2.  **Tamaño/formato del paquete (pack_size)**: Información sobre el contenido del paquete (ej: "100 tubos/paquete", "500 ml"). Si no lo encuentras, devuelve 'null'.
+3.  **Precio estimado (estimated_price)**: El precio exacto en EUROS (€) si lo encuentras y es directamente verificable. Si no hay un precio exacto y verificable, establece este campo como 'null'.
+4.  **URL del producto (product_url)**: Un enlace **directo y verificable** a la página del producto. Si no encuentras una URL fiable, establece este campo como 'null'.
+5.  **Notas técnicas (technical_notes)**: Información breve pero relevante (ej: condiciones de almacenamiento, aplicaciones). Si no hay notas, establece este campo como 'null'.
 
-Si, después de una búsqueda exhaustiva en tu conocimiento, no puedes identificar un producto que coincida razonablemente con los criterios proporcionados, devuelve un objeto JSON donde \`product_name\` sea 'No disponible' y el resto de los campos sean \`null\`, con \`technical_notes\` explicando la falta de resultados.
+Si no puedes identificar el producto, devuelve un objeto JSON donde \`product_name\` sea 'No disponible' y el resto de los campos sean \`null\`.
 
-Devuelve la respuesta como un objeto JSON que se ajuste al siguiente esquema:
+ESQUEMA DE RESPUESTA JSON:
 {
   "product_name": "string | 'No disponible'",
   "pack_size": "string | null",
@@ -78,23 +76,35 @@ Devuelve la respuesta como un objeto JSON que se ajuste al siguiente esquema:
 }
 `;
 
-    // 5. Definir el esquema JSON para la respuesta (ya está en el prompt)
-    // const jsonSchema = { ... }; // No es necesario aquí, ya está en el prompt
-
-    // 6. Invocar la API de Groq
-    const chatCompletion = await groq.chat.completions.create({
-      messages: [{ role: "user", content: prompt }],
-      model: "llama-3.3-70b-versatile",
-      response_format: { type: "json_object" }, // Solicitar respuesta en formato JSON
+    // 5. Invocar la API de Gemini con la herramienta de búsqueda web activada
+    const chatCompletion = await ai.models.generateContent({
+      model: "gemini-2.5-flash-lite",
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: "object",
+          properties: {
+            product_name: { type: "string", description: "Nombre completo del producto o 'No disponible'." },
+            pack_size: { type: "string", description: "Tamaño o formato del paquete, o null." },
+            estimated_price: { type: "number", description: "Precio estimado en EUROS (€), o null." },
+            product_url: { type: "string", description: "URL directa del producto, o null." },
+            technical_notes: { type: "string", description: "Notas técnicas relevantes, o null." },
+          },
+          required: ["product_name", "pack_size", "estimated_price", "product_url", "technical_notes"],
+        },
+        // CRÍTICO: Activar la herramienta de búsqueda de Google
+        tools: [{ googleSearch: {} }],
+      },
     });
 
-    const groqResponseContent = chatCompletion.choices[0]?.message?.content;
+    const geminiResponseContent = chatCompletion.text;
 
-    if (groqResponseContent) {
-      const productInfo = JSON.parse(groqResponseContent);
-      console.log('Groq Product Info:', productInfo);
+    if (geminiResponseContent) {
+      const productInfo = JSON.parse(geminiResponseContent);
+      console.log('Gemini Product Info:', productInfo);
 
-      // 7. Formatear la respuesta al tipo ProductSearchResult
+      // 6. Formatear la respuesta al tipo ProductSearchResult
       const formattedResult = {
         product_name: productInfo.product_name || productName || 'No disponible',
         catalog_number: catalogNumber || 'No disponible',
@@ -111,7 +121,7 @@ Devuelve la respuesta como un objeto JSON que se ajuste al siguiente esquema:
         status: 200,
       });
     } else {
-      console.warn('Groq did not return any content.');
+      console.warn('Gemini did not return any content.');
       return new Response(JSON.stringify({ error: 'No se pudo extraer información del producto de la IA.' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
