@@ -57,18 +57,19 @@ serve(async (req) => {
     catalogNumber = body.catalogNumber;
     productName = body.productName;
 
-    // 4) Prompt
+    // 4) Prompt más estricto
     const prompt = `
-Actúa como experto en catálogos de laboratorio. Devuelve SOLO JSON según el esquema.
-Identifica por MARCA y NÚMERO DE CATÁLOGO. No inventes datos.
-Si no estás seguro de un campo, pon null.
+Actúa como experto en catálogos de laboratorio. Tu objetivo es encontrar información precisa sobre un producto.
+DEBES BASARTE EXCLUSIVAMENTE en el NÚMERO DE CATÁLOGO y la MARCA proporcionados.
+Si no puedes encontrar información verificable (precio, URL) para la combinación exacta de catálogo y marca, DEBES devolver 'null' para esos campos.
+NO INVENTES NINGÚN DATO.
 
 Entrada:
 - MARCA: ${brand || "No especificada"}
 - NÚMERO DE CATÁLOGO: ${catalogNumber || "No especificado"}
-- NOMBRE: ${productName || "No especificado"}
+- NOMBRE (solo referencia): ${productName || "No especificado"}
 
-Campos a devolver:
+Campos a devolver (SOLO JSON):
 - product_name (string | "No disponible")
 - pack_size (string | null)
 - estimated_price (number | null)   // en euros si aparece claramente
@@ -79,7 +80,6 @@ Campos a devolver:
     // 5) Modelo + esquema de salida (structured output)
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({
-      // Usando gemini-2.5-flash como solicitaste
       model: "gemini-2.5-flash", 
       generationConfig: {
         responseMimeType: "application/json",
@@ -111,8 +111,25 @@ Campos a devolver:
       console.error("AI returned invalid JSON:", jsonText);
       throw new Error("La IA no devolvió JSON válido.");
     }
+    
+    // 8) Validación de Confianza y Normalización
+    
+    // Criterio de fallo: Si no se encontró precio O URL, o si el nombre devuelto es demasiado genérico
+    const isUnreliable = !data.estimated_price && !data.product_url;
+    
+    if (isUnreliable) {
+        // Forzar el fallback a DB si la IA no pudo encontrar datos clave
+        return new Response(JSON.stringify(createFallbackResponse(
+            brand, 
+            catalogNumber, 
+            productName, 
+            "La IA no pudo encontrar un precio o URL verificable para este producto."
+        )), {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+    }
 
-    // 8) Normalización a tu formato
     const out = {
       product_name: data.product_name || productName || "No disponible",
       catalog_number: catalogNumber || "No disponible",
