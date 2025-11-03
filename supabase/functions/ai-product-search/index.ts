@@ -19,7 +19,7 @@ const createFallbackResponse = (brand: string | null, catalogNumber: string | nu
         unit_price: null,
         format: null,
         link: null,
-        source: 'DB', // Indica que la IA falló o no fue concluyente
+        source: 'DB', // Indica que la IA falló y se debe usar el fallback de DB
         notes: `AI Search Failed: ${errorMessage}`,
     };
 };
@@ -59,12 +59,13 @@ serve(async (req) => {
 
     // 4) Prompt más estricto
     const prompt = `
-Eres un experto en catálogos de laboratorio. Tu tarea es encontrar información de producto en internet.
+Eres un experto en catálogos de laboratorio. Tu tarea es encontrar información precisa sobre un producto.
 Tu respuesta DEBE ser un objeto JSON que contenga los detalles del producto.
 REGLAS CRÍTICAS:
 1. Solo busca información para el NÚMERO DE CATÁLOGO y la MARCA proporcionados.
-2. Si no encuentras un PRECIO ESTIMADO o una URL de producto, DEBES devolver 'null' para esos campos.
-3. NO INVENTES NINGÚN DATO. Si no estás seguro, devuelve 'null' para los campos de enriquecimiento.
+2. Si no encuentras un PRECIO ESTIMADO, DEBES devolver 'null' para ese campo.
+3. Si no encuentras una URL de producto, DEBES devolver 'null' para ese campo.
+4. NO INVENTES NINGÚN DATO. Si no estás seguro, devuelve 'null' para los campos de enriquecimiento.
 
 Entrada:
 - MARCA: ${brand || "No especificada"}
@@ -116,8 +117,9 @@ Campos a devolver (SOLO JSON):
     
     // 8) Validación de Confianza y Normalización
     
-    // Criterio de fallo: Si no se encontró precio O URL, consideramos que la búsqueda falló.
-    const isUnreliable = !data.estimated_price && !data.product_url;
+    // Criterio de fallo RELAJADO: Si no se encontró el nombre del producto O la URL, consideramos que falló.
+    // El precio ya no es un requisito estricto para el éxito.
+    const isUnreliable = !data.product_name || !data.product_url;
     
     if (isUnreliable) {
         // Forzar el fallback a DB si la IA no pudo encontrar datos clave
@@ -125,7 +127,7 @@ Campos a devolver (SOLO JSON):
             brand, 
             catalogNumber, 
             productName, 
-            "La IA no pudo encontrar un precio o URL verificable. Intenta buscar en la DB interna."
+            "La IA no pudo encontrar el nombre del producto o una URL verificable."
         )), {
             status: 200,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
