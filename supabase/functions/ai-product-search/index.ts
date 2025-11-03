@@ -1,6 +1,8 @@
+// functions/ai-product-search/index.ts
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai@0.21.0"; // Usar el SDK estable y la clase correcta
+import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai@0.21.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -9,10 +11,12 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders });
+  if (req.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: corsHeaders });
+  }
 
   try {
-    // 1) Autenticación
+    // 1) Verificar sesión (asegúrate de enviar Authorization: Bearer <token> desde el cliente)
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_ANON_KEY") ?? "",
@@ -21,19 +25,21 @@ serve(async (req) => {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized: Invalid session" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" }
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // 2) API key
+    // 2) Clave Gemini
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
     if (!GEMINI_API_KEY) {
       return new Response(JSON.stringify({ error: "Server Error: GEMINI_API_KEY missing" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" }
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // 3) Body
+    // 3) Body del request
     const { brand, catalogNumber, productName } = await req.json();
 
     // 4) Prompt
@@ -55,7 +61,7 @@ Campos a devolver:
 - technical_notes (string | null)
 `;
 
-    // 5) Modelo + esquema
+    // 5) Modelo + esquema de salida (structured output)
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({
       model: "gemini-1.5-flash",
@@ -75,12 +81,26 @@ Campos a devolver:
       },
     });
 
-    // 6) Llamada
-    const result = await model.generateContent([{ role: "user", parts: [{ text: prompt }] }]);
-    const jsonText = result.response.text(); // ya es JSON por el schema
-    const data = JSON.parse(jsonText);
+    // 6) Llamada a la IA (estructura correcta de contents)
+    const result = await model.generateContent({
+      contents: [
+        {
+          role: "user",
+          parts: [{ text: prompt }],
+        },
+      ],
+    });
 
-    // 7) Normaliza a tu formato
+    // 7) Parseo de respuesta JSON
+    const jsonText = result.response.text();
+    let data: any;
+    try {
+      data = JSON.parse(jsonText);
+    } catch {
+      throw new Error("La IA no devolvió JSON válido.");
+    }
+
+    // 8) Normalización a tu formato
     const out = {
       product_name: data.product_name || productName || "No disponible",
       catalog_number: catalogNumber || "No disponible",
@@ -96,10 +116,11 @@ Campos a devolver:
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (err) {
+  } catch (err: any) {
     console.error("Edge error:", err);
-    return new Response(JSON.stringify({ error: (err as Error)?.message || "Unexpected error" }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" }
+    return new Response(JSON.stringify({ error: err?.message || "Unexpected error" }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });
