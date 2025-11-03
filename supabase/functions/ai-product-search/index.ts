@@ -42,7 +42,7 @@ serve(async (req) => {
     const { brand, catalogNumber, productName } = await req.json();
 
     // 4. Construir el prompt para la IA
-    const prompt = `Actúa como un experto en búsqueda de productos de laboratorio. Tu objetivo es encontrar información **exacta y verificable** para el siguiente producto.
+    const prompt = `Actúa como un experto en búsqueda de productos de laboratorio. Tu objetivo es encontrar información **exacta y verificable** para el siguiente producto, utilizando tu vasto conocimiento entrenado.
 
 Información de búsqueda:
 - MARCA: ${brand || 'No especificada'}
@@ -50,13 +50,13 @@ Información de búsqueda:
 - NOMBRE DEL PRODUCTO (si se conoce): ${productName || 'No especificado'}
 
 **Instrucciones CRÍTICAS:**
-1.  **Prioridad de Búsqueda:** Utiliza MARCA y NÚMERO DE CATÁLOGO como identificadores clave para una búsqueda precisa. El NOMBRE DEL PRODUCTO es para complementar y refinar la búsqueda.
-2.  **Fuentes Confiables:** Realiza una búsqueda exhaustiva en tu base de conocimientos o en la web. Prioriza la información de sitios web de fabricantes o distribuidores oficiales.
-3.  **No Inventar:** Si un dato específico (precio, URL, formato) no se encuentra o no es verificable, establece ese campo como 'null'. **Nunca inventes información.**
+1.  **Identificación Principal:** Utiliza el **NÚMERO DE CATÁLOGO** y la **MARCA** como los identificadores más importantes para encontrar el producto. El NOMBRE DEL PRODUCTO es un criterio secundario para confirmar o refinar la búsqueda.
+2.  **Fuentes Confiables:** Accede a tu conocimiento entrenado que proviene de sitios web de fabricantes o distribuidores oficiales. Prioriza la información consistente y de alta confianza.
+3.  **No Inventar:** Si un dato específico (precio, URL, formato) no se encuentra o no es verificable con alta confianza en tu conocimiento, establece ese campo como 'null'. **Nunca inventes información.**
 
 Extrae la siguiente información clave:
 
-1.  **Nombre completo del producto**: El nombre oficial y completo del producto tal como aparece en el catálogo del fabricante o distribuidor. Si no lo encuentras con alta confianza, devuelve 'No disponible'.
+1.  **Nombre completo del producto**: El nombre oficial y completo del producto tal como aparece en el catálogo del fabricante. Si no puedes identificar el producto con alta confianza basándote en los criterios, devuelve 'No disponible'.
 2.  **Tamaño/formato del paquete**: Información crucial sobre el contenido del paquete (ej: "100 tubos/paquete", "500 ml", "50 reacciones", "1 kit", "25 g"). Sé específico sobre las unidades y cantidad. Si no lo encuentras, devuelve 'null'.
 3.  **Precio estimado**: El precio exacto en EUROS (€) si lo encuentras y es directamente verificable. Si no hay un precio exacto y verificable, establece este campo como 'null'.
 4.  **URL del producto**: Un enlace **directo y verificable** a la página del producto (preferiblemente del fabricante o de un distribuidor oficial). Si no encuentras una URL fiable, establece este campo como 'null'.
@@ -66,7 +66,7 @@ Extrae la siguiente información clave:
     -   Aplicaciones principales
     -   Cualquier información crítica para el usuario. Si no hay notas, establece este campo como 'null'.
 
-Si, después de una búsqueda exhaustiva, no puedes identificar un producto que coincida razonablemente con los criterios proporcionados, devuelve un objeto JSON donde \`product_name\` sea 'No disponible' y el resto de los campos sean \`null\`, con \`technical_notes\` explicando la falta de resultados.
+Si, después de una búsqueda exhaustiva en tu conocimiento, no puedes identificar un producto que coincida razonablemente con los criterios proporcionados, devuelve un objeto JSON donde \`product_name\` sea 'No disponible' y el resto de los campos sean \`null\`, con \`technical_notes\` explicando la falta de resultados.
 
 Devuelve la respuesta como un objeto JSON que se ajuste al siguiente esquema:
 {
