@@ -66,7 +66,7 @@ Extrae la siguiente información clave:
     -   Aplicaciones principales
     -   Cualquier información crítica para el usuario. Si no hay notas, establece este campo como 'null'.
 
-Si no puedes encontrar información fiable para el producto solicitado (especialmente si el número de catálogo y la marca no coinciden con una entrada real), devuelve un objeto JSON donde `product_name` sea 'No disponible' y el resto de los campos sean 'null', con `technical_notes` conteniendo una explicación detallada de por qué no se encontró la información o qué se recomienda hacer.
+Si no puedes encontrar información fiable para el producto solicitado (especialmente si el número de catálogo y la marca no coinciden con una entrada real), devuelve un objeto JSON donde \`product_name\` sea 'No disponible' y el resto de los campos sean \`null\`, con \`technical_notes\` conteniendo una explicación detallada de por qué no se encontró la información o qué se recomienda hacer.
 
 Devuelve la respuesta como un objeto JSON que se ajuste al siguiente esquema:
 {
