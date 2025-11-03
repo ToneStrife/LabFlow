@@ -3,7 +3,8 @@ import { createClient }
 from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 
 // Importar el SDK de Google Gemini
-import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai@0.15.0";
+// CAMBIO CRÍTICO: Actualizar la versión del SDK a 0.18.0
+import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai@0.18.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -40,8 +41,8 @@ serve(async (req) => {
     }
 
     const genAI = new GoogleGenerativeAI(geminiApiKey);
-    // CAMBIO CRÍTICO: Usar 'gemini-1.5-flash'
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    // Volvemos a 'gemini-pro' con el SDK actualizado
+    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
     // 3. Parsear el cuerpo de la solicitud del frontend
     const { brand, catalogNumber, productName } = await req.json();
@@ -114,10 +115,10 @@ Si no encuentras información fiable sobre este producto, devuelve un objeto con
     });
 
     const response = result.response;
-    const functionCalls = response.functionCalls(); // CAMBIADO: Usamos functionCalls()
+    const functionCalls = response.functionCalls();
 
     if (functionCalls && functionCalls.length > 0) {
-      const functionCall = functionCalls[0]; // Tomamos la primera llamada a la función
+      const functionCall = functionCalls[0];
 
       if (functionCall && functionCall.name === "extract_product_info") {
         const productInfo = functionCall.args;
@@ -132,7 +133,7 @@ Si no encuentras información fiable sobre este producto, devuelve un objeto con
           format: productInfo.pack_size || null,
           link: productInfo.product_url || null,
           source: 'AI',
-          notes: productInfo.technical_notes || null, // Añadir notas técnicas
+          notes: productInfo.technical_notes || null,
         };
 
         return new Response(JSON.stringify(formattedResult), {
