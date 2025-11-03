@@ -10,7 +10,8 @@ export interface ProductSearchResult {
   unit_price: number | null;
   format: string | null;
   link: string | null;
-  source: 'Inventory' | 'Request Item';
+  source: 'Inventory' | 'Request Item' | 'AI'; // Añadido 'AI'
+  notes?: string | null; // Añadido para las notas técnicas de la IA
 }
 
 // Definir tipos de datos devueltos por la consulta con score
@@ -22,9 +23,9 @@ interface RequestItemFuzzyResult extends SupabaseRequestItem {
     score: number;
 }
 
-
 /**
  * Busca productos en el inventario y en artículos de solicitudes anteriores.
+ * Si no encuentra resultados, intenta una búsqueda asistida por IA.
  * @param catalogNumber Número de catálogo para búsqueda exacta.
  * @param brand Marca para búsqueda exacta.
  * @param productName Nombre del producto para búsqueda de similitud (fuzzy search).
@@ -129,6 +130,35 @@ const fetchProductSearch = async (
     }
   }
 
+  // 3. Si no se encontraron resultados locales, intentar con la IA
+  if (results.length === 0 && (catalogNumber || brand || productName)) {
+    try {
+      const { data, error } = await supabase.functions.invoke('ai-product-search', {
+        method: 'POST',
+        body: JSON.stringify({ brand, catalogNumber, productName }),
+      });
+
+      if (error) {
+        console.error("Error invoking AI product search Edge Function:", error);
+        // No lanzar error, solo no añadir resultados de IA
+      } else if (data && data.product_name && data.product_name !== 'No disponible') {
+        // Asegurarse de que la respuesta de la IA se ajuste a ProductSearchResult
+        results.push({
+          product_name: data.product_name,
+          catalog_number: catalogNumber || 'AI-Generated', // Usar el de la búsqueda o un marcador
+          brand: brand || null,
+          unit_price: data.unit_price || null,
+          format: data.format || null,
+          link: data.link || null,
+          source: 'AI',
+          notes: data.notes || null,
+        });
+      }
+    } catch (e) {
+      console.error("Unexpected error calling AI product search:", e);
+    }
+  }
+
   // Devolver solo los 5 mejores resultados únicos
   return results.slice(0, 5);
 };
@@ -146,7 +176,9 @@ export const useProductSearch = (
   // Determinar si la búsqueda debe estar habilitada
   const isSearchEnabled = 
     (!!catNum && !!brnd) || 
-    (!!prodName && prodName.length > 3); // Habilitar si hay nombre de producto con > 3 caracteres
+    (!!prodName && prodName.length > 3) ||
+    (!!catNum && !brnd && !prodName) || // Permitir búsqueda AI solo con catálogo
+    (!!brnd && !catNum && !prodName); // Permitir búsqueda AI solo con marca
 
   return useQuery<ProductSearchResult[], Error>({
     queryKey: ['productSearch', catNum, brnd, prodName],

@@ -92,6 +92,10 @@ const ItemAutofill: React.FC<ItemAutofillProps> = ({ index, form }) => {
     setValue(`items.${index}.unitPrice`, result.unit_price || undefined, { shouldDirty: true });
     setValue(`items.${index}.format`, result.format || "", { shouldDirty: true });
     setValue(`items.${index}.link`, result.link || "", { shouldDirty: true });
+    // NUEVO: Aplicar notas técnicas si existen
+    if (result.notes) {
+      setValue(`items.${index}.notes`, result.notes, { shouldDirty: true });
+    }
     
     toast.info("Autocompletado aplicado.", {
       description: `Datos cargados desde ${result.source}.`,
@@ -101,9 +105,12 @@ const ItemAutofill: React.FC<ItemAutofillProps> = ({ index, form }) => {
   const hasResults = searchResults && searchResults.length > 0;
   
   // Habilitar si hay catálogo Y marca, O si hay nombre de producto con más de 3 caracteres
+  // O si hay solo catálogo, o solo marca (para la búsqueda AI)
   const isSearchEnabled = 
     (!!catalogNumber && !!brand) || 
-    (!!productName && productName.length > 3);
+    (!!productName && productName.length > 3) ||
+    (!!catalogNumber && !brand && !productName) ||
+    (!!brand && !catalogNumber && !productName);
 
   return (
     <div className="absolute top-4 right-4">
