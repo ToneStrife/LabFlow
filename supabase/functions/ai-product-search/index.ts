@@ -42,43 +42,39 @@ serve(async (req) => {
     const { brand, catalogNumber, productName } = await req.json();
 
     // 4. Construir el prompt para la IA
-    const prompt = `Actúa como un experto en compras de laboratorio con acceso a bases de datos de productos científicos y herramientas de búsqueda en línea. Tu objetivo es encontrar la información más precisa y completa posible para el siguiente producto.
+    const prompt = `Actúa como un experto en búsqueda de productos de laboratorio. Tu objetivo es encontrar información **exacta y verificable** para el siguiente producto.
 
 Información de búsqueda:
 - MARCA: ${brand || 'No especificada'}
 - NÚMERO DE CATÁLOGO: ${catalogNumber || 'No especificado'}
 - NOMBRE DEL PRODUCTO (si se conoce): ${productName || 'No especificado'}
 
-Prioriza la búsqueda utilizando la MARCA y el NÚMERO DE CATÁLOGO como identificadores principales. Si el NOMBRE DEL PRODUCTO es muy específico, úsalo para refinar la búsqueda.
+**Instrucciones CRÍTICAS:**
+1.  **Prioridad de Búsqueda:** Utiliza la MARCA y el NÚMERO DE CATÁLOGO como identificadores principales para una búsqueda precisa. El NOMBRE DEL PRODUCTO es secundario y solo para refinar.
+2.  **Precisión:** Solo devuelve información de la que estés **altamente seguro y que sea directamente verificable**.
+3.  **No Inventar:** **Nunca inventes datos**, especialmente URLs, números de catálogo o precios. Si no encuentras un dato, indícalo como 'No disponible' o `null`.
 
 Extrae la siguiente información clave:
 
-1.  **Nombre completo del producto**: El nombre oficial y completo del producto tal como aparece en el catálogo del fabricante o distribuidor.
-2.  **Tamaño/formato del paquete**: Información crucial sobre el contenido del paquete (ej: "100 tubos/paquete", "500 ml", "50 reacciones", "1 kit", "25 g"). Sé específico sobre las unidades y cantidad.
-3.  **Precio estimado**: Precio aproximado del producto en EUROS (€). Si encuentras el precio en otra moneda, conviértelo a euros usando tasas de cambio actuales. Si no encuentras un precio exacto, proporciona una estimación razonable o un rango si es posible, o indica 'No disponible' si no hay ninguna pista.
-4.  **URL del producto**: Un enlace directo y fiable a la página del producto (preferiblemente del fabricante o de un distribuidor oficial).
+1.  **Nombre completo del producto**: El nombre oficial y completo del producto tal como aparece en el catálogo del fabricante o distribuidor. Si no lo encuentras con alta confianza, devuelve 'No disponible'.
+2.  **Tamaño/formato del paquete**: Información crucial sobre el contenido del paquete (ej: "100 tubos/paquete", "500 ml", "50 reacciones", "1 kit", "25 g"). Sé específico sobre las unidades y cantidad. Si no lo encuentras, devuelve `null`.
+3.  **Precio estimado**: El precio exacto en EUROS (€) si lo encuentras y es directamente verificable. Si no hay un precio exacto y verificable, establece este campo como `null`.
+4.  **URL del producto**: Un enlace **directo y verificable** a la página del producto (preferiblemente del fabricante o de un distribuidor oficial). Si no encuentras una URL fiable, establece este campo como `null`.
 5.  **Notas técnicas**: Información breve pero relevante como:
     -   Especificaciones técnicas principales
     -   Condiciones de almacenamiento recomendadas
     -   Aplicaciones principales
-    -   Cualquier información crítica para el usuario
+    -   Cualquier información crítica para el usuario. Si no hay notas, establece este campo como `null`.
 
-IMPORTANTE:
--   Sé preciso y exacto. Solo devuelve información de la que estés razonablemente seguro.
--   Si no puedes encontrar algún dato específico, indica claramente "No disponible" o null.
--   Prioriza fuentes oficiales (fabricante, distribuidores autorizados).
--   El precio debe ser en EUROS.
--   El tamaño del paquete es CRÍTICO - no lo omitas si lo encuentras.
-
-Si no encuentras información fiable sobre este producto, devuelve un objeto JSON con los campos en null y una nota explicativa detallada sobre por qué no se encontró la información o qué se recomienda hacer.
+Si no puedes encontrar información fiable para el producto solicitado (especialmente si el número de catálogo y la marca no coinciden con una entrada real), devuelve un objeto JSON donde `product_name` sea 'No disponible' y el resto de los campos sean `null`, con `technical_notes` conteniendo una explicación detallada de por qué no se encontró la información o qué se recomienda hacer.
 
 Devuelve la respuesta como un objeto JSON que se ajuste al siguiente esquema:
 {
-  "product_name": "string",
-  "pack_size": "string",
-  "estimated_price": "number",
-  "product_url": "string",
-  "technical_notes": "string"
+  "product_name": "string | 'No disponible'",
+  "pack_size": "string | null",
+  "estimated_price": "number | null",
+  "product_url": "string | null",
+  "technical_notes": "string | null"
 }
 `;
 

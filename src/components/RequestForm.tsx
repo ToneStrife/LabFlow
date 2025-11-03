@@ -42,12 +42,12 @@ const itemSchema = z.object({
   ),
   unitPrice: z.preprocess(
     (val) => (val === "" ? undefined : Number(val)),
-    z.number().min(0, { message: "El precio unitario no puede ser negativo." }).optional()
+    z.number().min(0, { message: "El precio unitario no puede ser negativo." }).optional().nullable() // Added .nullable()
   ),
-  format: z.string().optional(),
-  link: z.string().url({ message: "Debe ser una URL válida." }).optional().or(z.literal("")),
-  notes: z.string().optional(),
-  brand: z.string().optional(),
+  format: z.string().optional().nullable(), // Added .nullable()
+  link: z.string().url({ message: "Debe ser una URL válida." }).optional().or(z.literal("")).nullable(), // Added .nullable()
+  notes: z.string().optional().nullable(), // Added .nullable()
+  brand: z.string().optional().nullable(), // Added .nullable()
 });
 
 const formSchema = z.object({
@@ -86,20 +86,28 @@ const ItemAutofill: React.FC<ItemAutofillProps> = ({ index, form }) => {
   );
 
   const handleAutofill = (result: ProductSearchResult) => {
-    setValue(`items.${index}.productName`, result.product_name, { shouldDirty: true });
-    setValue(`items.${index}.catalogNumber`, result.catalog_number, { shouldDirty: true });
-    setValue(`items.${index}.brand`, result.brand || "", { shouldDirty: true });
-    setValue(`items.${index}.unitPrice`, result.unit_price || undefined, { shouldDirty: true });
-    setValue(`items.${index}.format`, result.format || "", { shouldDirty: true });
-    setValue(`items.${index}.link`, result.link || "", { shouldDirty: true });
-    // NUEVO: Aplicar notas técnicas si existen
-    if (result.notes) {
-      setValue(`items.${index}.notes`, result.notes, { shouldDirty: true });
+    try {
+      // Helper para limpiar valores 'No disponible' a null
+      const getCleanValue = (value: string | null | undefined) => 
+        value === 'No disponible' ? null : value;
+
+      setValue(`items.${index}.productName`, getCleanValue(result.product_name) || "", { shouldDirty: true });
+      setValue(`items.${index}.catalogNumber`, getCleanValue(result.catalog_number) || "", { shouldDirty: true });
+      setValue(`items.${index}.brand`, getCleanValue(result.brand), { shouldDirty: true }); // Pass null directly
+      setValue(`items.${index}.unitPrice`, result.unit_price, { shouldDirty: true }); // Pass null directly
+      setValue(`items.${index}.format`, getCleanValue(result.format), { shouldDirty: true }); // Pass null directly
+      setValue(`items.${index}.link`, getCleanValue(result.link), { shouldDirty: true }); // Pass null directly
+      setValue(`items.${index}.notes`, getCleanValue(result.notes), { shouldDirty: true }); // Pass null directly
+      
+      toast.info("Autocompletado aplicado.", {
+        description: `Datos cargados desde ${result.source}.`,
+      });
+    } catch (error: any) {
+      console.error("Error during autofill:", error);
+      toast.error("Fallo al aplicar el autocompletado.", {
+        description: error.message || "Hubo un problema al rellenar los campos.",
+      });
     }
-    
-    toast.info("Autocompletado aplicado.", {
-      description: `Datos cargados desde ${result.source}.`,
-    });
   };
 
   const hasResults = searchResults && searchResults.length > 0;
@@ -108,7 +116,7 @@ const ItemAutofill: React.FC<ItemAutofillProps> = ({ index, form }) => {
   // O si hay solo catálogo, o solo marca (para la búsqueda AI)
   const isSearchEnabled = 
     (!!catalogNumber && !!brand) || 
-    (!!productName && productName.length > 3) ||
+    (!!productName && productName.length > 3) || // Changed to > 3 for more meaningful search
     (!!catalogNumber && !brand && !productName) ||
     (!!brand && !catalogNumber && !productName);
 
@@ -179,10 +187,10 @@ const RequestForm: React.FC = () => {
         catalogNumber: "", 
         quantity: 1, 
         unitPrice: undefined, 
-        format: "", 
-        link: "", 
-        notes: "", 
-        brand: "",
+        format: undefined, // Changed to undefined
+        link: undefined, // Changed to undefined
+        notes: undefined, // Changed to undefined
+        brand: undefined, // Changed to undefined
       }],
       quoteFile: undefined,
       projectCodes: [],
@@ -283,10 +291,10 @@ const RequestForm: React.FC = () => {
         catalogNumber: "", 
         quantity: 1, 
         unitPrice: undefined, 
-        format: "", 
-        link: "", 
-        notes: "", 
-        brand: "",
+        format: undefined, 
+        link: undefined, 
+        notes: undefined, 
+        brand: undefined,
       }],
       quoteFile: undefined,
       projectCodes: [],
@@ -508,7 +516,7 @@ const RequestForm: React.FC = () => {
                   render={({ field: itemField }) => (
                     <FormItem>
                       <FormLabel>Marca</FormLabel>
-                      <FormControl><Input placeholder="ej. Invitrogen" {...itemField} /></FormControl>
+                      <FormControl><Input placeholder="ej. Invitrogen" {...itemField} value={itemField.value || ""} onChange={(e) => itemField.onChange(e.target.value || undefined)} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -555,7 +563,7 @@ const RequestForm: React.FC = () => {
                     return (
                       <FormItem>
                         <FormLabel>Precio Unitario (Opcional)</FormLabel>
-                        <FormControl><Input type="number" step="0.01" placeholder="ej. 120.50 €" {...itemField} /></FormControl>
+                        <FormControl><Input type="number" step="0.01" placeholder="ej. 120.50 €" {...itemField} value={itemField.value === undefined || itemField.value === null ? "" : itemField.value} onChange={(e) => itemField.onChange(e.target.value === "" ? undefined : Number(e.target.value))} /></FormControl>
                         <FormMessage />
                       </FormItem>
                     );
@@ -567,7 +575,7 @@ const RequestForm: React.FC = () => {
                   render={({ field: itemField }) => (
                     <FormItem>
                       <FormLabel>Formato (Opcional)</FormLabel>
-                      <FormControl><Input placeholder="ej. 500 mL" {...itemField} /></FormControl>
+                      <FormControl><Input placeholder="ej. 500 mL" {...itemField} value={itemField.value || ""} onChange={(e) => itemField.onChange(e.target.value || undefined)} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -578,7 +586,7 @@ const RequestForm: React.FC = () => {
                   render={({ field: itemField }) => (
                     <FormItem>
                       <FormLabel>Enlace del Producto (Opcional)</FormLabel>
-                      <FormControl><Input type="url" placeholder="ej. https://www.vendor.com/product" {...itemField} /></FormControl>
+                      <FormControl><Input type="url" placeholder="ej. https://www.vendor.com/product" {...itemField} value={itemField.value || ""} onChange={(e) => itemField.onChange(e.target.value || undefined)} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -591,7 +599,7 @@ const RequestForm: React.FC = () => {
                   render={({ field: itemField }) => (
                     <FormItem className="sm:col-span-2 lg:col-span-4">
                       <FormLabel>Notas (Opcional)</FormLabel>
-                      <FormControl><Textarea placeholder="Cualquier requisito o detalle específico..." {...itemField} /></FormControl>
+                      <FormControl><Textarea placeholder="Cualquier requisito o detalle específico..." {...itemField} value={itemField.value || ""} onChange={(e) => itemField.onChange(e.target.value || undefined)} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -605,10 +613,10 @@ const RequestForm: React.FC = () => {
           catalogNumber: "", 
           quantity: 1, 
           unitPrice: undefined, 
-          format: "", 
-          link: "", 
-          notes: "", 
-          brand: "",
+          format: undefined, 
+          link: undefined, 
+          notes: undefined, 
+          brand: undefined,
         })} className="w-full">
           <PlusCircle className="mr-2 h-4 w-4" /> Añadir Otro Artículo
         </Button>
