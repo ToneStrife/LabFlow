@@ -79,8 +79,8 @@ Campos a devolver:
     // 5) Modelo + esquema de salida (structured output)
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({
-      // Usar gemini-1.5-flash por su estabilidad y capacidad de estructuración
-      model: "gemini-1.5-flash", 
+      // Usando gemini-2.5-flash como solicitaste
+      model: "gemini-2.5-flash", 
       generationConfig: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -132,7 +132,6 @@ Campos a devolver:
     console.error("Edge error:", err);
     
     // Si hay un error, devolvemos una respuesta 200 con el objeto de fallback
-    // Esto permite que el cliente use el fallback de la base de datos sin romper la aplicación.
     const errorMessage = err?.message || "Unexpected error in Edge Function.";
     const fallback = createFallbackResponse(brand, catalogNumber, productName, errorMessage);
     
