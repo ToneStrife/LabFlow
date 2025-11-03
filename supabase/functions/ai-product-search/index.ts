@@ -3,7 +3,6 @@ import { createClient }
 from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 
 // Importar el SDK de Google Gemini
-// CAMBIO CRÍTICO: Actualizar la versión del SDK a 0.18.0
 import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai@0.18.0";
 
 const corsHeaders = {
@@ -41,8 +40,8 @@ serve(async (req) => {
     }
 
     const genAI = new GoogleGenerativeAI(geminiApiKey);
-    // Volvemos a 'gemini-pro' con el SDK actualizado
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    // CAMBIO CRÍTICO: Usar 'gemini-2.5-flash-lite'
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
 
     // 3. Parsear el cuerpo de la solicitud del frontend
     const { brand, catalogNumber, productName } = await req.json();
