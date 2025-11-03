@@ -10,37 +10,52 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+// Estructura de respuesta de fallback en caso de error
+const createFallbackResponse = (brand: string | null, catalogNumber: string | null, productName: string | null, errorMessage: string) => {
+    return {
+        product_name: productName || "No disponible",
+        catalog_number: catalogNumber || "No disponible",
+        brand: brand || null,
+        unit_price: null,
+        format: null,
+        link: null,
+        source: 'DB', // Indica que la IA falló y se debe usar el fallback de DB
+        notes: `AI Search Failed: ${errorMessage}`,
+    };
+};
+
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
+  if (req.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
 
+  let brand: string | null = null;
+  let catalogNumber: string | null = null;
+  let productName: string | null = null;
+
   try {
-    // 1) Verificar sesión (asegúrate de enviar Authorization: Bearer <token> desde el cliente)
+    // 1) Verificar sesión
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_ANON_KEY") ?? "",
       { global: { headers: { Authorization: req.headers.get("Authorization") ?? "" } } }
     );
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized: Invalid session" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    const { error: authError } = await supabase.auth.getUser();
+    if (authError) {
+      throw new Error("Unauthorized: Invalid session");
     }
 
     // 2) Clave Gemini
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
     if (!GEMINI_API_KEY) {
-      return new Response(JSON.stringify({ error: "Server Error: GEMINI_API_KEY missing" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      throw new Error("Server Error: GEMINI_API_KEY missing");
     }
 
     // 3) Body del request
-    const { brand, catalogNumber, productName } = await req.json();
+    const body = await req.json();
+    brand = body.brand;
+    catalogNumber = body.catalogNumber;
+    productName = body.productName;
 
     // 4) Prompt
     const prompt = `
@@ -64,7 +79,8 @@ Campos a devolver:
     // 5) Modelo + esquema de salida (structured output)
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-flash-lite",
+      // Usar gemini-1.5-flash por su estabilidad y capacidad de estructuración
+      model: "gemini-1.5-flash", 
       generationConfig: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -81,14 +97,9 @@ Campos a devolver:
       },
     });
 
-    // 6) Llamada a la IA (estructura correcta de contents)
+    // 6) Llamada a la IA
     const result = await model.generateContent({
-      contents: [
-        {
-          role: "user",
-          parts: [{ text: prompt }],
-        },
-      ],
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
     });
 
     // 7) Parseo de respuesta JSON
@@ -96,7 +107,8 @@ Campos a devolver:
     let data: any;
     try {
       data = JSON.parse(jsonText);
-    } catch {
+    } catch (e) {
+      console.error("AI returned invalid JSON:", jsonText);
       throw new Error("La IA no devolvió JSON válido.");
     }
 
@@ -118,8 +130,14 @@ Campos a devolver:
     });
   } catch (err: any) {
     console.error("Edge error:", err);
-    return new Response(JSON.stringify({ error: err?.message || "Unexpected error" }), {
-      status: 500,
+    
+    // Si hay un error, devolvemos una respuesta 200 con el objeto de fallback
+    // Esto permite que el cliente use el fallback de la base de datos sin romper la aplicación.
+    const errorMessage = err?.message || "Unexpected error in Edge Function.";
+    const fallback = createFallbackResponse(brand, catalogNumber, productName, errorMessage);
+    
+    return new Response(JSON.stringify(fallback), {
+      status: 200, // Devolver 200 para evitar FunctionsHttpError en el cliente
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
