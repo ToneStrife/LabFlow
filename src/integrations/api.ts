@@ -56,23 +56,44 @@ interface FuzzySearchResult {
 // --- API de Búsqueda de Productos ---
 
 export const apiFetchAIProductInfo = async (data: { brand: string | null; catalogNumber: string | null; productName: string | null }): Promise<AIProductInfo> => {
-  const { data: aiData, error } = await supabase.functions.invoke('ai-product-search', {
-    method: 'POST',
-    body: JSON.stringify(data),
-  });
-
-  if (error) {
-    console.error("Error invoking ai-product-search:", error);
-    let errorMessage = 'Fallo al obtener información del producto de la IA.';
-    if (aiData && typeof aiData === 'object' && 'error' in aiData) {
-        errorMessage = (aiData as any).error;
-    } else if (error.message) {
-        errorMessage = error.message;
-    }
-    throw new Error(errorMessage);
-  }
+  const emptyResult: AIProductInfo = {
+    product_name: "No disponible",
+    catalog_number: data.catalogNumber || "No disponible",
+    brand: data.brand || null,
+    unit_price: null,
+    format: null,
+    link: null,
+    source: 'DB', // Si la IA falla, asumimos que el origen será la DB
+    notes: null,
+  };
   
-  return aiData as AIProductInfo;
+  try {
+    const { data: aiData, error } = await supabase.functions.invoke('ai-product-search', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+
+    if (error) {
+      console.error("Error invoking ai-product-search:", error);
+      let errorMessage = 'Fallo al obtener información del producto de la IA.';
+      if (aiData && typeof aiData === 'object' && 'error' in aiData) {
+          errorMessage = (aiData as any).error;
+      } else if (error.message) {
+          errorMessage = error.message;
+      }
+      // Mostrar un toast de advertencia, pero no lanzar un error fatal
+      console.warn(`AI search failed: ${errorMessage}. Falling back to database.`);
+      return emptyResult;
+    }
+    
+    // Si la IA devuelve un resultado válido, lo usamos
+    return aiData as AIProductInfo;
+    
+  } catch (e) {
+    // Capturar errores de red o de invocación
+    console.error("Critical error during AI function invocation. Falling back to database.", e);
+    return emptyResult;
+  }
 };
 
 export const apiFuzzySearchInternal = async (searchTerm: string): Promise<FuzzySearchResult> => {
