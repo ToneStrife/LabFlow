@@ -1,9 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient }
-from 'https://esm.sh/@supabase/supabase-js@2.45.0';
-
-// Importar el SDK de Google Gemini
-import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai@0.18.0";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import Groq from 'https://esm.sh/groq-sdk@0.4.0'; // Importar el SDK de Groq
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -33,14 +30,13 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Unauthorized: Invalid session' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // 2. Obtener la clave de API de Gemini de los secretos de Supabase
-    const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
-    if (!geminiApiKey) {
-      return new Response(JSON.stringify({ error: 'Server Error: GEMINI_API_KEY is missing in Supabase secrets.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    // 2. Obtener la clave de API de Groq de los secretos de Supabase
+    const groqApiKey = Deno.env.get('GROQ_API_KEY');
+    if (!groqApiKey) {
+      return new Response(JSON.stringify({ error: 'Server Error: GROQ_API_KEY is missing in Supabase secrets.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    const genAI = new GoogleGenerativeAI(geminiApiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+    const groq = new Groq({ apiKey: groqApiKey });
 
     // 3. Parsear el cuerpo de la solicitud del frontend
     const { brand, catalogNumber, productName } = await req.json();
@@ -102,55 +98,37 @@ Si no encuentras información fiable sobre este producto, devuelve un objeto con
       "required": ["product_name"]
     };
 
-    // 6. Invocar la API de Gemini
-    const result = await model.generateContent({
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      tools: [{ functionDeclarations: [{
-        name: "extract_product_info",
-        description: "Extrae información de un producto de laboratorio.",
-        parameters: jsonSchema,
-      }]}],
+    // 6. Invocar la API de Groq
+    const chatCompletion = await groq.chat.completions.create({
+      messages: [{ role: "user", content: prompt }],
+      model: "llama3-8b-8192", // Puedes elegir otro modelo de Groq si lo prefieres
+      response_format: { type: "json_object" }, // Solicitar respuesta en formato JSON
     });
 
-    const response = result.response;
-    const functionCalls = response.functionCalls();
+    const groqResponseContent = chatCompletion.choices[0]?.message?.content;
 
-    if (functionCalls && functionCalls.length > 0) {
-      const functionCall = functionCalls[0];
+    if (groqResponseContent) {
+      const productInfo = JSON.parse(groqResponseContent);
+      console.log('Groq Product Info:', productInfo);
 
-      if (functionCall && functionCall.name === "extract_product_info") {
-        const productInfo = functionCall.args;
-        console.log('Gemini Product Info:', productInfo);
+      // 7. Formatear la respuesta al tipo ProductSearchResult
+      const formattedResult = {
+        product_name: productInfo.product_name || productName || 'No disponible',
+        catalog_number: catalogNumber || 'No disponible',
+        brand: brand || null,
+        unit_price: productInfo.estimated_price || null,
+        format: productInfo.pack_size || null,
+        link: productInfo.product_url || null,
+        source: 'AI',
+        notes: productInfo.technical_notes || null,
+      };
 
-        // 7. Formatear la respuesta al tipo ProductSearchResult
-        const formattedResult = {
-          product_name: productInfo.product_name || productName || 'No disponible',
-          catalog_number: catalogNumber || 'No disponible',
-          brand: brand || null,
-          unit_price: productInfo.estimated_price || null,
-          format: productInfo.pack_size || null,
-          link: productInfo.product_url || null,
-          source: 'AI',
-          notes: productInfo.technical_notes || null,
-        };
-
-        return new Response(JSON.stringify(formattedResult), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200,
-        });
-      } else {
-        console.warn('Gemini did not return the expected function call.');
-        // Log adicional para ver el contenido de la respuesta cuando no hay la función esperada
-        console.log('Gemini response content (no expected function call):', JSON.stringify(response.candidates?.[0]?.content?.parts));
-        return new Response(JSON.stringify({ error: 'No se pudo extraer información del producto de la IA.' }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 500,
-        });
-      }
+      return new Response(JSON.stringify(formattedResult), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      });
     } else {
-      console.warn('Gemini did not return any function calls.');
-      // Log adicional para ver el contenido de la respuesta cuando no hay ninguna función
-      console.log('Gemini response content (no function calls at all):', JSON.stringify(response.candidates?.[0]?.content?.parts));
+      console.warn('Groq did not return any content.');
       return new Response(JSON.stringify({ error: 'No se pudo extraer información del producto de la IA.' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
