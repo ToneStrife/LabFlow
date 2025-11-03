@@ -68,40 +68,24 @@ IMPORTANTE:
 - El tamaño del paquete es CRÍTICO - no lo omitas.
 
 Si no encuentras información fiable sobre este producto, devuelve un objeto con los campos en null y una nota explicativa.
+
+Devuelve la respuesta como un objeto JSON que se ajuste al siguiente esquema:
+{
+  "product_name": "string",
+  "pack_size": "string",
+  "estimated_price": "number",
+  "product_url": "string",
+  "technical_notes": "string"
+}
 `;
 
-    // 5. Definir el esquema JSON para la respuesta
-    const jsonSchema = {
-      "type": "object",
-      "properties": {
-        "product_name": { 
-          "type": "string",
-          "description": "Nombre completo oficial del producto"
-        },
-        "pack_size": { 
-          "type": "string",
-          "description": "Tamaño/formato del paquete con unidades"
-        },
-        "estimated_price": { 
-          "type": "number",
-          "description": "Precio estimado en euros"
-        },
-        "product_url": { 
-          "type": "string",
-          "description": "URL directa al producto"
-        },
-        "technical_notes": { 
-          "type": "string",
-          "description": "Notas técnicas y especificaciones relevantes"
-        }
-      },
-      "required": ["product_name"]
-    };
+    // 5. Definir el esquema JSON para la respuesta (ya está en el prompt)
+    // const jsonSchema = { ... }; // No es necesario aquí, ya está en el prompt
 
     // 6. Invocar la API de Groq
     const chatCompletion = await groq.chat.completions.create({
       messages: [{ role: "user", content: prompt }],
-      model: "llama-3.3-70b-versatile", // ¡MODELO ACTUALIZADO!
+      model: "llama-3.3-70b-versatile",
       response_format: { type: "json_object" }, // Solicitar respuesta en formato JSON
     });
 
