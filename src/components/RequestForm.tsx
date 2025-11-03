@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { PlusCircle, Trash2, Check, ChevronsUpDown, Loader2, Search, Zap } from "lucide-react";
+import { PlusCircle, Trash2, Check, ChevronsUpDown, Loader2, Search } from "lucide-react";
 import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
@@ -32,7 +32,6 @@ import { useProjects } from "@/hooks/use-projects";
 import { useShippingAddresses, useBillingAddresses } from "@/hooks/use-addresses";
 import { getFullName } from "@/hooks/use-profiles";
 import { useInternalFuzzySearch, InternalSearchResult } from "@/hooks/use-internal-search"; // Hook de búsqueda interna
-import { useAIEnrichment, AIEnrichmentResult } from "@/hooks/use-ai-enrichment"; // Hook de enriquecimiento AI
 
 const itemSchema = z.object({
   productName: z.string().min(1, { message: "El nombre del producto es obligatorio." }),
@@ -65,7 +64,7 @@ const formSchema = z.object({
 
 type RequestFormValues = z.infer<typeof formSchema>;
 
-// Componente auxiliar para manejar la búsqueda y el enriquecimiento de un solo ítem
+// Componente auxiliar para manejar la búsqueda interna de un solo ítem
 interface ItemAutofillControlsProps {
   index: number;
   form: ReturnType<typeof useForm<RequestFormValues>>;
@@ -86,10 +85,6 @@ const ItemAutofillControls: React.FC<ItemAutofillControlsProps> = ({ index, form
   // Hook de búsqueda interna (DB)
   const { data: internalResults, isLoading: isSearchingDB } = useInternalFuzzySearch(searchTerm);
   
-  // Hook de enriquecimiento AI (Mutación)
-  const aiEnrichmentMutation = useAIEnrichment();
-  const isEnrichingAI = aiEnrichmentMutation.isPending;
-
   // Helper para limpiar valores 'No disponible' a null
   const getCleanValue = (value: string | null | undefined) => 
     value === 'No disponible' ? null : value;
@@ -107,38 +102,8 @@ const ItemAutofillControls: React.FC<ItemAutofillControlsProps> = ({ index, form
     });
   };
   
-  const handleEnrichmentFromAI = async () => {
-    if (!catalogNumber && !brand) {
-      toast.warning("Se requiere el Número de Catálogo o la Marca para el enriquecimiento por IA.");
-      return;
-    }
-    
-    try {
-      const result = await aiEnrichmentMutation.mutateAsync({
-        brand: brand || null,
-        catalogNumber: catalogNumber || null,
-        productName: productName || null,
-      });
-      
-      // Aplicar resultados de AI
-      setValue(`items.${index}.productName`, getCleanValue(result.product_name) || "", { shouldDirty: true });
-      setValue(`items.${index}.catalogNumber`, getCleanValue(result.catalog_number) || "", { shouldDirty: true });
-      setValue(`items.${index}.brand`, getCleanValue(result.brand), { shouldDirty: true });
-      setValue(`items.${index}.unitPrice`, result.unit_price, { shouldDirty: true });
-      setValue(`items.${index}.format`, getCleanValue(result.format), { shouldDirty: true });
-      setValue(`items.${index}.link`, getCleanValue(result.link), { shouldDirty: true });
-      setValue(`items.${index}.notes`, getCleanValue(result.notes), { shouldDirty: true });
-      
-    } catch (e) {
-      // El toast de error ya se maneja en useAIEnrichment
-    }
-  };
-
   const hasInternalResults = internalResults && internalResults.length > 0;
   
-  // Habilitar la búsqueda AI si hay catálogo O marca
-  const isAIEnabled = !!catalogNumber || !!brand;
-
   return (
     <div className="absolute top-4 right-4 flex space-x-2">
       {/* Botón de Búsqueda Interna (DB) */}
@@ -178,23 +143,6 @@ const ItemAutofillControls: React.FC<ItemAutofillControlsProps> = ({ index, form
           </Command>
         </PopoverContent>
       </Popover>
-      
-      {/* Botón de Enriquecimiento AI */}
-      <Button 
-        type="button" 
-        variant="secondary" 
-        size="sm" 
-        className="h-8 px-3 text-xs"
-        onClick={handleEnrichmentFromAI}
-        disabled={isEnrichingAI || !isAIEnabled}
-      >
-        {isEnrichingAI ? (
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-        ) : (
-          <Zap className="mr-2 h-4 w-4" />
-        )}
-        Enriquecer con AI
-      </Button>
     </div>
   );
 };
@@ -542,7 +490,7 @@ const RequestForm: React.FC = () => {
                 )}
               </div>
               
-              {/* Autofill Component */}
+              {/* Autofill Component (Solo DB) */}
               <ItemAutofillControls index={index} form={form} />
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

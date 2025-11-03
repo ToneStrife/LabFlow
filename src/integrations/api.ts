@@ -37,17 +37,6 @@ import {
 import { InventoryItemFormData } from "@/hooks/use-inventory"; // Importar el tipo de datos del formulario
 
 // --- Tipos de datos para la búsqueda ---
-interface AIProductInfo {
-  product_name: string;
-  catalog_number: string;
-  brand: string | null;
-  unit_price: number | null;
-  format: string | null;
-  link: string | null;
-  source: 'AI' | 'DB' | 'AI+DB';
-  notes: string | null;
-}
-
 interface FuzzySearchResult {
   inv: InventoryItem[];
   req: SupabaseRequestItem[];
@@ -55,30 +44,7 @@ interface FuzzySearchResult {
 
 // --- API de Búsqueda de Productos ---
 
-export const apiFetchAIProductInfo = async (data: { brand: string | null; catalogNumber: string | null; productName: string | null }): Promise<AIProductInfo> => {
-  // Ya no necesitamos el fallback aquí, la función Edge lo maneja devolviendo 200
-  // con source: 'DB' si falla la IA.
-  
-  const { data: aiData, error } = await supabase.functions.invoke('ai-product-search', {
-    method: 'POST',
-    body: JSON.stringify(data),
-  });
-
-  if (error) {
-    console.error("Error invoking ai-product-search:", error);
-    let errorMessage = 'Fallo al obtener información del producto de la IA.';
-    if (aiData && typeof aiData === 'object' && 'error' in aiData) {
-        errorMessage = (aiData as any).error;
-    } else if (error.message) {
-        errorMessage = error.message;
-    }
-    // Lanzar un error para que el hook de mutación lo capture
-    throw new Error(errorMessage);
-  }
-  
-  // Si la función Edge devuelve 200, devolvemos el cuerpo (que puede ser el resultado AI o el fallback DB)
-  return aiData as AIProductInfo;
-};
+// apiFetchAIProductInfo ELIMINADA
 
 export const apiFuzzySearchInternal = async (searchTerm: string): Promise<FuzzySearchResult> => {
   const [inventoryResult, requestItemsResult] = await Promise.all([
