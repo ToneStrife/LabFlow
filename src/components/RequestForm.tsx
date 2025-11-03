@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { PlusCircle, Trash2, Check, ChevronsUpDown, Loader2, Search } from "lucide-react";
+import { PlusCircle, Trash2, Check, ChevronsUpDown, Loader2, Search, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
@@ -26,12 +26,13 @@ import { RequestItem } from "@/data/types";
 import { showError } from "@/utils/toast";
 import { useSession } from "@/components/SessionContextProvider";
 import { useVendors } from "@/hooks/use-vendors";
-import { useAddRequest, useUpdateRequestFile, useUpdateRequestStatus } from "@/hooks/use-requests"; // Importar useUpdateRequestStatus
+import { useAddRequest, useUpdateRequestFile, useUpdateRequestStatus } from "@/hooks/use-requests";
 import { useAccountManagers } from "@/hooks/use-account-managers";
 import { useProjects } from "@/hooks/use-projects";
 import { useShippingAddresses, useBillingAddresses } from "@/hooks/use-addresses";
 import { getFullName } from "@/hooks/use-profiles";
-import { useProductSearch, ProductSearchResult } from "@/hooks/use-product-search"; // Importar hook de búsqueda
+import { useInternalFuzzySearch, InternalSearchResult } from "@/hooks/use-internal-search"; // Nuevo hook de búsqueda interna
+import { useAIEnrichment, AIEnrichmentResult } from "@/hooks/use-ai-enrichment"; // Nuevo hook de enriquecimiento AI
 
 const itemSchema = z.object({
   productName: z.string().min(1, { message: "El nombre del producto es obligatorio." }),
@@ -42,12 +43,12 @@ const itemSchema = z.object({
   ),
   unitPrice: z.preprocess(
     (val) => (val === "" ? undefined : Number(val)),
-    z.number().min(0, { message: "El precio unitario no puede ser negativo." }).optional().nullable() // Added .nullable()
+    z.number().min(0, { message: "El precio unitario no puede ser negativo." }).optional().nullable()
   ),
-  format: z.string().optional().nullable(), // Added .nullable()
-  link: z.string().url({ message: "Debe ser una URL válida." }).optional().or(z.literal("")).nullable(), // Added .nullable()
-  notes: z.string().optional().nullable(), // Added .nullable()
-  brand: z.string().optional().nullable(), // Added .nullable()
+  format: z.string().optional().nullable(),
+  link: z.string().url({ message: "Debe ser una URL válida." }).optional().or(z.literal("")).nullable(),
+  notes: z.string().optional().nullable(),
+  brand: z.string().optional().nullable(),
 });
 
 const formSchema = z.object({
@@ -57,71 +58,90 @@ const formSchema = z.object({
   shippingAddressId: z.string().min(1, { message: "La dirección de envío es obligatoria." }),
   billingAddressId: z.string().min(1, { message: "La dirección de facturación es obligatoria." }),
   items: z.array(itemSchema).min(1, { message: "Se requiere al menos un artículo." }),
-  quoteFile: z.any().optional(), // Nuevo campo para el archivo de cotización
+  quoteFile: z.any().optional(),
   projectCodes: z.array(z.string()).optional(),
   notes: z.string().optional(),
 });
 
 type RequestFormValues = z.infer<typeof formSchema>;
 
-// Componente auxiliar para manejar el autocompletado de un solo ítem
-interface ItemAutofillProps {
+// Componente auxiliar para manejar la búsqueda y el enriquecimiento de un solo ítem
+interface ItemAutofillControlsProps {
   index: number;
   form: ReturnType<typeof useForm<RequestFormValues>>;
 }
 
-const ItemAutofill: React.FC<ItemAutofillProps> = ({ index, form }) => {
-  const { control, watch, setValue } = form;
+const ItemAutofillControls: React.FC<ItemAutofillControlsProps> = ({ index, form }) => {
+  const { watch, setValue } = form;
   
   // Observar los campos clave para la búsqueda
   const productName = watch(`items.${index}.productName`);
   const catalogNumber = watch(`items.${index}.catalogNumber`);
   const brand = watch(`items.${index}.brand`);
+  
+  // Construir el término de búsqueda para la DB
+  const searchTermParts = [brand, catalogNumber, productName].filter(Boolean).map(s => s?.trim()).filter(Boolean);
+  const searchTerm = searchTermParts.join(" ");
 
-  // Usar el hook de búsqueda
-  const { data: searchResults, isLoading: isSearching } = useProductSearch(
-    catalogNumber || null,
-    brand || null,
-    productName || null
-  );
+  // Hook de búsqueda interna (DB)
+  const { data: internalResults, isLoading: isSearchingDB } = useInternalFuzzySearch(searchTerm);
+  
+  // Hook de enriquecimiento AI (Mutación)
+  const aiEnrichmentMutation = useAIEnrichment();
+  const isEnrichingAI = aiEnrichmentMutation.isPending;
 
-  const handleAutofill = (result: ProductSearchResult) => {
+  // Helper para limpiar valores 'No disponible' a null
+  const getCleanValue = (value: string | null | undefined) => 
+    value === 'No disponible' ? null : value;
+
+  const handleAutofillFromDB = (result: InternalSearchResult) => {
+    setValue(`items.${index}.productName`, getCleanValue(result.product_name) || "", { shouldDirty: true });
+    setValue(`items.${index}.catalogNumber`, getCleanValue(result.catalog_number) || "", { shouldDirty: true });
+    setValue(`items.${index}.brand`, getCleanValue(result.brand), { shouldDirty: true });
+    setValue(`items.${index}.unitPrice`, result.unit_price, { shouldDirty: true });
+    setValue(`items.${index}.format`, getCleanValue(result.format), { shouldDirty: true });
+    setValue(`items.${index}.link`, getCleanValue(result.link), { shouldDirty: true });
+    
+    toast.info("Datos cargados de solicitudes/inventario anteriores.", {
+      description: `Fuente: ${result.source}.`,
+    });
+  };
+  
+  const handleEnrichmentFromAI = async () => {
+    if (!catalogNumber && !brand) {
+      toast.warning("Se requiere el Número de Catálogo o la Marca para el enriquecimiento por IA.");
+      return;
+    }
+    
     try {
-      // Helper para limpiar valores 'No disponible' a null
-      const getCleanValue = (value: string | null | undefined) => 
-        value === 'No disponible' ? null : value;
-
+      const result = await aiEnrichmentMutation.mutateAsync({
+        brand: brand || null,
+        catalogNumber: catalogNumber || null,
+        productName: productName || null,
+      });
+      
+      // Aplicar resultados de AI
       setValue(`items.${index}.productName`, getCleanValue(result.product_name) || "", { shouldDirty: true });
       setValue(`items.${index}.catalogNumber`, getCleanValue(result.catalog_number) || "", { shouldDirty: true });
-      setValue(`items.${index}.brand`, getCleanValue(result.brand), { shouldDirty: true }); // Pass null directly
-      setValue(`items.${index}.unitPrice`, result.unit_price, { shouldDirty: true }); // Pass null directly
-      setValue(`items.${index}.format`, getCleanValue(result.format), { shouldDirty: true }); // Pass null directly
-      setValue(`items.${index}.link`, getCleanValue(result.link), { shouldDirty: true }); // Pass null directly
-      setValue(`items.${index}.notes`, getCleanValue(result.notes), { shouldDirty: true }); // Pass null directly
+      setValue(`items.${index}.brand`, getCleanValue(result.brand), { shouldDirty: true });
+      setValue(`items.${index}.unitPrice`, result.unit_price, { shouldDirty: true });
+      setValue(`items.${index}.format`, getCleanValue(result.format), { shouldDirty: true });
+      setValue(`items.${index}.link`, getCleanValue(result.link), { shouldDirty: true });
+      setValue(`items.${index}.notes`, getCleanValue(result.notes), { shouldDirty: true });
       
-      toast.info("Autocompletado aplicado.", {
-        description: `Datos cargados desde ${result.source}.`,
-      });
-    } catch (error: any) {
-      console.error("Error during autofill:", error);
-      toast.error("Fallo al aplicar el autocompletado.", {
-        description: error.message || "Hubo un problema al rellenar los campos.",
-      });
+    } catch (e) {
+      // El toast de error ya se maneja en useAIEnrichment
     }
   };
 
-  const hasResults = searchResults && searchResults.length > 0;
+  const hasInternalResults = internalResults && internalResults.length > 0;
   
-  // Habilitar si hay catálogo Y marca, O si hay nombre de producto con más de 3 caracteres
-  // O si hay solo catálogo, o solo marca (para la búsqueda AI)
-  const isSearchEnabled = 
-    (!!catalogNumber && !!brand) || 
-    (!!productName && productName.length > 3) || // Changed to > 3 for more meaningful search
-    (!!catalogNumber && !brand && !productName) ||
-    (!!brand && !catalogNumber && !productName);
+  // Habilitar la búsqueda AI si hay catálogo O marca
+  const isAIEnabled = !!catalogNumber || !!brand;
 
   return (
-    <div className="absolute top-4 right-4">
+    <div className="absolute top-4 right-4 flex space-x-2">
+      {/* Botón de Búsqueda Interna (DB) */}
       <Popover>
         <PopoverTrigger asChild>
           <Button 
@@ -129,23 +149,23 @@ const ItemAutofill: React.FC<ItemAutofillProps> = ({ index, form }) => {
             variant="outline" 
             size="sm" 
             className="h-8 px-3 text-xs"
-            disabled={isSearching || !isSearchEnabled}
+            disabled={isSearchingDB || searchTerm.length < 3}
           >
-            {isSearching ? (
+            {isSearchingDB ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
               <Search className="mr-2 h-4 w-4" />
             )}
-            {hasResults ? `Sugerencias (${searchResults.length})` : "Buscar Sugerencias"}
+            {hasInternalResults ? `DB Sugerencias (${internalResults.length})` : "Buscar en DB"}
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-80 p-0">
           <Command>
-            {isSearching && <CommandEmpty>Buscando...</CommandEmpty>}
-            {!isSearching && !hasResults && <CommandEmpty>No se encontraron sugerencias.</CommandEmpty>}
-            <CommandGroup heading="Sugerencias de Productos">
-              {searchResults?.map((result, i) => (
-                <CommandItem key={i} onSelect={() => handleAutofill(result)} className="cursor-pointer">
+            {isSearchingDB && <CommandEmpty>Buscando...</CommandEmpty>}
+            {!isSearchingDB && !hasInternalResults && <CommandEmpty>No se encontraron sugerencias internas.</CommandEmpty>}
+            <CommandGroup heading="Sugerencias de la Base de Datos">
+              {internalResults?.map((result, i) => (
+                <CommandItem key={i} onSelect={() => handleAutofillFromDB(result)} className="cursor-pointer">
                   <div className="flex flex-col w-full">
                     <span className="font-medium">{result.product_name}</span>
                     <span className="text-xs text-muted-foreground">
@@ -158,6 +178,23 @@ const ItemAutofill: React.FC<ItemAutofillProps> = ({ index, form }) => {
           </Command>
         </PopoverContent>
       </Popover>
+      
+      {/* Botón de Enriquecimiento AI */}
+      <Button 
+        type="button" 
+        variant="secondary" 
+        size="sm" 
+        className="h-8 px-3 text-xs"
+        onClick={handleEnrichmentFromAI}
+        disabled={isEnrichingAI || !isAIEnabled}
+      >
+        {isEnrichingAI ? (
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        ) : (
+          <Zap className="mr-2 h-4 w-4" />
+        )}
+        Enriquecer con AI
+      </Button>
     </div>
   );
 };
@@ -171,8 +208,8 @@ const RequestForm: React.FC = () => {
   const { data: shippingAddresses, isLoading: isLoadingShippingAddresses } = useShippingAddresses();
   const { data: billingAddresses, isLoading: isLoadingBillingAddresses } = useBillingAddresses();
   const addRequestMutation = useAddRequest();
-  const updateFileMutation = useUpdateRequestFile(); // Para subir el archivo de cotización
-  const updateStatusMutation = useUpdateRequestStatus(); // Para actualizar el estado después de la subida
+  const updateFileMutation = useUpdateRequestFile();
+  const updateStatusMutation = useUpdateRequestStatus();
 
   const form = useForm<RequestFormValues>({
     resolver: zodResolver(formSchema),
@@ -187,10 +224,10 @@ const RequestForm: React.FC = () => {
         catalogNumber: "", 
         quantity: 1, 
         unitPrice: undefined, 
-        format: undefined, // Changed to undefined
-        link: undefined, // Changed to undefined
-        notes: undefined, // Changed to undefined
-        brand: undefined, // Changed to undefined
+        format: undefined, 
+        link: undefined, 
+        notes: undefined, 
+        brand: undefined,
       }],
       quoteFile: undefined,
       projectCodes: [],
@@ -506,7 +543,7 @@ const RequestForm: React.FC = () => {
               </div>
               
               {/* Autofill Component */}
-              <ItemAutofill index={index} form={form} />
+              <ItemAutofillControls index={index} form={form} />
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {/* Fila 1: Marca, Catálogo, Nombre, Cantidad */}
