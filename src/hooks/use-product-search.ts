@@ -56,11 +56,17 @@ export const useProductSearch = (
         result.product_name === "No disponible" ||
         !result.product_name ||
         !result.unit_price ||
-        !result.link;
+        !result.link ||
+        result.source === 'DB'; // Si la IA falló y devolvió el resultado vacío
 
       if (needsFallback) {
         // 3. Realizar búsqueda fuzzy interna
-        const searchTerm = `${brand ?? ""} ${catalogNumber ?? productName ?? ""}`.trim();
+        // Construir un término de búsqueda que combine todos los campos disponibles
+        const searchTermParts = [brand, catalogNumber, productName].filter(Boolean).map(s => s?.trim()).filter(Boolean);
+        const searchTerm = searchTermParts.join(" ");
+        
+        if (searchTerm.length === 0) return []; // No hay nada que buscar
+
         const { inv, req } = await apiFuzzySearchInternal(searchTerm);
         
         // Combinar resultados de inventario y solicitudes, priorizando inventario
@@ -74,6 +80,7 @@ export const useProductSearch = (
         if (best) {
           // 4. Fusionar resultados
           result = {
+            // Priorizar el resultado de la IA si es válido, sino usar el de la DB
             product_name: result.product_name !== "No disponible" && result.product_name
               ? result.product_name
               : best.product_name,
@@ -91,7 +98,11 @@ export const useProductSearch = (
       }
       
       // Devolver el resultado fusionado como un array de un solo elemento para mantener la consistencia
-      // (Aunque la búsqueda AI solo devuelve un resultado, la interfaz ProductSearchResult[] es más flexible)
+      // Si el resultado final sigue siendo "No disponible", devolvemos un array vacío para no sugerir nada.
+      if (result.product_name === "No disponible" && result.catalog_number === "No disponible") {
+          return [];
+      }
+      
       return [result];
     },
     // Deshabilitar la consulta si no hay suficientes parámetros
