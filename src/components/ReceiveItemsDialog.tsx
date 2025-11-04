@@ -26,6 +26,7 @@ import { Loader2, CheckSquare, CheckCheck } from "lucide-react";
 import { SupabaseRequestItem } from "@/data/types";
 import { useReceiveItems, useAggregatedReceivedItems } from "@/hooks/use-packing-slips";
 import { toast } from "sonner";
+import FileUploadInput from "./FileUploadInput"; // Importar el nuevo componente
 
 // Esquema para la cantidad recibida de un ítem
 const receivedItemSchema = z.object({
@@ -42,7 +43,7 @@ const receivedItemSchema = z.object({
 // Esquema principal del formulario
 const receiveFormSchema = z.object({
   slipNumber: z.string().optional(), // Opcional
-  slipFile: z.any().optional(),
+  slipFile: z.any().optional(), // Ahora maneja FileList o null
   items: z.array(receivedItemSchema).min(1),
 });
 
@@ -125,6 +126,7 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
       return;
     }
 
+    // Extraer el archivo del FileList/Array (si existe)
     const file = data.slipFile?.[0] || null;
 
     await receiveItemsMutation.mutateAsync({
@@ -219,9 +221,14 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
                 name="slipFile"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Subir Archivo de Albarán (Opcional)</FormLabel>
                     <FormControl>
-                      <Input type="file" onChange={(e) => field.onChange(e.target.files)} disabled={isSubmitting} accept="image/*,application/pdf" />
+                      <FileUploadInput 
+                        label="Subir Archivo de Albarán (Opcional)"
+                        onChange={field.onChange} 
+                        disabled={isSubmitting} 
+                        accept="image/*,application/pdf"
+                        // No pasamos currentFile ya que el formulario solo almacena FileList/Array
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
 import { FileType } from "@/hooks/use-requests";
 import { toast } from "sonner";
+import FileUploadInput from "../FileUploadInput"; // Importar el nuevo componente
 
 interface FileUploadDialogProps {
   isOpen: boolean;
@@ -42,43 +43,65 @@ const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
     }
   }, [isOpen]);
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files && event.target.files[0]) {
-      setSelectedFile(event.target.files[0]);
-    } else {
-      setSelectedFile(null);
-    }
+  const handleFileChange = (fileList: FileList | null) => {
+    setSelectedFile(fileList && fileList.length > 0 ? fileList[0] : null);
   };
 
   const handleSubmit = async () => {
     const isPoUpload = fileType === 'po';
+    const isQuoteUpload = fileType === 'quote';
     
     if (isPoUpload) {
       if (!poNumber.trim()) {
         toast.error("El número de PO es obligatorio.", { description: "Por favor, introduce un número de Orden de Compra." });
         return;
       }
-      // Si es PO, enviamos el archivo (puede ser null) y el número de PO (obligatorio)
+      // Si es PO, el archivo es opcional, pero el número de PO es obligatorio.
       await onUpload(selectedFile, poNumber.trim());
-    } else if (selectedFile) {
-      // Si no es PO, el archivo es obligatorio
+    } else if (isQuoteUpload) {
+      // Si es Quote, el archivo es obligatorio.
+      if (!selectedFile) {
+        toast.error("El archivo de cotización es obligatorio.", { description: "Por favor, selecciona un archivo para subir." });
+        return;
+      }
       await onUpload(selectedFile);
-    } else {
-      toast.error("El archivo es obligatorio.", { description: "Por favor, selecciona un archivo para subir." });
-      return;
+    } else if (fileType === 'slip') {
+      // Si es Slip, el archivo es opcional.
+      await onUpload(selectedFile);
+    }
+    
+    // Si es un PO sin archivo, solo se guarda el número de PO.
+    if (isPoUpload && !selectedFile && poNumber.trim()) {
+        await onUpload(null, poNumber.trim());
     }
   };
 
   const getTitle = () => {
     switch (fileType) {
-      case "quote": return "Subir Archivo de Cotización (Obligatorio)";
-      case "po": return "Subir Archivo de Orden de Compra (Opcional)";
-      case "slip": return "Subir Albarán (Opcional)";
+      case "quote": return "Subir Archivo de Cotización";
+      case "po": return "Subir Archivo de Orden de Compra";
+      case "slip": return "Subir Albarán";
       default: return "Subir Archivo";
     }
   };
   
-  const isSubmitDisabled = isUploading || (fileType !== 'po' && fileType !== 'slip' && !selectedFile);
+  const getFileLabel = () => {
+    if (fileType === 'quote') return "Archivo de Cotización (Obligatorio)";
+    if (fileType === 'po') return "Archivo de PO (Opcional)";
+    if (fileType === 'slip') return "Archivo de Albarán (Opcional)";
+    return "Archivo";
+  };
+  
+  // La lógica de deshabilitación es más compleja ahora:
+  // 1. Siempre deshabilitado si está subiendo.
+  // 2. Si es 'quote', requiere archivo.
+  // 3. Si es 'po', requiere archivo O número de PO.
+  // 4. Si es 'slip', requiere archivo.
+  const isSubmitDisabled = isUploading || 
+    (fileType === 'quote' && !selectedFile) ||
+    (fileType === 'slip' && !selectedFile) ||
+    (fileType === 'po' && !selectedFile && !poNumber.trim());
+
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -86,7 +109,7 @@ const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
         <DialogHeader>
           <DialogTitle>{getTitle()}</DialogTitle>
           <DialogDescription>
-            Selecciona un archivo para subir.
+            {fileType === 'po' ? "Introduce el número de PO y/o sube el archivo." : "Selecciona un archivo para subir."}
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
@@ -106,18 +129,14 @@ const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
               />
             </div>
           )}
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="file" className="text-right">
-              Archivo {fileType === 'po' || fileType === 'slip' ? "(Opcional)" : "(Obligatorio)"}
-            </Label>
-            <Input
-              id="file"
-              type="file"
-              onChange={handleFileChange}
-              className="col-span-3"
-              disabled={isUploading}
-            />
-          </div>
+          
+          <FileUploadInput
+            label={getFileLabel()}
+            onChange={handleFileChange}
+            disabled={isUploading}
+            accept="image/*,application/pdf"
+            currentFile={selectedFile}
+          />
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isUploading}>
