@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
@@ -33,8 +33,8 @@ import { useShippingAddresses, useBillingAddresses } from "@/hooks/use-addresses
 import { getFullName } from "@/hooks/use-profiles";
 import { useInternalFuzzySearch, InternalSearchResult } from "@/hooks/use-internal-search";
 import { useEnrichProductDetails } from "@/hooks/use-ai-enrichment";
-import { useFormPersistence } from "@/hooks/use-form-persistence";
 
+// -------------------- Schemas --------------------
 const itemSchema = z.object({
   productName: z.string().min(1, { message: "El nombre del producto es obligatorio." }),
   catalogNumber: z.string().min(1, { message: "El número de catálogo es obligatorio." }),
@@ -54,8 +54,8 @@ const itemSchema = z.object({
 
 const formSchema = z.object({
   vendorId: z.string().min(1, { message: "El proveedor es obligatorio." }),
-  requesterId: z.string().min(1, { message: "El ID del solicitante es obligatorio." }), 
-  accountManagerId: z.string().optional(), 
+  requesterId: z.string().min(1, { message: "El ID del solicitante es obligatorio." }),
+  accountManagerId: z.string().optional(),
   shippingAddressId: z.string().min(1, { message: "La dirección de envío es obligatoria." }),
   billingAddressId: z.string().min(1, { message: "La dirección de facturación es obligatoria." }),
   items: z.array(itemSchema).min(1, { message: "Se requiere al menos un artículo." }),
@@ -66,7 +66,7 @@ const formSchema = z.object({
 
 type RequestFormValues = z.infer<typeof formSchema>;
 
-// Componente auxiliar para manejar la búsqueda interna de un solo ítem
+// -------------------- Item Autofill Controls --------------------
 interface ItemAutofillControlsProps {
   index: number;
   form: ReturnType<typeof useForm<RequestFormValues>>;
@@ -75,22 +75,18 @@ interface ItemAutofillControlsProps {
 const ItemAutofillControls: React.FC<ItemAutofillControlsProps> = ({ index, form }) => {
   const { watch, setValue } = form;
   const enrichMutation = useEnrichProductDetails();
-  
-  // Observar los campos clave para la búsqueda
+
   const productName = watch(`items.${index}.productName`);
   const catalogNumber = watch(`items.${index}.catalogNumber`);
   const brand = watch(`items.${index}.brand`);
-  
-  // Construir el término de búsqueda para la DB
+
   const searchTermParts = [brand, catalogNumber, productName].filter(Boolean).map(s => s?.trim()).filter(Boolean);
   const searchTerm = searchTermParts.join(" ");
 
-  // Hook de búsqueda interna (DB)
   const { data: internalResults, isLoading: isSearchingDB } = useInternalFuzzySearch(searchTerm);
-  
-  // Helper para limpiar valores 'No disponible' a null
-  const getCleanValue = (value: string | null | undefined) => 
-    value === 'No disponible' ? null : value;
+
+  const getCleanValue = (value: string | null | undefined) =>
+    value === "No disponible" ? null : value;
 
   const handleAutofillFromDB = (result: InternalSearchResult) => {
     setValue(`items.${index}.productName`, getCleanValue(result.product_name) || "", { shouldDirty: true });
@@ -99,22 +95,21 @@ const ItemAutofillControls: React.FC<ItemAutofillControlsProps> = ({ index, form
     setValue(`items.${index}.unitPrice`, result.unit_price, { shouldDirty: true });
     setValue(`items.${index}.format`, getCleanValue(result.format), { shouldDirty: true });
     setValue(`items.${index}.link`, getCleanValue(result.link), { shouldDirty: true });
-    
+
     toast.info("Datos cargados de solicitudes/inventario anteriores.", {
       description: `Fuente: ${result.source}.`,
     });
   };
-  
+
   const handleEnrichment = async () => {
     if (!brand || !catalogNumber) {
       toast.error("Faltan datos", { description: "Por favor, introduce la Marca y el Número de Catálogo antes de usar la IA." });
       return;
     }
-    
+
     try {
       const result = await enrichMutation.mutateAsync({ brand, catalogNumber });
-      
-      // Aplicar los resultados al formulario
+
       setValue(`items.${index}.productName`, result.product_name || "", { shouldDirty: true });
       setValue(`items.${index}.catalogNumber`, result.catalog_number || catalogNumber, { shouldDirty: true });
       setValue(`items.${index}.brand`, result.brand || brand, { shouldDirty: true });
@@ -122,23 +117,21 @@ const ItemAutofillControls: React.FC<ItemAutofillControlsProps> = ({ index, form
       setValue(`items.${index}.format`, result.format, { shouldDirty: true });
       setValue(`items.${index}.link`, result.link, { shouldDirty: true });
       setValue(`items.${index}.notes`, result.notes, { shouldDirty: true });
-      
-    } catch (e) {
-      // El toast de error ya se maneja en el hook
+    } catch {
+      // el hook ya muestra el error
     }
   };
 
   const hasInternalResults = internalResults && internalResults.length > 0;
   const isEnriching = enrichMutation.isPending;
   const isReadyForAI = !!brand && !!catalogNumber;
-  
+
   return (
     <div className="absolute top-4 right-4 flex space-x-2">
-      {/* Botón de Enriquecimiento por IA */}
-      <Button 
-        type="button" 
-        variant="secondary" 
-        size="sm" 
+      <Button
+        type="button"
+        variant="secondary"
+        size="sm"
         className="h-8 px-3 text-xs"
         onClick={handleEnrichment}
         disabled={isEnriching || !isReadyForAI}
@@ -150,14 +143,13 @@ const ItemAutofillControls: React.FC<ItemAutofillControlsProps> = ({ index, form
         )}
         Enriquecer por IA
       </Button>
-      
-      {/* Botón de Búsqueda Interna (DB) */}
+
       <Popover>
         <PopoverTrigger asChild>
-          <Button 
-            type="button" 
-            variant="outline" 
-            size="sm" 
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
             className="h-8 px-3 text-xs"
             disabled={isSearchingDB || searchTerm.length < 3}
           >
@@ -179,7 +171,7 @@ const ItemAutofillControls: React.FC<ItemAutofillControlsProps> = ({ index, form
                   <div className="flex flex-col w-full">
                     <span className="font-medium">{result.product_name}</span>
                     <span className="text-xs text-muted-foreground">
-                      {result.catalog_number} | {result.brand || 'Sin Marca'} ({result.source})
+                      {result.catalog_number} | {result.brand || "Sin Marca"} ({result.source})
                     </span>
                   </div>
                 </CommandItem>
@@ -192,7 +184,7 @@ const ItemAutofillControls: React.FC<ItemAutofillControlsProps> = ({ index, form
   );
 };
 
-
+// -------------------- Request Form --------------------
 const RequestForm: React.FC = () => {
   const { session, profile } = useSession();
   const { data: vendors, isLoading: isLoadingVendors } = useVendors();
@@ -204,47 +196,103 @@ const RequestForm: React.FC = () => {
   const updateFileMutation = useUpdateRequestFile();
   const updateStatusMutation = useUpdateRequestStatus();
 
+  // defaultValues memoizados para evitar remounts inesperados
+  const defaultValues = React.useMemo<RequestFormValues>(() => ({
+    vendorId: "",
+    requesterId: session?.user?.id || "",
+    accountManagerId: "unassigned",
+    shippingAddressId: "",
+    billingAddressId: "",
+    items: [{
+      productName: "",
+      catalogNumber: "",
+      quantity: 1,
+      unitPrice: undefined,
+      format: undefined,
+      link: undefined,
+      notes: undefined,
+      brand: undefined,
+    }],
+    quoteFile: undefined,
+    projectCodes: [],
+    notes: "",
+  }), [session?.user?.id]);
+
   const form = useForm<RequestFormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      vendorId: "",
-      requesterId: session?.user?.id || "",
-      accountManagerId: "unassigned",
-      shippingAddressId: "",
-      billingAddressId: "",
-      items: [{ 
-        productName: "", 
-        catalogNumber: "", 
-        quantity: 1, 
-        unitPrice: undefined, 
-        format: undefined, 
-        link: undefined, 
-        notes: undefined, 
-        brand: undefined,
-      }],
-      quoteFile: undefined,
-      projectCodes: [],
-      notes: "",
-    },
+    defaultValues,
   });
-  
-  // --- PERSISTENCIA DEL FORMULARIO ---
-  const fieldsToPersist: (keyof RequestFormValues)[] = [
-    "vendorId", "accountManagerId", "shippingAddressId", "billingAddressId", 
-    "items", "projectCodes", "notes"
-  ];
-  const { clearPersistence } = useFormPersistence(form, "newRequestFormState", fieldsToPersist);
-  // -----------------------------------
 
-  // Establecer valores predeterminados para direcciones y solicitante
+  // ---------- PERSISTENCIA ROBUSTA (autosave + restore) ----------
+  // key por usuario para no mezclar borradores
+  const PERSIST_KEY = React.useMemo(
+    () => `newRequestFormState:v2:${session?.user?.id ?? "anon"}`,
+    [session?.user?.id]
+  );
+
+  // Restore on first mount
+  React.useEffect(() => {
+    try {
+      const raw = localStorage.getItem(PERSIST_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      if (saved) {
+        delete saved.quoteFile; // nunca restaurar archivos
+        form.reset({
+          ...form.getValues(), // respeta defaults que vengan de hooks
+          ...saved,
+        });
+      }
+    } catch (e) {
+      console.warn("Restore failed", e);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [PERSIST_KEY]);
+
+  // Autosave con debounce
+  const watched = useWatch({ control: form.control });
+  React.useEffect(() => {
+    const id = setTimeout(() => {
+      const toSave: any = { ...watched };
+      delete toSave.quoteFile;
+      try {
+        localStorage.setItem(PERSIST_KEY, JSON.stringify(toSave));
+      } catch (e) {
+        console.warn("Persist failed", e);
+      }
+    }, 400);
+    return () => clearTimeout(id);
+  }, [watched, PERSIST_KEY, form.control]);
+
+  // Guardado inmediato si la pestaña se oculta (opcional pero útil con Memory Saver)
+  React.useEffect(() => {
+    const onHide = () => {
+      if (document.visibilityState === "hidden") {
+        try {
+          const snapshot = { ...form.getValues() } as any;
+          delete snapshot.quoteFile;
+          localStorage.setItem(PERSIST_KEY, JSON.stringify(snapshot));
+        } catch {}
+      }
+    };
+    document.addEventListener("visibilitychange", onHide);
+    return () => document.removeEventListener("visibilitychange", onHide);
+  }, [PERSIST_KEY, form]);
+
+  const clearAllPersistence = React.useCallback(() => {
+    try { localStorage.removeItem(PERSIST_KEY); } catch {}
+  }, [PERSIST_KEY]);
+
+  // ---------- FIN PERSISTENCIA ----------
+
+  // Establecer requesterId si llega la sesión
   React.useEffect(() => {
     if (session?.user?.id) {
       form.setValue("requesterId", session.user.id);
     }
   }, [session, form]);
 
-  // Modificación CRÍTICA: Solo establecer valores predeterminados si el campo está vacío
-  // y no hay un valor persistido (que se carga en el primer render).
+  // No pisar valores restaurados: solo si están vacíos
   React.useEffect(() => {
     if (shippingAddresses && shippingAddresses.length > 0 && !form.getValues("shippingAddressId")) {
       form.setValue("shippingAddressId", shippingAddresses[0].id);
@@ -257,7 +305,6 @@ const RequestForm: React.FC = () => {
     }
   }, [billingAddresses, form]);
 
-
   const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: "items",
@@ -269,10 +316,9 @@ const RequestForm: React.FC = () => {
       return;
     }
 
-    const managerId = data.accountManagerId === 'unassigned' || !data.accountManagerId ? null : data.accountManagerId;
-    const quoteFile = data.quoteFile?.[0] || null;
-    
-    // 1. Crear la solicitud (inicialmente en estado Pending)
+    const managerId = data.accountManagerId === "unassigned" || !data.accountManagerId ? null : data.accountManagerId;
+    const quoteFile = (data as any).quoteFile?.[0] || null;
+
     const itemsToSubmit: RequestItem[] = data.items.map(item => ({
       productName: item.productName,
       catalogNumber: item.catalogNumber,
@@ -294,8 +340,7 @@ const RequestForm: React.FC = () => {
       projectCodes: data.projectCodes,
       items: itemsToSubmit,
     });
-    
-    // 2. Si hay un archivo de cotización, subirlo y actualizar el estado a 'Quote Requested'
+
     if (quoteFile) {
       try {
         const { filePath } = await updateFileMutation.mutateAsync({
@@ -303,15 +348,14 @@ const RequestForm: React.FC = () => {
           fileType: "quote",
           file: quoteFile,
         });
-        
-        // Actualizar el estado de la solicitud a 'Quote Requested'
+
         if (filePath) {
-            await updateStatusMutation.mutateAsync({ 
-                id: newRequest.id, 
-                status: "Quote Requested", 
-                quoteUrl: filePath 
-            });
-            toast.success("Cotización adjunta. Solicitud marcada como 'Cotización Solicitada'.");
+          await updateStatusMutation.mutateAsync({
+            id: newRequest.id,
+            status: "Quote Requested",
+            quoteUrl: filePath,
+          });
+          toast.success("Cotización adjunta. Solicitud marcada como 'Cotización Solicitada'.");
         }
       } catch (error) {
         showError("La solicitud fue creada, pero falló la subida del archivo de cotización.");
@@ -319,24 +363,24 @@ const RequestForm: React.FC = () => {
       }
     }
 
-    // 3. Limpiar la persistencia del formulario después del envío exitoso
-    clearPersistence();
+    // limpiar persistencia tras submit correcto
+    clearAllPersistence();
 
-    // Restablecer el formulario, manteniendo los valores predeterminados de dirección si existen
+    // reset conservando defaults razonables
     form.reset({
       vendorId: "",
       requesterId: session.user.id,
-      accountManagerId: shippingAddresses?.[0]?.id || "",
+      accountManagerId: "unassigned", // FIX
       shippingAddressId: shippingAddresses?.[0]?.id || "",
       billingAddressId: billingAddresses?.[0]?.id || "",
-      items: [{ 
-        productName: "", 
-        catalogNumber: "", 
-        quantity: 1, 
-        unitPrice: undefined, 
-        format: undefined, 
-        link: undefined, 
-        notes: undefined, 
+      items: [{
+        productName: "",
+        catalogNumber: "",
+        quantity: 1,
+        unitPrice: undefined,
+        format: undefined,
+        link: undefined,
+        notes: undefined,
         brand: undefined,
       }],
       quoteFile: undefined,
@@ -345,7 +389,7 @@ const RequestForm: React.FC = () => {
     });
   };
 
-  const requesterName = profile ? getFullName(profile) : 'Cargando...';
+  const requesterName = profile ? getFullName(profile) : "Cargando...";
   const isLoadingAddresses = isLoadingShippingAddresses || isLoadingBillingAddresses;
   const isSubmitting = addRequestMutation.isPending || updateFileMutation.isPending;
 
@@ -383,7 +427,7 @@ const RequestForm: React.FC = () => {
             )}
           />
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
             control={form.control}
@@ -462,7 +506,7 @@ const RequestForm: React.FC = () => {
                 <Popover>
                   <PopoverTrigger asChild>
                     <FormControl>
-                      <Button variant="outline" role="combobox" className={cn("w-full justify-between", !field.value || field.value.length === 0 && "text-muted-foreground")} disabled={isLoadingProjects || isSubmitting}>
+                      <Button variant="outline" role="combobox" className={cn("w-full justify-between", (!field.value || field.value.length === 0) && "text-muted-foreground")} disabled={isLoadingProjects || isSubmitting}>
                         {field.value && field.value.length > 0 ? (
                           <div className="flex flex-wrap gap-1">
                             {field.value.map((projectId) => {
@@ -502,7 +546,7 @@ const RequestForm: React.FC = () => {
             )}
           />
         </div>
-        
+
         <h2 className="text-xl font-semibold mt-8 mb-4">Archivos Adjuntos (Opcional)</h2>
         <FormField
           control={form.control}
@@ -510,13 +554,13 @@ const RequestForm: React.FC = () => {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Adjuntar Cotización (Si ya la tienes)</FormLabel>
-              <FormControl><Input type="file" onChange={(e) => field.onChange(e.target.files)} disabled={isSubmitting} /></FormControl>
+              <FormControl><Input type="file" onChange={(e) => field.onChange((e.target as HTMLInputElement).files)} disabled={isSubmitting} /></FormControl>
               <FormMessage />
               <p className="text-sm text-muted-foreground">Si adjuntas una cotización, la solicitud se creará directamente en estado "Cotización Solicitada".</p>
             </FormItem>
           )}
         />
-        
+
         <FormField
           control={form.control}
           name="notes"
@@ -533,12 +577,11 @@ const RequestForm: React.FC = () => {
             </FormItem>
           )}
         />
+
         <h2 className="text-xl font-semibold">Artículos</h2>
         <div className="space-y-6">
           {fields.map((field, index) => (
             <div key={field.id} className="border p-4 rounded-md relative bg-muted/20 pt-16 sm:pt-4">
-              
-              {/* Encabezado de Artículo para Móvil/Escritorio */}
               <div className="flex justify-between items-center mb-4 absolute top-4 left-4 right-4 sm:relative sm:top-0 sm:left-0 sm:right-0 sm:mb-4">
                 <h3 className="text-lg font-medium text-primary">Artículo #{index + 1}</h3>
                 {fields.length > 1 && (
@@ -547,19 +590,24 @@ const RequestForm: React.FC = () => {
                   </Button>
                 )}
               </div>
-              
-              {/* Autofill Component (DB & AI) */}
+
               <ItemAutofillControls index={index} form={form} />
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* Fila 1: Marca, Catálogo, Nombre, Cantidad */}
                 <FormField
                   control={form.control}
                   name={`items.${index}.brand`}
                   render={({ field: itemField }) => (
                     <FormItem>
                       <FormLabel>Marca</FormLabel>
-                      <FormControl><Input placeholder="ej. Invitrogen" {...itemField} value={itemField.value || ""} onChange={(e) => itemField.onChange(e.target.value || undefined)} /></FormControl>
+                      <FormControl>
+                        <Input
+                          placeholder="ej. Invitrogen"
+                          {...itemField}
+                          value={itemField.value || ""}
+                          onChange={(e) => itemField.onChange(e.target.value || undefined)}
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -586,8 +634,7 @@ const RequestForm: React.FC = () => {
                     </FormItem>
                   )}
                 />
-                
-                {/* Fila 2: Cantidad, Precio, Formato, Enlace */}
+
                 <FormField
                   control={form.control}
                   name={`items.${index}.quantity`}
@@ -602,15 +649,22 @@ const RequestForm: React.FC = () => {
                 <FormField
                   control={form.control}
                   name={`items.${index}.unitPrice`}
-                  render={({ field: itemField }) => {
-                    return (
-                      <FormItem>
-                        <FormLabel>Precio Unitario (Opcional)</FormLabel>
-                        <FormControl><Input type="number" step="0.01" placeholder="ej. 120.50 €" {...itemField} value={itemField.value === undefined || itemField.value === null ? "" : itemField.value} onChange={(e) => itemField.onChange(e.target.value === "" ? undefined : Number(e.target.value))} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    );
-                  }}
+                  render={({ field: itemField }) => (
+                    <FormItem>
+                      <FormLabel>Precio Unitario (Opcional)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="ej. 120.50"
+                          {...itemField}
+                          value={itemField.value === undefined || itemField.value === null ? "" : itemField.value}
+                          onChange={(e) => itemField.onChange(e.target.value === "" ? undefined : Number(e.target.value))}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
                 <FormField
                   control={form.control}
@@ -618,7 +672,14 @@ const RequestForm: React.FC = () => {
                   render={({ field: itemField }) => (
                     <FormItem>
                       <FormLabel>Formato (Opcional)</FormLabel>
-                      <FormControl><Input placeholder="ej. 500 mL" {...itemField} value={itemField.value || ""} onChange={(e) => itemField.onChange(e.target.value || undefined)} /></FormControl>
+                      <FormControl>
+                        <Input
+                          placeholder="ej. 500 mL"
+                          {...itemField}
+                          value={itemField.value || ""}
+                          onChange={(e) => itemField.onChange(e.target.value || undefined)}
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -629,20 +690,34 @@ const RequestForm: React.FC = () => {
                   render={({ field: itemField }) => (
                     <FormItem>
                       <FormLabel>Enlace del Producto (Opcional)</FormLabel>
-                      <FormControl><Input type="url" placeholder="ej. https://www.vendor.com/product" {...itemField} value={itemField.value || ""} onChange={(e) => itemField.onChange(e.target.value || undefined)} /></FormControl>
+                      <FormControl>
+                        <Input
+                          type="url"
+                          placeholder="ej. https://www.vendor.com/product"
+                          {...itemField}
+                          value={itemField.value || ""}
+                          onChange={(e) => itemField.onChange(e.target.value || undefined)}
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                
-                {/* Fila 3: Notas */}
+
                 <FormField
                   control={form.control}
                   name={`items.${index}.notes`}
                   render={({ field: itemField }) => (
                     <FormItem className="sm:col-span-2 lg:col-span-4">
                       <FormLabel>Notas (Opcional)</FormLabel>
-                      <FormControl><Textarea placeholder="Cualquier requisito o detalle específico..." {...itemField} value={itemField.value || ""} onChange={(e) => itemField.onChange(e.target.value || undefined)} /></FormControl>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Cualquier requisito o detalle específico..."
+                          {...itemField}
+                          value={itemField.value || ""}
+                          onChange={(e) => itemField.onChange(e.target.value || undefined)}
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -651,19 +726,27 @@ const RequestForm: React.FC = () => {
             </div>
           ))}
         </div>
-        <Button type="button" variant="outline" onClick={() => append({ 
-          productName: "", 
-          catalogNumber: "", 
-          quantity: 1, 
-          unitPrice: undefined, 
-          format: undefined, 
-          link: undefined, 
-          notes: undefined, 
-          brand: undefined,
-        })} className="w-full">
+
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() =>
+            append({
+              productName: "",
+              catalogNumber: "",
+              quantity: 1,
+              unitPrice: undefined,
+              format: undefined,
+              link: undefined,
+              notes: undefined,
+              brand: undefined,
+            })
+          }
+          className="w-full"
+        >
           <PlusCircle className="mr-2 h-4 w-4" /> Añadir Otro Artículo
         </Button>
-        
+
         <Button type="submit" className="w-full" disabled={isSubmitting}>
           {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : "Enviar Solicitud"}
         </Button>
