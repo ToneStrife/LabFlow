@@ -12,33 +12,22 @@ export function useFormPersistence<TFieldValues extends Record<string, any>>(
   storageKey: string,
   fieldsToPersist: (keyof TFieldValues)[]
 ) {
-  const { watch, reset, getValues, setValue } = form;
+  const { watch, setValue } = form;
 
-  // 1. Cargar estado al montar
+  // 1. Cargar estado al montar (solo una vez)
   useEffect(() => {
     const savedData = localStorage.getItem(storageKey);
     if (savedData) {
       try {
         const parsedData = JSON.parse(savedData);
         
-        // Solo aplicar los campos que queremos persistir
-        const dataToRestore: Partial<TFieldValues> = {};
+        // Restaurar solo los campos que queremos persistir
         fieldsToPersist.forEach(field => {
-          if (parsedData[field as string] !== undefined) {
-            (dataToRestore as any)[field] = parsedData[field as string];
+          const value = parsedData[field as string];
+          if (value !== undefined) {
+            // Usar setValue para restaurar el valor sin disparar validación o dirty state innecesariamente
+            setValue(field, value as any, { shouldValidate: false, shouldDirty: true });
           }
-        });
-        
-        // Usar reset para establecer los valores iniciales y limpiar el almacenamiento
-        // Nota: Usamos setValue en lugar de reset para manejar arrays complejos como 'items'
-        Object.entries(dataToRestore).forEach(([key, value]) => {
-            // Aseguramos que los arrays se manejen correctamente
-            if (Array.isArray(value)) {
-                // Si es un array, lo establecemos directamente
-                setValue(key as keyof TFieldValues, value as any, { shouldValidate: false, shouldDirty: true });
-            } else {
-                setValue(key as keyof TFieldValues, value as any, { shouldValidate: false, shouldDirty: true });
-            }
         });
         
         console.log(`[FormPersistence] Restored form state for ${storageKey}.`);
@@ -47,7 +36,8 @@ export function useFormPersistence<TFieldValues extends Record<string, any>>(
         localStorage.removeItem(storageKey);
       }
     }
-  }, [storageKey, fieldsToPersist, setValue]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storageKey]); // Dependencias: solo storageKey. setValue y fieldsToPersist son estables.
 
   // 2. Guardar estado en cada cambio
   useEffect(() => {
