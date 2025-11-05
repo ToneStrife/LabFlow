@@ -145,6 +145,7 @@ const FileRow: React.FC<FileRowProps> = ({ label, filePath, fileType, onUploadCl
 
 const RequestFilesCard: React.FC<RequestFilesCardProps> = ({ request, onUploadClick, onSimpleFileUpload }) => {
   
+  // La subida simple de SLIP ya no se usa aquí, pero mantenemos el handler para Quote/PO si fuera necesario.
   const handleSimpleUpload = (fileType: FileType) => async (file: File) => {
       await onSimpleFileUpload(file, fileType);
   };
@@ -169,13 +170,7 @@ const RequestFilesCard: React.FC<RequestFilesCardProps> = ({ request, onUploadCl
           onUploadClick={() => onUploadClick("po")} 
           onSimpleFileUpload={handleSimpleUpload("po")} // No se usa, pero se pasa
         />
-        <FileRow 
-          label="Último Albarán" 
-          filePath={request.slip_url} 
-          fileType="slip"
-          onUploadClick={() => onUploadClick("slip")} // Se pasa el handler del diálogo, pero FileRow lo ignora
-          onSimpleFileUpload={handleSimpleUpload("slip")} // Usado para subida directa
-        />
+        {/* La fila de Albarán se ha movido a PackingSlipsList */}
       </CardContent>
     </Card>
   );

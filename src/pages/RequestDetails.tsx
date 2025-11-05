@@ -33,6 +33,7 @@ import RequestFilesCard from "@/components/request-details/RequestFilesCard";
 import FileUploadDialog from "@/components/request-details/FileUploadDialog";
 import RequestMetadataForm from "@/components/request-details/RequestMetadataForm";
 import RequestFullEditForm, { FullEditFormValues } from "@/components/request-details/RequestFullEditForm";
+import PackingSlipsList from "@/components/request-details/PackingSlipsList"; // Importar el nuevo componente
 import { toast } from "sonner";
 import { useSession } from "@/components/SessionContextProvider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -611,6 +612,12 @@ const RequestDetails: React.FC = () => {
             request={request} 
             onUploadClick={handleUploadClick} 
             onSimpleFileUpload={(file, fileType) => handleSimpleFileUpload(file, fileType)} // Pasar el nuevo handler
+          />
+          
+          {/* NUEVO: Lista de Albaranes */}
+          <PackingSlipsList 
+            requestId={request.id} 
+            onUploadClick={() => handleSimpleFileUpload(null, 'slip')} // Usar el handler de subida simple (que dispara el input)
           />
         </div>
       </div>
