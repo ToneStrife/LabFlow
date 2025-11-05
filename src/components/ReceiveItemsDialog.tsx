@@ -109,8 +109,7 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
   const watchedValues = useWatch({ control: form.control });
   const [hasRestored, setHasRestored] = React.useState(false);
   const [savedFileMeta, setSavedFileMeta] = React.useState<{ name: string; size: number } | null>(null);
-  const [selectedFile, setSelectedFile] = React.useState<File | null>(null); // Estado para el objeto File real
-
+  
   // 1. Restaurar estado al montar (o cuando cambie initialItems)
   React.useEffect(() => {
     if (isLoadingReceived || hasRestored) return;
@@ -159,8 +158,8 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
     if (!hasRestored) return;
     
     const id = setTimeout(() => {
-      // Usar selectedFile para la metadata si existe, si no, usar savedFileMeta
-      const meta = selectedFile ? { name: selectedFile.name, size: selectedFile.size } : savedFileMeta;
+      // Usar savedFileMeta para la metadata
+      const meta = savedFileMeta;
       
       const dataToSave = {
         slipNumber: watchedValues.slipNumber,
@@ -173,27 +172,24 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
       localStorage.setItem(PERSIST_KEY, JSON.stringify(dataToSave));
     }, 500);
     return () => clearTimeout(id);
-  }, [watchedValues, selectedFile, savedFileMeta, PERSIST_KEY, hasRestored]);
+  }, [watchedValues, savedFileMeta, PERSIST_KEY, hasRestored]);
   
   // 3. Limpiar borrador al cerrar si se ha enviado
   const clearDraft = React.useCallback(() => {
     localStorage.removeItem(PERSIST_KEY);
     setSavedFileMeta(null);
-    setSelectedFile(null);
   }, [PERSIST_KEY]);
   
   // 4. Limpiar el estado del archivo al cerrar el diálogo
   React.useEffect(() => {
     if (!isOpen) {
         form.setValue('slipFile', undefined);
-        setSelectedFile(null);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
   
   const handleFileChange = (fileList: FileList | null) => {
     const f = fileList && fileList.length > 0 ? fileList[0] : null;
-    setSelectedFile(f);
     form.setValue('slipFile', fileList); // Actualizar el valor del formulario
     setSavedFileMeta(f ? { name: f.name, size: f.size } : null); // Actualizar metadata para persistencia
   };
@@ -225,8 +221,15 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
       return;
     }
 
-    // Usamos selectedFile (el objeto File real) para la subida
-    const file = selectedFile;
+    // Extraer el archivo del FileList/Array (si existe)
+    const fileList = form.getValues('slipFile');
+    const file = fileList?.[0] || null;
+    
+    // CRÍTICO: Si el archivo es obligatorio y se perdió (solo metadata), forzar la re-selección
+    if (savedFileMeta && !file) {
+        toast.error("Archivo perdido", { description: `El archivo ${savedFileMeta.name} se perdió. Por favor, vuelve a seleccionarlo.` });
+        return;
+    }
 
     await receiveItemsMutation.mutateAsync({
       requestId,
@@ -291,11 +294,12 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
   const isSubmitting = receiveItemsMutation.isPending;
   const allItemsFullyReceived = initialItems.every(item => item.quantityOrdered - item.quantityPreviouslyReceived <= 0);
   
-  // Determinar qué metadata mostrar: el archivo seleccionado (si existe) o la metadata guardada
-  const fileMetaToDisplay = selectedFile ? { name: selectedFile.name, size: selectedFile.size } : savedFileMeta;
+  // Comprobar si el archivo se perdió después de una recarga
+  const fileList = form.watch('slipFile');
+  const fileLost = savedFileMeta && (!fileList || fileList.length === 0);
   
-  // Mostrar advertencia si se perdió el archivo pero se recuperó la metadata
-  const showFileLostWarning = fileMetaToDisplay && !selectedFile;
+  // Determinar qué metadata mostrar: el archivo seleccionado (si existe) o la metadata guardada
+  const fileMetaToDisplay = fileList?.[0] ? { name: fileList[0].name, size: fileList[0].size } : savedFileMeta;
 
 
   return (
@@ -347,11 +351,11 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
               />
             </div>
             
-            {showFileLostWarning && (
+            {fileLost && savedFileMeta && (
                 <div className="flex items-start gap-2 rounded-md border p-3 text-sm text-orange-600 bg-orange-50/50">
                     <Info className="h-4 w-4 mt-0.5 shrink-0" />
                     <div>
-                        Advertencia: El archivo <strong>{fileMetaToDisplay!.name}</strong> se perdió debido a la recarga del navegador. Por favor, **vuelve a seleccionarlo** para adjuntarlo.
+                        Advertencia: El archivo <strong>{savedFileMeta.name}</strong> se perdió debido a la recarga del navegador. Por favor, **vuelve a seleccionarlo** para adjuntarlo.
                     </div>
                 </div>
             )}

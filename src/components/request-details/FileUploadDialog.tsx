@@ -154,7 +154,7 @@ const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
     isUploading ||
     (fileType === "quote" && !selectedFile) ||
     (fileType === "slip" && !selectedFile) ||
-    (fileType === "po" && !selectedFile && !poNumber.trim());
+    (fileType === "po" && !poNumber.trim() && !selectedFile); // Corregido: si es PO, se puede enviar solo con número o solo con archivo.
 
   const getTitle = () =>
     fileType === "quote" ? "Subir Archivo de Cotización"

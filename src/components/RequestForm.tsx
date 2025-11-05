@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { PlusCircle, Trash2, Check, ChevronsUpDown, Loader2, Search, Zap, RotateCcw } from "lucide-react"; // Importar RotateCcw
+import { PlusCircle, Trash2, Check, ChevronsUpDown, Loader2, Search, Zap, RotateCcw, Info } from "lucide-react"; // Importar Info
 import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
@@ -34,6 +34,7 @@ import { getFullName } from "@/hooks/use-profiles";
 import { useInternalFuzzySearch, InternalSearchResult } from "@/hooks/use-internal-search";
 import { useEnrichProductDetails } from "@/hooks/use-ai-enrichment";
 import { useFormPersistence } from "@/hooks/use-form-persistence";
+import FileUploadInput from "./FileUploadInput"; // Importar FileUploadInput
 
 // -------------------- Schemas --------------------
 const itemSchema = z.object({
@@ -60,7 +61,7 @@ const formSchema = z.object({
   shippingAddressId: z.string().min(1, { message: "La dirección de envío es obligatoria." }),
   billingAddressId: z.string().min(1, { message: "La dirección de facturación es obligatoria." }),
   items: z.array(itemSchema).min(1, { message: "Se requiere al menos un artículo." }),
-  quoteFile: z.any().optional(),
+  quoteFile: z.any().optional(), // FileList | null | undefined
   projectCodes: z.array(z.string()).optional(),
   notes: z.string().optional(),
 });
@@ -237,6 +238,39 @@ const RequestForm: React.FC = () => {
     "items", "projectCodes", "notes"
   ];
   const { clearPersistence } = useFormPersistence(form, "newRequestFormState", fieldsToPersist);
+  
+  // Estado local para la metadata del archivo de cotización (para persistencia)
+  const [savedQuoteFileMeta, setSavedQuoteFileMeta] = React.useState<{ name: string; size: number } | null>(null);
+  
+  // 1. Restaurar metadata del archivo al montar
+  React.useEffect(() => {
+    const raw = localStorage.getItem("newRequestQuoteFileMeta");
+    if (raw) {
+      try {
+        const saved = JSON.parse(raw);
+        setSavedQuoteFileMeta(saved);
+      } catch {}
+    }
+  }, []);
+  
+  // 2. Autosave de metadata del archivo
+  const handleQuoteFileChange = (fileList: FileList | null) => {
+    const f = fileList && fileList.length > 0 ? fileList[0] : null;
+    
+    // 1. Actualizar el valor del formulario (objeto FileList)
+    form.setValue('quoteFile', fileList);
+    
+    // 2. Actualizar y guardar la metadata (nombre/tamaño)
+    const meta = f ? { name: f.name, size: f.size } : null;
+    setSavedQuoteFileMeta(meta);
+    localStorage.setItem("newRequestQuoteFileMeta", JSON.stringify(meta));
+  };
+  
+  // 3. Limpiar metadata al limpiar el formulario
+  const clearQuoteFilePersistence = () => {
+    localStorage.removeItem("newRequestQuoteFileMeta");
+    setSavedQuoteFileMeta(null);
+  };
   // -----------------------------------
 
   // Establecer valores predeterminados para direcciones y solicitante
@@ -323,6 +357,7 @@ const RequestForm: React.FC = () => {
 
     // 3. Limpiar la persistencia del formulario después del envío exitoso
     clearPersistence();
+    clearQuoteFilePersistence();
 
     // Restablecer el formulario, manteniendo los valores predeterminados de dirección si existen
     form.reset({
@@ -341,6 +376,7 @@ const RequestForm: React.FC = () => {
   const handleClearForm = () => {
     // Limpiar la persistencia
     clearPersistence();
+    clearQuoteFilePersistence();
     
     // Resetear el formulario a los valores iniciales (incluyendo un solo ítem vacío)
     form.reset({
@@ -360,6 +396,10 @@ const RequestForm: React.FC = () => {
   const requesterName = profile ? getFullName(profile) : 'Cargando...';
   const isLoadingAddresses = isLoadingShippingAddresses || isLoadingBillingAddresses;
   const isSubmitting = addRequestMutation.isPending || updateFileMutation.isPending;
+  
+  // Comprobar si el archivo se perdió después de una recarga
+  const fileList = form.watch('quoteFile');
+  const fileLost = savedQuoteFileMeta && (!fileList || fileList.length === 0);
 
   return (
     <Form {...form}>
@@ -522,12 +562,29 @@ const RequestForm: React.FC = () => {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Adjuntar Cotización (Si ya la tienes)</FormLabel>
-              <FormControl><Input type="file" onChange={(e) => field.onChange(e.target.files)} disabled={isSubmitting} /></FormControl>
+              <FormControl>
+                <FileUploadInput 
+                    label="Subir Archivo de Cotización (Opcional)"
+                    onChange={handleQuoteFileChange} 
+                    disabled={isSubmitting} 
+                    accept="image/*,application/pdf"
+                    currentFileMeta={fileLost ? savedQuoteFileMeta : undefined} // Mostrar metadata si se perdió el archivo
+                />
+              </FormControl>
               <FormMessage />
               <p className="text-sm text-muted-foreground">Si adjuntas una cotización, la solicitud se creará directamente en estado "Cotización Solicitada".</p>
             </FormItem>
           )}
         />
+        
+        {fileLost && savedQuoteFileMeta && (
+            <div className="flex items-start gap-2 rounded-md border p-3 text-sm text-orange-600 bg-orange-50/50">
+                <Info className="h-4 w-4 mt-0.5 shrink-0" />
+                <div>
+                    Advertencia: El archivo <strong>{savedQuoteFileMeta.name}</strong> se perdió debido a la recarga del navegador. Por favor, **vuelve a seleccionarlo** para adjuntarlo.
+                </div>
+            </div>
+        )}
         
         <FormField
           control={form.control}
