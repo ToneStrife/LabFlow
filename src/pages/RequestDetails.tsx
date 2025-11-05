@@ -3,7 +3,7 @@
 import React from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Loader2, ArrowLeft, Edit, Trash2, MoreVertical, Ban, XCircle } from "lucide-react";
+import { Loader2, ArrowLeft, Edit, Trash2, MoreVertical, Ban, XCircle, Info, CheckCircle } from "lucide-react"; // AÑADIDO Info y CheckCircle
 import {
   Dialog,
   DialogContent,
