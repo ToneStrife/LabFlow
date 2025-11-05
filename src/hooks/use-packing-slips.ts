@@ -63,12 +63,130 @@ export const useAggregatedReceivedItems = (requestId: string) => {
 };
 
 
-// --- Mutation Hook para Recepción ---
+// --- NUEVO HOOK: Subir archivo de albarán y crear registro ---
+interface UploadSlipData {
+  requestId: string;
+  file: File;
+  slipNumber?: string;
+}
+
+export const useUploadAndCreateSlip = () => {
+  const queryClient = useQueryClient();
+  const { session } = useSession();
+  
+  return useMutation({
+    mutationFn: async ({ requestId, file, slipNumber }: UploadSlipData) => {
+      const receivedBy = session?.user?.id;
+      if (!receivedBy) throw new Error("El usuario debe iniciar sesión para subir archivos.");
+
+      // 1. Subir el archivo usando la función Edge
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('fileType', 'slip');
+      formData.append('requestId', requestId);
+
+      const { data: uploadData, error: uploadError } = await supabase.functions.invoke('upload-file', {
+        body: formData,
+        method: 'POST',
+      });
+
+      if (uploadError) {
+        console.error("Error uploading slip file:", uploadError);
+        throw new Error(`Fallo al subir el archivo: ${uploadError.message}`);
+      }
+      
+      const slipFilePath = (uploadData as { filePath: string | null }).filePath;
+      if (!slipFilePath) {
+          throw new Error("Fallo al obtener la ruta del archivo subido.");
+      }
+      
+      // 2. Generar un número de albarán si no se proporciona
+      let finalSlipNumber = slipNumber?.trim() || `SLIP-${Date.now()}`;
+      
+      // 3. Insertar el Albarán (Packing Slip)
+      const { data: newSlip, error: slipError } = await supabase
+        .from('packing_slips')
+        .insert({
+            request_id: requestId,
+            slip_number: finalSlipNumber,
+            received_by: receivedBy,
+            slip_url: slipFilePath,
+        })
+        .select()
+        .single();
+
+      if (slipError) throw new Error(`Fallo al crear el registro de albarán: ${slipError.message}`);
+      
+      // 4. Actualizar requests.slip_url con el path del archivo subido (para compatibilidad)
+      const { error: updateReqError } = await supabase
+        .from('requests')
+        .update({ slip_url: slipFilePath })
+        .eq('id', requestId);
+        
+      if (updateReqError) {
+          console.error("Error updating request slip_url:", updateReqError);
+      }
+
+      return newSlip;
+    },
+    onSuccess: (newSlip) => {
+      queryClient.invalidateQueries({ queryKey: ['packingSlips', newSlip.request_id] });
+      queryClient.invalidateQueries({ queryKey: ['requests'] });
+      toast.success(`Albarán ${newSlip.slip_number} subido exitosamente!`);
+    },
+    onError: (error) => {
+      toast.error("Fallo al subir el albarán.", {
+        description: error.message,
+      });
+    },
+  });
+};
+
+// --- NUEVO HOOK: Eliminar Albarán ---
+export const useDeleteSlip = () => {
+    const queryClient = useQueryClient();
+    
+    return useMutation({
+        mutationFn: async (slipId: string) => {
+            // 1. Verificar si hay ítems recibidos asociados a este albarán
+            const { data: receivedItems, error: fetchError } = await supabase
+                .from('received_items')
+                .select('id')
+                .eq('slip_id', slipId);
+                
+            if (fetchError) throw new Error(fetchError.message);
+            
+            if (receivedItems && receivedItems.length > 0) {
+                throw new Error("No se puede eliminar el albarán. Primero debes revertir la recepción de los artículos asociados.");
+            }
+            
+            // 2. Eliminar el registro del albarán (Packing Slip)
+            const { error: deleteError } = await supabase
+                .from('packing_slips')
+                .delete()
+                .eq('id', slipId);
+                
+            if (deleteError) throw new Error(deleteError.message);
+            
+            // Nota: La eliminación del archivo de Storage debe hacerse manualmente si es necesario,
+            // pero por ahora, solo eliminamos el registro de la DB.
+        },
+        onSuccess: (data, slipId) => {
+            queryClient.invalidateQueries({ queryKey: ['packingSlips'] });
+            toast.success("Albarán eliminado exitosamente.");
+        },
+        onError: (error) => {
+            toast.error("Fallo al eliminar el albarán.", { description: error.message });
+        }
+    });
+};
+
+
+// --- Mutation Hook para Recepción (SIMPLIFICADO) ---
 
 interface ReceiveItemsData {
   requestId: string;
-  slipNumber: string;
-  slipFiles: File[]; // CAMBIADO: Ahora es un array de archivos
+  slipNumber: string; // Ahora es obligatorio si no se usa un slip existente
   items: {
     requestItemId: string;
     quantityReceived: number;
@@ -82,88 +200,30 @@ export const useReceiveItems = () => {
 
   return useMutation({
     mutationFn: async (data: ReceiveItemsData) => {
-      const { requestId, slipNumber, slipFiles, items } = data;
+      const { requestId, slipNumber, items } = data;
       const receivedBy = session?.user?.id;
 
       if (!receivedBy) throw new Error("El usuario debe iniciar sesión para recibir artículos.");
+      if (!slipNumber.trim()) throw new Error("El número de albarán es obligatorio para registrar la recepción.");
 
-      // --- SOLUCIÓN AL ERROR DE UNICIDAD ---
-      // Si slipNumber está vacío, generamos uno basado en el timestamp para evitar colisiones.
-      let finalSlipNumber = slipNumber.trim();
-      if (!finalSlipNumber) {
-        finalSlipNumber = `AUTO-${Date.now()}`;
-      }
-      // ------------------------------------
-
-      // 1. Subir los archivos de albarán si existen
-      let slipFilePath: string | null = null;
-      
-      // Si hay múltiples archivos, solo usamos el primero para el campo slip_url de la tabla requests
-      // y el resto se sube pero no se registra en requests.slip_url.
-      // Sin embargo, para simplificar, solo subiremos el primer archivo y lo vincularemos al albarán.
-      // Si hay múltiples archivos, crearemos múltiples albaranes.
-      
-      const uploadedFilePaths: string[] = [];
-      
-      for (const file of slipFiles) {
-          const formData = new FormData();
-          formData.append('file', file);
-          formData.append('fileType', 'slip');
-          formData.append('requestId', requestId);
-
-          const { data: uploadData, error: uploadError } = await supabase.functions.invoke('upload-file', {
-            body: formData,
-            method: 'POST',
-          });
-
-          if (uploadError) {
-            console.error("Error uploading slip file:", uploadError);
-            // No lanzamos un error fatal, solo registramos y continuamos
-            toast.warning(`Fallo al subir el archivo ${file.name}. Continuando con la recepción.`);
-            continue;
-          }
-          
-          const path = (uploadData as { filePath: string | null }).filePath;
-          if (path) {
-              uploadedFilePaths.push(path);
-          }
-      }
-      
-      // Usamos el primer archivo subido para actualizar requests.slip_url (para compatibilidad)
-      slipFilePath = uploadedFilePaths[0] || null;
-
-
-      // 2. Insertar el Albarán (Packing Slip)
-      // Si hay múltiples archivos, creamos un albarán por archivo.
-      // Si no hay archivos, creamos un albarán sin URL.
-      
-      const slipsToInsert = uploadedFilePaths.length > 0 
-        ? uploadedFilePaths.map((path, index) => ({
-            request_id: requestId,
-            slip_number: `${finalSlipNumber}${uploadedFilePaths.length > 1 ? `-${index + 1}` : ''}`,
-            received_by: receivedBy,
-            slip_url: path,
-          }))
-        : [{
-            request_id: requestId,
-            slip_number: finalSlipNumber,
-            received_by: receivedBy,
-            slip_url: null,
-          }];
-          
-      const { data: newSlips, error: slipError } = await supabase
+      // 1. Insertar el Albarán (Packing Slip)
+      const { data: newSlip, error: slipError } = await supabase
         .from('packing_slips')
-        .insert(slipsToInsert)
-        .select();
+        .insert({
+            request_id: requestId,
+            slip_number: slipNumber,
+            received_by: receivedBy,
+            slip_url: null, // Ya no subimos archivos aquí
+        })
+        .select()
+        .single();
 
       if (slipError) throw new Error(`Fallo al crear el albarán: ${slipError.message}`);
+      const primarySlipId = newSlip.id;
 
-      // 3. Insertar los Ítems Recibidos y actualizar el Inventario
-      const slipIds = newSlips.map(s => s.id);
-      const primarySlipId = slipIds[0]; // Usamos el primer slip ID para vincular todos los ítems recibidos
-
+      // 2. Insertar los Ítems Recibidos y actualizar el Inventario
       const receivedItemInserts = items.map(item => ({
-        slip_id: primarySlipId, // Vinculamos todos los ítems recibidos al primer albarán creado
+        slip_id: primarySlipId,
         request_item_id: item.requestItemId,
         quantity_received: item.quantityReceived,
       }));
@@ -174,7 +234,7 @@ export const useReceiveItems = () => {
 
       if (receivedItemsError) throw new Error(`Fallo al insertar artículos recibidos: ${receivedItemsError.message}`);
 
-      // 4. Actualizar el Inventario (usando RPC para manejar la lógica de upsert)
+      // 3. Actualizar el Inventario (usando RPC para manejar la lógica de upsert)
       for (const item of items) {
         if (item.quantityReceived > 0) {
           const { error: inventoryError } = await supabase.rpc('add_or_update_inventory_item', {
@@ -189,20 +249,7 @@ export const useReceiveItems = () => {
         }
       }
       
-      // 5. Actualizar requests.slip_url con el path del primer archivo subido (para compatibilidad)
-      if (slipFilePath) {
-          const { error: updateReqError } = await supabase
-            .from('requests')
-            .update({ slip_url: slipFilePath })
-            .eq('id', requestId);
-            
-          if (updateReqError) {
-              console.error("Error updating request slip_url:", updateReqError);
-          }
-      }
-
-
-      // 6. Verificar si la solicitud está completamente recibida y actualizar el estado
+      // 4. Verificar si la solicitud está completamente recibida y actualizar el estado
       
       // Obtener la solicitud completa con ítems
       const { data: requestData, error: requestError } = await supabase
@@ -263,12 +310,11 @@ export const useReceiveItems = () => {
       queryClient.invalidateQueries({ queryKey: ['packingSlips', requestId] });
       queryClient.invalidateQueries({ queryKey: ['inventory'] });
 
-      return newSlips;
+      return newSlip;
     },
-    onSuccess: (newSlips) => {
-      const slipNumbers = newSlips.map(s => s.slip_number).join(', ');
+    onSuccess: (newSlip) => {
       toast.success(`Artículos recibidos exitosamente!`, {
-        description: `Albarán(es) ${slipNumbers} registrado(s).`,
+        description: `Albarán ${newSlip.slip_number} registrado.`,
       });
     },
     onError: (error) => {

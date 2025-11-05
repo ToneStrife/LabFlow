@@ -22,7 +22,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Loader2, CheckSquare, CheckCheck, Info, Paperclip, X } from "lucide-react";
+import { Loader2, CheckSquare, CheckCheck, Info } from "lucide-react";
 import { SupabaseRequestItem } from "@/data/types";
 import { useReceiveItems, useAggregatedReceivedItems } from "@/hooks/use-packing-slips";
 import { toast } from "sonner";
@@ -42,7 +42,7 @@ const receivedItemSchema = z.object({
 
 // Esquema principal del formulario
 const receiveFormSchema = z.object({
-  slipNumber: z.string().optional(), // Opcional
+  slipNumber: z.string().min(1, { message: "El número de albarán es obligatorio." }), // Ahora obligatorio
   items: z.array(receivedItemSchema).min(1),
 });
 
@@ -53,8 +53,6 @@ interface ReceiveItemsDialogProps {
   onOpenChange: (open: boolean) => void;
   requestId: string;
   requestItems: SupabaseRequestItem[];
-  // initialSlipFiles?: File[]; // ELIMINADO
-  // onClearInitialSlipFiles?: () => void; // ELIMINADO
 }
 
 const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
@@ -68,10 +66,7 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
   
   const PERSIST_KEY = `receiveItemsForm:${requestId}`;
   
-  // Estado local para los objetos File reales (ya no inicializado con props)
-  const [selectedFiles, setSelectedFiles] = React.useState<File[]>([]); 
-  
-  // Sincronización de archivos iniciales eliminada
+  // Eliminamos el estado de archivos seleccionados
   
   const initialItems = React.useMemo(() => {
     if (!requestItems || !aggregatedReceived) return [];
@@ -166,38 +161,8 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
   // 3. Limpiar borrador al cerrar si se ha enviado
   const clearDraft = React.useCallback(() => {
     localStorage.removeItem(PERSIST_KEY);
-    setSelectedFiles([]);
   }, [PERSIST_KEY]);
   
-  // 4. Limpiar el estado del archivo al cerrar el diálogo
-  React.useEffect(() => {
-    if (!isOpen) {
-        // Si el diálogo se cierra, limpiamos los archivos locales si no se han enviado
-        if (selectedFiles.length > 0) {
-            setSelectedFiles([]);
-        }
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen]);
-  
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (files) {
-        // Convertir FileList a Array y añadir a los archivos existentes
-        const newFiles = Array.from(files);
-        setSelectedFiles(prev => [...prev, ...newFiles]);
-        // Limpiar el input para permitir la selección del mismo archivo de nuevo
-        if (event.target) {
-            event.target.value = '';
-        }
-    }
-  };
-  
-  const handleRemoveFile = (indexToRemove: number) => {
-    setSelectedFiles(prev => prev.filter((_, index) => index !== indexToRemove));
-  };
-  
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
   // --- Fin Lógica de Persistencia ---
 
 
@@ -209,9 +174,16 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
         if (!orderedItem) throw new Error(`Item ${item.requestItemId} not found.`);
         
         const totalReceived = item.quantityPreviouslyReceived + item.quantityReceived;
-        if (totalReceived > item.quantityOrdered) {
-          toast.error(`Error: La cantidad recibida para ${item.productName} excede la cantidad pedida.`);
+        // Permitir cantidades negativas para corrección, pero advertir si excede el pedido
+        if (totalReceived > item.quantityOrdered && item.quantityReceived > 0) {
+          toast.error(`Error: La cantidad total recibida para ${item.productName} excede la cantidad pedida.`);
           throw new Error("Quantity received exceeds quantity ordered.");
+        }
+        
+        // Si la cantidad recibida es negativa, es una corrección.
+        if (item.quantityReceived < 0 && item.quantityPreviouslyReceived + item.quantityReceived < 0) {
+             toast.error(`Error: La corrección para ${item.productName} resultaría en una cantidad recibida negativa.`);
+             throw new Error("Correction results in negative received quantity.");
         }
 
         return {
@@ -228,8 +200,7 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
 
     await receiveItemsMutation.mutateAsync({
       requestId,
-      slipNumber: data.slipNumber || '',
-      slipFiles: selectedFiles, // Usar el array de archivos
+      slipNumber: data.slipNumber, // Ahora es obligatorio
       items: itemsToReceive,
     });
 
@@ -259,7 +230,6 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
     handleReceiveAll();
     
     // 2. Submit the form
-    // Usamos setTimeout para asegurar que React Hook Form haya procesado el setValue antes de enviar.
     setTimeout(() => {
       form.handleSubmit(handleSubmit)();
     }, 0);
@@ -297,9 +267,9 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
         onPointerDownOutside={(e) => e.preventDefault()}
       >
         <DialogHeader>
-          <DialogTitle>Recibir Artículos y Registrar Albarán</DialogTitle>
+          <DialogTitle>Registrar Recepción de Artículos</DialogTitle>
           <DialogDescription>
-            Introduce los detalles del albarán y la cantidad recibida para cada artículo.
+            Introduce el número de albarán y la cantidad recibida para cada artículo.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -310,7 +280,7 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
                 name="slipNumber"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Número de Albarán (Opcional)</FormLabel>
+                    <FormLabel>Número de Albarán</FormLabel>
                     <FormControl>
                       <Input placeholder="ej. SLIP-12345" {...field} disabled={isSubmitting} />
                     </FormControl>
@@ -318,57 +288,16 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
                   </FormItem>
                 )}
               />
-              <FormItem>
-                <FormLabel>Archivos de Albarán (Opcional)</FormLabel>
-                <div 
-                    className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-muted/50 transition-colors"
-                    onClick={() => fileInputRef.current?.click()}
-                >
-                    <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/*,application/pdf"
-                        onChange={handleFileChange}
-                        disabled={isSubmitting}
-                        className="hidden"
-                        multiple // Permitir múltiples archivos
-                    />
-                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                        <Paperclip className="w-8 h-8 mb-3 text-muted-foreground" />
-                        <p className="mb-2 text-sm text-muted-foreground text-center">
-                            <span className="font-semibold">Haz clic para añadir</span> o arrastra y suelta
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                            PDF, JPG, PNG (Múltiples archivos permitidos)
-                        </p>
-                    </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Corrección de Errores</Label>
+                <div className="flex items-center p-3 border rounded-md bg-red-50 text-red-700">
+                    <Info className="h-4 w-4 mr-2 flex-shrink-0" />
+                    <p className="text-xs">Para corregir una recepción errónea, introduce una cantidad negativa (ej. -1) en la casilla correspondiente.</p>
                 </div>
-              </FormItem>
+              </div>
             </div>
             
-            {/* Lista de Archivos Seleccionados */}
-            {selectedFiles.length > 0 && (
-                <div className="space-y-2">
-                    <Label className="text-sm font-medium">Archivos a Subir ({selectedFiles.length})</Label>
-                    <div className="flex flex-wrap gap-2 p-2 border rounded-md bg-background">
-                        {selectedFiles.map((file, index) => (
-                            <div key={index} className="flex items-center bg-secondary text-secondary-foreground rounded-full px-3 py-1 text-sm">
-                                <span className="truncate max-w-[150px]">{file.name}</span>
-                                <Button 
-                                    type="button" 
-                                    variant="ghost" 
-                                    size="icon" 
-                                    className="h-5 w-5 ml-2 p-0.5 hover:bg-destructive/20"
-                                    onClick={() => handleRemoveFile(index)}
-                                    disabled={isSubmitting}
-                                >
-                                    <X className="h-3 w-3 text-destructive" />
-                                </Button>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
+            {/* Eliminamos la lista de archivos seleccionados */}
 
             <div className="space-y-4 max-h-[400px] overflow-y-auto p-2 border rounded-md">
               <h3 className="text-lg font-semibold mb-4">Artículos a Recibir</h3>
@@ -377,7 +306,7 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
                 const quantityOrdered = form.watch(`items.${index}.quantityOrdered`);
                 const quantityPreviouslyReceived = form.watch(`items.${index}.quantityPreviouslyReceived`);
                 const quantityRemaining = quantityOrdered - quantityPreviouslyReceived;
-                const isFullyReceived = quantityRemaining <= 0;
+                const isFullyReceived = quantityRemaining <= 0 && quantityPreviouslyReceived > 0;
                 const currentQuantityReceived = form.watch(`items.${index}.quantityReceived`);
 
                 return (
@@ -388,7 +317,7 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
                     </div>
                     <div className="sm:col-span-1">
                       <p className="text-sm text-muted-foreground">Restante:</p>
-                      <p className={`font-bold ${isFullyReceived ? 'text-green-600' : 'text-orange-600'}`}>{quantityRemaining}</p>
+                      <p className={`font-bold ${quantityRemaining <= 0 ? 'text-green-600' : 'text-orange-600'}`}>{quantityRemaining}</p>
                     </div>
                     <FormField
                       control={form.control}
@@ -400,14 +329,13 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
                             <FormControl>
                               <Input 
                                 type="number" 
-                                min={0}
-                                max={quantityRemaining}
+                                min={quantityPreviouslyReceived > 0 ? -quantityPreviouslyReceived : 0} // Permitir corrección negativa
                                 {...quantityField} 
                                 onChange={(e) => {
                                   const val = Number(e.target.value);
                                   quantityField.onChange(val);
                                 }}
-                                disabled={isSubmitting || isFullyReceived}
+                                disabled={isSubmitting}
                                 className={isFullyReceived ? "bg-green-50/50" : ""}
                               />
                             </FormControl>

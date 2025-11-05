@@ -111,9 +111,7 @@ const RequestDetails: React.FC = () => {
   
   const [newStatus, setNewStatus] = React.useState<RequestStatusType>(request?.status || "Pending");
   
-  // ESTADOS DE ALBARÁN ELIMINADOS:
-  // const [pendingSlipFiles, setPendingSlipFiles] = React.useState<File[]>([]);
-  // const slipFileInputRef = React.useRef<HTMLInputElement>(null);
+  // Lógica de archivos pendientes ELIMINADA
 
 
   const getVendorEmail = (vendorId: string) => vendors?.find(v => v.id === vendorId)?.email || "";
@@ -256,10 +254,6 @@ const RequestDetails: React.FC = () => {
   };
   
   // Lógica de archivos pendientes ELIMINADA
-  // const handleAddSlipFiles = (event: React.ChangeEvent<HTMLInputElement>) => { ... };
-  // const handleRemovePendingSlipFile = (indexToRemove: number) => { ... };
-  // const handleOpenSlipFileSelector = () => { ... };
-  // const handleClearPendingSlipFiles = () => { ... };
 
 
   const handleUploadClick = (fileType: FileType) => {
@@ -610,7 +604,8 @@ const RequestDetails: React.FC = () => {
           {/* NUEVO: Lista de Albaranes */}
           <PackingSlipsList 
             requestId={request.id} 
-            onUploadClick={handleOpenReceiveItemsDialog} // Volver a abrir el diálogo de recepción
+            onOpenReceiveItemsDialog={handleOpenReceiveItemsDialog} // Abrir el diálogo de recepción
+            requestNumber={displayRequestNumber}
           />
           
           {/* Input de archivo oculto y lista de archivos pendientes ELIMINADOS */}
@@ -797,7 +792,6 @@ const RequestDetails: React.FC = () => {
           onOpenChange={setIsReceiveItemsDialogOpen}
           requestId={request.id}
           requestItems={request.items}
-          // Ya no pasamos initialSlipFiles ni onClearInitialSlipFiles
         />
       )}
     </div>
