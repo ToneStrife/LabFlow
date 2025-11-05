@@ -258,6 +258,14 @@ const RequestForm: React.FC = () => {
     // No hay metadata de archivo para limpiar en localStorage, solo el estado local
     setSelectedQuoteFile(null);
   };
+  
+  // 3. Restaurar estado al montar (sin toast)
+  React.useEffect(() => {
+    const savedData = localStorage.getItem("newRequestFormState");
+    if (savedData) {
+      // No mostrar toast, solo restaurar silenciosamente
+    }
+  }, []);
   // -----------------------------------
 
   // Establecer valores predeterminados para direcciones y solicitante
@@ -387,8 +395,7 @@ const RequestForm: React.FC = () => {
   // Determinar qué metadata mostrar: solo el archivo seleccionado (si existe)
   const fileMetaToDisplay = selectedQuoteFile ? { name: selectedQuoteFile.name, size: selectedQuoteFile.size } : null;
   
-  // Mostrar advertencia si el archivo se perdió (ya no es necesario porque el campo aparecerá vacío)
-  // const fileLost = savedQuoteFileMeta && !selectedQuoteFile;
+  // Ya no mostramos la advertencia de archivo perdido, simplemente el campo aparece vacío si se recarga.
 
   return (
     <Form {...form}>

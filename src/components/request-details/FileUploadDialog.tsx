@@ -51,6 +51,7 @@ const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
       const saved = JSON.parse(raw);
       if (saved) {
         setPoNumber(saved.poNumber ?? "");
+        // No restauramos savedFileMeta aquí, ya que no lo estamos usando.
       }
     } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -140,7 +140,7 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
         }
         
         setHasRestored(true);
-        toast.info("Borrador de recepción recuperado.");
+        // toast.info("Borrador de recepción recuperado."); // ELIMINADO
       } catch (e) {
         console.error("Failed to restore receive items form state:", e);
         localStorage.removeItem(PERSIST_KEY);
