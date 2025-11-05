@@ -258,6 +258,36 @@ const RequestDetails: React.FC = () => {
   const handleUploadQuote = () => handleUploadClick("quote");
   const handleUploadPOAndOrder = () => handleUploadClick("po");
 
+  // NUEVO HANDLER: Subida simple de archivo (usado para 'slip')
+  const handleSimpleFileUpload = async (file: File, fileType: FileType) => {
+    if (!request) return;
+    
+    if (fileType !== 'slip') {
+        // Si no es un albarán, usamos el diálogo (que maneja PO Number y cambio de estado)
+        handleUploadClick(fileType);
+        return;
+    }
+
+    try {
+      // 1. Subir el archivo (sin PO Number)
+      const { filePath } = await updateFileMutation.mutateAsync({
+        id: request.id,
+        fileType: fileType,
+        file: file,
+        poNumber: null, // No necesitamos PO Number para slips
+      });
+      
+      // 2. Si es un slip, no cambiamos el estado, solo notificamos la subida.
+      if (filePath) {
+          toast.success(`Albarán subido exitosamente!`);
+      }
+      
+    } catch (error) {
+      console.error("Simple file upload failed:", error);
+    }
+  };
+
+
   const handleFileUpload = async (file: File | null, poNumber?: string) => {
     if (!request) return;
 
@@ -577,7 +607,11 @@ const RequestDetails: React.FC = () => {
             />
           </div>
           
-          <RequestFilesCard request={request} onUploadClick={handleUploadClick} />
+          <RequestFilesCard 
+            request={request} 
+            onUploadClick={handleUploadClick} 
+            onSimpleFileUpload={(file, fileType) => handleSimpleFileUpload(file, fileType)} // Pasar el nuevo handler
+          />
         </div>
       </div>
       

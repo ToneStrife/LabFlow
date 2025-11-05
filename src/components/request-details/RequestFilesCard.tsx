@@ -5,13 +5,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FileText, Upload, Paperclip, Loader2, Trash2 } from "lucide-react";
 import { SupabaseRequest } from "@/data/types"; // Corrected import
-import { FileType } from "@/hooks/use-requests";
+import { FileType, useUpdateRequestFile } from "@/hooks/use-requests"; // Importar useUpdateRequestFile
 import { generateSignedUrl } from "@/utils/supabase-storage"; // Importar utilidad
 import { toast } from "sonner";
 
 interface RequestFilesCardProps {
   request: SupabaseRequest;
-  onUploadClick: (fileType: FileType) => void;
+  onUploadClick: (fileType: FileType) => void; // Mantener para quote/po
+  onSimpleFileUpload: (file: File, fileType: FileType) => Promise<void>; // Nuevo prop para subida simple
 }
 
 const getFileNameFromPath = (filePath: string): string => {
@@ -37,8 +38,18 @@ const getFileNameFromPath = (filePath: string): string => {
   }
 };
 
-const FileRow: React.FC<{ label: string; filePath: string | null; onUpload: () => void }> = ({ label, filePath, onUpload }) => {
+interface FileRowProps {
+    label: string;
+    filePath: string | null;
+    fileType: FileType;
+    onUploadClick: () => void; // Para abrir diálogo (quote/po)
+    onSimpleFileUpload: (file: File) => Promise<void>; // Para subida directa (slip)
+}
+
+const FileRow: React.FC<FileRowProps> = ({ label, filePath, fileType, onUploadClick, onSimpleFileUpload }) => {
   const [isGenerating, setIsGenerating] = React.useState(false);
+  const [isUploading, setIsUploading] = React.useState(false);
+  const inputRef = React.useRef<HTMLInputElement>(null);
 
   const handleViewClick = async () => {
     if (!filePath) return;
@@ -50,10 +61,32 @@ const FileRow: React.FC<{ label: string; filePath: string | null; onUpload: () =
     if (signedUrl) {
       window.open(signedUrl, '_blank');
     } else {
-      // Explicit toast if the utility failed to return a URL
       toast.error(`No se pudo generar la URL firmada para ${label}.`);
     }
   };
+  
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+        setIsUploading(true);
+        try {
+            await onSimpleFileUpload(file);
+        } catch (e) {
+            // El error ya se maneja en el hook de mutación
+        } finally {
+            setIsUploading(false);
+            // Limpiar el input para permitir la subida del mismo archivo de nuevo
+            if (inputRef.current) {
+                inputRef.current.value = "";
+            }
+        }
+    }
+  };
+  
+  // Si es 'slip', usamos la subida directa. Si es 'quote' o 'po', usamos el diálogo.
+  const isSimpleUpload = fileType === 'slip';
+  const actionHandler = isSimpleUpload ? () => inputRef.current?.click() : onUploadClick;
+  const buttonDisabled = isGenerating || isUploading;
 
   return (
     <div className="flex items-center justify-between p-3 rounded-md hover:bg-muted/50 border-b last:border-b-0">
@@ -69,7 +102,7 @@ const FileRow: React.FC<{ label: string; filePath: string | null; onUpload: () =
               variant="link" 
               size="sm" 
               onClick={handleViewClick} 
-              disabled={isGenerating}
+              disabled={buttonDisabled}
               className="text-xs text-blue-600 hover:underline flex items-center p-0 h-auto truncate max-w-[150px] sm:max-w-[200px]"
               title={getFileNameFromPath(filePath)}
             >
@@ -82,22 +115,40 @@ const FileRow: React.FC<{ label: string; filePath: string | null; onUpload: () =
             </Button>
             
             {/* Botón de Reemplazar/Subir como icono */}
-            <Button variant="outline" size="icon" onClick={onUpload} title="Reemplazar Archivo" className="h-8 w-8 flex-shrink-0">
-              <Upload className="h-4 w-4" />
+            <Button variant="outline" size="icon" onClick={actionHandler} title="Reemplazar Archivo" className="h-8 w-8 flex-shrink-0" disabled={buttonDisabled}>
+              {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
             </Button>
           </>
         ) : (
-          <Button variant="outline" size="sm" onClick={onUpload} title="Subir Archivo" className="h-8 px-3 text-sm">
-            <Upload className="h-4 w-4 mr-2" />
+          <Button variant="outline" size="sm" onClick={actionHandler} title="Subir Archivo" className="h-8 px-3 text-sm" disabled={buttonDisabled}>
+            {isUploading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Upload className="h-4 w-4 mr-2" />}
             Subir
           </Button>
+        )}
+        
+        {/* Input de archivo oculto para subida simple */}
+        {isSimpleUpload && (
+            <input
+                ref={inputRef}
+                type="file"
+                accept="image/*,application/pdf"
+                onChange={handleFileChange}
+                disabled={buttonDisabled}
+                className="hidden"
+                max={1}
+            />
         )}
       </div>
     </div>
   );
 };
 
-const RequestFilesCard: React.FC<RequestFilesCardProps> = ({ request, onUploadClick }) => {
+const RequestFilesCard: React.FC<RequestFilesCardProps> = ({ request, onUploadClick, onSimpleFileUpload }) => {
+  
+  const handleSimpleUpload = (fileType: FileType) => async (file: File) => {
+      await onSimpleFileUpload(file, fileType);
+  };
+  
   return (
     <Card>
       <CardHeader>
@@ -107,17 +158,23 @@ const RequestFilesCard: React.FC<RequestFilesCardProps> = ({ request, onUploadCl
         <FileRow 
           label="Cotización" 
           filePath={request.quote_url} 
-          onUpload={() => onUploadClick("quote")} 
+          fileType="quote"
+          onUploadClick={() => onUploadClick("quote")} 
+          onSimpleFileUpload={handleSimpleUpload("quote")} // No se usa, pero se pasa
         />
         <FileRow 
           label="Orden de Compra (PO)" 
           filePath={request.po_url} 
-          onUpload={() => onUploadClick("po")} 
+          fileType="po"
+          onUploadClick={() => onUploadClick("po")} 
+          onSimpleFileUpload={handleSimpleUpload("po")} // No se usa, pero se pasa
         />
         <FileRow 
           label="Último Albarán" 
           filePath={request.slip_url} 
-          onUpload={() => onUploadClick("slip")} 
+          fileType="slip"
+          onUploadClick={() => onUploadClick("slip")} // Se pasa el handler del diálogo, pero FileRow lo ignora
+          onSimpleFileUpload={handleSimpleUpload("slip")} // Usado para subida directa
         />
       </CardContent>
     </Card>
