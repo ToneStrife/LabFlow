@@ -1,17 +1,12 @@
 "use client";
 
 import React from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
+  Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
 } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -19,27 +14,23 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
 import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
-import { Input } from "@/components/ui/input"; // Importación corregida
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { SupabaseRequest, Profile } from "@/data/types"; // Corrected import source
+import { SupabaseRequest, Profile } from "@/data/types";
 import { useAccountManagers } from "@/hooks/use-account-managers";
 import { useProjects } from "@/hooks/use-projects";
 import { useVendors } from "@/hooks/use-vendors";
 import { useShippingAddresses, useBillingAddresses } from "@/hooks/use-addresses";
-import { getFullName } from "@/hooks/use-profiles"; // Only import getFullName
+import { getFullName } from "@/hooks/use-profiles";
 
 const fullEditSchema = z.object({
   vendorId: z.string().min(1, { message: "El proveedor es obligatorio." }),
   shippingAddressId: z.string().min(1, { message: "La dirección de envío es obligatoria." }),
   billingAddressId: z.string().min(1, { message: "La dirección de facturación es obligatoria." }),
-  accountManagerId: z.union([
-    z.string().uuid({ message: "ID de gerente no válido." }),
-    z.literal("unassigned"),
-  ]).optional(),
+  accountManagerId: z.union([z.string().uuid({ message: "ID de gerente no válido." }), z.literal("unassigned")]).optional(),
   notes: z.string().optional(),
   projectCodes: z.array(z.string()).optional(),
 });
-
 export type FullEditFormValues = z.infer<typeof fullEditSchema>;
 
 interface RequestFullEditFormProps {
@@ -57,33 +48,85 @@ const RequestFullEditForm: React.FC<RequestFullEditFormProps> = ({ request, prof
   const { data: billingAddresses, isLoading: isLoadingBillingAddresses } = useBillingAddresses();
 
   const defaultProjectCodes = request.project_codes || [];
-  const requesterProfile = profiles.find(p => p.id === request.requester_id);
+  const requesterProfile = profiles.find((p) => p.id === request.requester_id);
+
+  // ---- defaultValues memoizados (solo en montaje / cuando cambie la request)
+  const defaultValues = React.useMemo<FullEditFormValues>(() => ({
+    vendorId: request.vendor_id,
+    shippingAddressId: request.shipping_address_id || "",
+    billingAddressId: request.billing_address_id || "",
+    accountManagerId: request.account_manager_id || "unassigned",
+    notes: request.notes || "",
+    projectCodes: defaultProjectCodes,
+  }), [
+    request.vendor_id,
+    request.shipping_address_id,
+    request.billing_address_id,
+    request.account_manager_id,
+    request.notes,
+    defaultProjectCodes,
+  ]);
 
   const form = useForm<FullEditFormValues>({
     resolver: zodResolver(fullEditSchema),
-    defaultValues: {
-      vendorId: request.vendor_id,
-      shippingAddressId: request.shipping_address_id || "",
-      billingAddressId: request.billing_address_id || "",
-      accountManagerId: request.account_manager_id || "unassigned",
-      notes: request.notes || "",
-      projectCodes: defaultProjectCodes,
-    },
-    values: { // Usar values para asegurar que el formulario se actualice si la solicitud cambia
-      vendorId: request.vendor_id,
-      shippingAddressId: request.shipping_address_id || "",
-      billingAddressId: request.billing_address_id || "",
-      accountManagerId: request.account_manager_id || "unassigned",
-      notes: request.notes || "",
-      projectCodes: defaultProjectCodes,
-    }
+    defaultValues,
   });
 
-  const handleSubmit = (data: FullEditFormValues) => {
-    onSubmit(data);
+  // ---- PERSISTENCIA por request.id
+  const PERSIST_KEY = React.useMemo(() => `requestFullEdit:${request.id}`, [request.id]);
+
+  // Restore al montar o cuando cambie la request
+  React.useEffect(() => {
+    try {
+      const raw = localStorage.getItem(PERSIST_KEY);
+      if (raw) {
+        const saved = JSON.parse(raw);
+        // mezcla con defaultValues para no perder campos nuevos
+        form.reset({ ...defaultValues, ...saved });
+        return;
+      }
+    } catch {}
+    // si no hay guardado, usa defaultValues
+    form.reset(defaultValues);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [PERSIST_KEY, defaultValues]);
+
+  // Autosave (debounce)
+  const watched = useWatch({ control: form.control });
+  React.useEffect(() => {
+    const id = setTimeout(() => {
+      try {
+        localStorage.setItem(PERSIST_KEY, JSON.stringify(watched));
+      } catch {}
+    }, 300);
+    return () => clearTimeout(id);
+  }, [watched, PERSIST_KEY]);
+
+  // Guardar también si la pestaña se va al fondo (Memory Saver / lid close)
+  React.useEffect(() => {
+    const onHide = () => {
+      if (document.visibilityState !== "hidden") return;
+      try {
+        const snap = form.getValues();
+        localStorage.setItem(PERSIST_KEY, JSON.stringify(snap));
+      } catch {}
+    };
+    document.addEventListener("visibilitychange", onHide);
+    return () => document.removeEventListener("visibilitychange", onHide);
+  }, [PERSIST_KEY, form]);
+
+  const handleSubmit = async (data: FullEditFormValues) => {
+    await onSubmit(data);
+    // limpia borrador tras guardar OK
+    try { localStorage.removeItem(PERSIST_KEY); } catch {}
   };
 
-  const isLoading = isLoadingVendors || isLoadingManagers || isLoadingProjects || isLoadingShippingAddresses || isLoadingBillingAddresses;
+  const isLoading =
+    isLoadingVendors ||
+    isLoadingManagers ||
+    isLoadingProjects ||
+    isLoadingShippingAddresses ||
+    isLoadingBillingAddresses;
 
   return (
     <Form {...form}>
@@ -92,9 +135,10 @@ const RequestFullEditForm: React.FC<RequestFullEditFormProps> = ({ request, prof
           <FormItem>
             <FormLabel>Solicitante</FormLabel>
             <FormControl>
-              <Input value={getFullName(requesterProfile)} readOnly disabled />
+              <Input value={getFullName(requesterProfile) || "—"} readOnly disabled />
             </FormControl>
           </FormItem>
+
           <FormField
             control={form.control}
             name="vendorId"
@@ -175,7 +219,9 @@ const RequestFullEditForm: React.FC<RequestFullEditFormProps> = ({ request, prof
                 <FormLabel>Gerente de Cuenta Asignado</FormLabel>
                 <Select onValueChange={field.onChange} value={field.value || "unassigned"} disabled={isLoadingManagers || isSubmitting}>
                   <FormControl>
-                    <SelectTrigger><SelectValue placeholder={isLoadingManagers ? "Cargando gerentes..." : "Selecciona un gerente de cuenta"} /></SelectTrigger>
+                    <SelectTrigger>
+                      <SelectValue placeholder={isLoadingManagers ? "Cargando gerentes..." : "Selecciona un gerente de cuenta"} />
+                    </SelectTrigger>
                   </FormControl>
                   <SelectContent>
                     <SelectItem value="unassigned">Sin Gerente</SelectItem>
@@ -190,6 +236,7 @@ const RequestFullEditForm: React.FC<RequestFullEditFormProps> = ({ request, prof
               </FormItem>
             )}
           />
+
           <FormField
             control={form.control}
             name="projectCodes"
@@ -199,7 +246,12 @@ const RequestFullEditForm: React.FC<RequestFullEditFormProps> = ({ request, prof
                 <Popover>
                   <PopoverTrigger asChild>
                     <FormControl>
-                      <Button variant="outline" role="combobox" className={cn("w-full justify-between", !field.value || field.value.length === 0 && "text-muted-foreground")} disabled={isLoadingProjects || isSubmitting}>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        className={cn("w-full justify-between", (!field.value || field.value.length === 0) && "text-muted-foreground")}
+                        disabled={isLoadingProjects || isSubmitting}
+                      >
                         {field.value && field.value.length > 0 ? (
                           <div className="flex flex-wrap gap-1">
                             {field.value.map((projectId) => {
@@ -218,14 +270,18 @@ const RequestFullEditForm: React.FC<RequestFullEditFormProps> = ({ request, prof
                       <CommandEmpty>No se encontró ningún proyecto.</CommandEmpty>
                       <CommandGroup>
                         {projects?.map((project) => (
-                          <CommandItem value={project.name} key={project.id} onSelect={() => {
-                            const currentValues = field.value || [];
-                            if (currentValues.includes(project.id)) {
-                              field.onChange(currentValues.filter((id) => id !== project.id));
-                            } else {
-                              field.onChange([...currentValues, project.id]);
-                            }
-                          }}>
+                          <CommandItem
+                            value={project.name}
+                            key={project.id}
+                            onSelect={() => {
+                              const currentValues = field.value || [];
+                              if (currentValues.includes(project.id)) {
+                                field.onChange(currentValues.filter((id) => id !== project.id));
+                              } else {
+                                field.onChange([...currentValues, project.id]);
+                              }
+                            }}
+                          >
                             <Check className={cn("mr-2 h-4 w-4", field.value?.includes(project.id) ? "opacity-100" : "opacity-0")} />
                             {project.name} ({project.code})
                           </CommandItem>
@@ -239,6 +295,7 @@ const RequestFullEditForm: React.FC<RequestFullEditFormProps> = ({ request, prof
             )}
           />
         </div>
+
         <FormField
           control={form.control}
           name="notes"
@@ -252,15 +309,10 @@ const RequestFullEditForm: React.FC<RequestFullEditFormProps> = ({ request, prof
             </FormItem>
           )}
         />
+
         <div className="flex justify-end pt-4">
           <Button type="submit" disabled={isSubmitting || isLoading}>
-            {isSubmitting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando...
-              </>
-            ) : (
-              "Guardar Todos los Cambios"
-            )}
+            {isSubmitting ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando...</>) : "Guardar Todos los Cambios"}
           </Button>
         </div>
       </form>
