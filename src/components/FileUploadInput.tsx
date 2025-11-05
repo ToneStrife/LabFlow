@@ -1,7 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { useDropzone } from "react-dropzone";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Label } from "@/components/ui/label";
 import { FileText, UploadCloud, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -12,82 +11,75 @@ interface FileUploadInputProps {
   accept?: string; // e.g. "image/*,application/pdf"
   onChange: (files: FileList | null) => void;
   disabled?: boolean;
-  currentFile?: File | null;
+  // currentFile ya no es un objeto File, sino la metadata para mostrar
+  currentFileMeta?: { name: string; size: number } | null; 
 }
-
-const toDropzoneAccept = (accept?: string) => {
-  if (!accept) return undefined;
-  // "image/*,application/pdf" -> { "image/*": [], "application/pdf": [] }
-  const entries = accept
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean)
-    .map((k) => [k, [] as string[]]);
-  return Object.fromEntries(entries);
-};
 
 const FileUploadInput: React.FC<FileUploadInputProps> = ({
   label,
   accept = "image/*,application/pdf",
   onChange,
   disabled = false,
-  currentFile,
+  currentFileMeta,
 }) => {
-  const [file, setFile] = useState<File | null>(currentFile || null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [fileName, setFileName] = useState<string | null>(currentFileMeta?.name || null);
 
-  // --- Sincroniza estado interno si cambia currentFile desde fuera
+  // Sincroniza el nombre del archivo si la metadata externa cambia
   useEffect(() => {
-    setFile(currentFile ?? null);
-  }, [currentFile]);
+    setFileName(currentFileMeta?.name || null);
+  }, [currentFileMeta]);
 
-  const dzAccept = useMemo(() => toDropzoneAccept(accept), [accept]);
-
-  const onDrop = useCallback(
-    (acceptedFiles: File[]) => {
-      if (acceptedFiles.length > 0) {
-        const newFile = acceptedFiles[0];
-        setFile(newFile);
-        const dt = new DataTransfer();
-        dt.items.add(newFile);
-        onChange(dt.files);
-      }
-    },
-    [onChange]
-  );
-
-  const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
-    onDrop,
-    accept: dzAccept,
-    maxFiles: 1,
-    disabled,
-    noClick: true, // usamos open() en el contenedor para click controlado
-  });
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    const file = files && files.length > 0 ? files[0] : null;
+    
+    setFileName(file ? file.name : null);
+    onChange(files);
+  };
 
   const handleRemoveFile = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setFile(null);
+    if (inputRef.current) {
+      inputRef.current.value = ""; // Limpiar el input nativo
+    }
+    setFileName(null);
     onChange(null);
   };
+  
+  // Si hay metadata pero el input está vacío (pérdida de estado), mostramos la metadata
+  const displayFileName = fileName || currentFileMeta?.name || null;
 
   return (
     <div className="space-y-2">
       <Label>{label}</Label>
       <div
-        {...getRootProps()}
-        onClick={() => !disabled && open()}
         className={cn(
-          "flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-muted/50 transition-colors",
-          isDragActive ? "border-primary bg-muted/70" : "border-input",
+          "flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-muted/50 transition-colors relative",
           disabled && "opacity-50 cursor-not-allowed"
         )}
+        onClick={() => {
+            if (!disabled && inputRef.current) {
+                inputRef.current.click();
+            }
+        }}
       >
-        <input {...getInputProps()} />
+        {/* Input de archivo oculto */}
+        <input
+          ref={inputRef}
+          type="file"
+          accept={accept}
+          onChange={handleFileChange}
+          disabled={disabled}
+          className="hidden"
+          max={1}
+        />
 
-        {file ? (
+        {displayFileName ? (
           <div className="flex items-center justify-between w-full px-4">
             <div className="flex items-center space-x-2 min-w-0">
               <FileText className="h-5 w-5 text-primary flex-shrink-0" />
-              <span className="text-sm font-medium truncate">{file.name}</span>
+              <span className="text-sm font-medium truncate">{displayFileName}</span>
             </div>
             <Button
               type="button"
