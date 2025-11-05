@@ -178,7 +178,12 @@ const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       {/* Mantén el contenido montado incluso cuando esté cerrado */}
-      <DialogContent className="sm:max-w-[425px]" forceMount>
+      <DialogContent 
+        className="sm:max-w-[425px]" 
+        forceMount
+        // CRÍTICO: Prevenir el cierre al hacer clic fuera
+        onPointerDownOutside={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle>{getTitle()}</DialogTitle>
           <DialogDescription>
