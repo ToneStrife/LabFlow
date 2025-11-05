@@ -239,37 +239,24 @@ const RequestForm: React.FC = () => {
   ];
   const { clearPersistence } = useFormPersistence(form, "newRequestFormState", fieldsToPersist);
   
-  // Estado local para la metadata del archivo de cotización (para persistencia)
-  const [savedQuoteFileMeta, setSavedQuoteFileMeta] = React.useState<{ name: string; size: number } | null>(null);
+  // Estado local para el objeto File real (solo existe en la sesión actual)
+  const [selectedQuoteFile, setSelectedQuoteFile] = React.useState<File | null>(null);
   
-  // 1. Restaurar metadata del archivo al montar
-  React.useEffect(() => {
-    const raw = localStorage.getItem("newRequestQuoteFileMeta");
-    if (raw) {
-      try {
-        const saved = JSON.parse(raw);
-        setSavedQuoteFileMeta(saved);
-      } catch {}
-    }
-  }, []);
-  
-  // 2. Autosave de metadata del archivo
+  // 1. Autosave de metadata del archivo
   const handleQuoteFileChange = (fileList: FileList | null) => {
     const f = fileList && fileList.length > 0 ? fileList[0] : null;
     
     // 1. Actualizar el valor del formulario (objeto FileList)
     form.setValue('quoteFile', fileList);
     
-    // 2. Actualizar y guardar la metadata (nombre/tamaño)
-    const meta = f ? { name: f.name, size: f.size } : null;
-    setSavedQuoteFileMeta(meta);
-    localStorage.setItem("newRequestQuoteFileMeta", JSON.stringify(meta));
+    // 2. Actualizar el objeto File real
+    setSelectedQuoteFile(f);
   };
   
-  // 3. Limpiar metadata al limpiar el formulario
+  // 2. Limpiar metadata al limpiar el formulario
   const clearQuoteFilePersistence = () => {
-    localStorage.removeItem("newRequestQuoteFileMeta");
-    setSavedQuoteFileMeta(null);
+    // No hay metadata de archivo para limpiar en localStorage, solo el estado local
+    setSelectedQuoteFile(null);
   };
   // -----------------------------------
 
@@ -306,7 +293,7 @@ const RequestForm: React.FC = () => {
     }
 
     const managerId = data.accountManagerId === 'unassigned' || !data.accountManagerId ? null : data.accountManagerId;
-    const quoteFile = data.quoteFile?.[0] || null;
+    const quoteFile = selectedQuoteFile; // Usar el objeto File real
     
     // 1. Crear la solicitud (inicialmente en estado Pending)
     const itemsToSubmit: RequestItem[] = data.items.map(item => ({
@@ -397,9 +384,11 @@ const RequestForm: React.FC = () => {
   const isLoadingAddresses = isLoadingShippingAddresses || isLoadingBillingAddresses;
   const isSubmitting = addRequestMutation.isPending || updateFileMutation.isPending;
   
-  // Comprobar si el archivo se perdió después de una recarga
-  const fileList = form.watch('quoteFile');
-  const fileLost = savedQuoteFileMeta && (!fileList || fileList.length === 0);
+  // Determinar qué metadata mostrar: solo el archivo seleccionado (si existe)
+  const fileMetaToDisplay = selectedQuoteFile ? { name: selectedQuoteFile.name, size: selectedQuoteFile.size } : null;
+  
+  // Mostrar advertencia si el archivo se perdió (ya no es necesario porque el campo aparecerá vacío)
+  // const fileLost = savedQuoteFileMeta && !selectedQuoteFile;
 
   return (
     <Form {...form}>
@@ -568,7 +557,7 @@ const RequestForm: React.FC = () => {
                     onChange={handleQuoteFileChange} 
                     disabled={isSubmitting} 
                     accept="image/*,application/pdf"
-                    currentFileMeta={fileLost ? savedQuoteFileMeta : undefined} // Mostrar metadata si se perdió el archivo
+                    currentFileMeta={fileMetaToDisplay} // Mostrar metadata si se perdió el archivo
                 />
               </FormControl>
               <FormMessage />
@@ -577,14 +566,7 @@ const RequestForm: React.FC = () => {
           )}
         />
         
-        {fileLost && savedQuoteFileMeta && (
-            <div className="flex items-start gap-2 rounded-md border p-3 text-sm text-orange-600 bg-orange-50/50">
-                <Info className="h-4 w-4 mt-0.5 shrink-0" />
-                <div>
-                    Advertencia: El archivo <strong>{savedQuoteFileMeta.name}</strong> se perdió debido a la recarga del navegador. Por favor, **vuelve a seleccionarlo** para adjuntarlo.
-                </div>
-            </div>
-        )}
+        {/* Eliminamos la advertencia de archivo perdido, ya que el campo aparecerá vacío */}
         
         <FormField
           control={form.control}

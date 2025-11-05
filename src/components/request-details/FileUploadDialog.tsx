@@ -42,10 +42,8 @@ const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
   // selectedFile es el objeto File real (solo existe en la sesión actual)
   const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
   const [poNumber, setPoNumber] = React.useState<string>("");
-  // savedFileMeta es la metadata persistida (nombre, tamaño)
-  const [savedFileMeta, setSavedFileMeta] = React.useState<{ name: string; size: number } | null>(null);
-
-  // --- RESTORE SIEMPRE AL MONTAR (independiente de isOpen)
+  
+  // --- RESTORE PO NUMBER AL MONTAR
   React.useEffect(() => {
     try {
       const raw = localStorage.getItem(PERSIST_KEY);
@@ -53,58 +51,40 @@ const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
       const saved = JSON.parse(raw);
       if (saved) {
         setPoNumber(saved.poNumber ?? "");
-        setSavedFileMeta(saved.fileMeta ?? null);
-        setSelectedFile(null); // El objeto File nunca se restaura
       }
     } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [PERSIST_KEY]);
 
-  // --- AUTOSAVE SIEMPRE (no depende de isOpen)
+  // --- AUTOSAVE PO NUMBER
   React.useEffect(() => {
     const id = setTimeout(() => {
-      // Si hay un archivo seleccionado en la sesión actual, usamos su metadata.
-      // Si no, usamos la metadata guardada previamente.
-      const meta = selectedFile ? { name: selectedFile.name, size: selectedFile.size } : savedFileMeta;
       try {
-        localStorage.setItem(PERSIST_KEY, JSON.stringify({ poNumber, fileMeta: meta }));
+        localStorage.setItem(PERSIST_KEY, JSON.stringify({ poNumber }));
       } catch {}
     }, 300);
     return () => clearTimeout(id);
-  }, [poNumber, selectedFile, savedFileMeta, PERSIST_KEY]);
+  }, [poNumber, PERSIST_KEY]);
 
-  // --- Guardar en visibilitychange (para Memory Saver)
+  // --- Guardar PO NUMBER en visibilitychange
   React.useEffect(() => {
     const onHide = () => {
       if (document.visibilityState !== "hidden") return;
-      const meta = selectedFile ? { name: selectedFile.name, size: selectedFile.size } : savedFileMeta;
       try {
-        localStorage.setItem(PERSIST_KEY, JSON.stringify({ poNumber, fileMeta: meta }));
+        localStorage.setItem(PERSIST_KEY, JSON.stringify({ poNumber }));
       } catch {}
     };
     document.addEventListener("visibilitychange", onHide);
     return () => document.removeEventListener("visibilitychange", onHide);
-  }, [poNumber, selectedFile, savedFileMeta, PERSIST_KEY]);
-
-  // --- Guardar también en unmount
-  React.useEffect(() => {
-    return () => {
-      const meta = selectedFile ? { name: selectedFile.name, size: selectedFile.size } : savedFileMeta;
-      try {
-        localStorage.setItem(PERSIST_KEY, JSON.stringify({ poNumber, fileMeta: meta }));
-      } catch {}
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [poNumber, PERSIST_KEY]);
 
   const clearDraft = React.useCallback(() => {
     try { localStorage.removeItem(PERSIST_KEY); } catch {}
-    setSavedFileMeta(null);
     setSelectedFile(null);
     setPoNumber("");
   }, [PERSIST_KEY]);
 
-  // Limpiar el objeto File al cerrar el diálogo, pero mantener la metadata y el PO Number
+  // Limpiar el objeto File al cerrar el diálogo
   React.useEffect(() => {
     if (!isOpen) {
       setSelectedFile(null);
@@ -114,8 +94,6 @@ const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
   const handleFileChange = (fileList: FileList | null) => {
     const f = fileList && fileList.length > 0 ? fileList[0] : null;
     setSelectedFile(f);
-    // Actualizar la metadata guardada inmediatamente para el autosave
-    setSavedFileMeta(f ? { name: f.name, size: f.size } : null);
   };
 
   const handleSubmit = async () => {
@@ -126,12 +104,7 @@ const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
     // Si el archivo es obligatorio y no está en la sesión actual (selectedFile),
     // el usuario debe volver a seleccionarlo.
     if ((isQuoteUpload || isSlipUpload) && !selectedFile) {
-        // Si hay metadata guardada, significa que el archivo se perdió por recarga.
-        if (savedFileMeta) {
-            toast.error("Archivo perdido", { description: `El archivo ${savedFileMeta.name} se perdió. Por favor, vuelve a seleccionarlo.` });
-        } else {
-            toast.error("Archivo obligatorio", { description: "Debes seleccionar un archivo para continuar." });
-        }
+        toast.error("Archivo obligatorio", { description: "Debes seleccionar un archivo para continuar." });
         return;
     }
     
@@ -154,7 +127,7 @@ const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
     isUploading ||
     (fileType === "quote" && !selectedFile) ||
     (fileType === "slip" && !selectedFile) ||
-    (fileType === "po" && !poNumber.trim() && !selectedFile); // Corregido: si es PO, se puede enviar solo con número o solo con archivo.
+    (fileType === "po" && !poNumber.trim() && !selectedFile);
 
   const getTitle = () =>
     fileType === "quote" ? "Subir Archivo de Cotización"
@@ -168,12 +141,10 @@ const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
     : fileType === "slip" ? "Archivo de Albarán (Opcional)"
     : "Archivo";
 
-  // Determinar qué metadata mostrar: el archivo seleccionado (si existe) o la metadata guardada
-  const fileMetaToDisplay = selectedFile ? { name: selectedFile.name, size: selectedFile.size } : savedFileMeta;
+  // Determinar qué metadata mostrar: solo el archivo seleccionado (si existe)
+  const fileMetaToDisplay = selectedFile ? { name: selectedFile.name, size: selectedFile.size } : null;
   
-  // Mostrar advertencia si se perdió el archivo pero se recuperó la metadata
-  const showFileLostWarning = fileMetaToDisplay && !selectedFile && (fileType === "quote" || fileType === "slip");
-
+  // Ya no mostramos la advertencia de archivo perdido, simplemente el campo aparece vacío si se recarga.
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -181,7 +152,6 @@ const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
       <DialogContent 
         className="sm:max-w-[425px]" 
         forceMount
-        // CRÍTICO: Prevenir el cierre al hacer clic fuera
         onPointerDownOutside={(e) => e.preventDefault()}
       >
         <DialogHeader>
@@ -193,20 +163,11 @@ const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
           </DialogDescription>
         </DialogHeader>
 
-        {showFileLostWarning && (
-          <div className="flex items-start gap-2 rounded-md border p-3 text-sm text-orange-600 bg-orange-50/50">
-            <Info className="h-4 w-4 mt-0.5 shrink-0" />
-            <div>
-              Advertencia: El archivo <strong>{fileMetaToDisplay!.name}</strong> se perdió debido a la recarga del navegador. Por favor, **vuelve a seleccionarlo** para adjuntarlo.
-            </div>
-          </div>
-        )}
-
         <div className="grid gap-4 py-4">
           {fileType === "po" && (
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="poNumber" className="text-right">
-                Número de PO <span className="text-red-500">*</span>
+                Número de PO {fileType === "po" && !selectedFile ? <span className="text-red-500">*</span> : "(Opcional)"}
               </Label>
               <Input
                 id="poNumber"
