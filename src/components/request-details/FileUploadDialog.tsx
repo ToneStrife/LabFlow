@@ -23,8 +23,7 @@ interface FileUploadDialogProps {
   onUpload: (file: File | null, poNumber?: string) => Promise<void>;
   isUploading: boolean;
   fileType: FileType; // 'quote' | 'po' | 'slip'
-  // opcional: una clave estable para aislar el borrador (p.ej., requestId)
-  draftKey?: string;
+  draftKey?: string;   // pásame algo estable (p.ej. requestId)
 }
 
 const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
@@ -35,7 +34,6 @@ const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
   fileType,
   draftKey = "global",
 }) => {
-  // --- Persistencia: claves por usuario/solicitud/diálogo si quieres afinar más
   const PERSIST_KEY = React.useMemo(
     () => `uploadDialog:${fileType}:${draftKey}`,
     [fileType, draftKey]
@@ -43,15 +41,10 @@ const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
 
   const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
   const [poNumber, setPoNumber] = React.useState<string>("");
+  const [savedFileMeta, setSavedFileMeta] = React.useState<{ name: string; size: number } | null>(null);
 
-  // guardamos metadatos no sensibles del archivo para informar al reabrir
-  const [savedFileMeta, setSavedFileMeta] = React.useState<
-    { name: string; size: number } | null
-  >(null);
-
-  // ---- Restore al abrir (y también en primer render si ya estaba abierto)
+  // --- RESTORE SIEMPRE AL MONTAR (independiente de isOpen)
   React.useEffect(() => {
-    if (!isOpen) return;
     try {
       const raw = localStorage.getItem(PERSIST_KEY);
       if (!raw) return;
@@ -59,65 +52,61 @@ const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
       if (saved) {
         setPoNumber(saved.poNumber ?? "");
         setSavedFileMeta(saved.fileMeta ?? null);
-        // No podemos restaurar el File. Mostramos aviso si había fileMeta.
-        setSelectedFile(null);
+        setSelectedFile(null); // Files no restaurables
       }
     } catch {}
-  }, [isOpen, PERSIST_KEY]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [PERSIST_KEY]);
 
-  // ---- Autosave con debounce
+  // --- AUTOSAVE SIEMPRE (no depende de isOpen)
   React.useEffect(() => {
-    if (!isOpen) return;
     const id = setTimeout(() => {
-      const meta = selectedFile
-        ? { name: selectedFile.name, size: selectedFile.size }
-        : savedFileMeta; // si no hay archivo seleccionado, preserva el último meta
-      const toSave = {
-        poNumber,
-        fileMeta: meta,
-      };
+      const meta = selectedFile ? { name: selectedFile.name, size: selectedFile.size } : savedFileMeta;
       try {
-        localStorage.setItem(PERSIST_KEY, JSON.stringify(toSave));
+        localStorage.setItem(PERSIST_KEY, JSON.stringify({ poNumber, fileMeta: meta }));
       } catch {}
     }, 300);
     return () => clearTimeout(id);
-  }, [isOpen, poNumber, selectedFile, savedFileMeta, PERSIST_KEY]);
+  }, [poNumber, selectedFile, savedFileMeta, PERSIST_KEY]);
 
-  // Guardado inmediato al ocultar pestaña
+  // --- Guardar en visibilitychange (para Memory Saver)
   React.useEffect(() => {
     const onHide = () => {
-      if (document.visibilityState !== "hidden" || !isOpen) return;
+      if (document.visibilityState !== "hidden") return;
+      const meta = selectedFile ? { name: selectedFile.name, size: selectedFile.size } : savedFileMeta;
       try {
-        const meta = selectedFile
-          ? { name: selectedFile.name, size: selectedFile.size }
-          : savedFileMeta;
-        localStorage.setItem(
-          PERSIST_KEY,
-          JSON.stringify({ poNumber, fileMeta: meta })
-        );
+        localStorage.setItem(PERSIST_KEY, JSON.stringify({ poNumber, fileMeta: meta }));
       } catch {}
     };
     document.addEventListener("visibilitychange", onHide);
     return () => document.removeEventListener("visibilitychange", onHide);
-  }, [isOpen, poNumber, selectedFile, savedFileMeta, PERSIST_KEY]);
+  }, [poNumber, selectedFile, savedFileMeta, PERSIST_KEY]);
+
+  // --- Guardar también en unmount (por si Radix desmonta igualmente)
+  React.useEffect(() => {
+    return () => {
+      const meta = selectedFile ? { name: selectedFile.name, size: selectedFile.size } : savedFileMeta;
+      try {
+        localStorage.setItem(PERSIST_KEY, JSON.stringify({ poNumber, fileMeta: meta }));
+      } catch {}
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const clearDraft = React.useCallback(() => {
-    try {
-      localStorage.removeItem(PERSIST_KEY);
-    } catch {}
+    try { localStorage.removeItem(PERSIST_KEY); } catch {}
     setSavedFileMeta(null);
   }, [PERSIST_KEY]);
 
-  // Reset limpio al cerrar manualmente
+  // Si cierras el diálogo NO borro el borrador (para poder recuperar si lo reabres).
+  // Si quieres borrarlo al cerrar, descomenta clearDraft() aquí.
   React.useEffect(() => {
     if (!isOpen) {
       setSelectedFile(null);
-      setPoNumber("");
-      // OJO: no borro el draft aquí para permitir que reabra y recupere.
-      // Si prefieres borrar al cerrar, descomenta:
+      // setPoNumber(""); // opcional: si prefieres limpiar visualmente al cerrar
       // clearDraft();
     }
-  }, [isOpen /* , clearDraft */]);
+  }, [isOpen /*, clearDraft*/]);
 
   const handleFileChange = (fileList: FileList | null) => {
     const f = fileList && fileList.length > 0 ? fileList[0] : null;
@@ -132,17 +121,13 @@ const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
 
     if (isPoUpload) {
       if (!poNumber.trim() && !selectedFile) {
-        toast.error("Faltan datos", {
-          description: "Indica un número de PO y/o selecciona un archivo.",
-        });
+        toast.error("Faltan datos", { description: "Indica un número de PO y/o selecciona un archivo." });
         return;
       }
       await onUpload(selectedFile, poNumber.trim() || undefined);
     } else if (isQuoteUpload) {
       if (!selectedFile) {
-        toast.error("El archivo de cotización es obligatorio.", {
-          description: "Por favor, selecciona un archivo para subir.",
-        });
+        toast.error("El archivo de cotización es obligatorio.", { description: "Selecciona un archivo para subir." });
         return;
       }
       await onUpload(selectedFile);
@@ -150,29 +135,8 @@ const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
       await onUpload(selectedFile);
     }
 
-    // Al subir OK, limpiamos el borrador y cerramos
     clearDraft();
     onOpenChange(false);
-  };
-
-  const getTitle = () => {
-    switch (fileType) {
-      case "quote":
-        return "Subir Archivo de Cotización";
-      case "po":
-        return "Subir Archivo de Orden de Compra";
-      case "slip":
-        return "Subir Albarán";
-      default:
-        return "Subir Archivo";
-    }
-  };
-
-  const getFileLabel = () => {
-    if (fileType === "quote") return "Archivo de Cotización (Obligatorio)";
-    if (fileType === "po") return "Archivo de PO (Opcional)";
-    if (fileType === "slip") return "Archivo de Albarán (Opcional)";
-    return "Archivo";
   };
 
   const isSubmitDisabled =
@@ -181,9 +145,22 @@ const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
     (fileType === "slip" && !selectedFile) ||
     (fileType === "po" && !selectedFile && !poNumber.trim());
 
+  const getTitle = () =>
+    fileType === "quote" ? "Subir Archivo de Cotización"
+    : fileType === "po"   ? "Subir Archivo de Orden de Compra"
+    : fileType === "slip" ? "Subir Albarán"
+    : "Subir Archivo";
+
+  const getFileLabel = () =>
+    fileType === "quote" ? "Archivo de Cotización (Obligatorio)"
+    : fileType === "po"   ? "Archivo de PO (Opcional)"
+    : fileType === "slip" ? "Archivo de Albarán (Opcional)"
+    : "Archivo";
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      {/* Mantén el contenido montado incluso cuando esté cerrado */}
+      <DialogContent className="sm:max-w-[425px]" forceMount>
         <DialogHeader>
           <DialogTitle>{getTitle()}</DialogTitle>
           <DialogDescription>
@@ -193,7 +170,6 @@ const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
           </DialogDescription>
         </DialogHeader>
 
-        {/* aviso si había fichero en borrador pero no puede restaurarse */}
         {savedFileMeta && !selectedFile && (
           <div className="flex items-start gap-2 rounded-md border p-3 text-sm">
             <Info className="h-4 w-4 mt-0.5 shrink-0" />
@@ -232,11 +208,7 @@ const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
         </div>
 
         <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={isUploading}
-          >
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isUploading}>
             Cancelar
           </Button>
           <Button onClick={handleSubmit} disabled={isSubmitDisabled}>
