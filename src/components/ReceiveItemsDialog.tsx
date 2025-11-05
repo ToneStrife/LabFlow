@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Loader2, CheckSquare, CheckCheck } from "lucide-react";
+import { Loader2, CheckSquare, CheckCheck, Info } from "lucide-react";
 import { SupabaseRequestItem } from "@/data/types";
 import { useReceiveItems, useAggregatedReceivedItems } from "@/hooks/use-packing-slips";
 import { toast } from "sonner";
@@ -65,6 +65,8 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
   const { data: aggregatedReceived, isLoading: isLoadingReceived } = useAggregatedReceivedItems(requestId);
   const receiveItemsMutation = useReceiveItems();
   
+  const PERSIST_KEY = `receiveItemsForm:${requestId}`;
+  
   const initialItems = React.useMemo(() => {
     if (!requestItems || !aggregatedReceived) return [];
 
@@ -89,7 +91,9 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
       slipFile: undefined,
       items: initialItems,
     },
-    values: { // Usar values para resetear cuando cambian las dependencias
+    // Usamos values para resetear cuando cambian las dependencias, pero la lógica de persistencia
+    // se encargará de sobrescribir esto si hay datos guardados.
+    values: { 
       slipNumber: "",
       slipFile: undefined,
       items: initialItems,
@@ -100,6 +104,89 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
     control: form.control,
     name: "items",
   });
+  
+  // --- Lógica de Persistencia ---
+  const watchedValues = useWatch({ control: form.control });
+  const [hasRestored, setHasRestored] = React.useState(false);
+  const [savedFileMeta, setSavedFileMeta] = React.useState<{ name: string; size: number } | null>(null);
+
+  // 1. Restaurar estado al montar (o cuando cambie initialItems)
+  React.useEffect(() => {
+    if (isLoadingReceived || hasRestored) return;
+    
+    const raw = localStorage.getItem(PERSIST_KEY);
+    if (raw) {
+      try {
+        const saved = JSON.parse(raw);
+        
+        // Restaurar slipNumber
+        if (saved.slipNumber) {
+          form.setValue('slipNumber', saved.slipNumber);
+        }
+        
+        // Restaurar metadata del archivo (el archivo File en sí se pierde)
+        if (saved.fileMeta) {
+            setSavedFileMeta(saved.fileMeta);
+        }
+
+        // Restaurar cantidades recibidas
+        if (saved.items && Array.isArray(saved.items)) {
+          const updatedItems = initialItems.map(initialItem => {
+            const savedItem = saved.items.find((s: any) => s.requestItemId === initialItem.requestItemId);
+            if (savedItem && savedItem.quantityReceived !== undefined) {
+              return { ...initialItem, quantityReceived: savedItem.quantityReceived };
+            }
+            return initialItem;
+          });
+          form.setValue('items', updatedItems as any, { shouldDirty: true });
+        }
+        
+        setHasRestored(true);
+        toast.info("Borrador de recepción recuperado.");
+      } catch (e) {
+        console.error("Failed to restore receive items form state:", e);
+        localStorage.removeItem(PERSIST_KEY);
+      }
+    } else {
+        setHasRestored(true); // Marcar como restaurado incluso si no había datos
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialItems, isLoadingReceived]); // Dependencias: initialItems y loading
+
+  // 2. Autosave (guardar solo slipNumber y quantityReceived de los items)
+  React.useEffect(() => {
+    if (!hasRestored) return;
+    
+    const id = setTimeout(() => {
+      const dataToSave = {
+        slipNumber: watchedValues.slipNumber,
+        items: watchedValues.items?.map(item => ({
+          requestItemId: item.requestItemId,
+          quantityReceived: item.quantityReceived,
+        })),
+        // Guardar metadata del archivo si existe
+        fileMeta: savedFileMeta,
+      };
+      localStorage.setItem(PERSIST_KEY, JSON.stringify(dataToSave));
+    }, 500);
+    return () => clearTimeout(id);
+  }, [watchedValues, savedFileMeta, PERSIST_KEY, hasRestored]);
+  
+  // 3. Limpiar borrador al cerrar si se ha enviado
+  const clearDraft = React.useCallback(() => {
+    localStorage.removeItem(PERSIST_KEY);
+    setSavedFileMeta(null);
+  }, [PERSIST_KEY]);
+  
+  // 4. Limpiar el estado del archivo al cerrar el diálogo
+  React.useEffect(() => {
+    if (!isOpen) {
+        form.setValue('slipFile', undefined);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
+  // --- Fin Lógica de Persistencia ---
+
 
   const handleSubmit = async (data: ReceiveFormValues) => {
     const itemsToReceive = data.items
@@ -136,6 +223,7 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
       items: itemsToReceive,
     });
 
+    clearDraft(); // Limpiar borrador al enviar
     onOpenChange(false);
   };
 
@@ -148,7 +236,7 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
         quantityReceived: quantityRemaining > 0 ? quantityRemaining : 0,
       };
     });
-    form.setValue('items', updatedItems, { shouldDirty: true });
+    form.setValue('items', updatedItems as any, { shouldDirty: true });
   };
   
   const handleReceiveAllAndSubmit = () => {
@@ -235,6 +323,15 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
                 )}
               />
             </div>
+            
+            {savedFileMeta && !form.watch('slipFile') && (
+                <div className="flex items-start gap-2 rounded-md border p-3 text-sm text-muted-foreground">
+                    <Info className="h-4 w-4 mt-0.5 shrink-0" />
+                    <div>
+                        Se recuperó el borrador del archivo: <strong>{savedFileMeta.name}</strong>. Por favor, vuelve a seleccionarlo si deseas adjuntarlo.
+                    </div>
+                </div>
+            )}
 
             <div className="space-y-4 max-h-[400px] overflow-y-auto p-2 border rounded-md">
               <h3 className="text-lg font-semibold mb-4">Artículos a Recibir</h3>
