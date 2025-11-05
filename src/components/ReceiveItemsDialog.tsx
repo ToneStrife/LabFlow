@@ -357,6 +357,7 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
                             PDF, JPG, PNG (Múltiples archivos permitidos)
                         </p>
                     </div>
+                </div>
               </FormItem>
             </div>
             
