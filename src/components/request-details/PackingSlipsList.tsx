@@ -11,7 +11,7 @@ import { format } from "date-fns";
 
 interface PackingSlipsListProps {
   requestId: string;
-  onUploadClick: () => void; // Para abrir el diálogo de subida de albarán
+  onUploadClick: () => void; // Para abrir el diálogo de subida de albarán (ahora es el diálogo de recepción)
 }
 
 // Función auxiliar para obtener el nombre de archivo legible (copiada de RequestFilesCard.tsx)

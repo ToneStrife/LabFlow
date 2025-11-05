@@ -3,7 +3,7 @@
 import React from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Loader2, ArrowLeft, Edit, Trash2, MoreVertical, Ban, XCircle, Info, CheckCircle } from "lucide-react"; // AÑADIDO Info y CheckCircle
+import { Loader2, ArrowLeft, Edit, Trash2, MoreVertical, Ban, XCircle, Info, CheckCircle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -111,9 +111,9 @@ const RequestDetails: React.FC = () => {
   
   const [newStatus, setNewStatus] = React.useState<RequestStatusType>(request?.status || "Pending");
   
-  // NUEVO ESTADO: Archivos de albarán seleccionados fuera del diálogo
-  const [pendingSlipFiles, setPendingSlipFiles] = React.useState<File[]>([]);
-  const slipFileInputRef = React.useRef<HTMLInputElement>(null);
+  // ESTADOS DE ALBARÁN ELIMINADOS:
+  // const [pendingSlipFiles, setPendingSlipFiles] = React.useState<File[]>([]);
+  // const slipFileInputRef = React.useRef<HTMLInputElement>(null);
 
 
   const getVendorEmail = (vendorId: string) => vendors?.find(v => v.id === vendorId)?.email || "";
@@ -255,40 +255,11 @@ const RequestDetails: React.FC = () => {
     }
   };
   
-  // NUEVO: Handler para añadir archivos de albarán al estado local
-  const handleAddSlipFiles = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (files) {
-        const newFiles = Array.from(files);
-        setPendingSlipFiles(prev => [...prev, ...newFiles]);
-        // Limpiar el input para permitir la selección del mismo archivo de nuevo
-        if (event.target) {
-            event.target.value = '';
-        }
-        
-        // Abrir el diálogo de recepción automáticamente si se añade el primer archivo
-        if (!isReceiveItemsDialogOpen && request?.items && request.items.length > 0) {
-            setIsReceiveItemsDialogOpen(true);
-        }
-    }
-  };
-  
-  // NUEVO: Handler para eliminar archivos de albarán del estado local
-  const handleRemovePendingSlipFile = (indexToRemove: number) => {
-    setPendingSlipFiles(prev => prev.filter((_, index) => index !== indexToRemove));
-  };
-  
-  // NUEVO: Handler para abrir el selector de archivos de albarán
-  const handleOpenSlipFileSelector = () => {
-    if (slipFileInputRef.current) {
-        slipFileInputRef.current.click();
-    }
-  };
-  
-  // NUEVO: Callback para limpiar los archivos pendientes después de un envío exitoso
-  const handleClearPendingSlipFiles = () => {
-    setPendingSlipFiles([]);
-  };
+  // Lógica de archivos pendientes ELIMINADA
+  // const handleAddSlipFiles = (event: React.ChangeEvent<HTMLInputElement>) => { ... };
+  // const handleRemovePendingSlipFile = (indexToRemove: number) => { ... };
+  // const handleOpenSlipFileSelector = () => { ... };
+  // const handleClearPendingSlipFiles = () => { ... };
 
 
   const handleUploadClick = (fileType: FileType) => {
@@ -639,51 +610,10 @@ const RequestDetails: React.FC = () => {
           {/* NUEVO: Lista de Albaranes */}
           <PackingSlipsList 
             requestId={request.id} 
-            onUploadClick={handleOpenSlipFileSelector} // Abrir el selector de archivos oculto
+            onUploadClick={handleOpenReceiveItemsDialog} // Volver a abrir el diálogo de recepción
           />
           
-          {/* Input de archivo oculto para la subida de albaranes */}
-          <input
-            ref={slipFileInputRef}
-            type="file"
-            accept="image/*,application/pdf"
-            onChange={handleAddSlipFiles}
-            disabled={updateStatusMutation.isPending}
-            className="hidden"
-            multiple
-          />
-          
-          {/* Lista de archivos pendientes para el albarán */}
-          {pendingSlipFiles.length > 0 && (
-            <div className="space-y-2 p-4 border rounded-lg bg-yellow-50/50">
-                <h4 className="text-sm font-semibold flex items-center text-yellow-800">
-                    <Info className="h-4 w-4 mr-2" /> Archivos de Albarán Pendientes ({pendingSlipFiles.length})
-                </h4>
-                <ul className="space-y-1 text-sm">
-                    {pendingSlipFiles.map((file, index) => (
-                        <li key={index} className="flex items-center justify-between bg-yellow-100/50 p-1 rounded">
-                            <span className="truncate max-w-[80%]">{file.name}</span>
-                            <Button 
-                                type="button" 
-                                variant="ghost" 
-                                size="icon" 
-                                className="h-6 w-6 p-1 text-red-600 hover:bg-red-100"
-                                onClick={() => handleRemovePendingSlipFile(index)}
-                            >
-                                <XCircle className="h-4 w-4" />
-                            </Button>
-                        </li>
-                    ))}
-                </ul>
-                <Button 
-                    onClick={handleOpenReceiveItemsDialog} 
-                    className="w-full mt-2"
-                    disabled={updateStatusMutation.isPending}
-                >
-                    <CheckCircle className="mr-2 h-4 w-4" /> Continuar con Recepción
-                </Button>
-            </div>
-          )}
+          {/* Input de archivo oculto y lista de archivos pendientes ELIMINADOS */}
         </div>
       </div>
       
@@ -867,9 +797,7 @@ const RequestDetails: React.FC = () => {
           onOpenChange={setIsReceiveItemsDialogOpen}
           requestId={request.id}
           requestItems={request.items}
-          // Pasar los archivos pendientes y el callback de limpieza
-          initialSlipFiles={pendingSlipFiles}
-          onClearInitialSlipFiles={handleClearPendingSlipFiles}
+          // Ya no pasamos initialSlipFiles ni onClearInitialSlipFiles
         />
       )}
     </div>
