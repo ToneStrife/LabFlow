@@ -33,7 +33,7 @@ import { useShippingAddresses, useBillingAddresses } from "@/hooks/use-addresses
 import { getFullName } from "@/hooks/use-profiles";
 import { useInternalFuzzySearch, InternalSearchResult } from "@/hooks/use-internal-search";
 import { useEnrichProductDetails } from "@/hooks/use-ai-enrichment";
-import { useFormPersistence } from "@/hooks/use-form-persistence"; // Importar el nuevo hook
+import { useFormPersistence } from "@/hooks/use-form-persistence";
 
 const itemSchema = z.object({
   productName: z.string().min(1, { message: "El nombre del producto es obligatorio." }),
@@ -243,6 +243,8 @@ const RequestForm: React.FC = () => {
     }
   }, [session, form]);
 
+  // Modificación CRÍTICA: Solo establecer valores predeterminados si el campo está vacío
+  // y no hay un valor persistido (que se carga en el primer render).
   React.useEffect(() => {
     if (shippingAddresses && shippingAddresses.length > 0 && !form.getValues("shippingAddressId")) {
       form.setValue("shippingAddressId", shippingAddresses[0].id);
