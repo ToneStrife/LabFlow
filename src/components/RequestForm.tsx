@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { PlusCircle, Trash2, Check, ChevronsUpDown, Loader2, Search } from "lucide-react";
+import { PlusCircle, Trash2, Check, ChevronsUpDown, Loader2, Search, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
@@ -31,7 +31,8 @@ import { useAccountManagers } from "@/hooks/use-account-managers";
 import { useProjects } from "@/hooks/use-projects";
 import { useShippingAddresses, useBillingAddresses } from "@/hooks/use-addresses";
 import { getFullName } from "@/hooks/use-profiles";
-import { useInternalFuzzySearch, InternalSearchResult } from "@/hooks/use-internal-search"; // Hook de búsqueda interna
+import { useInternalFuzzySearch, InternalSearchResult } from "@/hooks/use-internal-search";
+import { useEnrichProductDetails } from "@/hooks/use-ai-enrichment"; // Importar el nuevo hook
 
 const itemSchema = z.object({
   productName: z.string().min(1, { message: "El nombre del producto es obligatorio." }),
@@ -72,6 +73,7 @@ interface ItemAutofillControlsProps {
 
 const ItemAutofillControls: React.FC<ItemAutofillControlsProps> = ({ index, form }) => {
   const { watch, setValue } = form;
+  const enrichMutation = useEnrichProductDetails();
   
   // Observar los campos clave para la búsqueda
   const productName = watch(`items.${index}.productName`);
@@ -102,10 +104,52 @@ const ItemAutofillControls: React.FC<ItemAutofillControlsProps> = ({ index, form
     });
   };
   
+  const handleEnrichment = async () => {
+    if (!brand || !catalogNumber) {
+      toast.error("Faltan datos", { description: "Por favor, introduce la Marca y el Número de Catálogo antes de usar la IA." });
+      return;
+    }
+    
+    try {
+      const result = await enrichMutation.mutateAsync({ brand, catalogNumber });
+      
+      // Aplicar los resultados al formulario
+      setValue(`items.${index}.productName`, result.product_name || "", { shouldDirty: true });
+      setValue(`items.${index}.catalogNumber`, result.catalog_number || catalogNumber, { shouldDirty: true });
+      setValue(`items.${index}.brand`, result.brand || brand, { shouldDirty: true });
+      setValue(`items.${index}.unitPrice`, result.unit_price, { shouldDirty: true });
+      setValue(`items.${index}.format`, result.format, { shouldDirty: true });
+      setValue(`items.${index}.link`, result.link, { shouldDirty: true });
+      setValue(`items.${index}.notes`, result.notes, { shouldDirty: true });
+      
+    } catch (e) {
+      // El toast de error ya se maneja en el hook
+    }
+  };
+
   const hasInternalResults = internalResults && internalResults.length > 0;
+  const isEnriching = enrichMutation.isPending;
+  const isReadyForAI = !!brand && !!catalogNumber;
   
   return (
     <div className="absolute top-4 right-4 flex space-x-2">
+      {/* Botón de Enriquecimiento por IA */}
+      <Button 
+        type="button" 
+        variant="secondary" 
+        size="sm" 
+        className="h-8 px-3 text-xs"
+        onClick={handleEnrichment}
+        disabled={isEnriching || !isReadyForAI}
+      >
+        {isEnriching ? (
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        ) : (
+          <Zap className="mr-2 h-4 w-4 text-yellow-600" />
+        )}
+        Enriquecer por IA
+      </Button>
+      
       {/* Botón de Búsqueda Interna (DB) */}
       <Popover>
         <PopoverTrigger asChild>
@@ -490,7 +534,7 @@ const RequestForm: React.FC = () => {
                 )}
               </div>
               
-              {/* Autofill Component (Solo DB) */}
+              {/* Autofill Component (DB & AI) */}
               <ItemAutofillControls index={index} form={form} />
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
