@@ -32,7 +32,8 @@ import { useProjects } from "@/hooks/use-projects";
 import { useShippingAddresses, useBillingAddresses } from "@/hooks/use-addresses";
 import { getFullName } from "@/hooks/use-profiles";
 import { useInternalFuzzySearch, InternalSearchResult } from "@/hooks/use-internal-search";
-import { useEnrichProductDetails } from "@/hooks/use-ai-enrichment"; // Importar el nuevo hook
+import { useEnrichProductDetails } from "@/hooks/use-ai-enrichment";
+import { useFormPersistence } from "@/hooks/use-form-persistence"; // Importar el nuevo hook
 
 const itemSchema = z.object({
   productName: z.string().min(1, { message: "El nombre del producto es obligatorio." }),
@@ -226,6 +227,14 @@ const RequestForm: React.FC = () => {
       notes: "",
     },
   });
+  
+  // --- PERSISTENCIA DEL FORMULARIO ---
+  const fieldsToPersist: (keyof RequestFormValues)[] = [
+    "vendorId", "accountManagerId", "shippingAddressId", "billingAddressId", 
+    "items", "projectCodes", "notes"
+  ];
+  const { clearPersistence } = useFormPersistence(form, "newRequestFormState", fieldsToPersist);
+  // -----------------------------------
 
   // Establecer valores predeterminados para direcciones y solicitante
   React.useEffect(() => {
@@ -307,6 +316,9 @@ const RequestForm: React.FC = () => {
         console.error("Error uploading quote file on request creation:", error);
       }
     }
+
+    // 3. Limpiar la persistencia del formulario después del envío exitoso
+    clearPersistence();
 
     // Restablecer el formulario, manteniendo los valores predeterminados de dirección si existen
     form.reset({
