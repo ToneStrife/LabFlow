@@ -259,33 +259,18 @@ const RequestDetails: React.FC = () => {
   const handleUploadQuote = () => handleUploadClick("quote");
   const handleUploadPOAndOrder = () => handleUploadClick("po");
 
-  // NUEVO HANDLER: Subida simple de archivo (usado para 'slip')
+  // ELIMINADO: handleSimpleFileUpload ya no es necesario aquí.
   const handleSimpleFileUpload = async (file: File, fileType: FileType) => {
     if (!request) return;
     
-    if (fileType !== 'slip') {
-        // Si no es un albarán, usamos el diálogo (que maneja PO Number y cambio de estado)
-        handleUploadClick(fileType);
+    // Si es un albarán, abrimos el diálogo de recepción
+    if (fileType === 'slip') {
+        handleOpenReceiveItemsDialog();
         return;
     }
-
-    try {
-      // 1. Subir el archivo (sin PO Number)
-      const { filePath } = await updateFileMutation.mutateAsync({
-        id: request.id,
-        fileType: fileType,
-        file: file,
-        poNumber: null, // No necesitamos PO Number para slips
-      });
-      
-      // 2. Si es un slip, no cambiamos el estado, solo notificamos la subida.
-      if (filePath) {
-          toast.success(`Albarán subido exitosamente!`);
-      }
-      
-    } catch (error) {
-      console.error("Simple file upload failed:", error);
-    }
+    
+    // Si es quote/po, usamos el diálogo de subida normal
+    handleUploadClick(fileType);
   };
 
 
@@ -611,13 +596,13 @@ const RequestDetails: React.FC = () => {
           <RequestFilesCard 
             request={request} 
             onUploadClick={handleUploadClick} 
-            onSimpleFileUpload={(file, fileType) => handleSimpleFileUpload(file, fileType)} // Pasar el nuevo handler
+            onSimpleFileUpload={handleSimpleFileUpload} // Usar el handler que abre el diálogo de recepción para slips
           />
           
           {/* NUEVO: Lista de Albaranes */}
           <PackingSlipsList 
             requestId={request.id} 
-            onUploadClick={() => handleSimpleFileUpload(null, 'slip')} // Usar el handler de subida simple (que dispara el input)
+            onUploadClick={handleOpenReceiveItemsDialog} // Abrir el diálogo de recepción para añadir albarán
           />
         </div>
       </div>

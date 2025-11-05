@@ -22,11 +22,11 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Loader2, CheckSquare, CheckCheck, Info } from "lucide-react";
+import { Loader2, CheckSquare, CheckCheck, Info, Paperclip, X } from "lucide-react";
 import { SupabaseRequestItem } from "@/data/types";
 import { useReceiveItems, useAggregatedReceivedItems } from "@/hooks/use-packing-slips";
 import { toast } from "sonner";
-import FileUploadInput from "./FileUploadInput"; // Importar el nuevo componente
+import { Label } from "@/components/ui/label";
 
 // Esquema para la cantidad recibida de un ítem
 const receivedItemSchema = z.object({
@@ -43,7 +43,7 @@ const receivedItemSchema = z.object({
 // Esquema principal del formulario
 const receiveFormSchema = z.object({
   slipNumber: z.string().optional(), // Opcional
-  slipFile: z.any().optional(), // Ahora maneja FileList o null
+  // Eliminamos slipFile del esquema de RHF ya que manejaremos los archivos en un estado local
   items: z.array(receivedItemSchema).min(1),
 });
 
@@ -67,6 +67,9 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
   
   const PERSIST_KEY = `receiveItemsForm:${requestId}`;
   
+  // Estado local para los objetos File reales
+  const [selectedFiles, setSelectedFiles] = React.useState<File[]>([]); 
+  
   const initialItems = React.useMemo(() => {
     if (!requestItems || !aggregatedReceived) return [];
 
@@ -88,14 +91,10 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
     resolver: zodResolver(receiveFormSchema),
     defaultValues: {
       slipNumber: "",
-      slipFile: undefined,
       items: initialItems,
     },
-    // Usamos values para resetear cuando cambian las dependencias, pero la lógica de persistencia
-    // se encargará de sobrescribir esto si hay datos guardados.
     values: { 
       slipNumber: "",
-      slipFile: undefined,
       items: initialItems,
     }
   });
@@ -109,11 +108,6 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
   const watchedValues = useWatch({ control: form.control });
   const [hasRestored, setHasRestored] = React.useState(false);
   
-  // Estado local para el objeto File real (solo existe en la sesión actual)
-  const [selectedFile, setSelectedFile] = React.useState<File | null>(null); 
-  // Estado local para la metadata persistida (solo para cantidades y slipNumber)
-  const [savedSlipNumber, setSavedSlipNumber] = React.useState<string>("");
-  
   // 1. Restaurar estado al montar (o cuando cambie initialItems)
   React.useEffect(() => {
     if (isLoadingReceived || hasRestored) return;
@@ -124,7 +118,6 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
         const saved = JSON.parse(raw);
         
         // Restaurar slipNumber
-        setSavedSlipNumber(saved.slipNumber ?? "");
         form.setValue('slipNumber', saved.slipNumber ?? "");
         
         // Restaurar cantidades recibidas
@@ -140,7 +133,6 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
         }
         
         setHasRestored(true);
-        // toast.info("Borrador de recepción recuperado."); // ELIMINADO
       } catch (e) {
         console.error("Failed to restore receive items form state:", e);
         localStorage.removeItem(PERSIST_KEY);
@@ -171,23 +163,34 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
   // 3. Limpiar borrador al cerrar si se ha enviado
   const clearDraft = React.useCallback(() => {
     localStorage.removeItem(PERSIST_KEY);
-    setSelectedFile(null);
+    setSelectedFiles([]);
   }, [PERSIST_KEY]);
   
   // 4. Limpiar el estado del archivo al cerrar el diálogo
   React.useEffect(() => {
     if (!isOpen) {
-        form.setValue('slipFile', undefined);
-        setSelectedFile(null);
+        setSelectedFiles([]);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
   
-  const handleFileChange = (fileList: FileList | null) => {
-    const f = fileList && fileList.length > 0 ? fileList[0] : null;
-    setSelectedFile(f);
-    form.setValue('slipFile', fileList); // Actualizar el valor del formulario
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (files) {
+        // Convertir FileList a Array y añadir a los archivos existentes
+        const newFiles = Array.from(files);
+        setSelectedFiles(prev => [...prev, ...newFiles]);
+        // Limpiar el input para permitir la selección del mismo archivo de nuevo
+        if (event.target) {
+            event.target.value = '';
+        }
+    }
   };
+  
+  const handleRemoveFile = (indexToRemove: number) => {
+    setSelectedFiles(prev => prev.filter((_, index) => index !== indexToRemove));
+  };
+  
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
   // --- Fin Lógica de Persistencia ---
 
 
@@ -216,13 +219,10 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
       return;
     }
 
-    // Usamos selectedFile (el objeto File real) para la subida
-    const file = selectedFile;
-
     await receiveItemsMutation.mutateAsync({
       requestId,
-      slipNumber: data.slipNumber || '', // Enviar cadena vacía si es null/undefined
-      slipFile: file,
+      slipNumber: data.slipNumber || '',
+      slipFiles: selectedFiles, // Usar el array de archivos
       items: itemsToReceive,
     });
 
@@ -282,12 +282,6 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
   const isSubmitting = receiveItemsMutation.isPending;
   const allItemsFullyReceived = initialItems.every(item => item.quantityOrdered - item.quantityPreviouslyReceived <= 0);
   
-  // Determinar qué metadata mostrar: solo el archivo seleccionado (si existe)
-  const fileMetaToDisplay = selectedFile ? { name: selectedFile.name, size: selectedFile.size } : null;
-  
-  // Ya no mostramos la advertencia de archivo perdido, simplemente el campo aparece vacío si se recarga.
-
-
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent 
@@ -317,27 +311,57 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="slipFile"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormControl>
-                      <FileUploadInput 
-                        label="Subir Archivo de Albarán (Opcional)"
-                        onChange={handleFileChange} // Usar el handler local
-                        disabled={isSubmitting} 
+              <FormItem>
+                <FormLabel>Archivos de Albarán (Opcional)</FormLabel>
+                <div 
+                    className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-muted/50 transition-colors"
+                    onClick={() => fileInputRef.current?.click()}
+                >
+                    <input
+                        ref={fileInputRef}
+                        type="file"
                         accept="image/*,application/pdf"
-                        currentFileMeta={fileMetaToDisplay}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                        onChange={handleFileChange}
+                        disabled={isSubmitting}
+                        className="hidden"
+                        multiple // Permitir múltiples archivos
+                    />
+                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                        <Paperclip className="w-8 h-8 mb-3 text-muted-foreground" />
+                        <p className="mb-2 text-sm text-muted-foreground text-center">
+                            <span className="font-semibold">Haz clic para añadir</span> o arrastra y suelta
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                            PDF, JPG, PNG (Múltiples archivos permitidos)
+                        </p>
+                    </div>
+                </div>
+              </FormItem>
             </div>
             
-            {/* Eliminamos la advertencia de archivo perdido, ya que el campo aparecerá vacío */}
+            {/* Lista de Archivos Seleccionados */}
+            {selectedFiles.length > 0 && (
+                <div className="space-y-2">
+                    <Label className="text-sm font-medium">Archivos a Subir ({selectedFiles.length})</Label>
+                    <div className="flex flex-wrap gap-2 p-2 border rounded-md bg-background">
+                        {selectedFiles.map((file, index) => (
+                            <div key={index} className="flex items-center bg-secondary text-secondary-foreground rounded-full px-3 py-1 text-sm">
+                                <span className="truncate max-w-[150px]">{file.name}</span>
+                                <Button 
+                                    type="button" 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-5 w-5 ml-2 p-0.5 hover:bg-destructive/20"
+                                    onClick={() => handleRemoveFile(index)}
+                                    disabled={isSubmitting}
+                                >
+                                    <X className="h-3 w-3 text-destructive" />
+                                </Button>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             <div className="space-y-4 max-h-[400px] overflow-y-auto p-2 border rounded-md">
               <h3 className="text-lg font-semibold mb-4">Artículos a Recibir</h3>
