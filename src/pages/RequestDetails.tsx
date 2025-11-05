@@ -110,6 +110,10 @@ const RequestDetails: React.FC = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   
   const [newStatus, setNewStatus] = React.useState<RequestStatusType>(request?.status || "Pending");
+  
+  // NUEVO ESTADO: Archivos de albarán seleccionados fuera del diálogo
+  const [pendingSlipFiles, setPendingSlipFiles] = React.useState<File[]>([]);
+  const slipFileInputRef = React.useRef<HTMLInputElement>(null);
 
 
   const getVendorEmail = (vendorId: string) => vendors?.find(v => v.id === vendorId)?.email || "";
@@ -250,6 +254,42 @@ const RequestDetails: React.FC = () => {
       toast.error("No se pueden recibir artículos.", { description: "La solicitud no tiene artículos." });
     }
   };
+  
+  // NUEVO: Handler para añadir archivos de albarán al estado local
+  const handleAddSlipFiles = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (files) {
+        const newFiles = Array.from(files);
+        setPendingSlipFiles(prev => [...prev, ...newFiles]);
+        // Limpiar el input para permitir la selección del mismo archivo de nuevo
+        if (event.target) {
+            event.target.value = '';
+        }
+        
+        // Abrir el diálogo de recepción automáticamente si se añade el primer archivo
+        if (!isReceiveItemsDialogOpen && request?.items && request.items.length > 0) {
+            setIsReceiveItemsDialogOpen(true);
+        }
+    }
+  };
+  
+  // NUEVO: Handler para eliminar archivos de albarán del estado local
+  const handleRemovePendingSlipFile = (indexToRemove: number) => {
+    setPendingSlipFiles(prev => prev.filter((_, index) => index !== indexToRemove));
+  };
+  
+  // NUEVO: Handler para abrir el selector de archivos de albarán
+  const handleOpenSlipFileSelector = () => {
+    if (slipFileInputRef.current) {
+        slipFileInputRef.current.click();
+    }
+  };
+  
+  // NUEVO: Callback para limpiar los archivos pendientes después de un envío exitoso
+  const handleClearPendingSlipFiles = () => {
+    setPendingSlipFiles([]);
+  };
+
 
   const handleUploadClick = (fileType: FileType) => {
     setFileTypeToUpload(fileType);
@@ -259,18 +299,14 @@ const RequestDetails: React.FC = () => {
   const handleUploadQuote = () => handleUploadClick("quote");
   const handleUploadPOAndOrder = () => handleUploadClick("po");
 
-  // ELIMINADO: handleSimpleFileUpload ya no es necesario aquí.
-  const handleSimpleFileUpload = async (file: File, fileType: FileType) => {
-    if (!request) return;
-    
-    // Si es un albarán, abrimos el diálogo de recepción
+  // Este handler ya no se usa en RequestFilesCard, pero lo mantenemos por si acaso.
+  const handleSimpleFileUpload = (file: File | null, fileType: FileType) => {
     if (fileType === 'slip') {
         handleOpenReceiveItemsDialog();
-        return;
+        return Promise.resolve();
     }
-    
-    // Si es quote/po, usamos el diálogo de subida normal
     handleUploadClick(fileType);
+    return Promise.resolve();
   };
 
 
@@ -596,14 +632,58 @@ const RequestDetails: React.FC = () => {
           <RequestFilesCard 
             request={request} 
             onUploadClick={handleUploadClick} 
-            onSimpleFileUpload={handleSimpleFileUpload} // Usar el handler que abre el diálogo de recepción para slips
+            // Ya no necesitamos onSimpleFileUpload aquí, ya que el diálogo de recepción lo maneja
+            onSimpleFileUpload={() => Promise.resolve()} 
           />
           
           {/* NUEVO: Lista de Albaranes */}
           <PackingSlipsList 
             requestId={request.id} 
-            onUploadClick={handleOpenReceiveItemsDialog} // Abrir el diálogo de recepción para añadir albarán
+            onUploadClick={handleOpenSlipFileSelector} // Abrir el selector de archivos oculto
           />
+          
+          {/* Input de archivo oculto para la subida de albaranes */}
+          <input
+            ref={slipFileInputRef}
+            type="file"
+            accept="image/*,application/pdf"
+            onChange={handleAddSlipFiles}
+            disabled={updateStatusMutation.isPending}
+            className="hidden"
+            multiple
+          />
+          
+          {/* Lista de archivos pendientes para el albarán */}
+          {pendingSlipFiles.length > 0 && (
+            <div className="space-y-2 p-4 border rounded-lg bg-yellow-50/50">
+                <h4 className="text-sm font-semibold flex items-center text-yellow-800">
+                    <Info className="h-4 w-4 mr-2" /> Archivos de Albarán Pendientes ({pendingSlipFiles.length})
+                </h4>
+                <ul className="space-y-1 text-sm">
+                    {pendingSlipFiles.map((file, index) => (
+                        <li key={index} className="flex items-center justify-between bg-yellow-100/50 p-1 rounded">
+                            <span className="truncate max-w-[80%]">{file.name}</span>
+                            <Button 
+                                type="button" 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-6 w-6 p-1 text-red-600 hover:bg-red-100"
+                                onClick={() => handleRemovePendingSlipFile(index)}
+                            >
+                                <XCircle className="h-4 w-4" />
+                            </Button>
+                        </li>
+                    ))}
+                </ul>
+                <Button 
+                    onClick={handleOpenReceiveItemsDialog} 
+                    className="w-full mt-2"
+                    disabled={updateStatusMutation.isPending}
+                >
+                    <CheckCircle className="mr-2 h-4 w-4" /> Continuar con Recepción
+                </Button>
+            </div>
+          )}
         </div>
       </div>
       
@@ -787,6 +867,9 @@ const RequestDetails: React.FC = () => {
           onOpenChange={setIsReceiveItemsDialogOpen}
           requestId={request.id}
           requestItems={request.items}
+          // Pasar los archivos pendientes y el callback de limpieza
+          initialSlipFiles={pendingSlipFiles}
+          onClearInitialSlipFiles={handleClearPendingSlipFiles}
         />
       )}
     </div>

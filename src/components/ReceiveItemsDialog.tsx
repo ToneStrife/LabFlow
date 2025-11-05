@@ -43,7 +43,6 @@ const receivedItemSchema = z.object({
 // Esquema principal del formulario
 const receiveFormSchema = z.object({
   slipNumber: z.string().optional(), // Opcional
-  // Eliminamos slipFile del esquema de RHF ya que manejaremos los archivos en un estado local
   items: z.array(receivedItemSchema).min(1),
 });
 
@@ -54,6 +53,8 @@ interface ReceiveItemsDialogProps {
   onOpenChange: (open: boolean) => void;
   requestId: string;
   requestItems: SupabaseRequestItem[];
+  initialSlipFiles?: File[]; // NUEVO: Archivos pasados desde RequestDetails
+  onClearInitialSlipFiles?: () => void; // NUEVO: Callback para limpiar archivos iniciales
 }
 
 const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
@@ -61,14 +62,25 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
   onOpenChange,
   requestId,
   requestItems,
+  initialSlipFiles = [],
+  onClearInitialSlipFiles,
 }) => {
   const { data: aggregatedReceived, isLoading: isLoadingReceived } = useAggregatedReceivedItems(requestId);
   const receiveItemsMutation = useReceiveItems();
   
   const PERSIST_KEY = `receiveItemsForm:${requestId}`;
   
-  // Estado local para los objetos File reales
-  const [selectedFiles, setSelectedFiles] = React.useState<File[]>([]); 
+  // Estado local para los objetos File reales (inicializado con los archivos pasados)
+  const [selectedFiles, setSelectedFiles] = React.useState<File[]>(initialSlipFiles); 
+  
+  // Sincronizar archivos iniciales si cambian (ej. si el usuario añade archivos antes de abrir el diálogo)
+  React.useEffect(() => {
+    // Solo si el diálogo está cerrado y hay archivos iniciales, los sincronizamos.
+    // Si está abierto, el estado local `selectedFiles` tiene prioridad.
+    if (!isOpen && initialSlipFiles.length > 0) {
+        setSelectedFiles(initialSlipFiles);
+    }
+  }, [isOpen, initialSlipFiles]);
   
   const initialItems = React.useMemo(() => {
     if (!requestItems || !aggregatedReceived) return [];
@@ -164,13 +176,23 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
   const clearDraft = React.useCallback(() => {
     localStorage.removeItem(PERSIST_KEY);
     setSelectedFiles([]);
-  }, [PERSIST_KEY]);
+    if (onClearInitialSlipFiles) {
+        onClearInitialSlipFiles();
+    }
+  }, [PERSIST_KEY, onClearInitialSlipFiles]);
   
   // 4. Limpiar el estado del archivo al cerrar el diálogo
   React.useEffect(() => {
     if (!isOpen) {
-        setSelectedFiles([]);
+        // Si el diálogo se cierra, limpiamos los archivos locales si no se han enviado
+        if (selectedFiles.length > 0) {
+            setSelectedFiles([]);
+            if (onClearInitialSlipFiles) {
+                onClearInitialSlipFiles();
+            }
+        }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
   
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -335,7 +357,6 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
                             PDF, JPG, PNG (Múltiples archivos permitidos)
                         </p>
                     </div>
-                </div>
               </FormItem>
             </div>
             
