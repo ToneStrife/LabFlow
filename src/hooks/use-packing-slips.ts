@@ -248,14 +248,15 @@ export const useDeleteSlip = () => {
                 
             if (deleteError) throw new Error(deleteError.message);
             
-            return requestId; // Devolver el ID de la solicitud para invalidación específica
+            return { requestId, slipId }; // Devolver el ID de la solicitud y el ID del albarán
         },
-        onSuccess: (requestId) => {
+        onSuccess: ({ requestId, slipId }) => {
             // Invalidación específica para la solicitud afectada
             queryClient.invalidateQueries({ queryKey: ['packingSlips', requestId] });
             queryClient.invalidateQueries({ queryKey: ['aggregatedReceivedItems', requestId] });
-            queryClient.invalidateQueries({ queryKey: ['requests'] }); // Invalidar la lista de solicitudes
-            queryClient.invalidateQueries({ queryKey: ['inventory'] }); // Invalidar por si acaso
+            queryClient.invalidateQueries({ queryKey: ['receivedItemsBySlip', slipId] }); // CRÍTICO: Invalidar el detalle del albarán
+            queryClient.invalidateQueries({ queryKey: ['requests'] }); 
+            queryClient.invalidateQueries({ queryKey: ['inventory'] }); 
             toast.success("Albarán eliminado exitosamente.");
         },
         onError: (error) => {
