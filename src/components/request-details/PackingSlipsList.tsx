@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 
 interface PackingSlipsListProps {
   requestId: string;
-  onOpenReceiveItemsDialog: () => void; // Cambiado el nombre de la prop
+  onOpenReceiveItemsDialog: () => void; // Mantener la prop por si se usa en otro lugar, pero no la usaremos en el renderizado
   requestNumber: string; // Nuevo prop para el número de solicitud
 }
 
@@ -34,7 +34,7 @@ const getFileNameFromPath = (filePath: string): string => {
   }
 };
 
-const PackingSlipsList: React.FC<PackingSlipsListProps> = ({ requestId, onOpenReceiveItemsDialog, requestNumber }) => {
+const PackingSlipsList: React.FC<PackingSlipsListProps> = ({ requestId, requestNumber }) => {
   const { data: slips, isLoading, error } = usePackingSlips(requestId);
   const deleteSlipMutation = useDeleteSlip();
   const [isGenerating, setIsGenerating] = React.useState<string | null>(null);
@@ -93,12 +93,7 @@ const PackingSlipsList: React.FC<PackingSlipsListProps> = ({ requestId, onOpenRe
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-lg">Albaranes de Recepción ({slips?.length || 0})</CardTitle>
-        <div className="flex space-x-2">
-            <SlipUploadButton requestId={requestId} />
-            <Button variant="default" size="sm" onClick={onOpenReceiveItemsDialog}>
-              <PlusCircle className="h-4 w-4 mr-2" /> Recibir Artículos
-            </Button>
-        </div>
+        <SlipUploadButton requestId={requestId} />
       </CardHeader>
       <CardContent className="p-0">
         {slips && slips.length > 0 ? (
