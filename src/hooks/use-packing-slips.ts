@@ -161,6 +161,7 @@ export const useDeleteSlip = () => {
                 
             if (fetchError) throw new Error(fetchError.message);
             
+            const requestId = slipData.request_id; // Obtener el ID de la solicitud
             const requestStatus = (slipData.request as any)?.status;
             const hasReceivedItems = (slipData.received_items as any[])?.length > 0;
             
@@ -178,10 +179,6 @@ export const useDeleteSlip = () => {
                     .eq('slip_id', slipId);
                     
                 if (deleteItemsError) throw new Error(`Fallo al eliminar ítems recibidos asociados: ${deleteItemsError.message}`);
-                
-                // Nota: No revertimos el inventario aquí, ya que la reversión completa se maneja con el RPC.
-                // Si el usuario elimina un albarán con ítems, se asume que el inventario se corregirá manualmente
-                // o mediante una recepción con cantidad negativa.
             }
             
             // 4. Eliminar el registro del albarán (Packing Slip)
@@ -191,10 +188,14 @@ export const useDeleteSlip = () => {
                 .eq('id', slipId);
                 
             if (deleteError) throw new Error(deleteError.message);
+            
+            return requestId; // Devolver el ID de la solicitud para invalidación específica
         },
-        onSuccess: (data, slipId) => {
-            queryClient.invalidateQueries({ queryKey: ['packingSlips'] });
-            queryClient.invalidateQueries({ queryKey: ['aggregatedReceivedItems'] });
+        onSuccess: (requestId) => {
+            // Invalidación específica para la solicitud afectada
+            queryClient.invalidateQueries({ queryKey: ['packingSlips', requestId] });
+            queryClient.invalidateQueries({ queryKey: ['aggregatedReceivedItems', requestId] });
+            queryClient.invalidateQueries({ queryKey: ['requests'] }); // Invalidar la lista de solicitudes
             queryClient.invalidateQueries({ queryKey: ['inventory'] }); // Invalidar por si acaso
             toast.success("Albarán eliminado exitosamente.");
         },

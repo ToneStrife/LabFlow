@@ -36,7 +36,8 @@ const receivedItemSchema = z.object({
   quantityPreviouslyReceived: z.number(),
   quantityReceived: z.preprocess(
     (val) => Number(val),
-    z.number().min(0, { message: "La cantidad debe ser no negativa." })
+    // Permitir números negativos para correcciones, la validación de lógica se hace en handleSubmit
+    z.number() 
   ),
 });
 
@@ -175,18 +176,18 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
         
         const totalReceived = item.quantityPreviouslyReceived + item.quantityReceived;
         
+        // Validación de cantidad total recibida (no puede ser negativa)
+        if (totalReceived < 0) {
+             toast.error(`Error: La corrección para ${item.productName} resultaría en una cantidad recibida negativa (${totalReceived}).`);
+             throw new Error("Correction results in negative received quantity.");
+        }
+        
         // Advertir si la cantidad total recibida excede la cantidad pedida (solo si es una adición positiva)
         if (totalReceived > item.quantityOrdered && item.quantityReceived > 0) {
-          toast.error(`Error: La cantidad total recibida para ${item.productName} excede la cantidad pedida.`);
+          toast.error(`Error: La cantidad total recibida para ${item.productName} excede la cantidad pedida (${totalReceived} > ${item.quantityOrdered}).`);
           throw new Error("Quantity received exceeds quantity ordered.");
         }
         
-        // Advertir si la corrección resulta en una cantidad recibida negativa
-        if (item.quantityReceived < 0 && totalReceived < 0) {
-             toast.error(`Error: La corrección para ${item.productName} resultaría en una cantidad recibida negativa.`);
-             throw new Error("Correction results in negative received quantity.");
-        }
-
         return {
           requestItemId: item.requestItemId,
           quantityReceived: item.quantityReceived,
@@ -336,7 +337,7 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
                             <FormControl>
                               <Input 
                                 type="number" 
-                                min={quantityPreviouslyReceived > 0 ? -quantityPreviouslyReceived : 0} // Permitir corrección negativa
+                                // Eliminamos el atributo min para permitir negativos
                                 {...quantityField} 
                                 onChange={(e) => {
                                   const val = Number(e.target.value);
