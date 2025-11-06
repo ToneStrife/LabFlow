@@ -70,7 +70,7 @@ const PackingSlipsList: React.FC<PackingSlipsListProps> = ({ requestId, requestN
   if (isLoading) {
     return (
       <Card>
-        <CardHeader><CardTitle className="text-lg">Albaranes de Recepción</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-lg">Albaranes</CardTitle></CardHeader>
         <CardContent className="flex justify-center items-center h-20">
           <Loader2 className="h-5 w-5 animate-spin mr-2" /> Cargando albaranes...
         </CardContent>
