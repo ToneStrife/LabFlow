@@ -25,12 +25,14 @@ import { Input } from "@/components/ui/input";
 import { Loader2, Save } from "lucide-react";
 import { useCorrectReceivedItemQuantity } from "@/hooks/use-packing-slips";
 import { toast } from "sonner";
+import { Label } from "@/components/ui/label";
 
 const editReceivedItemSchema = z.object({
   receivedItemId: z.string(),
   productName: z.string(),
   quantityOrdered: z.number(),
   oldQuantity: z.number(),
+  requestId: z.string(), // Nuevo campo
   newQuantity: z.preprocess(
     (val) => Number(val),
     z.number().int({ message: "La cantidad debe ser un número entero." }).min(0, { message: "La cantidad no puede ser negativa." })
@@ -47,6 +49,7 @@ interface EditReceivedItemDialogProps {
     productName: string;
     quantityOrdered: number;
     oldQuantity: number;
+    requestId: string; // Nuevo campo
   } | null;
 }
 
@@ -65,17 +68,20 @@ const EditReceivedItemDialog: React.FC<EditReceivedItemDialogProps> = ({
   });
 
   const handleSubmit = async (data: EditReceivedItemFormValues) => {
+    // 1. Validar que la nueva cantidad no exceda la cantidad pedida
     if (data.newQuantity > data.quantityOrdered) {
         toast.error("Error de corrección", { description: `La cantidad total recibida (${data.newQuantity}) no puede exceder la cantidad pedida (${data.quantityOrdered}).` });
         return;
     }
     
+    // 2. Validar si hay cambios
     if (data.newQuantity === data.oldQuantity) {
         toast.info("No hay cambios para guardar.");
         onOpenChange(false);
         return;
     }
 
+    // 3. Ejecutar la corrección
     await correctQuantityMutation.mutateAsync({
       receivedItemId: data.receivedItemId,
       newQuantity: data.newQuantity,

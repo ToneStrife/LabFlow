@@ -87,20 +87,32 @@ export const useCorrectReceivedItemQuantity = () => {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: async ({ receivedItemId, newQuantity }: { receivedItemId: string; newQuantity: number }) => {
+            // El RPC devuelve el received_item actualizado
             const { data, error } = await supabase.rpc('correct_received_item_quantity', {
                 received_item_id_in: receivedItemId,
                 new_quantity_in: newQuantity,
             }).single();
 
             if (error) throw new Error(error.message);
-            return data;
+            
+            // Necesitamos el request_id para invalidar las consultas
+            const { data: slipData, error: slipError } = await supabase
+                .from('packing_slips')
+                .select('request_id')
+                .eq('id', (data as any).slip_id)
+                .single();
+                
+            if (slipError) throw new Error(`Fallo al obtener request_id: ${slipError.message}`);
+
+            return { receivedItem: data, requestId: slipData.request_id };
         },
-        onSuccess: (data) => {
-            const requestId = (data as any).request_id; // El RPC devuelve el received_item, que tiene request_id
+        onSuccess: ({ receivedItem, requestId }) => {
+            // Invalidar consultas relacionadas con la solicitud y el inventario
             queryClient.invalidateQueries({ queryKey: ['packingSlips', requestId] });
             queryClient.invalidateQueries({ queryKey: ['aggregatedReceivedItems', requestId] });
-            queryClient.invalidateQueries({ queryKey: ['receivedItemsBySlip'] }); // Invalida todos los detalles de albarán
+            queryClient.invalidateQueries({ queryKey: ['receivedItemsBySlip', receivedItem.slip_id] }); // Invalida el detalle del albarán
             queryClient.invalidateQueries({ queryKey: ['inventory'] });
+            queryClient.invalidateQueries({ queryKey: ['requests'] }); // Por si el estado de la solicitud cambia
             toast.success("Cantidad recibida corregida y inventario ajustado.");
         },
         onError: (error) => {
@@ -247,6 +259,7 @@ export const useDeleteSlip = () => {
             toast.success("Albarán eliminado exitosamente.");
         },
         onError: (error) => {
+            // Mostrar el mensaje de error específico de la mutación
             toast.error("Fallo al eliminar el albarán.", { description: error.message });
         }
     });

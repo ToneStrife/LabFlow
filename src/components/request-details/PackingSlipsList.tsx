@@ -41,7 +41,7 @@ const getFileNameFromPath = (filePath: string): string => {
 };
 
 // Componente para mostrar los ítems de un albarán
-const SlipItemsDialog: React.FC<{ slipId: string; slipNumber: string; isOpen: boolean; onOpenChange: (open: boolean) => void }> = ({ slipId, slipNumber, isOpen, onOpenChange }) => {
+const SlipItemsDialog: React.FC<{ slipId: string; slipNumber: string; requestId: string; isOpen: boolean; onOpenChange: (open: boolean) => void }> = ({ slipId, slipNumber, requestId, isOpen, onOpenChange }) => {
     const { data: receivedItems, isLoading } = useReceivedItemsBySlip(slipId);
     const [isEditItemDialogOpen, setIsEditItemDialogOpen] = React.useState(false);
     const [editingItemData, setEditingItemData] = React.useState<any>(null);
@@ -52,6 +52,7 @@ const SlipItemsDialog: React.FC<{ slipId: string; slipNumber: string; isOpen: bo
             productName: item.request_item.product_name,
             quantityOrdered: item.request_item.quantity,
             oldQuantity: item.quantity_received,
+            requestId: requestId, // Pasar el requestId
         });
         setIsEditItemDialogOpen(true);
     };
@@ -374,6 +375,7 @@ const PackingSlipsList: React.FC<PackingSlipsListProps> = ({ requestId, requestN
           <SlipItemsDialog
               slipId={selectedSlipForItems.id}
               slipNumber={formatSlipName(selectedSlipForItems.slip_number, slips?.findIndex(s => s.id === selectedSlipForItems.id) || 0)}
+              requestId={requestId} // Pasar el requestId
               isOpen={isSlipItemsDialogOpen}
               onOpenChange={setIsSlipItemsDialogOpen}
           />
