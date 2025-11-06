@@ -36,8 +36,8 @@ const receivedItemSchema = z.object({
   quantityPreviouslyReceived: z.number(),
   quantityReceived: z.preprocess(
     (val) => Number(val),
-    // Permitir números negativos para correcciones, la validación de lógica se hace en handleSubmit
-    z.number() 
+    // Permitir cualquier número entero (positivo, negativo o cero)
+    z.number().int({ message: "La cantidad debe ser un número entero." }) 
   ),
 });
 
