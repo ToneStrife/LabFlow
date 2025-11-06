@@ -36,8 +36,8 @@ const receivedItemSchema = z.object({
   quantityPreviouslyReceived: z.number(),
   quantityReceived: z.preprocess(
     (val) => Number(val),
-    // Permitir cualquier número entero (positivo, negativo o cero)
-    z.number().int({ message: "La cantidad debe ser un número entero." }) 
+    // Solo permitir números enteros no negativos para la recepción normal
+    z.number().int({ message: "La cantidad debe ser un número entero." }).min(0, { message: "La cantidad no puede ser negativa." }) 
   ),
 });
 
@@ -66,8 +66,6 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
   const receiveItemsMutation = useReceiveItems();
   
   const PERSIST_KEY = `receiveItemsForm:${requestId}`;
-  
-  // Eliminamos el estado de archivos seleccionados
   
   const initialItems = React.useMemo(() => {
     if (!requestItems || !aggregatedReceived) return [];
@@ -124,7 +122,10 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
           const updatedItems = initialItems.map(initialItem => {
             const savedItem = saved.items.find((s: any) => s.requestItemId === initialItem.requestItemId);
             if (savedItem && savedItem.quantityReceived !== undefined) {
-              return { ...initialItem, quantityReceived: savedItem.quantityReceived };
+              // Solo restaurar si el valor guardado es no negativo (para evitar restaurar correcciones fallidas)
+              if (savedItem.quantityReceived >= 0) {
+                return { ...initialItem, quantityReceived: savedItem.quantityReceived };
+              }
             }
             return initialItem;
           });
@@ -169,21 +170,15 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
 
   const handleSubmit = async (data: ReceiveFormValues) => {
     const itemsToReceive = data.items
-      .filter(item => item.quantityReceived !== 0) // Permitir 0, pero filtrar para el envío
+      .filter(item => item.quantityReceived > 0) // Solo procesar cantidades positivas
       .map(item => {
         const orderedItem = requestItems.find(ri => ri.id === item.requestItemId);
         if (!orderedItem) throw new Error(`Item ${item.requestItemId} not found.`);
         
         const totalReceived = item.quantityPreviouslyReceived + item.quantityReceived;
         
-        // Validación de cantidad total recibida (no puede ser negativa)
-        if (totalReceived < 0) {
-             toast.error(`Error: La corrección para ${item.productName} resultaría en una cantidad recibida negativa (${totalReceived}).`);
-             throw new Error("Correction results in negative received quantity.");
-        }
-        
-        // Advertir si la cantidad total recibida excede la cantidad pedida (solo si es una adición positiva)
-        if (totalReceived > item.quantityOrdered && item.quantityReceived > 0) {
+        // Advertir si la cantidad total recibida excede la cantidad pedida
+        if (totalReceived > item.quantityOrdered) {
           toast.error(`Error: La cantidad total recibida para ${item.productName} excede la cantidad pedida (${totalReceived} > ${item.quantityOrdered}).`);
           throw new Error("Quantity received exceeds quantity ordered.");
         }
@@ -196,7 +191,7 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
       });
 
     if (itemsToReceive.length === 0) {
-      toast.error("Por favor, especifica al menos una cantidad de artículo (positiva o negativa) para registrar.");
+      toast.error("Por favor, especifica al menos una cantidad de artículo positiva para registrar.");
       return;
     }
 
@@ -298,9 +293,9 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
               />
               <div className="space-y-2">
                 <Label className="text-sm font-medium">Corrección de Errores</Label>
-                <div className="flex items-center p-3 border rounded-md bg-red-50 text-red-700">
+                <div className="flex items-center p-3 border rounded-md bg-blue-50 text-blue-700">
                     <Info className="h-4 w-4 mr-2 flex-shrink-0" />
-                    <p className="text-xs">Para corregir una recepción errónea, introduce una cantidad negativa (ej. -1) en la casilla correspondiente.</p>
+                    <p className="text-xs">Para corregir una recepción, usa el botón <List className="inline h-3 w-3 mx-1" /> en el albarán correspondiente.</p>
                 </div>
               </div>
             </div>
@@ -337,7 +332,7 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
                             <FormControl>
                               <Input 
                                 type="number" 
-                                // Eliminamos el atributo min para permitir negativos
+                                min={0} // Volvemos a restringir a no negativo para la recepción normal
                                 {...quantityField} 
                                 onChange={(e) => {
                                   const val = Number(e.target.value);

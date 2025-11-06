@@ -3,8 +3,8 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, Loader2, Paperclip, PlusCircle, Trash2, Edit, RotateCcw } from "lucide-react";
-import { usePackingSlips, useDeleteSlip } from "@/hooks/use-packing-slips";
+import { FileText, Loader2, Paperclip, PlusCircle, Trash2, Edit, RotateCcw, List, CheckSquare } from "lucide-react";
+import { usePackingSlips, useDeleteSlip, useReceivedItemsBySlip } from "@/hooks/use-packing-slips";
 import { generateSignedUrl } from "@/utils/supabase-storage";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import EditReceivedItemDialog from "./EditReceivedItemDialog"; // Importar el nuevo componente
 
 interface PackingSlipsListProps {
   requestId: string;
@@ -39,6 +40,73 @@ const getFileNameFromPath = (filePath: string): string => {
   }
 };
 
+// Componente para mostrar los ítems de un albarán
+const SlipItemsDialog: React.FC<{ slipId: string; slipNumber: string; isOpen: boolean; onOpenChange: (open: boolean) => void }> = ({ slipId, slipNumber, isOpen, onOpenChange }) => {
+    const { data: receivedItems, isLoading } = useReceivedItemsBySlip(slipId);
+    const [isEditItemDialogOpen, setIsEditItemDialogOpen] = React.useState(false);
+    const [editingItemData, setEditingItemData] = React.useState<any>(null);
+    
+    const handleEditItem = (item: any) => {
+        setEditingItemData({
+            receivedItemId: item.id,
+            productName: item.request_item.product_name,
+            quantityOrdered: item.request_item.quantity,
+            oldQuantity: item.quantity_received,
+        });
+        setIsEditItemDialogOpen(true);
+    };
+
+    return (
+        <>
+            <Dialog open={isOpen} onOpenChange={onOpenChange}>
+                <DialogContent className="sm:max-w-[600px]">
+                    <DialogHeader>
+                        <DialogTitle>Artículos del Albarán {slipNumber}</DialogTitle>
+                        <DialogDescription>
+                            Detalles de los artículos registrados en este albarán.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="max-h-[400px] overflow-y-auto space-y-3">
+                        {isLoading ? (
+                            <div className="flex justify-center items-center h-20"><Loader2 className="h-5 w-5 animate-spin" /></div>
+                        ) : (
+                            receivedItems?.map(item => (
+                                <div key={item.id} className="flex justify-between items-center p-3 border rounded-md">
+                                    <div className="flex flex-col">
+                                        <span className="font-medium">{item.request_item.product_name}</span>
+                                        <span className="text-sm text-muted-foreground">Pedido: {item.request_item.quantity}</span>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <span className="font-bold text-lg text-primary">{item.quantity_received} uds.</span>
+                                        <Button 
+                                            variant="ghost" 
+                                            size="icon" 
+                                            onClick={() => handleEditItem(item)}
+                                            title="Corregir cantidad recibida"
+                                        >
+                                            <Edit className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => onOpenChange(false)}>Cerrar</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+            
+            <EditReceivedItemDialog
+                isOpen={isEditItemDialogOpen}
+                onOpenChange={setIsEditItemDialogOpen}
+                itemData={editingItemData}
+            />
+        </>
+    );
+};
+
+
 const PackingSlipsList: React.FC<PackingSlipsListProps> = ({ requestId, requestNumber }) => {
   const { data: slips, isLoading, error } = usePackingSlips(requestId);
   const { data: requests } = useRequests();
@@ -55,6 +123,9 @@ const PackingSlipsList: React.FC<PackingSlipsListProps> = ({ requestId, requestN
   const [isEditSlipDialogOpen, setIsEditSlipDialogOpen] = React.useState(false);
   const [editingSlip, setEditingSlip] = React.useState<{ id: string; slip_number: string } | null>(null);
   const [newSlipNumber, setNewSlipNumber] = React.useState('');
+  
+  const [isSlipItemsDialogOpen, setIsSlipItemsDialogOpen] = React.useState(false);
+  const [selectedSlipForItems, setSelectedSlipForItems] = React.useState<{ id: string; slip_number: string } | null>(null);
   
   const isRequestReceived = request?.status === 'Received';
 
@@ -106,6 +177,7 @@ const PackingSlipsList: React.FC<PackingSlipsListProps> = ({ requestId, requestN
             
         if (error) throw new Error(error.message);
         
+        // Invalida la consulta específica para que se recargue la lista
         queryClient.invalidateQueries({ queryKey: ['packingSlips', requestId] });
         toast.success("Número de albarán actualizado exitosamente!", { id: loadingToastId });
         setIsEditSlipDialogOpen(false);
@@ -118,6 +190,11 @@ const PackingSlipsList: React.FC<PackingSlipsListProps> = ({ requestId, requestN
   const handleRevertReception = async () => {
     if (!request) return;
     await revertReceptionMutation.mutateAsync(request.id);
+  };
+  
+  const handleViewSlipItems = (slip: { id: string; slip_number: string }) => {
+      setSelectedSlipForItems(slip);
+      setIsSlipItemsDialogOpen(true);
   };
 
   if (isLoading) {
@@ -181,7 +258,18 @@ const PackingSlipsList: React.FC<PackingSlipsListProps> = ({ requestId, requestN
                 </div>
                 
                 <div className="flex items-center space-x-2">
-                    {/* Botón de Edición */}
+                    {/* Botón de Ver Ítems */}
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleViewSlipItems(slip)}
+                        title="Ver Artículos Recibidos"
+                        disabled={deleteSlipMutation.isPending || revertReceptionMutation.isPending}
+                    >
+                        <List className="h-4 w-4" />
+                    </Button>
+                    
+                    {/* Botón de Edición de Número */}
                     <Button
                         variant="ghost"
                         size="icon"
@@ -280,6 +368,16 @@ const PackingSlipsList: React.FC<PackingSlipsListProps> = ({ requestId, requestN
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      
+      {/* Diálogo de Ítems del Albarán (para corrección) */}
+      {selectedSlipForItems && (
+          <SlipItemsDialog
+              slipId={selectedSlipForItems.id}
+              slipNumber={formatSlipName(selectedSlipForItems.slip_number, slips?.findIndex(s => s.id === selectedSlipForItems.id) || 0)}
+              isOpen={isSlipItemsDialogOpen}
+              onOpenChange={setIsSlipItemsDialogOpen}
+          />
+      )}
     </Card>
   );
 };

@@ -62,6 +62,53 @@ export const useAggregatedReceivedItems = (requestId: string) => {
   });
 };
 
+// Hook para obtener los ítems recibidos de un albarán específico
+export const useReceivedItemsBySlip = (slipId: string) => {
+    return useQuery<ReceivedItem[], Error>({
+        queryKey: ['receivedItemsBySlip', slipId],
+        queryFn: async () => {
+            const { data, error } = await supabase
+                .from('received_items')
+                .select(`
+                    *,
+                    request_item:request_items (product_name, catalog_number, quantity)
+                `)
+                .eq('slip_id', slipId);
+            
+            if (error) throw new Error(error.message);
+            return data as ReceivedItem[];
+        },
+        enabled: !!slipId,
+    });
+};
+
+// --- NUEVO HOOK: Corregir cantidad recibida de un ítem ---
+export const useCorrectReceivedItemQuantity = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async ({ receivedItemId, newQuantity }: { receivedItemId: string; newQuantity: number }) => {
+            const { data, error } = await supabase.rpc('correct_received_item_quantity', {
+                received_item_id_in: receivedItemId,
+                new_quantity_in: newQuantity,
+            }).single();
+
+            if (error) throw new Error(error.message);
+            return data;
+        },
+        onSuccess: (data) => {
+            const requestId = (data as any).request_id; // El RPC devuelve el received_item, que tiene request_id
+            queryClient.invalidateQueries({ queryKey: ['packingSlips', requestId] });
+            queryClient.invalidateQueries({ queryKey: ['aggregatedReceivedItems', requestId] });
+            queryClient.invalidateQueries({ queryKey: ['receivedItemsBySlip'] }); // Invalida todos los detalles de albarán
+            queryClient.invalidateQueries({ queryKey: ['inventory'] });
+            toast.success("Cantidad recibida corregida y inventario ajustado.");
+        },
+        onError: (error) => {
+            toast.error("Fallo al corregir la cantidad recibida.", { description: error.message });
+        }
+    });
+};
+
 
 // --- NUEVO HOOK: Subir archivo de albarán y crear registro ---
 interface UploadSlipData {
