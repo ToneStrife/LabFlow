@@ -148,31 +148,54 @@ export const useDeleteSlip = () => {
     
     return useMutation({
         mutationFn: async (slipId: string) => {
-            // 1. Verificar si hay ítems recibidos asociados a este albarán
-            const { data: receivedItems, error: fetchError } = await supabase
-                .from('received_items')
-                .select('id')
-                .eq('slip_id', slipId);
+            // 1. Obtener el albarán y la solicitud asociada
+            const { data: slipData, error: fetchError } = await supabase
+                .from('packing_slips')
+                .select(`
+                    request_id,
+                    received_items (id),
+                    request:requests (status)
+                `)
+                .eq('id', slipId)
+                .single();
                 
             if (fetchError) throw new Error(fetchError.message);
             
-            if (receivedItems && receivedItems.length > 0) {
-                throw new Error("No se puede eliminar el albarán. Primero debes revertir la recepción de los artículos asociados.");
+            const requestStatus = (slipData.request as any)?.status;
+            const hasReceivedItems = (slipData.received_items as any[])?.length > 0;
+            
+            // 2. Lógica de validación
+            if (requestStatus === 'Received' && hasReceivedItems) {
+                throw new Error("No se puede eliminar el albarán. La solicitud está en estado 'Recibido' y tiene artículos asociados. Utiliza la opción de Revertir Recepción.");
             }
             
-            // 2. Eliminar el registro del albarán (Packing Slip)
+            // 3. Si hay ítems recibidos pero la solicitud NO está en 'Received', eliminamos los ítems primero.
+            if (hasReceivedItems) {
+                // Esto es una corrección de un registro de recepción que no completó la solicitud.
+                const { error: deleteItemsError } = await supabase
+                    .from('received_items')
+                    .delete()
+                    .eq('slip_id', slipId);
+                    
+                if (deleteItemsError) throw new Error(`Fallo al eliminar ítems recibidos asociados: ${deleteItemsError.message}`);
+                
+                // Nota: No revertimos el inventario aquí, ya que la reversión completa se maneja con el RPC.
+                // Si el usuario elimina un albarán con ítems, se asume que el inventario se corregirá manualmente
+                // o mediante una recepción con cantidad negativa.
+            }
+            
+            // 4. Eliminar el registro del albarán (Packing Slip)
             const { error: deleteError } = await supabase
                 .from('packing_slips')
                 .delete()
                 .eq('id', slipId);
                 
             if (deleteError) throw new Error(deleteError.message);
-            
-            // Nota: La eliminación del archivo de Storage debe hacerse manualmente si es necesario,
-            // pero por ahora, solo eliminamos el registro de la DB.
         },
         onSuccess: (data, slipId) => {
             queryClient.invalidateQueries({ queryKey: ['packingSlips'] });
+            queryClient.invalidateQueries({ queryKey: ['aggregatedReceivedItems'] });
+            queryClient.invalidateQueries({ queryKey: ['inventory'] }); // Invalidar por si acaso
             toast.success("Albarán eliminado exitosamente.");
         },
         onError: (error) => {
@@ -204,14 +227,14 @@ export const useReceiveItems = () => {
       const receivedBy = session?.user?.id;
 
       if (!receivedBy) throw new Error("El usuario debe iniciar sesión para recibir artículos.");
-      if (!slipNumber.trim()) throw new Error("El número de albarán es obligatorio para registrar la recepción.");
+      // Eliminado: if (!slipNumber.trim()) throw new Error("El número de albarán es obligatorio para registrar la recepción.");
 
       // 1. Insertar el Albarán (Packing Slip)
       const { data: newSlip, error: slipError } = await supabase
         .from('packing_slips')
         .insert({
             request_id: requestId,
-            slip_number: slipNumber,
+            slip_number: slipNumber.trim() || `SLIP-${Date.now()}`, // Usar un valor por defecto si está vacío
             received_by: receivedBy,
             slip_url: null, // Ya no subimos archivos aquí
         })
@@ -236,7 +259,7 @@ export const useReceiveItems = () => {
 
       // 3. Actualizar el Inventario (usando RPC para manejar la lógica de upsert)
       for (const item of items) {
-        if (item.quantityReceived > 0) {
+        if (item.quantityReceived !== 0) { // Permitir cantidades negativas para corrección
           const { error: inventoryError } = await supabase.rpc('add_or_update_inventory_item', {
             product_name_in: item.itemDetails.product_name,
             catalog_number_in: item.itemDetails.catalog_number,

@@ -42,7 +42,7 @@ const receivedItemSchema = z.object({
 
 // Esquema principal del formulario
 const receiveFormSchema = z.object({
-  slipNumber: z.string().min(1, { message: "El número de albarán es obligatorio." }), // Ahora obligatorio
+  slipNumber: z.string().optional().nullable(), // Ahora opcional/nullable
   items: z.array(receivedItemSchema).min(1),
 });
 
@@ -88,11 +88,11 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
   const form = useForm<ReceiveFormValues>({
     resolver: zodResolver(receiveFormSchema),
     defaultValues: {
-      slipNumber: "",
+      slipNumber: null, // Inicializar como null
       items: initialItems,
     },
     values: { 
-      slipNumber: "",
+      slipNumber: null, // Inicializar como null
       items: initialItems,
     }
   });
@@ -116,7 +116,7 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
         const saved = JSON.parse(raw);
         
         // Restaurar slipNumber
-        form.setValue('slipNumber', saved.slipNumber ?? "");
+        form.setValue('slipNumber', saved.slipNumber ?? null);
         
         // Restaurar cantidades recibidas
         if (saved.items && Array.isArray(saved.items)) {
@@ -168,20 +168,21 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
 
   const handleSubmit = async (data: ReceiveFormValues) => {
     const itemsToReceive = data.items
-      .filter(item => item.quantityReceived > 0)
+      .filter(item => item.quantityReceived !== 0) // Permitir 0, pero filtrar para el envío
       .map(item => {
         const orderedItem = requestItems.find(ri => ri.id === item.requestItemId);
         if (!orderedItem) throw new Error(`Item ${item.requestItemId} not found.`);
         
         const totalReceived = item.quantityPreviouslyReceived + item.quantityReceived;
-        // Permitir cantidades negativas para corrección, pero advertir si excede el pedido
+        
+        // Advertir si la cantidad total recibida excede la cantidad pedida (solo si es una adición positiva)
         if (totalReceived > item.quantityOrdered && item.quantityReceived > 0) {
           toast.error(`Error: La cantidad total recibida para ${item.productName} excede la cantidad pedida.`);
           throw new Error("Quantity received exceeds quantity ordered.");
         }
         
-        // Si la cantidad recibida es negativa, es una corrección.
-        if (item.quantityReceived < 0 && item.quantityPreviouslyReceived + item.quantityReceived < 0) {
+        // Advertir si la corrección resulta en una cantidad recibida negativa
+        if (item.quantityReceived < 0 && totalReceived < 0) {
              toast.error(`Error: La corrección para ${item.productName} resultaría en una cantidad recibida negativa.`);
              throw new Error("Correction results in negative received quantity.");
         }
@@ -194,13 +195,13 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
       });
 
     if (itemsToReceive.length === 0) {
-      toast.error("Por favor, especifica al menos una cantidad de artículo mayor a cero para recibir.");
+      toast.error("Por favor, especifica al menos una cantidad de artículo (positiva o negativa) para registrar.");
       return;
     }
 
     await receiveItemsMutation.mutateAsync({
       requestId,
-      slipNumber: data.slipNumber, // Ahora es obligatorio
+      slipNumber: data.slipNumber || "", // Pasar cadena vacía si es null
       items: itemsToReceive,
     });
 
@@ -269,7 +270,7 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
         <DialogHeader>
           <DialogTitle>Registrar Recepción de Artículos</DialogTitle>
           <DialogDescription>
-            Introduce el número de albarán y la cantidad recibida para cada artículo.
+            Introduce el número de albarán (opcional) y la cantidad recibida para cada artículo.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -280,9 +281,15 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
                 name="slipNumber"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Número de Albarán</FormLabel>
+                    <FormLabel>Número de Albarán (Opcional)</FormLabel>
                     <FormControl>
-                      <Input placeholder="ej. SLIP-12345" {...field} disabled={isSubmitting} />
+                      <Input 
+                        placeholder="ej. SLIP-12345" 
+                        {...field} 
+                        disabled={isSubmitting} 
+                        value={field.value || ""} 
+                        onChange={(e) => field.onChange(e.target.value || null)}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -325,7 +332,7 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
                       render={({ field: quantityField }) => (
                         <FormItem className="sm:col-span-2 flex items-end space-y-0 gap-2">
                           <div className="flex-1">
-                            <FormLabel>Cantidad a Recibir</FormLabel>
+                            <FormLabel>Cantidad a Registrar</FormLabel>
                             <FormControl>
                               <Input 
                                 type="number" 

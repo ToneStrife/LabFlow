@@ -19,7 +19,7 @@ const SlipUploadButton: React.FC<SlipUploadButtonProps> = ({ requestId }) => {
     
     if (!file) return;
 
-    // 1. Pedir el número de albarán usando un prompt
+    // 1. Pedir el número de albarán usando un prompt (opcional)
     const defaultSlipNumber = file.name.split('.').slice(0, -1).join('.');
     const slipNumberInput = prompt(`Introduce el número de albarán (Opcional):`, defaultSlipNumber);
     
@@ -35,7 +35,7 @@ const SlipUploadButton: React.FC<SlipUploadButtonProps> = ({ requestId }) => {
     await uploadMutation.mutateAsync({
       requestId,
       file: file,
-      slipNumber: slipNumberInput || undefined,
+      slipNumber: slipNumberInput || undefined, // undefined si está vacío
     });
     
     // 3. Limpiar el input después de la subida

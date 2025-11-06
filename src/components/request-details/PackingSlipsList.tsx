@@ -3,21 +3,26 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, Loader2, Paperclip, PlusCircle, Trash2 } from "lucide-react";
+import { FileText, Loader2, Paperclip, PlusCircle, Trash2, Edit, RotateCcw } from "lucide-react";
 import { usePackingSlips, useDeleteSlip } from "@/hooks/use-packing-slips";
 import { generateSignedUrl } from "@/utils/supabase-storage";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import SlipUploadButton from "../SlipUploadButton"; // Importar el nuevo componente
+import SlipUploadButton from "../SlipUploadButton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { useRevertRequestReception, useRequests, SupabaseRequest } from "@/hooks/use-requests";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
 
 interface PackingSlipsListProps {
   requestId: string;
-  onOpenReceiveItemsDialog: () => void; // Mantener la prop por si se usa en otro lugar, pero no la usaremos en el renderizado
-  requestNumber: string; // Nuevo prop para el número de solicitud
+  onOpenReceiveItemsDialog: () => void;
+  requestNumber: string;
 }
 
-// Función auxiliar para obtener el nombre de archivo legible (copiada de RequestFilesCard.tsx)
+// Función auxiliar para obtener el nombre de archivo legible
 const getFileNameFromPath = (filePath: string): string => {
   if (!filePath) return "Archivo";
   try {
@@ -36,10 +41,22 @@ const getFileNameFromPath = (filePath: string): string => {
 
 const PackingSlipsList: React.FC<PackingSlipsListProps> = ({ requestId, requestNumber }) => {
   const { data: slips, isLoading, error } = usePackingSlips(requestId);
+  const { data: requests } = useRequests();
+  const request = requests?.find(req => req.id === requestId);
+  
   const deleteSlipMutation = useDeleteSlip();
+  const revertReceptionMutation = useRevertRequestReception();
+  const queryClient = useQueryClient();
+
   const [isGenerating, setIsGenerating] = React.useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   const [slipToDelete, setSlipToDelete] = React.useState<string | null>(null);
+  
+  const [isEditSlipDialogOpen, setIsEditSlipDialogOpen] = React.useState(false);
+  const [editingSlip, setEditingSlip] = React.useState<{ id: string; slip_number: string } | null>(null);
+  const [newSlipNumber, setNewSlipNumber] = React.useState('');
+  
+  const isRequestReceived = request?.status === 'Received';
 
   const handleViewClick = async (filePath: string) => {
     setIsGenerating(filePath);
@@ -66,11 +83,47 @@ const PackingSlipsList: React.FC<PackingSlipsListProps> = ({ requestId, requestN
         setSlipToDelete(null);
     }
   };
+  
+  const handleEditSlipNumber = (slip: { id: string; slip_number: string }) => {
+    setEditingSlip(slip);
+    setNewSlipNumber(slip.slip_number);
+    setIsEditSlipDialogOpen(true);
+  };
+  
+  const handleSaveSlipNumber = async () => {
+    if (!editingSlip || !newSlipNumber.trim()) {
+        toast.error("El número de albarán no puede estar vacío.");
+        return;
+    }
+    
+    const loadingToastId = toast.loading("Actualizando número de albarán...");
+    
+    try {
+        const { error } = await supabase
+            .from('packing_slips')
+            .update({ slip_number: newSlipNumber.trim() })
+            .eq('id', editingSlip.id);
+            
+        if (error) throw new Error(error.message);
+        
+        queryClient.invalidateQueries({ queryKey: ['packingSlips', requestId] });
+        toast.success("Número de albarán actualizado exitosamente!", { id: loadingToastId });
+        setIsEditSlipDialogOpen(false);
+        setEditingSlip(null);
+    } catch (e) {
+        toast.error("Fallo al actualizar el número de albarán.", { description: (e as Error).message, id: loadingToastId });
+    }
+  };
+  
+  const handleRevertReception = async () => {
+    if (!request) return;
+    await revertReceptionMutation.mutateAsync(request.id);
+  };
 
   if (isLoading) {
     return (
       <Card>
-        <CardHeader><CardTitle className="text-lg">Albaranes</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-lg">Albaranes de Recepción</CardTitle></CardHeader>
         <CardContent className="flex justify-center items-center h-20">
           <Loader2 className="h-5 w-5 animate-spin mr-2" /> Cargando albaranes...
         </CardContent>
@@ -93,7 +146,25 @@ const PackingSlipsList: React.FC<PackingSlipsListProps> = ({ requestId, requestN
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-lg">Albaranes de Recepción ({slips?.length || 0})</CardTitle>
-        <SlipUploadButton requestId={requestId} />
+        <div className="flex space-x-2">
+            {isRequestReceived && (
+                <Button 
+                    variant="destructive" 
+                    size="sm" 
+                    onClick={handleRevertReception}
+                    disabled={revertReceptionMutation.isPending}
+                    title="Revertir la recepción completa de esta solicitud"
+                >
+                    {revertReceptionMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                        <RotateCcw className="h-4 w-4 mr-2" />
+                    )}
+                    Revertir Recepción
+                </Button>
+            )}
+            <SlipUploadButton requestId={requestId} />
+        </div>
       </CardHeader>
       <CardContent className="p-0">
         {slips && slips.length > 0 ? (
@@ -110,6 +181,17 @@ const PackingSlipsList: React.FC<PackingSlipsListProps> = ({ requestId, requestN
                 </div>
                 
                 <div className="flex items-center space-x-2">
+                    {/* Botón de Edición */}
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleEditSlipNumber(slip)}
+                        title="Editar Número de Albarán"
+                        disabled={deleteSlipMutation.isPending || revertReceptionMutation.isPending}
+                    >
+                        <Edit className="h-4 w-4" />
+                    </Button>
+                    
                     {slip.slip_url ? (
                       <Button 
                         variant="link" 
@@ -135,7 +217,7 @@ const PackingSlipsList: React.FC<PackingSlipsListProps> = ({ requestId, requestN
                         size="icon"
                         onClick={() => handleDeleteClick(slip.id)}
                         title="Eliminar Albarán"
-                        disabled={deleteSlipMutation.isPending}
+                        disabled={deleteSlipMutation.isPending || revertReceptionMutation.isPending}
                     >
                         <Trash2 className="h-4 w-4" />
                     </Button>
@@ -156,7 +238,7 @@ const PackingSlipsList: React.FC<PackingSlipsListProps> = ({ requestId, requestN
           <DialogHeader>
             <DialogTitle>Eliminar Albarán</DialogTitle>
             <DialogDescription>
-              ¿Estás seguro de que deseas eliminar este albarán? Solo se puede eliminar si no tiene artículos recibidos asociados. Si tiene artículos, primero debes revertir la recepción.
+              ¿Estás seguro de que deseas eliminar este albarán? Si la solicitud está en estado "Recibido" y tiene artículos asociados, debes usar la opción de Revertir Recepción. De lo contrario, se eliminará el registro.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -165,6 +247,35 @@ const PackingSlipsList: React.FC<PackingSlipsListProps> = ({ requestId, requestN
             </Button>
             <Button variant="destructive" onClick={confirmDeleteSlip} disabled={deleteSlipMutation.isPending}>
               {deleteSlipMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Confirmar Eliminación"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Diálogo de Edición de Número de Albarán */}
+      <Dialog open={isEditSlipDialogOpen} onOpenChange={setIsEditSlipDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Editar Número de Albarán</DialogTitle>
+            <DialogDescription>
+              Actualiza el número de albarán para el registro seleccionado.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <Label htmlFor="newSlipNumber">Número de Albarán</Label>
+            <Input
+              id="newSlipNumber"
+              value={newSlipNumber}
+              onChange={(e) => setNewSlipNumber(e.target.value)}
+              disabled={deleteSlipMutation.isPending}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditSlipDialogOpen(false)} disabled={deleteSlipMutation.isPending}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveSlipNumber} disabled={deleteSlipMutation.isPending || !newSlipNumber.trim()}>
+              Guardar
             </Button>
           </DialogFooter>
         </DialogContent>
