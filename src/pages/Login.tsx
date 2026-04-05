@@ -7,7 +7,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/components/SessionContextProvider";
 import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
-import { toast } from "sonner"; // Import toast
 
 const Login: React.FC = () => {
   const { session, loading } = useSession();
@@ -40,7 +39,9 @@ const Login: React.FC = () => {
         </div>
         <Auth
           supabaseClient={supabase}
-          providers={[]} // Sin proveedores de terceros por ahora
+          providers={[]} // Sin proveedores de terceros
+          view="sign_in" // Forzar la vista de inicio de sesión
+          showLinks={false} // Ocultar enlaces de "Registrarse" y "Olvidé mi contraseña"
           appearance={{
             theme: ThemeSupa,
             variables: {
@@ -53,10 +54,11 @@ const Login: React.FC = () => {
             },
           }}
           theme="light"
-          // Usamos window.location.origin + '/#/dashboard' para HashRouter
           redirectTo={window.location.origin + '/#/dashboard'} 
-          // onError prop is not supported by the Auth component
         />
+        <p className="text-center text-sm text-muted-foreground mt-4">
+          Si no tienes cuenta, contacta con un administrador para recibir una invitación.
+        </p>
       </div>
     </div>
   );
