@@ -1,60 +1,60 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
-import { encode } from "https://deno.land/std@0.208.0/encoding/base64.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Dirección de correo electrónico para añadir en CC
+// Dirección de correo electrónico para añadir en CC (opcional, mantenida de la versión anterior)
 const CC_EMAIL = 'cjaranda@go.ugr.es';
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
+  if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
-  }
-
-  // 1. Obtener la configuración de SendGrid de los secretos
-  const sendgridApiKey = Deno.env.get('SENDGRID_API_KEY');
-  const sendgridFromEmail = Deno.env.get('SENDGRID_FROM_EMAIL');
-
-  if (!sendgridApiKey) {
-    return new Response(JSON.stringify({ error: 'Server Error: SENDGRID_API_KEY is missing in Supabase secrets.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-  }
-  
-  if (!sendgridFromEmail) {
-    return new Response(JSON.stringify({ error: 'Server Error: SENDGRID_FROM_EMAIL is missing in Supabase secrets or is invalid. Please set a verified sender email.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 
   let logStatus = 'failed';
   let logErrorMessage: string | undefined;
   let sentByUserId: string | undefined;
-  let requestBody: any; // Variable para almacenar el cuerpo de la solicitud
+  let requestBody: any;
 
   try {
-    // Leer el cuerpo de la solicitud UNA SOLA VEZ
+    // 1. Configuración desde Variables de Entorno
+    const SMTP_HOST = Deno.env.get("SMTP_HOST") || "smtp.gmail.com";
+    const SMTP_PORT = "465"; 
+    const SMTP_USER = Deno.env.get("SMTP_USER");
+    const SMTP_PASSWORD = Deno.env.get("SMTP_PASSWORD");
+    const SMTP_FROM = Deno.env.get("SMTP_FROM") || SMTP_USER;
+
+    if (!SMTP_USER || !SMTP_PASSWORD) {
+      throw new Error("Configuración SMTP incompleta (SMTP_USER o SMTP_PASSWORD faltantes).");
+    }
+
+    // 2. Obtener datos del Body
     requestBody = await req.json();
     const { to, subject, body, attachments, fromName } = requestBody;
 
-    // 2. Autenticar al usuario que llama a la función
+    if (!to || !subject || !body) {
+      return new Response(
+        JSON.stringify({ error: "Faltan datos (to, subject o body)" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // 3. Verificación de Seguridad (Supabase Auth)
     const authClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
     );
     const { data: { user }, error: authError } = await authClient.auth.getUser();
-    if (authError) {
-      logErrorMessage = `Unauthorized: ${authError.message}`;
-      return new Response(JSON.stringify({ error: logErrorMessage }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    if (authError || !user) {
+      logErrorMessage = "No autorizado";
+      return new Response(JSON.stringify({ error: logErrorMessage }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
-    sentByUserId = user?.id;
-
-    // 3. Parsear el cuerpo de la solicitud (ya hecho, usar variables)
-    if (!to || !subject || !body) {
-      logErrorMessage = 'Missing required fields: to, subject, or body';
-      return new Response(JSON.stringify({ error: logErrorMessage }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-    }
+    sentByUserId = user.id;
 
     // 4. Procesar los archivos adjuntos si existen
     const processedAttachments = [];
@@ -67,108 +67,89 @@ serve(async (req) => {
       for (const attachment of attachments) {
         try {
           const filePath = attachment.url; 
-          
-          console.log(`Attempting to download attachment: ${attachment.name} from path: ${filePath}`);
+          console.log(`[send-email] Descargando adjunto: ${attachment.name} desde: ${filePath}`);
 
           const { data: fileBlob, error: downloadError } = await supabaseAdmin.storage
             .from('LabFlow')
             .download(filePath);
 
           if (downloadError) {
-            console.error(`Failed to download attachment: ${attachment.name} at path ${filePath}`, downloadError);
+            console.error(`[send-email] Error al descargar ${attachment.name}:`, downloadError);
             continue;
           }
 
-          if (!fileBlob) {
-            console.error(`File blob is null for attachment: ${attachment.name} at path ${filePath}`);
-            continue;
+          if (fileBlob) {
+            const fileArrayBuffer = await fileBlob.arrayBuffer();
+            processedAttachments.push({
+              filename: attachment.name,
+              content: new Uint8Array(fileArrayBuffer),
+            });
           }
-
-          const fileArrayBuffer = await fileBlob.arrayBuffer();
-          const base64Content = encode(fileArrayBuffer);
-
-          processedAttachments.push({
-            content: base64Content,
-            filename: attachment.name,
-            type: fileBlob.type,
-            disposition: 'attachment',
-          });
         } catch (e) {
-          console.error(`Error processing attachment ${attachment.name}:`, e);
+          console.error(`[send-email] Error procesando adjunto ${attachment.name}:`, e);
         }
       }
     }
 
-    // 5. Construir el payload para la API de SendGrid
-    const personalizations = [{ to: [{ email: to }], cc: [{ email: CC_EMAIL }] }]; // Añadir CC aquí
-
-    const emailData = {
-      personalizations: personalizations,
-      from: { email: sendgridFromEmail, name: fromName || "LabFlow" },
-      subject: subject,
-      content: [{ type: 'text/html', value: body }],
-      attachments: processedAttachments.length > 0 ? processedAttachments : undefined,
-    };
-
-    // 6. Enviar la solicitud a la API de SendGrid
-    const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${sendgridApiKey}`,
-        'Content-Type': 'application/json',
+    // 5. Cliente SMTP con SSL Directo (Puerto 465)
+    const client = new SMTPClient({
+      connection: {
+        hostname: SMTP_HOST,
+        port: Number(SMTP_PORT),
+        tls: true, 
+        auth: {
+          username: SMTP_USER!,
+          password: SMTP_PASSWORD!,
+        },
       },
-      body: JSON.stringify(emailData),
     });
 
-    if (!response.ok) {
-      const errorBody = await response.text();
-      console.error('SendGrid API error response:', errorBody);
-      logErrorMessage = `SendGrid API error (${response.status}): ${errorBody}`;
-      throw new Error(logErrorMessage);
-    }
+    // 6. Preparar texto plano y Enviar
+    const plainText = body.replace(/<[^>]*>?/gm, "");
 
-    console.log('Email sent successfully via SendGrid.');
-    logStatus = 'success'; // Mark as success if no error was thrown
-
-    return new Response(JSON.stringify({ message: "Email sent successfully." }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200,
+    await client.send({
+      from: fromName ? `${fromName} <${SMTP_FROM}>` : SMTP_FROM!,
+      to,
+      cc: CC_EMAIL, // Añadimos el CC configurado
+      subject,
+      content: plainText,
+      html: body,
+      attachments: processedAttachments.length > 0 ? processedAttachments : undefined,
     });
 
-  } catch (error: any) {
-    console.error('Unhandled error in send-email function:', error);
-    logErrorMessage = error.message || 'An unexpected error occurred in the Edge Function.';
-    return new Response(JSON.stringify({ error: logErrorMessage }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 500,
-    });
+    await client.close();
+    logStatus = 'success';
+
+    return new Response(
+      JSON.stringify({ message: "Email enviado con éxito" }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (err: any) {
+    console.error("[send-email] Error crítico:", err.message);
+    logErrorMessage = err.message;
+    return new Response(
+      JSON.stringify({ error: err.message }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
   } finally {
-    // 7. Log the email attempt to Supabase
+    // 7. Registrar el intento en la base de datos
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
     
-    // Usar la variable requestBody que ya contiene los datos
-    const to = requestBody?.to;
-    const subject = requestBody?.subject;
-    const body = requestBody?.body;
+    const bodyPreview = requestBody?.body?.substring(0, 247) + '...';
 
-    const bodyPreview = body && body.length > 250 ? body.substring(0, 247) + '...' : body;
-
-    const { error: logError } = await supabaseAdmin
+    await supabaseAdmin
       .from('email_logs')
       .insert({
-        to_email: to,
-        subject: subject,
+        to_email: requestBody?.to,
+        subject: requestBody?.subject,
         body_preview: bodyPreview,
         status: logStatus,
         error_message: logErrorMessage,
         sent_by: sentByUserId,
       });
-
-    if (logError) {
-      console.error('Error logging email to Supabase:', logError);
-    }
   }
 });
