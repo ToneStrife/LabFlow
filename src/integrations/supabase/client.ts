@@ -1,16 +1,7 @@
-import { createBrowserClient } from '@supabase/ssr';
+import { createClient } from '@supabase/supabase-js';
 
-// En entornos Vite, las variables de entorno públicas deben usar el prefijo VITE_
-// y ser accedidas a través de import.meta.env.
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// Credenciales directas del proyecto para asegurar la conectividad en el entorno de desarrollo
+const SUPABASE_URL = "https://syuulozqwzveujlgppml.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN5dXVsb3pxd3p2ZXVqbGdwcG1sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEyNDcwOTIsImV4cCI6MjA3NjgyMzA5Mn0.TH9w7Ai-Pt0wjd845Gbq5Vgaw1eAxYr8u0LjoKe9BBA";
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  // Este es el error que estás viendo.
-  throw new Error('Error Supabase URL or Anon Key is missing.');
-}
-
-export const supabase = createBrowserClient(
-  supabaseUrl,
-  supabaseAnonKey
-);
+export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
