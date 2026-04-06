@@ -24,12 +24,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 // Componente de Tarjeta de Resumen Ultra-Compacta
 interface SummaryCardProps {
   title: string;
-  count: number;
+  value: string | number; // Cambiado de count a value para soportar formatos como "15/3"
   icon: React.ReactNode;
   colorClass: string;
 }
 
-const SummaryCard: React.FC<SummaryCardProps> = ({ title, count, icon, colorClass }) => (
+const SummaryCard: React.FC<SummaryCardProps> = ({ title, value, icon, colorClass }) => (
   <Card className="shadow-sm border-none bg-slate-50/50">
     <CardContent className="p-3 flex items-center gap-3">
       <div className={cn("p-2 rounded-lg bg-white shadow-sm", colorClass)}>
@@ -37,7 +37,7 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ title, count, icon, colorClas
       </div>
       <div>
         <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-tight leading-none mb-1">{title}</p>
-        <p className="text-xl font-bold leading-none">{count}</p>
+        <p className="text-xl font-bold leading-none">{value}</p>
       </div>
     </CardContent>
   </Card>
@@ -49,13 +49,15 @@ const Dashboard = () => {
   const { data: pendingItems, isLoading: isLoadingPending } = usePendingItems();
 
   const allRequests = requests || [];
+  const allPendingItems = pendingItems || [];
 
   // Métricas simplificadas
   const metrics = {
     pending: allRequests.filter(req => req.status === "Pending").length,
     quote: allRequests.filter(req => req.status === "Quote Requested").length,
     po: allRequests.filter(req => req.status === "PO Requested").length,
-    delivery: allRequests.filter(req => req.status === "Ordered").length,
+    deliveryOrders: allRequests.filter(req => req.status === "Ordered").length,
+    deliveryItems: allPendingItems.length,
   };
 
   if (isLoadingRequests || isLoadingPending) {
@@ -90,25 +92,25 @@ const Dashboard = () => {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <SummaryCard 
           title="Por Aprobar" 
-          count={metrics.pending} 
+          value={metrics.pending} 
           icon={<FileSearch className="text-orange-500" />} 
           colorClass="text-orange-500"
         />
         <SummaryCard 
           title="Presupuestos" 
-          count={metrics.quote} 
+          value={metrics.quote} 
           icon={<FileText className="text-blue-500" />} 
           colorClass="text-blue-500"
         />
         <SummaryCard 
           title="PO Pendientes" 
-          count={metrics.po} 
+          value={metrics.po} 
           icon={<CreditCard className="text-red-500" />} 
           colorClass="text-red-500"
         />
         <SummaryCard 
-          title="En Entrega" 
-          count={metrics.delivery} 
+          title="Art. / Pedidos" 
+          value={`${metrics.deliveryItems} / ${metrics.deliveryOrders}`} 
           icon={<Truck className="text-emerald-500" />} 
           colorClass="text-emerald-500"
         />
