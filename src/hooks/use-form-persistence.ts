@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { UseFormReturn } from 'react-hook-form';
+import { UseFormReturn, Path } from 'react-hook-form';
 
 /**
  * Hook para persistir el estado de un formulario de react-hook-form en localStorage.
@@ -26,7 +26,7 @@ export function useFormPersistence<TFieldValues extends Record<string, any>>(
           const value = parsedData[field as string];
           if (value !== undefined) {
             // Usar setValue para restaurar el valor sin disparar validación o dirty state innecesariamente
-            setValue(field, value as any, { shouldValidate: false, shouldDirty: true });
+            setValue(field as Path<TFieldValues>, value as any, { shouldValidate: false, shouldDirty: true });
           }
         });
         

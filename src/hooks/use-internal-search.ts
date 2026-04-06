@@ -41,7 +41,7 @@ export const useInternalFuzzySearch = (searchTerm: string | null) => {
         brand: item.brand || null,
         unit_price: item.unit_price || null,
         format: item.format || null,
-        link: item.link || null,
+        link: (item as any).link || null, // Cast to any to handle missing link in InventoryItem
         source: 'DB',
       }));
     },

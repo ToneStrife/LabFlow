@@ -71,7 +71,7 @@ const SlipItemsDialog: React.FC<{ slipId: string; slipNumber: string; requestId:
                         {isLoading ? (
                             <div className="flex justify-center items-center h-20"><Loader2 className="h-5 w-5 animate-spin" /></div>
                         ) : (
-                            receivedItems?.map(item => (
+                            receivedItems?.map((item: any) => (
                                 <div key={item.id} className="flex justify-between items-center p-3 border rounded-md">
                                     <div className="flex flex-col">
                                         <span className="font-medium">{item.request_item.product_name}</span>

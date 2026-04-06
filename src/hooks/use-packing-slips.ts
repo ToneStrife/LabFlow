@@ -104,7 +104,7 @@ export const useCorrectReceivedItemQuantity = () => {
                 
             if (slipError) throw new Error(`Fallo al obtener request_id: ${slipError.message}`);
 
-            return { receivedItem: data, requestId: slipData.request_id };
+            return { receivedItem: data as any, requestId: slipData.request_id };
         },
         onSuccess: ({ receivedItem, requestId }) => {
             // Invalidar consultas relacionadas con la solicitud y el inventario
