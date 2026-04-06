@@ -8,40 +8,37 @@ import { Button } from "@/components/ui/button";
 import { 
   PlusCircle, 
   Loader2, 
-  Clock, 
-  Package, 
-  CheckCircle, 
-  ListTodo, 
-  LayoutDashboard,
   FileSearch,
   FileText,
   CreditCard,
-  Truck
+  Truck,
+  ListTodo,
+  LayoutDashboard
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { useRequests } from "@/hooks/use-requests";
 import { usePendingItems } from "@/hooks/use-pending-items";
 import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-// Componente de Tarjeta de Resumen Compacta
+// Componente de Tarjeta de Resumen Ultra-Compacta
 interface SummaryCardProps {
   title: string;
   count: number;
   icon: React.ReactNode;
   colorClass: string;
-  description?: string;
 }
 
-const SummaryCard: React.FC<SummaryCardProps> = ({ title, count, icon, colorClass, description }) => (
-  <Card className="shadow-sm transition-all duration-300 hover:shadow-md border-l-4" style={{ borderColor: `var(--${colorClass})` }}>
-    <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 pb-1">
-      <CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-wider truncate">{title}</CardTitle>
-      <div className={cn("h-4 w-4", colorClass)}>{icon}</div>
-    </CardHeader>
-    <CardContent className="p-3 pt-0">
-      <div className="text-2xl font-bold">{count}</div>
-      {description && <p className="text-[10px] text-muted-foreground mt-1 truncate">{description}</p>}
+const SummaryCard: React.FC<SummaryCardProps> = ({ title, count, icon, colorClass }) => (
+  <Card className="shadow-sm border-none bg-slate-50/50">
+    <CardContent className="p-3 flex items-center gap-3">
+      <div className={cn("p-2 rounded-lg bg-white shadow-sm", colorClass)}>
+        {React.cloneElement(icon as React.ReactElement, { className: "h-4 w-4" })}
+      </div>
+      <div>
+        <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-tight leading-none mb-1">{title}</p>
+        <p className="text-xl font-bold leading-none">{count}</p>
+      </div>
     </CardContent>
   </Card>
 );
@@ -53,21 +50,18 @@ const Dashboard = () => {
 
   const allRequests = requests || [];
 
-  // Cálculos dinámicos por estado
-  const counts = {
+  // Métricas simplificadas
+  const metrics = {
     pending: allRequests.filter(req => req.status === "Pending").length,
     quote: allRequests.filter(req => req.status === "Quote Requested").length,
     po: allRequests.filter(req => req.status === "PO Requested").length,
-    ordered: allRequests.filter(req => req.status === "Ordered").length,
-    received: allRequests.filter(req => req.status === "Received").length,
+    delivery: allRequests.filter(req => req.status === "Ordered").length,
   };
-
-  const totalPendingItemsCount = pendingItems?.reduce((sum, item) => sum + item.quantityPending, 0) || 0;
 
   if (isLoadingRequests || isLoadingPending) {
     return (
       <div className="container mx-auto py-8 flex justify-center items-center">
-        <Loader2 className="h-8 w-8 animate-spin mr-2" /> Cargando Panel de Control...
+        <Loader2 className="h-8 w-8 animate-spin mr-2 text-primary" /> Cargando...
       </div>
     );
   }
@@ -75,82 +69,72 @@ const Dashboard = () => {
   if (error) {
     return (
       <div className="container mx-auto py-8 text-red-600">
-        Error al cargar los datos del panel: {error.message}
+        Error: {error.message}
       </div>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8">
-      <div className="flex justify-between items-center flex-wrap gap-4">
+    <div className="max-w-7xl mx-auto space-y-6">
+      <div className="flex justify-between items-end">
         <div>
-          <h1 className="text-3xl font-bold">Panel de Control</h1>
-          <p className="text-muted-foreground">Estado operativo del laboratorio.</p>
+          <h1 className="text-2xl font-bold tracking-tight">Panel de Control</h1>
+          <p className="text-sm text-muted-foreground">Resumen de actividad del laboratorio.</p>
         </div>
-        <Button onClick={() => navigate("/new-request")} size="lg" className="shadow-md">
-          <PlusCircle className="mr-2 h-5 w-5" /> Nueva Solicitud
+        <Button onClick={() => navigate("/new-request")} size="sm" className="h-9">
+          <PlusCircle className="mr-2 h-4 w-4" /> Nueva Solicitud
         </Button>
       </div>
       
-      {/* Mini Dash Superior - Métricas de Flujo */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+      {/* Mini Dash Compacto - 4 Columnas */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <SummaryCard 
           title="Por Aprobar" 
-          count={counts.pending} 
+          count={metrics.pending} 
           icon={<FileSearch className="text-orange-500" />} 
-          colorClass="orange-500"
-          description="Nuevas solicitudes"
+          colorClass="text-orange-500"
         />
         <SummaryCard 
           title="Presupuestos" 
-          count={counts.quote} 
+          count={metrics.quote} 
           icon={<FileText className="text-blue-500" />} 
-          colorClass="blue-500"
-          description="Esperando cotización"
+          colorClass="text-blue-500"
         />
         <SummaryCard 
-          title="PO (Cómprame)" 
-          count={counts.po} 
-          icon={<CreditCard className="text-red-600" />} 
-          colorClass="red-600"
-          description="Listos para pedir"
+          title="PO Pendientes" 
+          count={metrics.po} 
+          icon={<CreditCard className="text-red-500" />} 
+          colorClass="text-red-500"
         />
         <SummaryCard 
-          title="En Camino" 
-          count={counts.ordered} 
-          icon={<Truck className="text-indigo-600" />} 
-          colorClass="indigo-600"
-          description="Pedidos realizados"
-        />
-        <SummaryCard 
-          title="Faltan Recibir" 
-          count={totalPendingItemsCount} 
-          icon={<Package className="text-primary" />} 
-          colorClass="primary"
-          description="Unidades pendientes"
+          title="En Entrega" 
+          count={metrics.delivery} 
+          icon={<Truck className="text-emerald-500" />} 
+          colorClass="text-emerald-500"
         />
       </div>
 
       <Tabs defaultValue="pending-items" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 mb-4">
-          <TabsTrigger value="pending-items" className="flex items-center gap-2">
-            <ListTodo className="h-4 w-4" /> Artículos Pendientes
+        <TabsList className="mb-4 bg-transparent border-b rounded-none w-full justify-start h-auto p-0 gap-6">
+          <TabsTrigger 
+            value="pending-items" 
+            className="data-[state=active]:border-primary data-[state=active]:bg-transparent border-b-2 border-transparent rounded-none px-0 pb-2 shadow-none"
+          >
+            <ListTodo className="h-4 w-4 mr-2" /> Artículos Pendientes
           </TabsTrigger>
-          <TabsTrigger value="all-requests" className="flex items-center gap-2">
-            <LayoutDashboard className="h-4 w-4" /> Todas las Solicitudes
+          <TabsTrigger 
+            value="all-requests" 
+            className="data-[state=active]:border-primary data-[state=active]:bg-transparent border-b-2 border-transparent rounded-none px-0 pb-2 shadow-none"
+          >
+            <LayoutDashboard className="h-4 w-4 mr-2" /> Historial
           </TabsTrigger>
         </TabsList>
         
-        <TabsContent value="pending-items" className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold">Seguimiento de Artículos</h2>
-            <p className="text-sm text-muted-foreground">Desglose de productos en pedidos activos.</p>
-          </div>
+        <TabsContent value="pending-items" className="mt-0 border-none p-0">
           <PendingItemsList />
         </TabsContent>
         
-        <TabsContent value="all-requests" className="space-y-4">
-          <h2 className="text-xl font-bold">Historial de Solicitudes</h2>
+        <TabsContent value="all-requests" className="mt-0 border-none p-0">
           <RequestList />
         </TabsContent>
       </Tabs>
