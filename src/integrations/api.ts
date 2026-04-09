@@ -2,39 +2,33 @@ import { supabase } from "./supabase/client"; // Importar cliente de Supabase
 import {
   Profile,
   Vendor,
-  AccountManager, // Importar el nuevo tipo AccountManager
-  Project, // Importar el nuevo tipo Project
+  AccountManager, 
+  Project, 
   SupabaseRequest,
   RequestItem,
   RequestStatus,
   InventoryItem,
   MockEmail,
-  ProductDetails, // Importar ProductDetails para la búsqueda externa
-  EmailTemplate, // Importar el nuevo tipo EmailTemplate
-  Expenditure, // Importar Expenditure
-  UserNotificationPreferences, // Importar la nueva interfaz
-  SupabaseRequestItem, // Importar SupabaseRequestItem
+  ProductDetails, 
+  EmailTemplate, 
+  Expenditure, 
+  UserNotificationPreferences, 
+  SupabaseRequestItem, 
 } from "@/data/types";
 
 // Mantener las importaciones de mock data para otras tablas hasta que se conviertan
 import {
-  // getMockRequests, // ELIMINADO
   addMockRequest,
-  updateMockRequestStatus as mockUpdateStatus, // Renombrar para evitar conflictos
+  updateMockRequestStatus as mockUpdateStatus, 
   updateMockRequestMetadata,
   deleteMockRequest,
   getMockInventory,
-  addMockInventoryItem as mockAddInventoryItem, // Renombrar para evitar conflictos
+  addMockInventoryItem as mockAddInventoryItem, 
   updateMockInventoryItem,
   deleteMockInventoryItem,
   sendMockEmail,
-  // NUEVAS IMPORTACIONES DE GASTOS (ELIMINADAS)
-  // getMockExpenditures,
-  // addMockExpenditure,
-  // updateMockExpenditure,
-  // deleteMockExpenditure,
 } from "@/data/crud";
-import { InventoryItemFormData } from "@/hooks/use-inventory"; // Importar el tipo de datos del formulario
+import { InventoryItemFormData } from "@/hooks/use-inventory"; 
 
 // --- Tipos de datos para la búsqueda ---
 interface FuzzySearchResult {
@@ -43,8 +37,6 @@ interface FuzzySearchResult {
 }
 
 // --- API de Búsqueda de Productos ---
-
-// apiFetchAIProductInfo ELIMINADA
 
 export const apiFuzzySearchInternal = async (searchTerm: string): Promise<FuzzySearchResult> => {
   const [inventoryResult, requestItemsResult] = await Promise.all([
@@ -81,10 +73,8 @@ export const apiUpdateProfile = async (id: string, data: Partial<Profile>): Prom
 };
 
 export const apiDeleteProfile = async (id: string): Promise<void> => {
-  // Asegurarse de que la sesión esté fresca antes de invocar la función Edge
   const { data: { session }, error: refreshError } = await supabase.auth.refreshSession();
   if (refreshError || !session) {
-    console.error("Error refreshing session before deleting user:", refreshError);
     throw new Error("Failed to refresh session. Please log in again.");
   }
 
@@ -94,17 +84,11 @@ export const apiDeleteProfile = async (id: string): Promise<void> => {
   });
 
   if (error) {
-    console.error("Error invoking delete-user edge function:", error);
     let errorMessage = 'Failed to delete user via Edge Function.';
     if (edgeFunctionData && typeof edgeFunctionData === 'object' && 'error' in edgeFunctionData) {
         errorMessage = (edgeFunctionData as any).error;
     } else if (error.message) {
         errorMessage = error.message;
-    } else if (typeof edgeFunctionData === 'string') {
-        errorMessage = edgeFunctionData;
-    }
-    if ((error as any).status) {
-        errorMessage = `(Status: ${(error as any).status}) ${errorMessage}`;
     }
     throw new Error(errorMessage);
   }
@@ -121,33 +105,26 @@ interface InviteUserData {
 export const apiInviteUser = async (data: InviteUserData): Promise<any> => {
   const { email, first_name, last_name, role } = data;
   
+  // Construir la URL de redirección compatible con HashRouter y GitHub Pages
+  // Esto asegura que el enlace lleve a https://.../LabFlow/#/login o similar
+  const origin = window.location.origin;
+  const path = window.location.pathname.split('/')[1]; // Captura 'LabFlow' si existe
+  const redirectTo = path 
+    ? `${origin}/${path}/#/dashboard` 
+    : `${origin}/#/dashboard`;
+
   const { data: edgeFunctionData, error } = await supabase.functions.invoke('invite-user', {
-    body: JSON.stringify({ email, first_name, last_name, role }),
+    body: JSON.stringify({ email, first_name, last_name, role, redirectTo }),
     method: 'POST',
   });
 
   if (error) {
-    console.error("Error invoking invite-user edge function:", error);
-    console.error("Edge function raw response data (on error):", edgeFunctionData); // Log raw data
-
     let errorMessage = 'Failed to invite user via Edge Function.';
-    
-    // Try to get a more specific error message from the edge function's response body
     if (edgeFunctionData && typeof edgeFunctionData === 'object' && 'error' in edgeFunctionData) {
         errorMessage = (edgeFunctionData as any).error;
-    } else if (typeof edgeFunctionData === 'string') {
-        // If the edge function returned a plain string error message
-        errorMessage = edgeFunctionData;
     } else if (error.message) {
-        // Fallback to the generic error message from supabase.functions.invoke
         errorMessage = error.message;
     }
-
-    // Add status code if available from the invoke error object
-    if ((error as any).status) {
-        errorMessage = `(Status: ${(error as any).status}) ${errorMessage}`;
-    }
-    
     throw new Error(errorMessage);
   }
   return edgeFunctionData;
@@ -201,7 +178,7 @@ export const apiDeleteVendor = async (id: string): Promise<void> => {
   if (error) throw new Error(error.message);
 };
 
-// --- API de Account Managers (Contactos, no usuarios del sistema) ---
+// --- API de Account Managers ---
 export const apiGetAccountManagers = async (): Promise<AccountManager[]> => {
   const { data, error } = await supabase.from('account_managers').select('*');
   if (error) throw new Error(error.message);
@@ -249,9 +226,8 @@ export const apiDeleteProject = async (id: string): Promise<void> => {
   if (error) throw new Error(error.message);
 };
 
-// --- API de Solicitudes (MIGRADO A SUPABASE REAL) ---
+// --- API de Solicitudes ---
 export const apiGetRequests = async (): Promise<SupabaseRequest[]> => {
-  // Selecciona la solicitud y une los ítems relacionados
   const { data: requestsData, error: requestsError } = await supabase
     .from('requests')
     .select(`
@@ -263,15 +239,12 @@ export const apiGetRequests = async (): Promise<SupabaseRequest[]> => {
     .order('created_at', { ascending: false });
 
   if (requestsError) {
-    console.error("Error fetching requests from Supabase:", requestsError);
     throw new Error(requestsError.message);
   }
 
-  // Mapear los datos para asegurar que 'items' es un array de SupabaseRequestItem
   const requests: SupabaseRequest[] = requestsData.map(req => ({
     ...req,
-    items: req.items || null, // Ensure it's SupabaseRequestItem[] | null
-    // Asegurar que los campos de URL y PO sean strings o null
+    items: req.items || null,
     quote_url: req.quote_url || null,
     po_number: req.po_number || null,
     po_url: req.po_url || null,
@@ -282,8 +255,6 @@ export const apiGetRequests = async (): Promise<SupabaseRequest[]> => {
     shipping_address_id: req.shipping_address_id || null,
     billing_address_id: req.billing_address_id || null,
     request_number: req.request_number || null,
-    // Nota: Los objetos de dirección se adjuntan aquí si se usan en el cliente,
-    // pero por ahora solo necesitamos los IDs para la creación.
   })) as SupabaseRequest[];
 
   return requests;
@@ -293,20 +264,19 @@ interface AddRequestData {
   vendorId: string;
   requesterId: string;
   accountManagerId: string | null;
-  shippingAddressId: string; // Nuevo
-  billingAddressId: string; // Nuevo
+  shippingAddressId: string; 
+  billingAddressId: string; 
   notes?: string | null;
   projectCodes?: string[] | null;
   items: RequestItem[];
 }
 
-// Helper para obtener Lab Managers (Admins) que desean notificaciones de nuevas solicitudes
 const getNotificationRecipients = async (preferenceField: keyof Profile, roles: Profile['role'][] = ['Admin']): Promise<Profile[]> => {
     const { data, error } = await supabase
         .from('profiles')
         .select(`id, first_name, last_name, role, ${preferenceField}`)
         .in('role', roles)
-        .eq(preferenceField, true); // Filtrar por la preferencia activada
+        .eq(preferenceField, true);
 
     if (error) {
         console.error(`Error fetching profiles for notification preference ${preferenceField}:`, error);
@@ -315,7 +285,6 @@ const getNotificationRecipients = async (preferenceField: keyof Profile, roles: 
     return data as Profile[] || [];
 };
 
-// Helper para obtener el Requester (ahora incluye preferencias)
 const getRequesterProfile = async (requesterId: string): Promise<Profile | null> => {
     const { data, error } = await supabase
         .from('profiles')
@@ -323,7 +292,6 @@ const getRequesterProfile = async (requesterId: string): Promise<Profile | null>
         .eq('id', requesterId)
         .single();
     if (error) {
-        console.error("Error fetching Requester profile for notification:", error);
         return null;
     }
     return data as Profile;
@@ -331,7 +299,6 @@ const getRequesterProfile = async (requesterId: string): Promise<Profile | null>
 
 
 export const apiAddRequest = async (data: AddRequestData): Promise<SupabaseRequest> => {
-  // Usar la función RPC para manejar la inserción de la solicitud y sus ítems en una sola transacción
   const { vendorId, requesterId, accountManagerId, shippingAddressId, billingAddressId, notes, projectCodes, items } = data;
 
   const itemsJsonb = items.map(item => ({
@@ -345,7 +312,6 @@ export const apiAddRequest = async (data: AddRequestData): Promise<SupabaseReque
     brand: item.brand,
   }));
 
-  // Aseguramos que accountManagerId se pase como UUID o null. 
   const accountManagerIdUuid = (accountManagerId && accountManagerId.trim() !== '') ? accountManagerId : null;
 
   const { data: newRequest, error } = await supabase.rpc('create_request_with_items', {
@@ -359,15 +325,11 @@ export const apiAddRequest = async (data: AddRequestData): Promise<SupabaseReque
   });
 
   if (error) {
-    console.error("Error invoking create_request_with_items RPC:", error);
     throw new Error(error.message);
   }
 
-  // --- NOTIFICATION: New Request (To Admins/Account Managers) ---
   try {
-    // Obtener Admins y Account Managers que quieren notificaciones de nuevas solicitudes
     const recipients = await getNotificationRecipients('notify_on_new_request', ['Admin', 'Account Manager']);
-    
     const recipientIds = recipients.map(m => m.id);
     const requester = await getRequesterProfile(requesterId);
     const requesterName = requester ? `${requester.first_name || ''} ${requester.last_name || ''}`.trim() : 'Unkown Requester';
@@ -384,17 +346,13 @@ export const apiAddRequest = async (data: AddRequestData): Promise<SupabaseReque
             }),
         });
     }
-    
   } catch (e) {
     console.error("Failed to send notification for new request:", e);
   }
-  // -----------------------------------------------------------------
 
-  // El RPC devuelve un objeto JSONB que ya incluye los ítems
   return newRequest as SupabaseRequest;
 };
 
-// Helper para obtener las preferencias de estado de un usuario
 const getUserStatusPreferences = async (userId: string): Promise<RequestStatus[]> => {
     const { data, error } = await supabase
         .from('user_notification_preferences')
@@ -403,11 +361,8 @@ const getUserStatusPreferences = async (userId: string): Promise<RequestStatus[]
         .single();
 
     if (error && error.code !== 'PGRST116') {
-        console.error("Error fetching user status preferences:", error);
         return [];
     }
-    
-    // Si no hay preferencias, devolvemos un array vacío (o el valor por defecto de la tabla si existe)
     return data?.notified_statuses || [];
 };
 
@@ -419,7 +374,6 @@ export const apiUpdateRequestStatus = async (
   poNumber: string | null = null
 ): Promise<SupabaseRequest> => {
   
-  // 1. Fetch current request state before update
   const { data: oldRequest, error: fetchError } = await supabase
     .from('requests')
     .select('status, requester_id, account_manager_id, request_number')
@@ -433,7 +387,6 @@ export const apiUpdateRequestStatus = async (
   const accountManagerId = oldRequest.account_manager_id;
   const requestNumber = oldRequest.request_number || id.substring(0, 8);
 
-  // 2. Perform the status update
   const updateData: Partial<SupabaseRequest> = { status };
   if (quoteUrl !== null) updateData.quote_url = quoteUrl;
   if (poNumber !== null) updateData.po_number = poNumber;
@@ -450,20 +403,14 @@ export const apiUpdateRequestStatus = async (
 
   if (error) throw new Error(error.message);
 
-  // 3. --- NOTIFICATION: Status Change ---
   if (oldStatus !== status) {
     try {
-      // Obtener todos los perfiles para filtrar por preferencia
       const allProfiles = await apiGetProfiles();
-      
-      // Determinar destinatarios y mensaje
       let targetUserIds: string[] = [];
       let title: string;
       let body: string;
-      
       const link = `/requests/${id}`;
 
-      // --- Lógica de Notificación para el Solicitante ---
       const requesterProfile = allProfiles.find(p => p.id === requesterId);
       if (requesterProfile?.notify_on_status_change) {
           const preferredStatuses = await getUserStatusPreferences(requesterId);
@@ -472,7 +419,6 @@ export const apiUpdateRequestStatus = async (
           }
       }
       
-      // --- Lógica de Notificación para el Gerente de Cuenta ---
       if (accountManagerId) {
           const managerProfile = allProfiles.find(p => p.id === accountManagerId);
           if (managerProfile?.notify_on_status_change) {
@@ -483,16 +429,6 @@ export const apiUpdateRequestStatus = async (
           }
       }
       
-      // --- Lógica de Notificación para Admins (Nuevas Solicitudes) ---
-      if (status === 'Pending') {
-          // Esto no debería ocurrir en un cambio de estado, pero si ocurre, notificamos a los admins
-          const adminRecipients = allProfiles.filter(p => 
-              (p.role === 'Admin' || p.role === 'Account Manager') && p.notify_on_new_request
-          ).map(p => p.id);
-          targetUserIds.push(...adminRecipients);
-      }
-      
-      // Definir mensajes (basados en el nuevo estado)
       switch (status) {
         case 'Quote Requested':
             title = `✅ Solicitud #${requestNumber} Aprobada`;
@@ -524,11 +460,8 @@ export const apiUpdateRequestStatus = async (
             break;
       }
       
-      // Enviar la notificación si hay destinatarios
       if (targetUserIds.length > 0) {
-          // Eliminar duplicados de IDs de usuario
           const uniqueTargetIds = Array.from(new Set(targetUserIds));
-          
           await supabase.functions.invoke('send-notification', {
               method: 'POST',
               body: JSON.stringify({
@@ -539,17 +472,14 @@ export const apiUpdateRequestStatus = async (
               }),
           });
       }
-      
     } catch (e) {
       console.error("Failed to send notification for status change:", e);
     }
   }
-  // -------------------------------------------------
 
   return updatedRequest as SupabaseRequest;
 };
 
-// NUEVA FUNCIÓN: Actualización completa de los detalles de la solicitud (solo para estado Pending)
 interface UpdateFullRequestData {
   vendorId: string;
   shippingAddressId: string;
@@ -611,17 +541,14 @@ export const apiUpdateRequestMetadata = async (
   return updatedRequest as SupabaseRequest;
 };
 
-// ACTUALIZADO: apiUpdateRequestFile para usar la función Edge
 export const apiUpdateRequestFile = async (
   id: string,
   fileType: "quote" | "po" | "slip",
-  file: File | null, // Aceptar File | null
+  file: File | null, 
   poNumber: string | null = null
 ): Promise<{ filePath: string | null; poNumber: string | null }> => {
-  // Asegurarse de que la sesión esté fresca antes de invocar la función Edge
   const { data: { session }, error: refreshError } = await supabase.auth.refreshSession();
   if (refreshError || !session) {
-    console.error("Error refreshing session before uploading file:", refreshError);
     throw new Error("Failed to refresh session. Please log in again.");
   }
 
@@ -638,34 +565,21 @@ export const apiUpdateRequestFile = async (
   const { data: edgeFunctionData, error } = await supabase.functions.invoke('upload-file', {
     body: formData,
     method: 'POST',
-    headers: {
-      // No Content-Type header needed for FormData, browser sets it automatically
-    },
   });
 
   if (error) {
-    console.error("Error invoking upload-file edge function:", error);
     let errorMessage = 'Fallo al subir archivo via Edge Function.';
     if (edgeFunctionData && typeof edgeFunctionData === 'object' && 'error' in edgeFunctionData) {
         errorMessage = (edgeFunctionData as any).error;
     } else if (error.message) {
         errorMessage = error.message;
-    } else if (typeof edgeFunctionData === 'string') {
-        errorMessage = edgeFunctionData;
-    }
-    if ((error as any).status) {
-        errorMessage = `(Status: ${(error as any).status}) ${errorMessage}`;
     }
     throw new Error(errorMessage);
   }
   
-  // Corregido: Desestructurar usando 'filePath' que es lo que devuelve la función Edge
   const { filePath, poNumber: returnedPoNumber } = edgeFunctionData as { filePath: string | null; poNumber: string | null };
 
-  // Paso adicional: Actualizar la URL del archivo y el PO Number en la tabla 'requests'
   const updateData: Partial<SupabaseRequest> = {};
-  
-  // Almacenamos la ruta del archivo (filePath)
   if (filePath) {
     if (fileType === 'quote') {
       updateData.quote_url = filePath;
@@ -680,7 +594,6 @@ export const apiUpdateRequestFile = async (
     updateData.po_number = returnedPoNumber;
   }
   
-  // Si no hay datos para actualizar, salimos.
   if (Object.keys(updateData).length === 0) {
       return { filePath: filePath, poNumber: returnedPoNumber };
   }
@@ -691,8 +604,7 @@ export const apiUpdateRequestFile = async (
     .eq('id', id);
 
   if (dbUpdateError) {
-    console.error(`Error updating request DB with ${fileType} URL/PO Number:`, dbUpdateError);
-    throw new Error(`File uploaded/PO Number saved, but failed to update database record: ${dbUpdateError.message}`);
+    throw new Error(`File uploaded, but failed to update database: ${dbUpdateError.message}`);
   }
 
   return { filePath: filePath, poNumber: returnedPoNumber };
@@ -703,17 +615,15 @@ export const apiDeleteRequest = async (id: string): Promise<void> => {
   if (error) throw new Error(error.message);
 };
 
-// NUEVA FUNCIÓN: Revertir la recepción de una solicitud
 export const apiRevertRequestReception = async (requestId: string): Promise<void> => {
   const { error } = await supabase.rpc('revert_request_reception', { request_id_in: requestId });
   if (error) {
-    console.error("Error invoking revert_request_reception RPC:", error);
     throw new Error(error.message);
   }
 };
 
 
-// --- API de Inventario (usando mock data por ahora) ---
+// --- API de Inventario ---
 export const apiGetInventory = async (): Promise<InventoryItem[]> => {
   const { data, error } = await supabase.from('inventory').select('*');
   if (error) throw new Error(error.message);
@@ -724,13 +634,13 @@ export const apiAddInventoryItem = async (data: InventoryItemFormData): Promise<
   const { data: newItem, error } = await supabase.rpc('add_or_update_inventory_item', {
     product_name_in: data.product_name,
     catalog_number_in: data.catalog_number,
-    brand_in: data.brand || null, // Asegurar null si es undefined
+    brand_in: data.brand || null, 
     quantity_in: data.quantity,
-    unit_price_in: data.unit_price || null, // Asegurar null si es undefined
-    format_in: data.format || null, // Asegurar null si es undefined
+    unit_price_in: data.unit_price || null, 
+    format_in: data.format || null, 
   }).single();
   if (error) throw new Error(error.message);
-  return newItem as InventoryItem; // Cast to InventoryItem
+  return newItem as InventoryItem; 
 };
 
 export const apiUpdateInventoryItem = async (id: string, data: Partial<InventoryItemFormData>): Promise<InventoryItem> => {
@@ -744,42 +654,37 @@ export const apiDeleteInventoryItem = async (id: string): Promise<void> => {
   if (error) throw new Error(error.message);
 };
 
-// --- API de Gastos (Expenditures) ---
+// --- API de Gastos ---
 export const apiGetExpenditures = async (): Promise<Expenditure[]> => {
-  // MIGRADO A SUPABASE REAL
   const { data, error } = await supabase.from('expenditures').select('*').order('date_incurred', { ascending: false });
   if (error) throw new Error(error.message);
   return data;
 };
 
 export const apiAddExpenditure = async (data: Omit<Expenditure, "id" | "created_at">): Promise<Expenditure> => {
-  // MIGRADO A SUPABASE REAL
   const { data: newExpenditure, error } = await supabase.from('expenditures').insert(data).select().single();
   if (error) throw new Error(error.message);
   return newExpenditure as Expenditure;
 };
 
 export const apiUpdateExpenditure = async (id: string, data: Partial<Omit<Expenditure, "id" | "created_at">>): Promise<Expenditure> => {
-  // MIGRADO A SUPABASE REAL
   const { data: updatedExpenditure, error } = await supabase.from('expenditures').update(data).eq('id', id).select().single();
   if (error) throw new Error(error.message);
   return updatedExpenditure as Expenditure;
 };
 
 export const apiDeleteExpenditure = async (id: string): Promise<void> => {
-  // MIGRADO A SUPABASE REAL
   const { error } = await supabase.from('expenditures').delete().eq('id', id);
   if (error) throw new Error(error.message);
 };
 
 
-// --- API de Envío de Correo Electrónico (REAL) ---
+// --- API de Envío de Correo Electrónico ---
 interface EmailData {
   to: string;
   subject: string;
   body: string;
   fromName?: string;
-  // La URL aquí debe ser la RUTA DE ALMACENAMIENTO (storage path) para que la función Edge pueda descargarla.
   attachments?: { name: string; url: string }[]; 
 }
 
@@ -790,7 +695,6 @@ export const apiSendEmail = async (email: EmailData): Promise<void> => {
   });
 
   if (error) {
-    console.error("Error invoking send-email edge function:", error);
     let errorMessage = 'Fallo al enviar correo via Edge Function.';
     if (data && typeof data === 'object' && 'error' in data) {
         errorMessage = (data as any).error;
