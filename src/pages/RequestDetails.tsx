@@ -3,7 +3,7 @@
 import React from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Loader2, ArrowLeft, Edit, Trash2, MoreVertical, Ban, XCircle, Info, CheckCircle } from "lucide-react";
+import { Loader2, ArrowLeft, Edit, Trash2, MoreVertical, Ban, XCircle, Info, CheckCircle, CreditCard } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -24,6 +24,7 @@ import { useShippingAddresses, useBillingAddresses } from "@/hooks/use-addresses
 import { processEmailTemplate, processTextTemplate } from "@/utils/email-templating";
 import EmailDialog, { EmailFormValues } from "@/components/EmailDialog";
 import ReceiveItemsDialog from "@/components/ReceiveItemsDialog";
+import InvoiceItemsDialog from "@/components/request-details/InvoiceItemsDialog"; // Nuevo
 
 import RequestSummaryCard from "@/components/request-details/RequestSummaryCard";
 import RequestItemsTable from "@/components/request-details/RequestItemsTable";
@@ -32,6 +33,7 @@ import RequestFilesCard from "@/components/request-details/RequestFilesCard";
 import FileUploadDialog from "@/components/request-details/FileUploadDialog";
 import RequestFullEditForm, { FullEditFormValues } from "@/components/request-details/RequestFullEditForm";
 import PackingSlipsList from "@/components/request-details/PackingSlipsList";
+import InvoicesList from "@/components/request-details/InvoicesList"; // Nuevo
 import { toast } from "sonner";
 import { useSession } from "@/components/SessionContextProvider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -59,6 +61,8 @@ const RequestDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { profile } = useSession();
+  const isAdmin = profile?.role === 'Admin';
+  
   const { data: requests, isLoading: isLoadingRequests } = useRequests();
   const { data: vendors, isLoading: isLoadingVendors } = useVendors();
   const { data: profiles, isLoading: isLoadingProfiles } = useAllProfiles();
@@ -70,14 +74,12 @@ const RequestDetails: React.FC = () => {
   
   const updateStatusMutation = useUpdateRequestStatus();
   const updateFileMutation = useUpdateRequestFile();
-  const updateMetadataMutation = useUpdateRequestMetadata();
   const updateFullRequestMutation = useUpdateFullRequest();
   const revertReceptionMutation = useRevertRequestReception();
   const deleteRequestMutation = useDeleteRequest();
   const sendEmailMutation = useSendEmail();
 
   const request = requests?.find(req => req.id === id);
-  const { data: aggregatedReceived, isLoading: isLoadingAggregatedReceived } = useAggregatedReceivedItems(id || '');
 
   const [isEmailDialogOpen, setIsEmailDialogOpen] = React.useState(false);
   const [emailInitialData, setEmailInitialData] = React.useState<Partial<EmailFormValues>>({});
@@ -91,6 +93,7 @@ const RequestDetails: React.FC = () => {
   const [isEditMetadataDialogOpen, setIsEditMetadataDialogOpen] = React.useState(false);
   const [isStatusOverrideDialogOpen, setIsStatusOverrideDialogOpen] = React.useState(false);
   const [isReceiveItemsDialogOpen, setIsReceiveItemsDialogOpen] = React.useState(false);
+  const [isInvoiceItemsDialogOpen, setIsInvoiceItemsDialogOpen] = React.useState(false); // Nuevo
   const [isRevertReceptionDialogOpen, setIsRevertReceptionDialogOpen] = React.useState(false);
   
   const [isDenyDialogOpen, setIsDenyDialogOpen] = React.useState(false);
@@ -109,7 +112,6 @@ const RequestDetails: React.FC = () => {
 
   const handleSendEmail = async (emailData: EmailFormValues) => {
     const attachmentsToSend = (emailData.attachmentsForSend || emailData.attachments || []) as { name: string; url: string }[];
-    
     await sendEmailMutation.mutateAsync({
       to: emailData.to!,
       subject: emailData.subject,
@@ -121,19 +123,11 @@ const RequestDetails: React.FC = () => {
 
   const handleSendPORequest = async (request: SupabaseRequest) => {
     if (!request.account_manager_id) {
-      toast.error("No se puede enviar la solicitud de PO.", { description: "No hay un gerente de cuenta asignado a esta solicitud." });
+      toast.error("No hay un gerente de cuenta asignado.");
       return;
     }
-    if (!request.quote_url) {
-      toast.error("No se puede enviar la solicitud de PO.", { description: "El archivo de cotización no está disponible." });
-      return;
-    }
-
     const poRequestTemplate = emailTemplates?.find(t => t.template_name === 'PO Request');
-    if (!poRequestTemplate) {
-      toast.error("Plantilla de correo electrónico 'PO Request' no encontrada.");
-      return;
-    }
+    if (!poRequestTemplate) return;
 
     const context = {
       request,
@@ -152,9 +146,7 @@ const RequestDetails: React.FC = () => {
     if (request.quote_url) {
       const fileName = getFileNameFromPath(request.quote_url);
       const signedUrl = await generateSignedUrl(request.quote_url);
-      if (signedUrl) {
-        attachmentsForDialog.push({ name: fileName, url: signedUrl });
-      }
+      if (signedUrl) attachmentsForDialog.push({ name: fileName, url: signedUrl });
       attachmentsForSend.push({ name: fileName, url: request.quote_url });
     }
 
@@ -166,19 +158,7 @@ const RequestDetails: React.FC = () => {
       attachmentsForSend: attachmentsForSend,
     });
 
-    // Cambiar estado a PO Requested después de enviar el correo
-    const originalOnSend = handleSendEmail;
-    const wrappedOnSend = async (data: EmailFormValues) => {
-        await originalOnSend(data);
-        await updateStatusMutation.mutateAsync({ id: request.id, status: "PO Requested" });
-    };
-
-    // Temporalmente sobreescribimos el handler para este diálogo específico
-    // Nota: En una refactorización mayor, esto se manejaría mejor con un estado de 'pendingAction'
     setIsEmailDialogOpen(true);
-    
-    // Re-asignamos el handler original al cerrar (esto es un poco hacky pero efectivo para este caso)
-    // Una mejor forma es pasar el callback de éxito a EmailDialog si fuera necesario.
   };
 
   const openApproveRequestDialog = (request: SupabaseRequest) => {
@@ -201,10 +181,7 @@ const RequestDetails: React.FC = () => {
       
       if (nextStatus === "Quote Requested") {
         const quoteTemplate = emailTemplates?.find(t => t.template_name === 'Quote Request');
-        if (!quoteTemplate) {
-          toast.error("Plantilla de correo electrónico 'Quote Request' no encontrada.");
-          return;
-        }
+        if (!quoteTemplate) return;
 
         const context = {
           request: requestToApprove,
@@ -231,11 +208,7 @@ const RequestDetails: React.FC = () => {
   };
 
   const handleOpenReceiveItemsDialog = () => {
-    if (request?.items && request.items.length > 0) {
-      setIsReceiveItemsDialogOpen(true);
-    } else {
-      toast.error("No se pueden recibir artículos.", { description: "La solicitud no tiene artículos." });
-    }
+    if (request?.items && request.items.length > 0) setIsReceiveItemsDialogOpen(true);
   };
 
   const handleUploadClick = (fileType: FileType) => {
@@ -243,46 +216,23 @@ const RequestDetails: React.FC = () => {
     setIsUploadDialogOpen(true);
   };
 
-  const handleUploadQuote = () => handleUploadClick("quote");
-  const handleUploadPOAndOrder = () => handleUploadClick("po");
-
   const handleFileUpload = async (file: File | null, poNumber?: string) => {
     if (!request) return;
-
-    try {
-      // Subir el archivo. La mutación ya actualiza el campo correspondiente en la DB.
-      const { filePath, poNumber: returnedPoNumber } = await updateFileMutation.mutateAsync({
-        id: request.id,
-        fileType: fileTypeToUpload,
-        file: file,
-        poNumber: poNumber,
-      });
-
-      // LÓGICA CAMBIADA: No cambiamos el estado automáticamente al subir cotización.
-      // Solo lo hacemos para el PO.
-      if (fileTypeToUpload === "po") {
-        if (returnedPoNumber && request.status === "PO Requested") {
-             await updateStatusMutation.mutateAsync({ id: request.id, status: "Ordered", poNumber: returnedPoNumber, quoteUrl: request.quote_url });
-        }
-      }
-
-      setIsUploadDialogOpen(false);
-    } catch (error) {
-      console.error("File upload orchestration failed:", error);
+    const { poNumber: returnedPoNumber } = await updateFileMutation.mutateAsync({
+      id: request.id,
+      fileType: fileTypeToUpload,
+      file: file,
+      poNumber: poNumber,
+    });
+    if (fileTypeToUpload === "po" && returnedPoNumber && request.status === "PO Requested") {
+        await updateStatusMutation.mutateAsync({ id: request.id, status: "Ordered", poNumber: returnedPoNumber, quoteUrl: request.quote_url });
     }
+    setIsUploadDialogOpen(false);
   };
 
   const handleMarkAsOrderedAndSendEmail = async (request: SupabaseRequest) => {
-    if (!request.po_url) {
-      toast.error("No se puede enviar el correo de pedido.", { description: "El archivo PO no está disponible." });
-      return;
-    }
-
     const orderConfirmationTemplate = emailTemplates?.find(t => t.template_name === 'Order Confirmation');
-    if (!orderConfirmationTemplate) {
-      toast.error("Plantilla de correo electrónico 'Order Confirmation' no encontrada.");
-      return;
-    }
+    if (!orderConfirmationTemplate) return;
 
     const context = {
       request,
@@ -340,19 +290,6 @@ const RequestDetails: React.FC = () => {
 
   const handleStatusOverride = async () => {
     if (!request || !newStatus) return;
-    
-    if (newStatus === "Received" && request.status !== "Received") {
-        toast.error("Usa el botón 'Recibir Artículos'.");
-        setIsStatusOverrideDialogOpen(false);
-        return;
-    }
-    
-    if (request.status === "Received" && newStatus !== "Received") {
-        setIsStatusOverrideDialogOpen(false);
-        setIsRevertReceptionDialogOpen(true);
-        return;
-    }
-
     await updateStatusMutation.mutateAsync({ id: request.id, status: newStatus as RequestStatusType });
     setIsStatusOverrideDialogOpen(false);
   };
@@ -363,10 +300,6 @@ const RequestDetails: React.FC = () => {
     setIsRevertReceptionDialogOpen(false);
   };
   
-  const openDenyRequestDialog = () => setIsDenyDialogOpen(true);
-  const openCancelRequestDialog = () => setIsCancelDialogOpen(true);
-  const openDeleteRequestDialog = () => setIsDeleteDialogOpen(true);
-
   const confirmDenyRequest = async () => {
     if (!request) return;
     await updateStatusMutation.mutateAsync({ id: request.id, status: "Denied" });
@@ -388,12 +321,8 @@ const RequestDetails: React.FC = () => {
 
   const handleSendQuoteRequest = async (request: SupabaseRequest) => {
     await updateStatusMutation.mutateAsync({ id: request.id, status: "Quote Requested" });
-
     const quoteTemplate = emailTemplates?.find(t => t.template_name === 'Quote Request');
-    if (!quoteTemplate) {
-      toast.error("Plantilla de correo electrónico 'Quote Request' no encontrada.");
-      return;
-    }
+    if (!quoteTemplate) return;
 
     const context = {
       request: { ...request, status: "Quote Requested" as const },
@@ -414,58 +343,29 @@ const RequestDetails: React.FC = () => {
     setIsEmailDialogOpen(true);
   };
 
-  if (isLoadingRequests || isLoadingVendors || isLoadingProfiles || isLoadingAccountManagers || isLoadingProjects || isLoadingEmailTemplates || isLoadingShippingAddresses || isLoadingBillingAddresses || isLoadingAggregatedReceived) {
+  if (isLoadingRequests || isLoadingVendors || isLoadingProfiles || isLoadingAccountManagers || isLoadingProjects || isLoadingEmailTemplates || isLoadingShippingAddresses || isLoadingBillingAddresses) {
     return <div className="p-4 sm:p-6 flex justify-center items-center"><Loader2 className="h-8 w-8 animate-spin mr-2" /> Cargando Detalles...</div>;
   }
 
-  if (!request) {
-    return (
-      <div className="p-4 sm:p-6 text-center">
-        <h1 className="text-3xl font-bold mb-4">Solicitud No Encontrada</h1>
-        <Button onClick={() => navigate("/dashboard")} className="mt-6"><ArrowLeft className="mr-2 h-4 w-4" /> Volver al Panel</Button>
-      </div>
-    );
-  }
+  if (!request) return null;
   
   const isEditableByRole = profile?.role === "Admin" || profile?.role === "Account Manager";
   const vendor = vendors?.find(v => v.id === request.vendor_id);
   const displayRequestNumber = request.request_number || `#${request.id.substring(0, 8)}`;
-  
-  const approveButtonText = request.quote_url ? "Aprobar y Solicitar PO (Cómprame)" : "Aprobar y Solicitar Cotización (Correo)";
-  const approveDialogTitle = request.quote_url ? "Aprobar Solicitud y Generar PO" : "Aprobar Solicitud";
-  const approveOnlyText = request.quote_url ? "Aprobar Solamente (a PO Solicitado)" : "Aprobar Solamente (a Cotización Solicitada)";
 
   return (
     <div className="p-4 sm:p-6 max-w-full mx-auto space-y-6">
       <div className="flex items-center justify-between mb-6">
         <Button variant="outline" onClick={() => navigate("/dashboard")}><ArrowLeft className="mr-2 h-4 w-4" /> Volver al Panel</Button>
-        
         <div className="flex items-center space-x-4">
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-gray-100">Solicitud {displayRequestNumber}</h1>
-          
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon" disabled={updateStatusMutation.isPending || deleteRequestMutation.isPending}>
-                <MoreVertical className="h-4 w-4" />
-              </Button>
+              <Button variant="outline" size="icon" disabled={updateStatusMutation.isPending || deleteRequestMutation.isPending}><MoreVertical className="h-4 w-4" /></Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              {isEditableByRole && (
-                <DropdownMenuItem onClick={() => {
-                  setNewStatus(request.status);
-                  setIsStatusOverrideDialogOpen(true);
-                }}>
-                  <Edit className="mr-2 h-4 w-4" /> Cambiar Estado Manualmente
-                </DropdownMenuItem>
-              )}
-              {isEditableByRole && (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={openDeleteRequestDialog} className="text-red-600">
-                    <Trash2 className="mr-2 h-4 w-4" /> Eliminar Solicitud
-                  </DropdownMenuItem>
-                </>
-              )}
+              {isEditableByRole && <DropdownMenuItem onClick={() => { setNewStatus(request.status); setIsStatusOverrideDialogOpen(true); }}><Edit className="mr-2 h-4 w-4" /> Cambiar Estado Manualmente</DropdownMenuItem>}
+              {isEditableByRole && <><DropdownMenuSeparator /><DropdownMenuItem onClick={() => setIsDeleteDialogOpen(true)} className="text-red-600"><Trash2 className="mr-2 h-4 w-4" /> Eliminar Solicitud</DropdownMenuItem></>}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -473,14 +373,7 @@ const RequestDetails: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
-          <RequestSummaryCard 
-            request={request} 
-            vendor={vendor} 
-            profiles={profiles} 
-            onEditDetails={() => setIsEditMetadataDialogOpen(true)}
-            isEditable={isEditableByRole}
-          />
-          
+          <RequestSummaryCard request={request} vendor={vendor} profiles={profiles} onEditDetails={() => setIsEditMetadataDialogOpen(true)} isEditable={isEditableByRole} />
           <RequestItemsTable items={request.items} isEditable={true} />
         </div>
         
@@ -496,151 +389,80 @@ const RequestDetails: React.FC = () => {
               handleUploadPOAndOrder={handleUploadPOAndOrder}
               handleMarkAsReceived={handleOpenReceiveItemsDialog}
               handleMarkAsOrderedAndSendEmail={handleMarkAsOrderedAndSendEmail}
-              openDenyRequestDialog={openDenyRequestDialog}
-              openCancelRequestDialog={openCancelRequestDialog}
+              openDenyRequestDialog={() => setIsDenyDialogOpen(true)}
+              openCancelRequestDialog={() => setIsCancelDialogOpen(true)}
               onSendQuoteRequest={handleSendQuoteRequest}
             />
+            {isAdmin && (
+                <Button 
+                    variant="secondary" 
+                    className="w-full mt-2 justify-start" 
+                    onClick={() => setIsInvoiceItemsDialogOpen(true)}
+                >
+                    <CreditCard className="mr-2 h-4 w-4" /> Registrar Facturación
+                </Button>
+            )}
           </div>
           
-          <RequestFilesCard 
-            request={request} 
-            onUploadClick={handleUploadClick} 
-            onSimpleFileUpload={() => Promise.resolve()} 
-          />
-          
-          <PackingSlipsList 
-            requestId={request.id} 
-            onOpenReceiveItemsDialog={handleOpenReceiveItemsDialog}
-            requestNumber={displayRequestNumber}
-          />
+          <RequestFilesCard request={request} onUploadClick={handleUploadClick} onSimpleFileUpload={() => Promise.resolve()} />
+          <PackingSlipsList requestId={request.id} onOpenReceiveItemsDialog={handleOpenReceiveItemsDialog} requestNumber={displayRequestNumber} />
+          {isAdmin && <InvoicesList requestId={request.id} onOpenInvoiceDialog={() => setIsInvoiceItemsDialogOpen(true)} />}
         </div>
       </div>
       
       <Dialog open={isEditMetadataDialogOpen} onOpenChange={setIsEditMetadataDialogOpen}>
         <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Editar Detalles de la Solicitud</DialogTitle>
-          </DialogHeader>
-          {request && isEditableByRole ? (
-            <RequestFullEditForm
-              request={request}
-              profiles={profiles || []}
-              onSubmit={handleUpdateFullRequest}
-              isSubmitting={updateFullRequestMutation.isPending}
-            />
-          ) : (
-            <p className="text-muted-foreground p-4">No tienes permiso para editar.</p>
-          )}
+          <DialogHeader><DialogTitle>Editar Detalles</DialogTitle></DialogHeader>
+          {request && isEditableByRole && <RequestFullEditForm request={request} profiles={profiles || []} onSubmit={handleUpdateFullRequest} isSubmitting={updateFullRequestMutation.isPending} />}
         </DialogContent>
       </Dialog>
 
       <Dialog open={isApproveRequestDialogOpen} onOpenChange={setIsApproveRequestDialogOpen}>
         <DialogContent>
-          <DialogHeader><DialogTitle>{approveDialogTitle}</DialogTitle></DialogHeader>
-          <DialogDescription>Elige cómo proceder con esta solicitud.</DialogDescription>
+          <DialogHeader><DialogTitle>Aprobar Solicitud</DialogTitle></DialogHeader>
           <DialogFooter className="flex flex-col sm:flex-row sm:justify-end sm:space-x-2">
-            <Button variant="outline" onClick={handleApproveOnly} disabled={updateStatusMutation.isPending}>{approveOnlyText}</Button>
-            <Button onClick={handleApproveAndRequestQuoteEmail} disabled={updateStatusMutation.isPending}>
-              {approveButtonText}
-            </Button>
+            <Button variant="outline" onClick={handleApproveOnly} disabled={updateStatusMutation.isPending}>Aprobar Solamente</Button>
+            <Button onClick={handleApproveAndRequestQuoteEmail} disabled={updateStatusMutation.isPending}>Aprobar y Solicitar Cotización</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog open={isStatusOverrideDialogOpen} onOpenChange={setIsStatusOverrideDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Anular Estado de Solicitud</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <Select value={newStatus} onValueChange={(value) => setNewStatus(value as RequestStatusType)} disabled={updateStatusMutation.isPending}>
-              <SelectTrigger>
-                <SelectValue placeholder="Seleccionar nuevo estado" />
-              </SelectTrigger>
-              <SelectContent>
-                {["Pending", "Quote Requested", "PO Requested", "Ordered", "Received", "Denied", "Cancelled"].map((status) => (
-                  <SelectItem key={status} value={status}>
-                    {status}
-                  </SelectItem>
-                ))}
-              </SelectContent>
+          <DialogHeader><DialogTitle>Anular Estado</DialogTitle></DialogHeader>
+          <div className="py-4">
+            <Select value={newStatus} onValueChange={(value) => setNewStatus(value as RequestStatusType)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>{["Pending", "Quote Requested", "PO Requested", "Ordered", "Received", "Denied", "Cancelled"].map((s) => <SelectItem key={status} value={s}>{s}</SelectItem>)}</SelectContent>
             </Select>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsStatusOverrideDialogOpen(false)} disabled={updateStatusMutation.isPending}>
-              Cancelar
-            </Button>
-            <Button onClick={handleStatusOverride} disabled={updateStatusMutation.isPending || newStatus === request?.status}>
-              {updateStatusMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Confirmar Cambio"}
-            </Button>
+            <Button variant="outline" onClick={() => setIsStatusOverrideDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={handleStatusOverride} disabled={updateStatusMutation.isPending}>Confirmar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
       
       <Dialog open={isDenyDialogOpen} onOpenChange={setIsDenyDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader><DialogTitle>Denegar Solicitud</DialogTitle></DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDenyDialogOpen(false)} disabled={updateStatusMutation.isPending}>Cancelar</Button>
-            <Button variant="destructive" onClick={confirmDenyRequest} disabled={updateStatusMutation.isPending}>Confirmar Denegación</Button>
-          </DialogFooter>
-        </DialogContent>
+        <DialogContent><DialogHeader><DialogTitle>Denegar Solicitud</DialogTitle></DialogHeader><DialogFooter><Button variant="outline" onClick={() => setIsDenyDialogOpen(false)}>Cancelar</Button><Button variant="destructive" onClick={confirmDenyRequest}>Confirmar</Button></DialogFooter></DialogContent>
       </Dialog>
 
       <Dialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader><DialogTitle>Cancelar Solicitud</DialogTitle></DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsCancelDialogOpen(false)} disabled={updateStatusMutation.isPending}>No, Mantener</Button>
-            <Button variant="destructive" onClick={confirmCancelRequest} disabled={updateStatusMutation.isPending}>Sí, Cancelar</Button>
-          </DialogFooter>
-        </DialogContent>
+        <DialogContent><DialogHeader><DialogTitle>Cancelar Solicitud</DialogTitle></DialogHeader><DialogFooter><Button variant="outline" onClick={() => setIsCancelDialogOpen(false)}>No</Button><Button variant="destructive" onClick={confirmCancelRequest}>Sí, Cancelar</Button></DialogFooter></DialogContent>
       </Dialog>
 
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader><DialogTitle>Eliminar Solicitud Permanentemente</DialogTitle></DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)} disabled={deleteRequestMutation.isPending}>Cancelar</Button>
-            <Button variant="destructive" onClick={confirmDeleteRequest} disabled={deleteRequestMutation.isPending}>Eliminar Permanentemente</Button>
-          </DialogFooter>
-        </DialogContent>
+        <DialogContent><DialogHeader><DialogTitle>Eliminar Solicitud</DialogTitle></DialogHeader><DialogFooter><Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>Cancelar</Button><Button variant="destructive" onClick={confirmDeleteRequest}>Eliminar</Button></DialogFooter></DialogContent>
       </Dialog>
       
       <Dialog open={isRevertReceptionDialogOpen} onOpenChange={setIsRevertReceptionDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader><DialogTitle>Revertir Recepción e Inventario</DialogTitle></DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsRevertReceptionDialogOpen(false)} disabled={revertReceptionMutation.isPending}>Cancelar</Button>
-            <Button variant="destructive" onClick={handleRevertReception} disabled={revertReceptionMutation.isPending}>Confirmar Reversión</Button>
-          </DialogFooter>
-        </DialogContent>
+        <DialogContent><DialogHeader><DialogTitle>Revertir Recepción</DialogTitle></DialogHeader><DialogFooter><Button variant="outline" onClick={() => setIsRevertReceptionDialogOpen(false)}>Cancelar</Button><Button variant="destructive" onClick={handleRevertReception}>Confirmar</Button></DialogFooter></DialogContent>
       </Dialog>
 
-      <EmailDialog 
-        isOpen={isEmailDialogOpen} 
-        onOpenChange={setIsEmailDialogOpen} 
-        initialData={emailInitialData} 
-        onSend={handleSendEmail} 
-        isSending={sendEmailMutation.isPending} 
-      />
-
-      <FileUploadDialog
-        isOpen={isUploadDialogOpen}
-        onOpenChange={setIsUploadDialogOpen}
-        onUpload={handleFileUpload}
-        isUploading={updateFileMutation.isPending}
-        fileType={fileTypeToUpload}
-      />
-      
-      {request && request.items && (
-        <ReceiveItemsDialog
-          isOpen={isReceiveItemsDialogOpen}
-          onOpenChange={setIsReceiveItemsDialogOpen}
-          requestId={request.id}
-          requestItems={request.items}
-        />
-      )}
+      <EmailDialog isOpen={isEmailDialogOpen} onOpenChange={setIsEmailDialogOpen} initialData={emailInitialData} onSend={handleSendEmail} isSending={sendEmailMutation.isPending} />
+      <FileUploadDialog isOpen={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen} onUpload={handleFileUpload} isUploading={updateFileMutation.isPending} fileType={fileTypeToUpload} />
+      {request && request.items && <ReceiveItemsDialog isOpen={isReceiveItemsDialogOpen} onOpenChange={setIsReceiveItemsDialogOpen} requestId={request.id} requestItems={request.items} />}
+      {request && request.items && <InvoiceItemsDialog isOpen={isInvoiceItemsDialogOpen} onOpenChange={setIsInvoiceItemsDialogOpen} requestId={request.id} requestItems={request.items} />}
     </div>
   );
 };

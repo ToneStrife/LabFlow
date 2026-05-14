@@ -11,12 +11,16 @@ import {
 } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { Edit, Trash2, Loader2 } from "lucide-react";
+import { Edit, Trash2, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { SupabaseRequestItem } from "@/data/types";
 import RequestItemForm, { ItemEditFormValues } from "./RequestItemForm";
 import { useUpdateRequestItem, useDeleteRequestItem } from "@/hooks/use-request-items";
+import { useAggregatedReceivedItems } from "@/hooks/use-packing-slips";
+import { useAggregatedInvoicedItems } from "@/hooks/use-invoices";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
+import { useSession } from "@/components/SessionContextProvider";
 
 interface RequestItemsTableProps {
   items: SupabaseRequestItem[] | null;
@@ -24,8 +28,14 @@ interface RequestItemsTableProps {
 }
 
 const RequestItemsTable: React.FC<RequestItemsTableProps> = ({ items, isEditable }) => {
+  const { profile } = useSession();
+  const isAdmin = profile?.role === 'Admin';
+  const requestId = items?.[0]?.request_id || '';
+  
   const updateItemMutation = useUpdateRequestItem();
   const deleteItemMutation = useDeleteRequestItem();
+  const { data: receivedData } = useAggregatedReceivedItems(requestId);
+  const { data: invoicedData } = useAggregatedInvoicedItems(requestId);
 
   const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
   const [editingItem, setEditingItem] = React.useState<SupabaseRequestItem | undefined>(undefined);
@@ -44,103 +54,76 @@ const RequestItemsTable: React.FC<RequestItemsTableProps> = ({ items, isEditable
 
   const handleDeleteItem = async (itemId: string) => {
     if (items && items.length <= 1) {
-      toast.error("No se puede eliminar el último artículo.", { description: "Una solicitud debe tener al menos un artículo. Considere eliminar la solicitud completa en su lugar." });
+      toast.error("No se puede eliminar el último artículo.");
       return;
     }
     await deleteItemMutation.mutateAsync(itemId);
   };
 
-  if (!items || items.length === 0) {
-    return (
-      <div className="text-muted-foreground text-center py-4">
-        No se encontraron artículos para esta solicitud.
-      </div>
-    );
-  }
+  if (!items || items.length === 0) return null;
 
   return (
     <>
       <Separator />
       <h2 className="text-xl font-semibold mb-4">Artículos Solicitados</h2>
-      <div className="rounded-md border">
+      <div className="rounded-md border overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Nombre del Producto</TableHead>
-              <TableHead>Marca</TableHead>
-              <TableHead>Catálogo #</TableHead>
-              <TableHead>Cantidad</TableHead>
-              <TableHead>Precio Unitario</TableHead>
-              <TableHead>Formato</TableHead>
-              <TableHead>Enlace</TableHead>
+              <TableHead>Producto</TableHead>
+              <TableHead className="text-center">Pedido</TableHead>
+              <TableHead className="text-center">Recibido</TableHead>
+              {isAdmin && <TableHead className="text-center">Facturado</TableHead>}
+              <TableHead>Precio</TableHead>
               {isEditable && <TableHead className="text-right">Acciones</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {items.map((item) => (
-              <TableRow key={item.id}>
-                <TableCell className="font-medium">{item.product_name}</TableCell>
-                <TableCell>{item.brand || "N/A"}</TableCell>
-                <TableCell>{item.catalog_number || "N/A"}</TableCell>
-                <TableCell>{item.quantity}</TableCell>
-                <TableCell>{item.unit_price ? `€${Number(item.unit_price).toFixed(2)}` : "N/A"}</TableCell>
-                <TableCell>{item.format || "N/A"}</TableCell>
-                <TableCell>
-                  {item.link ? (
-                    <a href={item.link} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
-                      Ver Producto
-                    </a>
-                  ) : (
-                    "N/A"
-                  )}
-                </TableCell>
-                {isEditable && (
-                  <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleEditItem(item)}
-                      className="mr-2"
-                      title="Editar Artículo"
-                      disabled={updateItemMutation.isPending || deleteItemMutation.isPending}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="icon"
-                      onClick={() => handleDeleteItem(item.id)}
-                      title="Eliminar Artículo"
-                      disabled={updateItemMutation.isPending || deleteItemMutation.isPending}
-                    >
-                      {deleteItemMutation.isPending && deleteItemMutation.variables === item.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Trash2 className="h-4 w-4" />
-                      )}
-                    </Button>
+            {items.map((item) => {
+              const received = receivedData?.find(r => r.request_item_id === item.id)?.total_received || 0;
+              const invoiced = invoicedData?.find(i => i.request_item_id === item.id)?.total_invoiced || 0;
+              const isFullyInvoiced = invoiced >= item.quantity;
+              const isFullyReceived = received >= item.quantity;
+
+              return (
+                <TableRow key={item.id}>
+                  <TableCell className="font-medium">
+                    <div className="flex flex-col">
+                        <span>{item.product_name}</span>
+                        <span className="text-xs text-muted-foreground font-mono">{item.catalog_number}</span>
+                    </div>
                   </TableCell>
-                )}
-              </TableRow>
-            ))}
+                  <TableCell className="text-center font-bold">{item.quantity}</TableCell>
+                  <TableCell className="text-center">
+                    <Badge variant={isFullyReceived ? "success" : "outline"} className="gap-1">
+                        {received} {isFullyReceived && <CheckCircle2 className="h-3 w-3" />}
+                    </Badge>
+                  </TableCell>
+                  {isAdmin && (
+                    <TableCell className="text-center">
+                        <Badge variant={isFullyInvoiced ? "default" : "secondary"} className={cn("gap-1", isFullyInvoiced ? "bg-blue-600" : "")}>
+                            {invoiced} {isFullyInvoiced && <CheckCircle2 className="h-3 w-3" />}
+                        </Badge>
+                    </TableCell>
+                  )}
+                  <TableCell>{item.unit_price ? `€${Number(item.unit_price).toFixed(2)}` : "N/A"}</TableCell>
+                  {isEditable && (
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="icon" onClick={() => handleEditItem(item)} className="mr-1"><Edit className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleDeleteItem(item.id)} className="text-red-500"><Trash2 className="h-4 w-4" /></Button>
+                    </TableCell>
+                  )}
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </div>
 
-      {/* Edit Item Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Editar Artículo de Solicitud</DialogTitle>
-          </DialogHeader>
-          {editingItem && (
-            <RequestItemForm
-              initialData={editingItem}
-              onSubmit={handleUpdateItem}
-              onCancel={() => setIsEditDialogOpen(false)}
-              isSubmitting={updateItemMutation.isPending}
-            />
-          )}
+          <DialogHeader><DialogTitle>Editar Artículo</DialogTitle></DialogHeader>
+          {editingItem && <RequestItemForm initialData={editingItem} onSubmit={handleUpdateItem} onCancel={() => setIsEditDialogOpen(false)} isSubmitting={updateItemMutation.isPending} />}
         </DialogContent>
       </Dialog>
     </>
