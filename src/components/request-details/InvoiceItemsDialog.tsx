@@ -22,7 +22,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Loader2 } from "lucide-react";
+import { Loader2, CheckCheck } from "lucide-react";
 import { SupabaseRequestItem } from "@/data/types";
 import { useInvoiceItems, useAggregatedInvoicedItems } from "@/hooks/use-invoices";
 import { toast } from "sonner";
@@ -65,7 +65,6 @@ const InvoiceItemsDialog: React.FC<InvoiceItemsDialogProps> = ({
 
   const initialItems = React.useMemo(() => {
     if (!requestItems) return [];
-    // Usamos [] si aggregatedInvoiced es undefined/null
     const aggregation = aggregatedInvoiced || [];
     return requestItems.map(item => {
       const previouslyInvoiced = aggregation.find(agg => agg.request_item_id === item.id)?.total_invoiced || 0;
@@ -88,14 +87,14 @@ const InvoiceItemsDialog: React.FC<InvoiceItemsDialogProps> = ({
     }
   });
 
-  // Sincronizar ítems cuando se cargan los datos de la DB
+  const { fields, replace } = useFieldArray({ control: form.control, name: "items" });
+
+  // Sincronizar ítems cuando se cargan los datos de la DB o se abre el diálogo
   React.useEffect(() => {
     if (isOpen && initialItems.length > 0) {
-      form.setValue('items', initialItems);
+      replace(initialItems);
     }
-  }, [initialItems, form, isOpen]);
-
-  const { fields } = useFieldArray({ control: form.control, name: "items" });
+  }, [initialItems, replace, isOpen]);
 
   const handleSubmit = async (data: InvoiceFormValues) => {
     const itemsToInvoice = data.items
@@ -128,7 +127,8 @@ const InvoiceItemsDialog: React.FC<InvoiceItemsDialogProps> = ({
       ...item,
       quantityInvoiced: Math.max(0, item.quantityOrdered - item.quantityPreviouslyInvoiced),
     }));
-    form.setValue('items', updatedItems as any);
+    // Usar replace de useFieldArray para asegurar el re-renderizado
+    replace(updatedItems);
   };
 
   return (
@@ -160,23 +160,34 @@ const InvoiceItemsDialog: React.FC<InvoiceItemsDialogProps> = ({
 
             <div className="space-y-4 max-h-[300px] overflow-y-auto p-2 border rounded-md">
               {fields.map((item, index) => {
-                const remaining = item.quantityOrdered - item.quantityPreviouslyInvoiced;
+                // Usamos form.watch para obtener los valores actuales y reactivos
+                const qtyOrdered = form.watch(`items.${index}.quantityOrdered`);
+                const qtyPrev = form.watch(`items.${index}.quantityPreviouslyInvoiced`);
+                const remaining = Math.max(0, qtyOrdered - qtyPrev);
+                
                 return (
                   <div key={item.id} className="grid grid-cols-1 sm:grid-cols-4 gap-4 items-center border-b pb-2 last:border-b-0">
                     <div className="sm:col-span-2">
                       <p className="font-medium text-sm truncate">{item.productName}</p>
-                      <p className="text-xs text-muted-foreground">Pedido: {item.quantityOrdered} | Ya facturado: {item.quantityPreviouslyInvoiced}</p>
+                      <p className="text-xs text-muted-foreground">Pedido: {qtyOrdered} | Ya facturado: {qtyPrev}</p>
                     </div>
                     <div className="text-center">
                       <p className="text-xs text-muted-foreground">Pendiente</p>
-                      <p className="font-bold text-orange-600">{remaining}</p>
+                      <p className={`font-bold ${remaining > 0 ? 'text-orange-600' : 'text-green-600'}`}>{remaining}</p>
                     </div>
                     <FormField
                       control={form.control}
                       name={`items.${index}.quantityInvoiced`}
                       render={({ field }) => (
                         <FormItem>
-                          <FormControl><Input type="number" {...field} className="h-8" /></FormControl>
+                          <FormControl>
+                            <Input 
+                                type="number" 
+                                {...field} 
+                                onChange={(e) => field.onChange(Number(e.target.value))}
+                                className="h-8" 
+                            />
+                          </FormControl>
                         </FormItem>
                       )}
                     />
@@ -185,9 +196,20 @@ const InvoiceItemsDialog: React.FC<InvoiceItemsDialogProps> = ({
               })}
             </div>
 
-            <DialogFooter className="gap-2">
-              <Button type="button" variant="outline" onClick={handleInvoiceAll}>Facturar Todo lo Pendiente</Button>
-              <Button type="submit" disabled={invoiceItemsMutation.isPending}>
+            <DialogFooter className="flex flex-col sm:flex-row gap-2">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={handleInvoiceAll}
+                className="w-full sm:w-auto"
+              >
+                <CheckCheck className="mr-2 h-4 w-4" /> Facturar Todo lo Pendiente
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={invoiceItemsMutation.isPending}
+                className="w-full sm:w-auto"
+              >
                 {invoiceItemsMutation.isPending ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : "Registrar Factura"}
               </Button>
             </DialogFooter>
