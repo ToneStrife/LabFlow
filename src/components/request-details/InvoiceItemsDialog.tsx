@@ -22,7 +22,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Loader2, CheckCheck, FileText } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { SupabaseRequestItem } from "@/data/types";
 import { useInvoiceItems, useAggregatedInvoicedItems } from "@/hooks/use-invoices";
 import { toast } from "sonner";
@@ -80,9 +80,19 @@ const InvoiceItemsDialog: React.FC<InvoiceItemsDialogProps> = ({
 
   const form = useForm<InvoiceFormValues>({
     resolver: zodResolver(invoiceFormSchema),
-    defaultValues: { invoiceNumber: "", items: initialItems },
-    values: { invoiceNumber: form?.getValues('invoiceNumber') || "", items: initialItems }
+    defaultValues: { 
+      invoiceNumber: "", 
+      items: initialItems 
+    },
+    // Eliminado el bloque 'values' que causaba el ReferenceError al intentar acceder a 'form' antes de ser definido
   });
+
+  // Efecto para actualizar los ítems si cambian los datos agregados
+  React.useEffect(() => {
+    if (initialItems.length > 0) {
+      form.setValue('items', initialItems);
+    }
+  }, [initialItems, form]);
 
   const { fields } = useFieldArray({ control: form.control, name: "items" });
 

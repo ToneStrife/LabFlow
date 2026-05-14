@@ -21,7 +21,7 @@ import { useAggregatedInvoicedItems } from "@/hooks/use-invoices";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { useSession } from "@/components/SessionContextProvider";
-import { cn } from "@/lib/utils"; // Importación añadida
+import { cn } from "@/lib/utils";
 
 interface RequestItemsTableProps {
   items: SupabaseRequestItem[] | null;
@@ -83,6 +83,7 @@ const RequestItemsTable: React.FC<RequestItemsTableProps> = ({ items, isEditable
             {items.map((item) => {
               const received = receivedData?.find(r => r.request_item_id === item.id)?.total_received || 0;
               const invoiced = invoicedData?.find(i => i.request_item_id === item.id)?.total_invoiced || 0;
+              
               const isFullyInvoiced = invoiced >= item.quantity;
               const isFullyReceived = received >= item.quantity;
 
@@ -96,13 +97,19 @@ const RequestItemsTable: React.FC<RequestItemsTableProps> = ({ items, isEditable
                   </TableCell>
                   <TableCell className="text-center font-bold">{item.quantity}</TableCell>
                   <TableCell className="text-center">
-                    <Badge variant={isFullyReceived ? "success" : "outline"} className="gap-1">
+                    <Badge 
+                        variant={isFullyReceived ? "secondary" : "outline"} 
+                        className={cn("gap-1", isFullyReceived ? "bg-green-600 text-white hover:bg-green-700" : "")}
+                    >
                         {received} {isFullyReceived && <CheckCircle2 className="h-3 w-3" />}
                     </Badge>
                   </TableCell>
                   {isAdmin && (
                     <TableCell className="text-center">
-                        <Badge variant={isFullyInvoiced ? "default" : "secondary"} className={cn("gap-1", isFullyInvoiced ? "bg-blue-600" : "")}>
+                        <Badge 
+                            variant={isFullyInvoiced ? "secondary" : "outline"} 
+                            className={cn("gap-1", isFullyInvoiced ? "bg-blue-600 text-white hover:bg-blue-700" : "")}
+                        >
                             {invoiced} {isFullyInvoiced && <CheckCircle2 className="h-3 w-3" />}
                         </Badge>
                     </TableCell>
