@@ -44,7 +44,6 @@ const RequestActions: React.FC<RequestActionsProps> = ({
 }) => {
   const { profile } = useSession();
   
-  // Only Admins and Account Managers can perform these actions
   const isManager = profile?.role === "Admin" || profile?.role === "Account Manager";
 
   if (!isManager) {
