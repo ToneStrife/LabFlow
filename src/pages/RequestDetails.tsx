@@ -24,7 +24,7 @@ import { useShippingAddresses, useBillingAddresses } from "@/hooks/use-addresses
 import { processEmailTemplate, processTextTemplate } from "@/utils/email-templating";
 import EmailDialog, { EmailFormValues } from "@/components/EmailDialog";
 import ReceiveItemsDialog from "@/components/ReceiveItemsDialog";
-import InvoiceItemsDialog from "@/components/request-details/InvoiceItemsDialog"; // Nuevo
+import InvoiceItemsDialog from "@/components/request-details/InvoiceItemsDialog";
 
 import RequestSummaryCard from "@/components/request-details/RequestSummaryCard";
 import RequestItemsTable from "@/components/request-details/RequestItemsTable";
@@ -33,7 +33,7 @@ import RequestFilesCard from "@/components/request-details/RequestFilesCard";
 import FileUploadDialog from "@/components/request-details/FileUploadDialog";
 import RequestFullEditForm, { FullEditFormValues } from "@/components/request-details/RequestFullEditForm";
 import PackingSlipsList from "@/components/request-details/PackingSlipsList";
-import InvoicesList from "@/components/request-details/InvoicesList"; // Nuevo
+import InvoicesList from "@/components/request-details/InvoicesList";
 import { toast } from "sonner";
 import { useSession } from "@/components/SessionContextProvider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -93,7 +93,7 @@ const RequestDetails: React.FC = () => {
   const [isEditMetadataDialogOpen, setIsEditMetadataDialogOpen] = React.useState(false);
   const [isStatusOverrideDialogOpen, setIsStatusOverrideDialogOpen] = React.useState(false);
   const [isReceiveItemsDialogOpen, setIsReceiveItemsDialogOpen] = React.useState(false);
-  const [isInvoiceItemsDialogOpen, setIsInvoiceItemsDialogOpen] = React.useState(false); // Nuevo
+  const [isInvoiceItemsDialogOpen, setIsInvoiceItemsDialogOpen] = React.useState(false);
   const [isRevertReceptionDialogOpen, setIsRevertReceptionDialogOpen] = React.useState(false);
   
   const [isDenyDialogOpen, setIsDenyDialogOpen] = React.useState(false);
@@ -215,6 +215,10 @@ const RequestDetails: React.FC = () => {
     setFileTypeToUpload(fileType);
     setIsUploadDialogOpen(true);
   };
+
+  // DEFINICIÓN DE FUNCIONES FALTANTES
+  const handleUploadQuote = () => handleUploadClick("quote");
+  const handleUploadPOAndOrder = () => handleUploadClick("po");
 
   const handleFileUpload = async (file: File | null, poNumber?: string) => {
     if (!request) return;
@@ -433,7 +437,7 @@ const RequestDetails: React.FC = () => {
           <div className="py-4">
             <Select value={newStatus} onValueChange={(value) => setNewStatus(value as RequestStatusType)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>{["Pending", "Quote Requested", "PO Requested", "Ordered", "Received", "Denied", "Cancelled"].map((s) => <SelectItem key={status} value={s}>{s}</SelectItem>)}</SelectContent>
+              <SelectContent>{["Pending", "Quote Requested", "PO Requested", "Ordered", "Received", "Denied", "Cancelled"].map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
             </Select>
           </div>
           <DialogFooter>
