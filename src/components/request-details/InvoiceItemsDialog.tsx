@@ -64,9 +64,11 @@ const InvoiceItemsDialog: React.FC<InvoiceItemsDialogProps> = ({
   const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
 
   const initialItems = React.useMemo(() => {
-    if (!requestItems || !aggregatedInvoiced) return [];
+    if (!requestItems) return [];
+    // Usamos [] si aggregatedInvoiced es undefined/null
+    const aggregation = aggregatedInvoiced || [];
     return requestItems.map(item => {
-      const previouslyInvoiced = aggregatedInvoiced.find(agg => agg.request_item_id === item.id)?.total_invoiced || 0;
+      const previouslyInvoiced = aggregation.find(agg => agg.request_item_id === item.id)?.total_invoiced || 0;
       const remaining = item.quantity - previouslyInvoiced;
       return {
         requestItemId: item.id,
@@ -83,16 +85,15 @@ const InvoiceItemsDialog: React.FC<InvoiceItemsDialogProps> = ({
     defaultValues: { 
       invoiceNumber: "", 
       items: initialItems 
-    },
-    // Eliminado el bloque 'values' que causaba el ReferenceError al intentar acceder a 'form' antes de ser definido
+    }
   });
 
-  // Efecto para actualizar los ítems si cambian los datos agregados
+  // Sincronizar ítems cuando se cargan los datos de la DB
   React.useEffect(() => {
-    if (initialItems.length > 0) {
+    if (isOpen && initialItems.length > 0) {
       form.setValue('items', initialItems);
     }
-  }, [initialItems, form]);
+  }, [initialItems, form, isOpen]);
 
   const { fields } = useFieldArray({ control: form.control, name: "items" });
 
@@ -129,8 +130,6 @@ const InvoiceItemsDialog: React.FC<InvoiceItemsDialogProps> = ({
     }));
     form.setValue('items', updatedItems as any);
   };
-
-  if (isLoadingInvoiced) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>

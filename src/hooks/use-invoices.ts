@@ -10,12 +10,14 @@ export const useInvoices = (requestId: string) => {
   return useQuery<Invoice[], Error>({
     queryKey: ['invoices', requestId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error, status } = await supabase
         .from('invoices')
         .select('*')
         .eq('request_id', requestId)
         .order('invoiced_at', { ascending: false });
       
+      // Si la tabla no existe (404), devolvemos array vacío en lugar de error
+      if (error && status === 404) return [];
       if (error) throw new Error(error.message);
       return data || [];
     },
@@ -32,7 +34,7 @@ export const useAggregatedInvoicedItems = (requestId: string) => {
   return useQuery<AggregatedInvoicedItem[], Error>({
     queryKey: ['aggregatedInvoicedItems', requestId],
     queryFn: async () => {
-      const { data: invoicedItems, error } = await supabase
+      const { data: invoicedItems, error, status } = await supabase
         .from('invoiced_items')
         .select(`
           quantity_invoiced,
@@ -41,9 +43,10 @@ export const useAggregatedInvoicedItems = (requestId: string) => {
         `)
         .eq('invoice_id.request_id', requestId);
 
+      if (error && status === 404) return [];
       if (error) throw new Error(error.message);
 
-      const aggregation = (invoicedItems as any[]).reduce((acc, item) => {
+      const aggregation = ((invoicedItems || []) as any[]).reduce((acc, item) => {
         const itemId = item.request_item_id;
         acc[itemId] = (acc[itemId] || 0) + item.quantity_invoiced;
         return acc;
@@ -87,7 +90,7 @@ export const useInvoiceItems = () => {
       if (file) {
         const formData = new FormData();
         formData.append('file', file);
-        formData.append('fileType', 'invoice'); // Usamos un tipo genérico o específico
+        formData.append('fileType', 'invoice'); 
         formData.append('requestId', requestId);
 
         const { data: uploadData, error: uploadError } = await supabase.functions.invoke('upload-file', {
