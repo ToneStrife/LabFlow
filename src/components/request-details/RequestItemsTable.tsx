@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { Edit, Trash2, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { Edit, Trash2, CheckCircle2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { SupabaseRequestItem } from "@/data/types";
 import RequestItemForm, { ItemEditFormValues } from "./RequestItemForm";
@@ -21,6 +21,7 @@ import { useAggregatedInvoicedItems } from "@/hooks/use-invoices";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { useSession } from "@/components/SessionContextProvider";
+import { cn } from "@/lib/utils"; // Importación añadida
 
 interface RequestItemsTableProps {
   items: SupabaseRequestItem[] | null;
