@@ -216,7 +216,6 @@ const RequestDetails: React.FC = () => {
     setIsUploadDialogOpen(true);
   };
 
-  // DEFINICIÓN DE FUNCIONES FALTANTES
   const handleUploadQuote = () => handleUploadClick("quote");
   const handleUploadPOAndOrder = () => handleUploadClick("po");
 
@@ -410,10 +409,13 @@ const RequestDetails: React.FC = () => {
           
           <RequestFilesCard request={request} onUploadClick={handleUploadClick} onSimpleFileUpload={() => Promise.resolve()} />
           <PackingSlipsList requestId={request.id} onOpenReceiveItemsDialog={handleOpenReceiveItemsDialog} requestNumber={displayRequestNumber} />
+          
+          {/* CRÍTICO: Envolver InvoicesList en check de isAdmin */}
           {isAdmin && <InvoicesList requestId={request.id} onOpenInvoiceDialog={() => setIsInvoiceItemsDialogOpen(true)} />}
         </div>
       </div>
       
+      {/* ... (resto de diálogos sin cambios) */}
       <Dialog open={isEditMetadataDialogOpen} onOpenChange={setIsEditMetadataDialogOpen}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader><DialogTitle>Editar Detalles</DialogTitle></DialogHeader>
