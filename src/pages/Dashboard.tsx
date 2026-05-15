@@ -4,6 +4,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import RequestList from "@/components/RequestList";
 import PendingItemsList from "@/components/PendingItemsList";
+import PendingInvoicesList from "@/components/PendingInvoicesList"; // Importar la nueva lista
 import { Button } from "@/components/ui/button";
 import { 
   PlusCircle, 
@@ -13,18 +14,21 @@ import {
   CreditCard,
   Truck,
   ListTodo,
-  LayoutDashboard
+  LayoutDashboard,
+  Receipt
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useRequests } from "@/hooks/use-requests";
 import { usePendingItems } from "@/hooks/use-pending-items";
+import { usePendingInvoices } from "@/hooks/use-pending-invoices"; // Nuevo hook
 import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useSession } from "@/components/SessionContextProvider";
 
 // Componente de Tarjeta de Resumen Ultra-Compacta
 interface SummaryCardProps {
   title: string;
-  value: string | number; // Cambiado de count a value para soportar formatos como "15/3"
+  value: string | number;
   icon: React.ReactNode;
   colorClass: string;
 }
@@ -45,11 +49,16 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ title, value, icon, colorClas
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const { profile } = useSession();
+  const isAdmin = profile?.role === 'Admin';
+  
   const { data: requests, isLoading: isLoadingRequests, error } = useRequests();
   const { data: pendingItems, isLoading: isLoadingPending } = usePendingItems();
+  const { data: pendingInvoices, isLoading: isLoadingInvoices } = usePendingInvoices();
 
   const allRequests = requests || [];
   const allPendingItems = pendingItems || [];
+  const allPendingInvoices = pendingInvoices || [];
 
   // Métricas simplificadas
   const metrics = {
@@ -58,9 +67,10 @@ const Dashboard = () => {
     po: allRequests.filter(req => req.status === "PO Requested").length,
     deliveryOrders: allRequests.filter(req => req.status === "Ordered").length,
     deliveryItems: allPendingItems.length,
+    uninvoicedItems: allPendingInvoices.length,
   };
 
-  if (isLoadingRequests || isLoadingPending) {
+  if (isLoadingRequests || isLoadingPending || isLoadingInvoices) {
     return (
       <div className="container mx-auto py-8 flex justify-center items-center">
         <Loader2 className="h-8 w-8 animate-spin mr-2 text-primary" /> Cargando...
@@ -88,8 +98,8 @@ const Dashboard = () => {
         </Button>
       </div>
       
-      {/* Mini Dash Compacto - 4 Columnas */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      {/* Mini Dash Compacto */}
+      <div className={cn("grid gap-3", isAdmin ? "grid-cols-2 md:grid-cols-5" : "grid-cols-2 md:grid-cols-4")}>
         <SummaryCard 
           title="Por Aprobar" 
           value={metrics.pending} 
@@ -114,16 +124,34 @@ const Dashboard = () => {
           icon={<Truck className="text-emerald-500" />} 
           colorClass="text-emerald-500"
         />
+        {isAdmin && (
+            <SummaryCard 
+                title="Sin Facturar" 
+                value={metrics.uninvoicedItems} 
+                icon={<Receipt className="text-purple-600" />} 
+                colorClass="text-purple-600"
+            />
+        )}
       </div>
 
       <Tabs defaultValue="pending-items" className="w-full">
-        <TabsList className="mb-4 bg-transparent border-b rounded-none w-full justify-start h-auto p-0 gap-6">
+        <TabsList className="mb-4 bg-transparent border-b rounded-none w-full justify-start h-auto p-0 gap-6 overflow-x-auto">
           <TabsTrigger 
             value="pending-items" 
             className="data-[state=active]:border-primary data-[state=active]:bg-transparent border-b-2 border-transparent rounded-none px-0 pb-2 shadow-none"
           >
             <ListTodo className="h-4 w-4 mr-2" /> Artículos Pendientes
           </TabsTrigger>
+          
+          {isAdmin && (
+            <TabsTrigger 
+              value="pending-invoices" 
+              className="data-[state=active]:border-primary data-[state=active]:bg-transparent border-b-2 border-transparent rounded-none px-0 pb-2 shadow-none"
+            >
+              <Receipt className="h-4 w-4 mr-2" /> Sin Factura
+            </TabsTrigger>
+          )}
+
           <TabsTrigger 
             value="all-requests" 
             className="data-[state=active]:border-primary data-[state=active]:bg-transparent border-b-2 border-transparent rounded-none px-0 pb-2 shadow-none"
@@ -135,6 +163,12 @@ const Dashboard = () => {
         <TabsContent value="pending-items" className="mt-0 border-none p-0">
           <PendingItemsList />
         </TabsContent>
+
+        {isAdmin && (
+          <TabsContent value="pending-invoices" className="mt-0 border-none p-0">
+            <PendingInvoicesList />
+          </TabsContent>
+        )}
         
         <TabsContent value="all-requests" className="mt-0 border-none p-0">
           <RequestList />
