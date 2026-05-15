@@ -11,8 +11,9 @@ export interface PendingInvoiceItem {
   catalogNumber: string;
   vendorName: string;
   quantityOrdered: number;
+  quantityReceived: number; // Añadido para claridad
   quantityInvoiced: number;
-  quantityPending: number;
+  quantityPending: number; // Ahora representa: Recibido - Facturado
 }
 
 export const usePendingInvoices = () => {
@@ -24,46 +25,49 @@ export const usePendingInvoices = () => {
     queryFn: async () => {
       if (!requests || !vendors) return [];
 
-      // 1. Filtrar solicitudes que están en proceso o terminadas (Ordered o Received)
-      // No incluimos 'Pending' o 'Quote Requested' porque aún no hay compromiso de pago real.
-      const activeRequests = requests.filter(r => ['Ordered', 'Received'].includes(r.status));
-      if (activeRequests.length === 0) return [];
+      // 1. Obtener IDs de todas las solicitudes activas (Ordered o Received)
+      const activeRequestIds = requests
+        .filter(r => ['Ordered', 'Received'].includes(r.status))
+        .map(r => r.id);
+        
+      if (activeRequestIds.length === 0) return [];
 
-      const requestIds = activeRequests.map(r => r.id);
+      // 2. Obtener TODAS las recepciones y TODAS las facturaciones para estas solicitudes
+      const [receivedRes, invoicedRes] = await Promise.all([
+        supabase.from('received_items').select('quantity_received, request_item_id, slip_id!inner(request_id)').in('slip_id.request_id', activeRequestIds),
+        supabase.from('invoiced_items').select('quantity_invoiced, request_item_id, invoice_id!inner(request_id)').in('invoice_id.request_id', activeRequestIds)
+      ]);
 
-      // 2. Obtener todos los registros de facturación para estas solicitudes
-      const { data: invoicedData, error: invoicedError, status } = await supabase
-        .from('invoiced_items')
-        .select(`
-          quantity_invoiced,
-          request_item_id,
-          invoice_id!inner (request_id)
-        `)
-        .in('invoice_id.request_id', requestIds);
+      // Manejo de errores de tabla no existente (404)
+      const receivedData = receivedRes.data || [];
+      const invoicedData = invoicedRes.data || [];
 
-      // Si la tabla no existe (404), tratamos como 0 facturado
-      if (invoicedError && status !== 404) throw new Error(invoicedError.message);
-
-      // 3. Agrupar facturaciones por request_item_id
-      const invoicedMap = ((invoicedData || []) as any[]).reduce((acc, item) => {
-        const itemId = item.request_item_id;
-        acc[itemId] = (acc[itemId] || 0) + item.quantity_invoiced;
+      // 3. Agrupar por ítem
+      const receivedMap = (receivedData as any[]).reduce((acc, item) => {
+        acc[item.request_item_id] = (acc[item.request_item_id] || 0) + item.quantity_received;
         return acc;
       }, {} as Record<string, number>);
 
-      // 4. Construir la lista de ítems pendientes de factura
+      const invoicedMap = (invoicedData as any[]).reduce((acc, item) => {
+        acc[item.request_item_id] = (acc[item.request_item_id] || 0) + item.quantity_invoiced;
+        return acc;
+      }, {} as Record<string, number>);
+
+      // 4. Construir la lista basada en la lógica: "Lo que está en el lab pero no se ha facturado"
       const pendingInvoices: PendingInvoiceItem[] = [];
 
-      activeRequests.forEach(req => {
-        const vendor = vendors.find(v => v.id === req.vendor_id);
-        const vendorName = vendor ? vendor.name : 'Desconocido';
+      requests.filter(r => ['Ordered', 'Received'].includes(r.status)).forEach(req => {
+        const vendorName = vendors.find(v => v.id === req.vendor_id)?.name || 'Desconocido';
         const requestNumber = req.request_number || req.id.substring(0, 8);
 
         req.items?.forEach(item => {
+          const qtyReceived = receivedMap[item.id] || 0;
           const qtyInvoiced = invoicedMap[item.id] || 0;
-          const qtyPending = item.quantity - qtyInvoiced;
+          
+          // Lógica clave: Si hemos recibido más de lo que hemos facturado, hay una deuda de factura.
+          const qtyPendingInvoice = qtyReceived - qtyInvoiced;
 
-          if (qtyPending > 0) {
+          if (qtyPendingInvoice > 0) {
             pendingInvoices.push({
               requestItemId: item.id,
               requestId: req.id,
@@ -72,8 +76,9 @@ export const usePendingInvoices = () => {
               catalogNumber: item.catalog_number,
               vendorName: vendorName,
               quantityOrdered: item.quantity,
+              quantityReceived: qtyReceived,
               quantityInvoiced: qtyInvoiced,
-              quantityPending: qtyPending,
+              quantityPending: qtyPendingInvoice,
             });
           }
         });
