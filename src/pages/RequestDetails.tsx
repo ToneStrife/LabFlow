@@ -40,6 +40,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAggregatedReceivedItems } from "@/hooks/use-packing-slips";
 import { generateSignedUrl } from "@/utils/supabase-storage";
 import { RequestStatus as RequestStatusType, Vendor, Profile, AccountManager, Project, ShippingAddress, BillingAddress } from "@/data/types";
+import { cn } from "@/lib/utils";
 import { pageContainerClass, mobileDialogClass, dialogFooterMobileClass } from "@/lib/layout";
 
 const getFileNameFromPath = (filePath: string): string => {
@@ -351,7 +352,16 @@ const RequestDetails: React.FC = () => {
     return <div className="p-4 sm:p-6 flex justify-center items-center"><Loader2 className="h-8 w-8 animate-spin mr-2" /> Cargando Detalles...</div>;
   }
 
-  if (!request) return null;
+  if (!request) {
+    return (
+      <div className={pageContainerClass}>
+        <p className="text-muted-foreground">No se encontró la solicitud.</p>
+        <Button variant="outline" onClick={() => navigate("/dashboard")} className="mt-4 w-fit">
+          <ArrowLeft className="mr-2 h-4 w-4" /> Volver al Panel
+        </Button>
+      </div>
+    );
+  }
   
   const isEditableByRole = profile?.role === "Admin" || profile?.role === "Account Manager";
   const vendor = vendors?.find(v => v.id === request.vendor_id);
