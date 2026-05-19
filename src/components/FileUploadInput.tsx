@@ -54,9 +54,30 @@ const FileUploadInput: React.FC<FileUploadInputProps> = ({
     setFileName(currentFileMeta?.name || null);
   }, [currentFileMeta]);
 
-  const setPickerActive = (active: boolean) => {
-    onPickerActiveChange?.(active);
+  const clearActiveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const markPickerActive = () => {
+    if (clearActiveTimerRef.current) {
+      clearTimeout(clearActiveTimerRef.current);
+      clearActiveTimerRef.current = null;
+    }
+    onPickerActiveChange?.(true);
   };
+
+  const schedulePickerInactive = (delayMs = 3000) => {
+    if (clearActiveTimerRef.current) clearTimeout(clearActiveTimerRef.current);
+    clearActiveTimerRef.current = setTimeout(() => {
+      onPickerActiveChange?.(false);
+      clearActiveTimerRef.current = null;
+    }, delayMs);
+  };
+
+  useEffect(
+    () => () => {
+      if (clearActiveTimerRef.current) clearTimeout(clearActiveTimerRef.current);
+    },
+    []
+  );
 
   const clearAllInputs = () => {
     [cameraInputRef, galleryInputRef, desktopInputRef].forEach((ref) => {
@@ -77,22 +98,27 @@ const FileUploadInput: React.FC<FileUploadInputProps> = ({
       onChange(fileListFromFile(processed));
     } finally {
       setIsProcessing(false);
-      setPickerActive(false);
+      schedulePickerInactive(3000);
     }
   };
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    markPickerActive();
     const file = event.target.files?.[0] ?? null;
     await emitFile(file);
     event.target.value = "";
   };
 
   const handlePickerOpen = () => {
-    if (!disabled) setPickerActive(true);
+    if (!disabled) markPickerActive();
   };
 
   const handlePickerCancel = () => {
-    setPickerActive(false);
+    schedulePickerInactive(500);
+  };
+
+  const handlePickerPointerDown = () => {
+    if (!disabled) markPickerActive();
   };
 
   const handleRemoveFile = (e: React.MouseEvent) => {
@@ -106,6 +132,7 @@ const FileUploadInput: React.FC<FileUploadInputProps> = ({
   const pickerInputProps = {
     disabled: disabled || isProcessing,
     className: "sr-only" as const,
+    onPointerDown: handlePickerPointerDown,
     onClick: handlePickerOpen,
     onChange: handleFileChange,
     onCancel: handlePickerCancel,
@@ -173,6 +200,7 @@ const FileUploadInput: React.FC<FileUploadInputProps> = ({
             accept={accept}
             className="sr-only hidden sm:block"
             disabled={disabled || isProcessing}
+            onPointerDown={handlePickerPointerDown}
             onClick={handlePickerOpen}
             onChange={handleFileChange}
             onCancel={handlePickerCancel}
@@ -181,6 +209,7 @@ const FileUploadInput: React.FC<FileUploadInputProps> = ({
           <div className={cn("space-y-2 sm:hidden", zoneClass, "p-3")}>
             <Label
               htmlFor={cameraInputId}
+              onPointerDown={handlePickerPointerDown}
               className={cn(
                 "flex items-center justify-center gap-2 rounded-md border bg-background px-4 py-3 text-sm font-medium cursor-pointer w-full",
                 (disabled || isProcessing) && "pointer-events-none opacity-50"
@@ -191,6 +220,7 @@ const FileUploadInput: React.FC<FileUploadInputProps> = ({
             </Label>
             <Label
               htmlFor={galleryInputId}
+              onPointerDown={handlePickerPointerDown}
               className={cn(
                 "flex items-center justify-center gap-2 rounded-md border bg-background px-4 py-3 text-sm font-medium cursor-pointer w-full",
                 (disabled || isProcessing) && "pointer-events-none opacity-50"
@@ -222,12 +252,14 @@ const FileUploadInput: React.FC<FileUploadInputProps> = ({
             capture={capture}
             className="sr-only"
             disabled={disabled || isProcessing}
+            onPointerDown={handlePickerPointerDown}
             onClick={handlePickerOpen}
             onChange={handleFileChange}
             onCancel={handlePickerCancel}
           />
           <label
             htmlFor={desktopInputId}
+            onPointerDown={handlePickerPointerDown}
             className={cn(zoneClass, "cursor-pointer", disabled && "pointer-events-none")}
           >
             <div className="flex flex-col items-center justify-center py-6 px-4 pointer-events-none">

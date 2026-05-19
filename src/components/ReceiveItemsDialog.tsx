@@ -72,8 +72,29 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
   const receiveItemsMutation = useReceiveItems();
   const [slipFile, setSlipFile] = React.useState<File | null>(null);
   const filePickerActiveRef = React.useRef(false);
+  const suppressCloseUntilRef = React.useRef(0);
+  const reopenAttemptedRef = React.useRef(false);
   const PERSIST_KEY = `receiveItemsForm:${requestId}`;
   const SLIP_FILE_KEY = `receiveItemsSlipFile:${requestId}`;
+  const RECEIVING_FLAG_KEY = `receiveItemsReceiving:${requestId}`;
+
+  const [useNonModalDialog, setUseNonModalDialog] = React.useState(false);
+  React.useEffect(() => {
+    const mq = window.matchMedia("(pointer: coarse)");
+    const update = () => setUseNonModalDialog(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+
+  const extendSuppressClose = useCallback((ms: number) => {
+    suppressCloseUntilRef.current = Date.now() + ms;
+  }, []);
+
+  const shouldBlockDialogClose = useCallback(
+    () => filePickerActiveRef.current || Date.now() < suppressCloseUntilRef.current,
+    []
+  );
 
   const initialItems = React.useMemo(() => {
     if (!requestItems || !aggregatedReceived) return [];
@@ -148,6 +169,8 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
 
   React.useEffect(() => {
     if (!isOpen) return;
+    reopenAttemptedRef.current = false;
+    sessionStorage.setItem(RECEIVING_FLAG_KEY, "1");
     const raw = sessionStorage.getItem(SLIP_FILE_KEY);
     if (!raw) return;
     try {
@@ -156,7 +179,17 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
     } catch {
       sessionStorage.removeItem(SLIP_FILE_KEY);
     }
-  }, [isOpen, SLIP_FILE_KEY]);
+  }, [isOpen, SLIP_FILE_KEY, RECEIVING_FLAG_KEY]);
+
+  React.useEffect(() => {
+    if (isOpen) return;
+    const receiving = sessionStorage.getItem(RECEIVING_FLAG_KEY) === "1";
+    const hasSlipDraft = Boolean(sessionStorage.getItem(SLIP_FILE_KEY));
+    if (!receiving || !hasSlipDraft || reopenAttemptedRef.current) return;
+    reopenAttemptedRef.current = true;
+    const id = window.setTimeout(() => onOpenChange(true), 80);
+    return () => window.clearTimeout(id);
+  }, [isOpen, onOpenChange, RECEIVING_FLAG_KEY, SLIP_FILE_KEY]);
 
   const persistSlipFile = useCallback(
     async (file: File | null) => {
@@ -185,24 +218,34 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
     (files: FileList | null) => {
       const file = files?.[0] ?? null;
       setSlipFile(file);
+      extendSuppressClose(5000);
       void persistSlipFile(file);
     },
-    [persistSlipFile]
+    [persistSlipFile, extendSuppressClose]
+  );
+
+  const handlePickerActiveChange = useCallback(
+    (active: boolean) => {
+      filePickerActiveRef.current = active;
+      extendSuppressClose(active ? 10000 : 4000);
+    },
+    [extendSuppressClose]
   );
 
   const handleDialogOpenChange = useCallback(
     (open: boolean) => {
-      if (!open && filePickerActiveRef.current) return;
+      if (!open && shouldBlockDialogClose()) return;
       onOpenChange(open);
     },
-    [onOpenChange]
+    [onOpenChange, shouldBlockDialogClose]
   );
 
   const clearDraft = useCallback(() => {
     localStorage.removeItem(PERSIST_KEY);
     sessionStorage.removeItem(SLIP_FILE_KEY);
+    sessionStorage.removeItem(RECEIVING_FLAG_KEY);
     setSlipFile(null);
-  }, [PERSIST_KEY, SLIP_FILE_KEY]);
+  }, [PERSIST_KEY, SLIP_FILE_KEY, RECEIVING_FLAG_KEY]);
 
   const handleSubmit = async (data: ReceiveFormValues) => {
     const itemsToReceive = data.items
@@ -269,7 +312,7 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
 
   if (isLoadingReceived) {
     return (
-      <Dialog open={isOpen} onOpenChange={handleDialogOpenChange}>
+      <Dialog open={isOpen} onOpenChange={handleDialogOpenChange} modal={!useNonModalDialog}>
         <DialogContent className={dialogClass}>
           <div className="flex justify-center items-center h-40 shrink-0">
             <Loader2 className="h-6 w-6 animate-spin mr-2" /> Cargando estado de recepción...
@@ -285,12 +328,13 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
   );
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleDialogOpenChange}>
+    <Dialog open={isOpen} onOpenChange={handleDialogOpenChange} modal={!useNonModalDialog}>
       <DialogContent
         className={dialogClass}
         onPointerDownOutside={(e) => e.preventDefault()}
         onInteractOutside={(e) => e.preventDefault()}
         onFocusOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
       >
         <DialogHeader className="shrink-0 pr-8">
           <DialogTitle className="text-base sm:text-lg">Registrar Recepción de Artículos</DialogTitle>
@@ -335,9 +379,7 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
                   capture="environment"
                   compact
                   compressImages
-                  onPickerActiveChange={(active) => {
-                    filePickerActiveRef.current = active;
-                  }}
+                  onPickerActiveChange={handlePickerActiveChange}
                   onChange={handleSlipFileChange}
                   disabled={isSubmitting}
                   currentFileMeta={slipFile ? { name: slipFile.name, size: slipFile.size } : null}
