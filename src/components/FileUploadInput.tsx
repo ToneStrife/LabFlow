@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useId, useRef, useState } from "react";
 import { Label } from "@/components/ui/label";
-import { FileText, UploadCloud, X } from "lucide-react";
+import { Camera, FileText, ImageIcon, UploadCloud, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { compressImageFile } from "@/utils/image-file";
 
 interface FileUploadInputProps {
   label: string;
@@ -15,6 +16,15 @@ interface FileUploadInputProps {
   currentFileMeta?: { name: string; size: number } | null;
   className?: string;
   compact?: boolean;
+  compressImages?: boolean;
+  onPickerActiveChange?: (active: boolean) => void;
+}
+
+function fileListFromFile(file: File | null): FileList | null {
+  if (!file) return null;
+  const dt = new DataTransfer();
+  dt.items.add(file);
+  return dt.files;
 }
 
 const FileUploadInput: React.FC<FileUploadInputProps> = ({
@@ -26,60 +36,94 @@ const FileUploadInput: React.FC<FileUploadInputProps> = ({
   currentFileMeta,
   className,
   compact = false,
+  compressImages = false,
+  onPickerActiveChange,
 }) => {
-  const inputRef = useRef<HTMLInputElement>(null);
+  const desktopInputId = useId();
+  const cameraInputId = useId();
+  const galleryInputId = useId();
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+  const desktopInputRef = useRef<HTMLInputElement>(null);
   const [fileName, setFileName] = useState<string | null>(currentFileMeta?.name || null);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const useMobilePickers = Boolean(capture);
 
   useEffect(() => {
     setFileName(currentFileMeta?.name || null);
   }, [currentFileMeta]);
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    const file = files && files.length > 0 ? files[0] : null;
-    setFileName(file ? file.name : null);
-    onChange(files);
+  const setPickerActive = (active: boolean) => {
+    onPickerActiveChange?.(active);
+  };
+
+  const clearAllInputs = () => {
+    [cameraInputRef, galleryInputRef, desktopInputRef].forEach((ref) => {
+      if (ref.current) ref.current.value = "";
+    });
+  };
+
+  const emitFile = async (file: File | null) => {
+    if (!file) {
+      setFileName(null);
+      onChange(null);
+      return;
+    }
+    setIsProcessing(true);
+    try {
+      const processed = compressImages ? await compressImageFile(file) : file;
+      setFileName(processed.name);
+      onChange(fileListFromFile(processed));
+    } finally {
+      setIsProcessing(false);
+      setPickerActive(false);
+    }
+  };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] ?? null;
+    await emitFile(file);
+    event.target.value = "";
+  };
+
+  const handlePickerOpen = () => {
+    if (!disabled) setPickerActive(true);
+  };
+
+  const handlePickerCancel = () => {
+    setPickerActive(false);
   };
 
   const handleRemoveFile = (e: React.MouseEvent) => {
+    e.preventDefault();
     e.stopPropagation();
-    if (inputRef.current) {
-      inputRef.current.value = "";
-    }
+    clearAllInputs();
     setFileName(null);
     onChange(null);
   };
 
+  const pickerInputProps = {
+    disabled: disabled || isProcessing,
+    className: "sr-only" as const,
+    onClick: handlePickerOpen,
+    onChange: handleFileChange,
+    onCancel: handlePickerCancel,
+  };
+
   const displayFileName = fileName || currentFileMeta?.name || null;
-  const hintPrimary = capture ? "Tomar foto o elegir archivo" : "Haz clic para subir";
+  const zoneClass = cn(
+    "flex flex-col items-center justify-center w-full border-2 border-dashed rounded-lg bg-muted/50 transition-colors",
+    compact ? "min-h-24 sm:min-h-32" : "min-h-32",
+    disabled && "opacity-50"
+  );
 
-  return (
-    <div className={cn("space-y-2", className)}>
-      <Label>{label}</Label>
-      <div
-        className={cn(
-          "flex flex-col items-center justify-center w-full border-2 border-dashed rounded-lg cursor-pointer bg-muted/50 transition-colors relative",
-          compact ? "h-24 sm:h-32" : "h-32",
-          disabled && "opacity-50 cursor-not-allowed"
-        )}
-        onClick={() => {
-          if (!disabled && inputRef.current) {
-            inputRef.current.click();
-          }
-        }}
-      >
-        <input
-          ref={inputRef}
-          type="file"
-          accept={accept}
-          capture={capture}
-          onChange={handleFileChange}
-          disabled={disabled}
-          className="hidden"
-        />
-
-        {displayFileName ? (
-          <div className="flex items-center justify-between w-full px-4 gap-2 min-w-0">
+  if (displayFileName) {
+    return (
+      <div className={cn("space-y-2", className)}>
+        <Label>{label}</Label>
+        <div className={cn(zoneClass, "px-4 py-3")}>
+          <div className="flex items-center justify-between w-full gap-2 min-w-0">
             <div className="flex items-center space-x-2 min-w-0 flex-1">
               <FileText className="h-5 w-5 text-primary flex-shrink-0" />
               <span className="text-sm font-medium truncate">{displayFileName}</span>
@@ -89,26 +133,114 @@ const FileUploadInput: React.FC<FileUploadInputProps> = ({
               variant="ghost"
               size="icon"
               onClick={handleRemoveFile}
-              disabled={disabled}
+              disabled={disabled || isProcessing}
               className="flex-shrink-0"
               aria-label="Quitar archivo"
             >
               <X className="h-4 w-4 text-destructive" />
             </Button>
           </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center pt-5 pb-6 px-4">
-            <UploadCloud className="w-8 h-8 mb-3 text-muted-foreground" />
-            <p className="mb-2 text-sm text-muted-foreground text-center">
-              <span className="font-semibold">{hintPrimary}</span>
-              {!capture && <span className="hidden sm:inline"> o arrastra y suelta</span>}
-            </p>
-            <p className="text-xs text-muted-foreground text-center">
-              PDF, JPG, PNG (Máx. 5&nbsp;MB)
-            </p>
-          </div>
-        )}
+        </div>
       </div>
+    );
+  }
+
+  return (
+    <div className={cn("space-y-2", className)}>
+      <Label>{label}</Label>
+
+      {useMobilePickers ? (
+        <>
+          <input
+            ref={cameraInputRef}
+            id={cameraInputId}
+            type="file"
+            accept="image/*"
+            capture={capture}
+            {...pickerInputProps}
+          />
+          <input
+            ref={galleryInputRef}
+            id={galleryInputId}
+            type="file"
+            accept={accept}
+            {...pickerInputProps}
+          />
+          <input
+            ref={desktopInputRef}
+            id={desktopInputId}
+            type="file"
+            accept={accept}
+            className="sr-only hidden sm:block"
+            disabled={disabled || isProcessing}
+            onClick={handlePickerOpen}
+            onChange={handleFileChange}
+            onCancel={handlePickerCancel}
+          />
+
+          <div className={cn("space-y-2 sm:hidden", zoneClass, "p-3")}>
+            <Label
+              htmlFor={cameraInputId}
+              className={cn(
+                "flex items-center justify-center gap-2 rounded-md border bg-background px-4 py-3 text-sm font-medium cursor-pointer w-full",
+                (disabled || isProcessing) && "pointer-events-none opacity-50"
+              )}
+            >
+              <Camera className="h-4 w-4 shrink-0" />
+              {isProcessing ? "Procesando foto…" : "Tomar foto del albarán"}
+            </Label>
+            <Label
+              htmlFor={galleryInputId}
+              className={cn(
+                "flex items-center justify-center gap-2 rounded-md border bg-background px-4 py-3 text-sm font-medium cursor-pointer w-full",
+                (disabled || isProcessing) && "pointer-events-none opacity-50"
+              )}
+            >
+              <ImageIcon className="h-4 w-4 shrink-0" />
+              Elegir de galería o PDF
+            </Label>
+          </div>
+
+          <label
+            htmlFor={desktopInputId}
+            className={cn(zoneClass, "cursor-pointer hidden sm:flex")}
+          >
+            <div className="flex flex-col items-center justify-center py-6 px-4 pointer-events-none">
+              <UploadCloud className="w-8 h-8 mb-3 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground text-center font-semibold">Haz clic para subir</p>
+              <p className="text-xs text-muted-foreground text-center mt-1">PDF, JPG, PNG (Máx. 5&nbsp;MB)</p>
+            </div>
+          </label>
+        </>
+      ) : (
+        <>
+          <input
+            ref={desktopInputRef}
+            id={desktopInputId}
+            type="file"
+            accept={accept}
+            capture={capture}
+            className="sr-only"
+            disabled={disabled || isProcessing}
+            onClick={handlePickerOpen}
+            onChange={handleFileChange}
+            onCancel={handlePickerCancel}
+          />
+          <label
+            htmlFor={desktopInputId}
+            className={cn(zoneClass, "cursor-pointer", disabled && "pointer-events-none")}
+          >
+            <div className="flex flex-col items-center justify-center py-6 px-4 pointer-events-none">
+              <UploadCloud className="w-8 h-8 mb-3 text-muted-foreground" />
+              <p className="mb-2 text-sm text-muted-foreground text-center">
+                <span className="font-semibold">Haz clic para subir</span>
+                <span className="hidden sm:inline"> o arrastra y suelta</span>
+              </p>
+              <p className="text-xs text-muted-foreground text-center">PDF, JPG, PNG (Máx. 5&nbsp;MB)</p>
+            </div>
+          </label>
+        </>
+      )}
     </div>
   );
 };
