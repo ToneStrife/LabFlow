@@ -68,14 +68,14 @@ const RequestCard: React.FC<{ request: SupabaseRequest; vendor?: Vendor; request
 
   return (
     <Card className="w-full shadow-md">
-      <CardHeader className="p-4 pb-2 flex flex-row items-start justify-between">
-        <CardTitle className="text-lg font-bold flex flex-col">
+      <CardHeader className="p-4 pb-2 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <CardTitle className="text-lg font-bold flex flex-col min-w-0">
           <Link to={`/requests/${request.id}`} className="text-sm text-primary hover:underline">
             Solicitud {displayRequestNumber}
           </Link>
           <span className="text-xs font-medium text-muted-foreground">{vendor?.name || "N/A"}</span>
         </CardTitle>
-        <Badge variant={getStatusBadgeVariant(request.status)} className="text-xs">
+        <Badge variant={getStatusBadgeVariant(request.status)} className="text-xs shrink-0 self-start sm:self-auto">
           {request.status === "Pending" && "Pendiente"}
           {request.status === "Quote Requested" && "Cot. Solicitada"}
           {request.status === "PO Requested" && "PO Solicitado"}
@@ -113,8 +113,8 @@ const RequestCard: React.FC<{ request: SupabaseRequest; vendor?: Vendor; request
           </ul>
         </div>
         
-        <div className="flex justify-end pt-2">
-          <RequestListActions request={request} {...actionProps} />
+        <div className="pt-2 w-full">
+          <RequestListActions request={request} {...actionProps} className="w-full" />
         </div>
       </CardContent>
     </Card>
@@ -208,7 +208,7 @@ const RequestListTable: React.FC<RequestListTableProps> = ({
                     </Badge>
                   </TableCell>
                   <TableCell>{date}</TableCell>
-                  <TableCell>
+                  <TableCell className="min-w-[120px]">
                     <RequestListActions request={request} onSendQuoteRequest={onSendQuoteRequest} {...actionProps} />
                   </TableCell>
                 </TableRow>

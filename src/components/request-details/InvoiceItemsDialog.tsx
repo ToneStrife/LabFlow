@@ -13,6 +13,8 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
+import { mobileDialogClass, dialogFooterMobileClass, dialogBodyScrollClass } from "@/lib/layout";
 import {
   Form,
   FormControl,
@@ -133,7 +135,7 @@ const InvoiceItemsDialog: React.FC<InvoiceItemsDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[700px]">
+      <DialogContent className={cn(mobileDialogClass, "sm:max-w-[700px] flex flex-col")}>
         <DialogHeader>
           <DialogTitle>Registrar Facturación</DialogTitle>
           <DialogDescription>Registra qué artículos se incluyen en esta factura.</DialogDescription>

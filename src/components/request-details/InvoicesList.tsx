@@ -30,9 +30,9 @@ const InvoicesList: React.FC<InvoicesListProps> = ({ requestId, onOpenInvoiceDia
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between space-y-0 pb-2">
         <CardTitle className="text-lg">Facturas</CardTitle>
-        <Button variant="outline" size="sm" onClick={onOpenInvoiceDialog}>
+        <Button variant="outline" size="sm" onClick={onOpenInvoiceDialog} className="w-full sm:w-auto shrink-0">
           <PlusCircle className="mr-2 h-4 w-4" /> Registrar Factura
         </Button>
       </CardHeader>
@@ -40,12 +40,12 @@ const InvoicesList: React.FC<InvoicesListProps> = ({ requestId, onOpenInvoiceDia
         {invoices && invoices.length > 0 ? (
           <div className="divide-y">
             {invoices.map((inv) => (
-              <div key={inv.id} className="flex items-center justify-between p-3 hover:bg-muted/50">
+              <div key={inv.id} className="flex flex-col gap-2 p-3 hover:bg-muted/50 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex flex-col min-w-0">
                   <span className="font-medium truncate">Factura: {inv.invoice_number}</span>
                   <span className="text-xs text-muted-foreground">{format(new Date(inv.invoiced_at), 'yyyy-MM-dd')}</span>
                 </div>
-                <div className="flex items-center space-x-2">
+                <div className="flex flex-wrap items-center gap-2">
                   {inv.invoice_url && (
                     <Button 
                       variant="link" 

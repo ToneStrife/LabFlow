@@ -40,6 +40,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAggregatedReceivedItems } from "@/hooks/use-packing-slips";
 import { generateSignedUrl } from "@/utils/supabase-storage";
 import { RequestStatus as RequestStatusType, Vendor, Profile, AccountManager, Project, ShippingAddress, BillingAddress } from "@/data/types";
+import { pageContainerClass, mobileDialogClass, dialogFooterMobileClass } from "@/lib/layout";
 
 const getFileNameFromPath = (filePath: string): string => {
   if (!filePath) return "Archivo";
@@ -357,11 +358,15 @@ const RequestDetails: React.FC = () => {
   const displayRequestNumber = request.request_number || `#${request.id.substring(0, 8)}`;
 
   return (
-    <div className="p-4 sm:p-6 max-w-full mx-auto space-y-6">
-      <div className="flex items-center justify-between mb-6">
-        <Button variant="outline" onClick={() => navigate("/dashboard")}><ArrowLeft className="mr-2 h-4 w-4" /> Volver al Panel</Button>
-        <div className="flex items-center space-x-4">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-gray-100">Solicitud {displayRequestNumber}</h1>
+    <div className={pageContainerClass}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6">
+        <Button variant="outline" onClick={() => navigate("/dashboard")} className="w-fit shrink-0">
+          <ArrowLeft className="mr-2 h-4 w-4" /> Volver al Panel
+        </Button>
+        <div className="flex items-center justify-between gap-2 min-w-0">
+          <h1 className="text-xl sm:text-3xl font-bold text-gray-800 dark:text-gray-100 truncate min-w-0">
+            Solicitud {displayRequestNumber}
+          </h1>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="icon" disabled={updateStatusMutation.isPending || deleteRequestMutation.isPending}><MoreVertical className="h-4 w-4" /></Button>
@@ -417,7 +422,7 @@ const RequestDetails: React.FC = () => {
       
       {/* ... (resto de diálogos sin cambios) */}
       <Dialog open={isEditMetadataDialogOpen} onOpenChange={setIsEditMetadataDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className={cn(mobileDialogClass, "sm:max-w-[600px]")}>
           <DialogHeader><DialogTitle>Editar Detalles</DialogTitle></DialogHeader>
           {request && isEditableByRole && <RequestFullEditForm request={request} profiles={profiles || []} onSubmit={handleUpdateFullRequest} isSubmitting={updateFullRequestMutation.isPending} />}
         </DialogContent>
@@ -426,7 +431,7 @@ const RequestDetails: React.FC = () => {
       <Dialog open={isApproveRequestDialogOpen} onOpenChange={setIsApproveRequestDialogOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>Aprobar Solicitud</DialogTitle></DialogHeader>
-          <DialogFooter className="flex flex-col sm:flex-row sm:justify-end sm:space-x-2">
+          <DialogFooter className={dialogFooterMobileClass}>
             <Button variant="outline" onClick={handleApproveOnly} disabled={updateStatusMutation.isPending}>Aprobar Solamente</Button>
             <Button onClick={handleApproveAndRequestQuoteEmail} disabled={updateStatusMutation.isPending}>Aprobar y Solicitar Cotización</Button>
           </DialogFooter>
@@ -434,7 +439,7 @@ const RequestDetails: React.FC = () => {
       </Dialog>
 
       <Dialog open={isStatusOverrideDialogOpen} onOpenChange={setIsStatusOverrideDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className={cn(mobileDialogClass, "sm:max-w-[425px]")}>
           <DialogHeader><DialogTitle>Anular Estado</DialogTitle></DialogHeader>
           <div className="py-4">
             <Select value={newStatus} onValueChange={(value) => setNewStatus(value as RequestStatusType)}>

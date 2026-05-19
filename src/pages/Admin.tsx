@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { PlusCircle, Loader2, MapPin, DollarSign, Users, Briefcase, Shield, Mail, ScrollText, Bell } from "lucide-react"; // Añadir iconos para pestañas
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import { pageContainerClass, mobileDialogClass } from "@/lib/layout";
 
 // Account Managers imports
 import AccountManagerTable from "@/components/AccountManagerTable";
@@ -329,7 +331,7 @@ const AdminPage = () => {
               <CardTitle className="text-xl">Gestión de Usuarios</CardTitle>
               <Dialog open={isInviteUserDialogOpen} onOpenChange={setIsInviteUserDialogOpen}>
                 <DialogTrigger asChild><Button size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Invitar Nuevo Usuario</Button></DialogTrigger>
-                <DialogContent className="sm:max-w-[425px]">
+                <DialogContent className={cn(mobileDialogClass, "sm:max-w-[425px]")}>
                   <DialogHeader><DialogTitle>Invitar Nuevo Usuario</DialogTitle></DialogHeader>
                   <InviteUserDialog onSubmit={handleInviteUser} onCancel={() => setIsInviteUserDialogOpen(false)} isSubmitting={inviteUserMutation.isPending} />
                 </DialogContent>
@@ -340,7 +342,7 @@ const AdminPage = () => {
             </CardContent>
           </Card>
           <Dialog open={isEditAddressDialogOpen} onOpenChange={setIsEditAddressDialogOpen}>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className={cn(mobileDialogClass, "sm:max-w-[425px]")}>
               <DialogHeader><DialogTitle>Editar Dirección</DialogTitle></DialogHeader>
               {editingAddress && <AddressForm initialData={editingAddress} onSubmit={(data) => handleEditAddress(editingAddress.id, data)} onCancel={() => setIsEditAddressDialogOpen(false)} isSubmitting={updateShippingMutation.isPending || updateBillingMutation.isPending} />}
             </DialogContent>
@@ -354,7 +356,7 @@ const AdminPage = () => {
               <CardTitle className="text-xl">Gerentes de Cuenta</CardTitle>
               <Dialog open={isAddManagerDialogOpen} onOpenChange={setIsAddManagerDialogOpen}>
                 <DialogTrigger asChild><Button size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Añadir Nuevo Gerente</Button></DialogTrigger>
-                <DialogContent className="sm:max-w-[425px]">
+                <DialogContent className={cn(mobileDialogClass, "sm:max-w-[425px]")}>
                   <DialogHeader><DialogTitle>Añadir Nuevo Gerente de Cuenta</DialogTitle></DialogHeader>
                   <AccountManagerForm onSubmit={handleAddManager} onCancel={() => setIsAddManagerDialogOpen(false)} isSubmitting={addAccountManagerMutation.isPending} />
                 </DialogContent>
@@ -365,7 +367,7 @@ const AdminPage = () => {
             </CardContent>
           </Card>
           <Dialog open={isEditManagerDialogOpen} onOpenChange={setIsEditManagerDialogOpen}>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className={cn(mobileDialogClass, "sm:max-w-[425px]")}>
               <DialogHeader><DialogTitle>Editar Gerente de Cuenta</DialogTitle></DialogHeader>
               {editingManager && <AccountManagerForm initialData={editingManager} onSubmit={(data) => handleEditManager(editingManager.id, data)} onCancel={() => setIsEditManagerDialogOpen(false)} isSubmitting={updateAccountManagerMutation.isPending} />}
             </DialogContent>
@@ -379,7 +381,7 @@ const AdminPage = () => {
               <CardTitle className="text-xl">Proyectos</CardTitle>
               <Dialog open={isAddProjectDialogOpen} onOpenChange={setIsAddProjectDialogOpen}>
                 <DialogTrigger asChild><Button size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Añadir Nuevo Proyecto</Button></DialogTrigger>
-                <DialogContent className="sm:max-w-[425px]">
+                <DialogContent className={cn(mobileDialogClass, "sm:max-w-[425px]")}>
                   <DialogHeader><DialogTitle>Añadir Nuevo Proyecto</DialogTitle></DialogHeader>
                   <ProjectForm onSubmit={handleAddProject} onCancel={() => setIsAddProjectDialogOpen(false)} isSubmitting={addProjectMutation.isPending} />
                 </DialogContent>
@@ -390,7 +392,7 @@ const AdminPage = () => {
             </CardContent>
           </Card>
           <Dialog open={isEditProjectDialogOpen} onOpenChange={setIsEditProjectDialogOpen}>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className={cn(mobileDialogClass, "sm:max-w-[425px]")}>
               <DialogHeader><DialogTitle>Editar Proyecto</DialogTitle></DialogHeader>
               {editingProject && <ProjectForm initialData={editingProject} onSubmit={(data) => handleEditProject(editingProject.id, data)} onCancel={() => setIsEditProjectDialogOpen(false)} isSubmitting={updateProjectMutation.isPending} />}
             </DialogContent>
@@ -490,7 +492,7 @@ const AdminPage = () => {
 
       {/* Edit/Add Address Dialog */}
       <Dialog open={isAddAddressDialogOpen || isEditAddressDialogOpen} onOpenChange={isEditAddressDialogOpen ? setIsEditAddressDialogOpen : setIsAddAddressDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className={cn(mobileDialogClass, "sm:max-w-[425px]")}>
           <DialogHeader>
             <DialogTitle>{editingAddress ? "Editar Dirección" : `Añadir Nueva Dirección de ${currentAddressType === 'shipping' ? 'Envío' : 'Facturación'}`}</DialogTitle>
           </DialogHeader>

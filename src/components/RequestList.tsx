@@ -23,6 +23,8 @@ import ReceiveItemsDialog from "@/components/ReceiveItemsDialog";
 import MergeRequestsDialog from "@/components/MergeRequestsDialog";
 import { useShippingAddresses, useBillingAddresses } from "@/hooks/use-addresses";
 import ApproveRequestListDialog from "@/components/request-list/ApproveRequestListDialog";
+import { cn } from "@/lib/utils";
+import { mobileDialogClass, dialogFooterMobileClass } from "@/lib/layout";
 
 
 // Función auxiliar para obtener el nombre de archivo legible (copiada de RequestFilesCard.tsx)
@@ -418,7 +420,7 @@ const RequestList: React.FC = () => {
       )}
       
       <Dialog open={isDenyDialogOpen} onOpenChange={setIsDenyDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className={cn(mobileDialogClass, "sm:max-w-[425px]")}>
           <DialogHeader>
             <DialogTitle>Denegar Solicitud</DialogTitle>
             <DialogDescription>
@@ -437,7 +439,7 @@ const RequestList: React.FC = () => {
       </Dialog>
 
       <Dialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className={cn(mobileDialogClass, "sm:max-w-[425px]")}>
           <DialogHeader>
             <DialogTitle>Cancelar Solicitud</DialogTitle>
             <DialogDescription>

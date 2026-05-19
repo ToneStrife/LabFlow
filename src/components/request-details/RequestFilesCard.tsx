@@ -89,13 +89,13 @@ const FileRow: React.FC<FileRowProps> = ({ label, filePath, fileType, onUploadCl
   const buttonDisabled = isGenerating || isUploading;
 
   return (
-    <div className="flex items-center justify-between p-3 rounded-md hover:bg-muted/50 border-b last:border-b-0">
-      <div className="flex items-center min-w-0 flex-shrink-0">
-        <FileText className="h-5 w-5 mr-3 text-muted-foreground" />
+    <div className="flex flex-col gap-2 p-3 rounded-md hover:bg-muted/50 border-b last:border-b-0 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex items-center min-w-0">
+        <FileText className="h-5 w-5 mr-3 text-muted-foreground shrink-0" />
         <span className="font-medium text-sm">{label}</span>
       </div>
       
-      <div className="flex items-center space-x-2 min-w-0 flex-grow justify-end">
+      <div className="flex flex-wrap items-center gap-2 min-w-0 justify-end">
         {filePath ? (
           <>
             <Button 

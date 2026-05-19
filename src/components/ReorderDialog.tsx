@@ -13,6 +13,8 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
+import { mobileDialogClass, dialogFooterMobileClass } from "@/lib/layout";
 import {
   Form,
   FormControl,
@@ -127,7 +129,7 @@ const ReorderDialog: React.FC<ReorderDialogProps> = ({ isOpen, onOpenChange, ite
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className={cn(mobileDialogClass, "sm:max-w-[600px]")}>
         <DialogHeader>
           <DialogTitle>Reordenar Artículos de Inventario</DialogTitle>
           <DialogDescription>

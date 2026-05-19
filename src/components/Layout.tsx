@@ -55,13 +55,14 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       )}
 
       {/* FIX: Añadir overflow-x-hidden aquí para prevenir el desbordamiento horizontal en el móvil */}
-      <div className="flex flex-col flex-1 overflow-x-hidden">
+      <div className="flex flex-col flex-1 min-w-0 overflow-x-hidden">
         {/* Header */}
-        <header className="sticky top-0 z-40 w-full border-b bg-card shadow-sm p-4 flex items-center justify-between">
+        <header className="sticky top-0 z-40 w-full border-b bg-card shadow-sm p-3 sm:p-4 flex items-center justify-between gap-2 min-w-0">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
           {isMobile && (
             <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon">
+                <Button variant="ghost" size="icon" className="shrink-0">
                   <Menu className="h-6 w-6" />
                 </Button>
               </SheetTrigger>
@@ -80,14 +81,21 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               </SheetContent>
             </Sheet>
           )}
-          
-          <h1 className="text-xl font-semibold text-gray-700 dark:text-gray-300 hidden sm:block">Gestión de Solicitudes de Laboratorio</h1>
+          {isMobile && (
+            <Link to="/dashboard" className="text-lg font-bold text-gray-800 dark:text-gray-100 truncate">
+              LabFlow
+            </Link>
+          )}
+          <h1 className="text-xl font-semibold text-gray-700 dark:text-gray-300 hidden sm:block truncate">
+            Gestión de Solicitudes de Laboratorio
+          </h1>
+          </div>
 
           {/* User Profile Dropdown */}
           {profile ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                <Button variant="ghost" className="relative h-8 w-8 rounded-full shrink-0">
                   <Avatar className="h-8 w-8">
                     <AvatarFallback className="bg-primary text-primary-foreground text-sm">{userInitials}</AvatarFallback>
                   </Avatar>
@@ -122,7 +130,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         </header>
 
         {/* Main Content: Eliminar overflow-auto aquí ya que el padre lo maneja */}
-        <main className="flex-1 p-4 sm:p-6 bg-gray-50 dark:bg-gray-900">
+        <main className="flex-1 min-w-0 p-4 sm:p-6 bg-gray-50 dark:bg-gray-900 pb-[env(safe-area-inset-bottom,0px)]">
           {children}
         </main>
       </div>

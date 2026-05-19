@@ -15,7 +15,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
-import EditReceivedItemDialog from "./EditReceivedItemDialog"; // Importar el nuevo componente
+import EditReceivedItemDialog from "./EditReceivedItemDialog";
+import { cn } from "@/lib/utils";
+import { mobileDialogClass, dialogFooterMobileClass } from "@/lib/layout";
 
 interface PackingSlipsListProps {
   requestId: string;
@@ -60,7 +62,7 @@ const SlipItemsDialog: React.FC<{ slipId: string; slipNumber: string; requestId:
     return (
         <>
             <Dialog open={isOpen} onOpenChange={onOpenChange}>
-                <DialogContent className="sm:max-w-[600px]">
+                <DialogContent className={cn(mobileDialogClass, "sm:max-w-[600px]")}>
                     <DialogHeader>
                         <DialogTitle>Artículos del Albarán {slipNumber}</DialogTitle>
                         <DialogDescription>
@@ -222,9 +224,9 @@ const PackingSlipsList: React.FC<PackingSlipsListProps> = ({ requestId, requestN
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-lg">Albaranes de Recepción ({slips?.length || 0})</CardTitle>
-        <div className="flex space-x-2">
+      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between space-y-0 pb-2">
+        <CardTitle className="text-base sm:text-lg">Albaranes de Recepción ({slips?.length || 0})</CardTitle>
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto sm:justify-end">
             {isRequestReceived && (
                 <Button 
                     variant="destructive" 
@@ -232,13 +234,15 @@ const PackingSlipsList: React.FC<PackingSlipsListProps> = ({ requestId, requestN
                     onClick={handleRevertReception}
                     disabled={revertReceptionMutation.isPending}
                     title="Revertir la recepción completa de esta solicitud"
+                    className="flex-1 min-w-[140px] sm:flex-initial"
                 >
                     {revertReceptionMutation.isPending ? (
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     ) : (
                         <RotateCcw className="h-4 w-4 mr-2" />
                     )}
-                    Revertir Recepción
+                    <span className="sm:hidden">Revertir</span>
+                    <span className="hidden sm:inline">Revertir Recepción</span>
                 </Button>
             )}
             <SlipUploadButton requestId={requestId} />
@@ -248,8 +252,8 @@ const PackingSlipsList: React.FC<PackingSlipsListProps> = ({ requestId, requestN
         {slips && slips.length > 0 ? (
           <div className="divide-y">
             {slips.map((slip, index) => (
-              <div key={slip.id} className="flex items-center justify-between p-3 hover:bg-muted/50">
-                <div className="flex flex-col min-w-0">
+              <div key={slip.id} className="flex flex-col gap-3 p-3 hover:bg-muted/50 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-col min-w-0 flex-1">
                   <span className="font-medium truncate" title={slip.slip_number}>
                     {formatSlipName(slip.slip_number, index)}
                   </span>
@@ -258,7 +262,7 @@ const PackingSlipsList: React.FC<PackingSlipsListProps> = ({ requestId, requestN
                   </span>
                 </div>
                 
-                <div className="flex items-center space-x-2">
+                <div className="flex flex-wrap items-center gap-1.5">
                     {/* Botón de Ver Ítems */}
                     <Button
                         variant="ghost"
@@ -287,7 +291,7 @@ const PackingSlipsList: React.FC<PackingSlipsListProps> = ({ requestId, requestN
                         size="sm" 
                         onClick={() => handleViewClick(slip.slip_url!)} 
                         disabled={isGenerating === slip.slip_url}
-                        className="text-xs text-blue-600 hover:underline flex items-center p-0 h-auto truncate max-w-[150px] sm:max-w-[200px]"
+                        className="text-xs text-blue-600 hover:underline flex items-center p-0 h-auto truncate max-w-full sm:max-w-[200px]"
                         title={getFileNameFromPath(slip.slip_url)}
                       >
                         {isGenerating === slip.slip_url ? (
@@ -323,7 +327,7 @@ const PackingSlipsList: React.FC<PackingSlipsListProps> = ({ requestId, requestN
       
       {/* Diálogo de Confirmación de Eliminación */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className={cn(mobileDialogClass, "sm:max-w-[425px]")}>
           <DialogHeader>
             <DialogTitle>Eliminar Albarán</DialogTitle>
             <DialogDescription>
@@ -343,7 +347,7 @@ const PackingSlipsList: React.FC<PackingSlipsListProps> = ({ requestId, requestN
       
       {/* Diálogo de Edición de Número de Albarán */}
       <Dialog open={isEditSlipDialogOpen} onOpenChange={setIsEditSlipDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className={cn(mobileDialogClass, "sm:max-w-[425px]")}>
           <DialogHeader>
             <DialogTitle>Editar Número de Albarán</DialogTitle>
             <DialogDescription>

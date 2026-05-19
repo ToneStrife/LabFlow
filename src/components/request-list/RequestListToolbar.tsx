@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RequestStatus } from "@/data/types";
@@ -18,10 +19,15 @@ const RequestListToolbar: React.FC<RequestListToolbarProps> = ({
   filterStatus,
   onStatusChange,
 }) => {
+  const isMobile = useIsMobile();
   return (
     <div className="flex flex-col sm:flex-row gap-4">
       <Input
-        placeholder="Buscar solicitudes (producto, catálogo, marca, proveedor, solicitante, gerente, cotización, PO)..."
+        placeholder={
+          isMobile
+            ? "Buscar solicitudes..."
+            : "Buscar solicitudes (producto, catálogo, marca, proveedor, solicitante, gerente, cotización, PO)..."
+        }
         value={searchTerm}
         onChange={(e) => onSearchChange(e.target.value)}
         className="flex-1"

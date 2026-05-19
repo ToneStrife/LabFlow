@@ -9,6 +9,8 @@ import VendorForm from "@/components/VendorForm";
 import { useVendors, useAddVendor, useUpdateVendor, useDeleteVendor, VendorFormValues } from "@/hooks/use-vendors";
 import { Vendor } from "@/data/types"; // Corrected import
 import { toast } from "sonner";
+import { pageContainerClass, pageHeaderClass, mobileDialogClass } from "@/lib/layout";
+import { cn } from "@/lib/utils";
 
 // Definir un tipo que incluya el ID para el estado de edición
 interface EditingVendorData extends VendorFormValues {
@@ -80,16 +82,16 @@ const Vendors = () => {
   }
 
   return (
-    <div className="p-4 sm:p-6 max-w-full mx-auto">
-      <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
-        <h1 className="text-3xl font-bold">Directorio de Proveedores</h1>
+    <div className={pageContainerClass}>
+      <div className={cn(pageHeaderClass, "items-center mb-2 sm:mb-6")}>
+        <h1 className="text-2xl sm:text-3xl font-bold">Directorio de Proveedores</h1>
         <Dialog open={isAddVendorDialogOpen} onOpenChange={setIsAddVendorDialogOpen}>
           <DialogTrigger asChild>
             <Button>
               <PlusCircle className="mr-2 h-4 w-4" /> Añadir Nuevo Proveedor
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
+          <DialogContent className={cn(mobileDialogClass, "sm:max-w-[425px]")}>
             <DialogHeader>
               <DialogTitle>Añadir Nuevo Proveedor</DialogTitle>
             </DialogHeader>
@@ -112,7 +114,7 @@ const Vendors = () => {
 
       {/* Edit Vendor Dialog */}
       <Dialog open={isEditVendorDialogOpen} onOpenChange={setIsEditVendorDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className={cn(mobileDialogClass, "sm:max-w-[425px]")}>
           <DialogHeader>
             <DialogTitle>Editar Proveedor</DialogTitle>
           </DialogHeader>

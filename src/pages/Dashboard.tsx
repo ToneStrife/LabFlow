@@ -22,6 +22,7 @@ import { useRequests } from "@/hooks/use-requests";
 import { usePendingItems } from "@/hooks/use-pending-items";
 import { usePendingInvoices } from "@/hooks/use-pending-invoices"; // Nuevo hook
 import { cn } from "@/lib/utils";
+import { pageContainerClass, pageHeaderClass } from "@/lib/layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSession } from "@/components/SessionContextProvider";
 
@@ -41,7 +42,7 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ title, value, icon, colorClas
       </div>
       <div>
         <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-tight leading-none mb-1">{title}</p>
-        <p className="text-xl font-bold leading-none">{value}</p>
+        <p className="text-base sm:text-xl font-bold leading-none">{value}</p>
       </div>
     </CardContent>
   </Card>
@@ -87,13 +88,13 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
-      <div className="flex justify-between items-end">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Panel de Control</h1>
+    <div className={pageContainerClass}>
+      <div className={pageHeaderClass}>
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Panel de Control</h1>
           <p className="text-sm text-muted-foreground">Resumen de actividad del laboratorio.</p>
         </div>
-        <Button onClick={() => navigate("/new-request")} size="sm" className="h-9">
+        <Button onClick={() => navigate("/new-request")} size="sm" className="h-9 w-full sm:w-auto shrink-0">
           <PlusCircle className="mr-2 h-4 w-4" /> Nueva Solicitud
         </Button>
       </div>
@@ -135,10 +136,10 @@ const Dashboard = () => {
       </div>
 
       <Tabs defaultValue="pending-items" className="w-full">
-        <TabsList className="mb-4 bg-transparent border-b rounded-none w-full justify-start h-auto p-0 gap-6 overflow-x-auto">
+        <TabsList className="mb-4 bg-transparent border-b rounded-none w-full justify-start h-auto p-0 gap-4 sm:gap-6 overflow-x-auto flex-nowrap">
           <TabsTrigger 
             value="pending-items" 
-            className="data-[state=active]:border-primary data-[state=active]:bg-transparent border-b-2 border-transparent rounded-none px-0 pb-2 shadow-none"
+            className="data-[state=active]:border-primary data-[state=active]:bg-transparent border-b-2 border-transparent rounded-none px-1 sm:px-0 pb-2 shadow-none whitespace-nowrap shrink-0 text-sm sm:text-base"
           >
             <ListTodo className="h-4 w-4 mr-2" /> Artículos Pendientes
           </TabsTrigger>
@@ -146,7 +147,7 @@ const Dashboard = () => {
           {isAdmin && (
             <TabsTrigger 
               value="pending-invoices" 
-              className="data-[state=active]:border-primary data-[state=active]:bg-transparent border-b-2 border-transparent rounded-none px-0 pb-2 shadow-none"
+              className="data-[state=active]:border-primary data-[state=active]:bg-transparent border-b-2 border-transparent rounded-none px-1 sm:px-0 pb-2 shadow-none whitespace-nowrap shrink-0 text-sm sm:text-base"
             >
               <Receipt className="h-4 w-4 mr-2" /> Sin Factura
             </TabsTrigger>
@@ -154,7 +155,7 @@ const Dashboard = () => {
 
           <TabsTrigger 
             value="all-requests" 
-            className="data-[state=active]:border-primary data-[state=active]:bg-transparent border-b-2 border-transparent rounded-none px-0 pb-2 shadow-none"
+            className="data-[state=active]:border-primary data-[state=active]:bg-transparent border-b-2 border-transparent rounded-none px-1 sm:px-0 pb-2 shadow-none whitespace-nowrap shrink-0 text-sm sm:text-base"
           >
             <LayoutDashboard className="h-4 w-4 mr-2" /> Historial
           </TabsTrigger>

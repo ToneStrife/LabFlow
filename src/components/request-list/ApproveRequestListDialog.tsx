@@ -10,6 +10,8 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
+import { mobileDialogClass, dialogFooterMobileClass } from "@/lib/layout";
 import { Loader2 } from "lucide-react";
 import { SupabaseRequest } from "@/data/types";
 

@@ -24,6 +24,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Paperclip } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import { mobileDialogClass } from "@/lib/layout";
 import RichTextEditor from './RichTextEditor'; // Importar el nuevo componente
 
 const attachmentSchema = z.object({
@@ -99,7 +101,7 @@ const EmailDialog: React.FC<EmailDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className={cn(mobileDialogClass, "sm:max-w-[600px] gap-4")}>
         <DialogHeader>
           <DialogTitle>Redactar Correo Electrónico</DialogTitle>
           <DialogDescription>
@@ -182,7 +184,7 @@ const EmailDialog: React.FC<EmailDialogProps> = ({
                 </div>
               </div>
             )}
-            <div className="flex justify-end space-x-2 pt-4">
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4 shrink-0">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSending}>
                 Cancelar
               </Button>

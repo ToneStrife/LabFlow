@@ -16,6 +16,8 @@ import { Loader2, Info } from "lucide-react";
 import { FileType } from "@/hooks/use-requests";
 import { toast } from "sonner";
 import FileUploadInput from "../FileUploadInput";
+import { cn } from "@/lib/utils";
+import { mobileDialogClass, dialogFooterMobileClass } from "@/lib/layout";
 
 interface FileUploadDialogProps {
   isOpen: boolean;
@@ -151,7 +153,7 @@ const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       {/* Mantén el contenido montado incluso cuando esté cerrado */}
       <DialogContent 
-        className="sm:max-w-[425px]" 
+        className={cn(mobileDialogClass, "sm:max-w-[425px] gap-4")} 
         forceMount
         onPointerDownOutside={(e) => e.preventDefault()}
       >
@@ -166,15 +168,15 @@ const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
 
         <div className="grid gap-4 py-4">
           {fileType === "po" && (
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="poNumber" className="text-right">
+            <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-2 sm:gap-4">
+              <Label htmlFor="poNumber" className="sm:text-right">
                 Número de PO {fileType === "po" && !selectedFile ? <span className="text-red-500">*</span> : "(Opcional)"}
               </Label>
               <Input
                 id="poNumber"
                 value={poNumber}
                 onChange={(e) => setPoNumber(e.target.value)}
-                className="col-span-3"
+                className="sm:col-span-3"
                 placeholder="ej. PO-12345"
                 disabled={isUploading}
               />
@@ -190,11 +192,11 @@ const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
           />
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isUploading}>
+        <DialogFooter className={dialogFooterMobileClass}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isUploading} className="w-full sm:w-auto">
             Cancelar
           </Button>
-          <Button onClick={handleSubmit} disabled={isSubmitDisabled}>
+          <Button onClick={handleSubmit} disabled={isSubmitDisabled} className="w-full sm:w-auto">
             {isUploading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Subiendo...

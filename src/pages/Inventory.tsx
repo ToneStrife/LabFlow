@@ -8,7 +8,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useInventory, useAddInventoryItem, useUpdateInventoryItem, useDeleteInventoryItem, InventoryItem, InventoryItemFormData } from "@/hooks/use-inventory";
 import InventoryForm, { InventoryFormValues } from "@/components/InventoryForm";
 import InventoryToolbar from "@/components/InventoryToolbar"; // Importar Toolbar
-import ReorderDialog from "@/components/ReorderDialog"; // Importar ReorderDialog
+import ReorderDialog from "@/components/ReorderDialog";
+import { pageContainerClass, pageHeaderClass, mobileDialogClass } from "@/lib/layout";
+import { cn } from "@/lib/utils";
 
 const Inventory = () => {
   const { data: inventoryItems, isLoading, error } = useInventory();
@@ -87,16 +89,16 @@ const Inventory = () => {
   }
 
   return (
-    <div className="p-4 sm:p-6 max-w-full mx-auto">
-      <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
-        <h1 className="text-3xl font-bold">Inventario</h1>
+    <div className={pageContainerClass}>
+      <div className={cn(pageHeaderClass, "items-center mb-2 sm:mb-6")}>
+        <h1 className="text-2xl sm:text-3xl font-bold">Inventario</h1>
         <Dialog open={isAddInventoryDialogOpen} onOpenChange={setIsAddInventoryDialogOpen}>
           <DialogTrigger asChild>
             <Button>
               <PlusCircle className="mr-2 h-4 w-4" /> Añadir Nuevo Artículo
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
+          <DialogContent className={cn(mobileDialogClass, "sm:max-w-[425px]")}>
             <DialogHeader>
               <DialogTitle>Añadir Nuevo Artículo al Inventario</DialogTitle>
             </DialogHeader>
@@ -131,7 +133,7 @@ const Inventory = () => {
 
       {/* Edit Inventory Item Dialog */}
       <Dialog open={isEditInventoryDialogOpen} onOpenChange={setIsEditInventoryDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className={cn(mobileDialogClass, "sm:max-w-[425px]")}>
           <DialogHeader>
             <DialogTitle>Editar Artículo de Inventario</DialogTitle>
           </DialogHeader>

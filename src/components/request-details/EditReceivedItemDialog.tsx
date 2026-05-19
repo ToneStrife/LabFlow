@@ -13,6 +13,8 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
+import { mobileDialogClass, dialogFooterMobileClass } from "@/lib/layout";
 import {
   Form,
   FormControl,
@@ -93,7 +95,7 @@ const EditReceivedItemDialog: React.FC<EditReceivedItemDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[450px]">
+      <DialogContent className={cn(mobileDialogClass, "sm:max-w-[450px]")}>
         <DialogHeader>
           <DialogTitle>Corregir Cantidad Recibida</DialogTitle>
           <DialogDescription>

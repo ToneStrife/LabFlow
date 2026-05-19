@@ -13,6 +13,8 @@ import { useExpenditureAnalytics } from "@/hooks/use-expenditure-analytics";
 import ExpenditureTable from "@/components/ExpenditureTable";
 import ExpenditureForm from "@/components/ExpenditureForm";
 import ImportExpendituresDialog from "@/components/ImportExpendituresDialog";
+import { pageContainerClass, pageHeaderClass, mobileDialogClass } from "@/lib/layout";
+import { cn } from "@/lib/utils";
 import SpendingByProjectChart from "@/components/charts/SpendingByProjectChart";
 import SpendingByVendorChart from "@/components/charts/SpendingByVendorChart";
 import SpendingByYearChart from "@/components/charts/SpendingByYearChart";
@@ -79,10 +81,10 @@ const Expenditures = () => {
   const unaccountedCount = unaccountedRequests?.length || 0;
 
   return (
-    <div className="p-4 sm:p-6 max-w-full mx-auto">
-      <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
-        <h1 className="text-3xl font-bold">Gestión de Gastos</h1>
-        <div className="flex space-x-2">
+    <div className={pageContainerClass}>
+      <div className={cn(pageHeaderClass, "items-center mb-2 sm:mb-6")}>
+        <h1 className="text-2xl sm:text-3xl font-bold">Gestión de Gastos</h1>
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
           {unaccountedCount > 0 && (
             <Button 
               variant="secondary" 
@@ -98,7 +100,7 @@ const Expenditures = () => {
                 <PlusCircle className="mr-2 h-4 w-4" /> Registrar Nuevo Gasto
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className={cn(mobileDialogClass, "sm:max-w-[425px]")}>
               <DialogHeader>
                 <DialogTitle>Registrar Nuevo Gasto</DialogTitle>
               </DialogHeader>
@@ -161,7 +163,7 @@ const Expenditures = () => {
 
       {/* Edit Expenditure Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className={cn(mobileDialogClass, "sm:max-w-[425px]")}>
           <DialogHeader>
             <DialogTitle>Editar Gasto</DialogTitle>
           </DialogHeader>

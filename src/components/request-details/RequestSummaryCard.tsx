@@ -102,8 +102,8 @@ const RequestSummaryCard: React.FC<RequestSummaryCardProps> = ({ request, vendor
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
-        <CardTitle className="text-xl sm:text-2xl font-bold flex flex-col items-start">
+      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between space-y-0 pb-2">
+        <CardTitle className="text-lg sm:text-2xl font-bold flex flex-col items-start min-w-0">
           <span className="text-base font-semibold text-muted-foreground">Solicitud {displayRequestNumber}</span>
           <span>{vendor?.name || "N/A"}</span>
         </CardTitle>
@@ -117,7 +117,7 @@ const RequestSummaryCard: React.FC<RequestSummaryCardProps> = ({ request, vendor
         </div>
       </CardHeader>
       <CardContent className="space-y-6 pt-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
           <div>
             <p className="text-sm text-muted-foreground">Solicitante</p>
             <p className="font-medium">{requesterName}</p>
@@ -147,7 +147,7 @@ const RequestSummaryCard: React.FC<RequestSummaryCardProps> = ({ request, vendor
 
         <Separator />
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
           <div>
             <p className="text-sm text-muted-foreground">Fecha de Envío</p>
             <p className="font-medium">{dateSubmitted}</p>

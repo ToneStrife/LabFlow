@@ -10,6 +10,8 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
+import { mobileDialogClass, dialogFooterMobileClass } from "@/lib/layout";
 import { Loader2, CheckCheck, DollarSign } from "lucide-react";
 import { SupabaseRequest } from "@/data/types";
 import { useAddExpenditure, ExpenditureFormValues } from "@/hooks/use-expenditures";
@@ -136,7 +138,7 @@ const ImportExpendituresDialog: React.FC<ImportExpendituresDialogProps> = ({
   if (isLoading) {
     return (
       <Dialog open={isOpen} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[800px]">
+        <DialogContent className={cn(mobileDialogClass, "sm:max-w-[800px]")}>
           <div className="flex justify-center items-center h-40">
             <Loader2 className="h-6 w-6 animate-spin mr-2" /> Cargando datos de importación...
           </div>
@@ -147,7 +149,7 @@ const ImportExpendituresDialog: React.FC<ImportExpendituresDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[800px]">
+      <DialogContent className={cn(mobileDialogClass, "sm:max-w-[800px]")}>
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <DollarSign className="mr-2 h-5 w-5" /> Importar Gastos de Solicitudes Recibidas

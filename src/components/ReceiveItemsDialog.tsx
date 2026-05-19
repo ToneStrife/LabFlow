@@ -22,13 +22,15 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Loader2, CheckSquare, CheckCheck, Info, List } from "lucide-react"; // Importar List
+import { Loader2, CheckSquare, CheckCheck, Info, List } from "lucide-react";
 import { SupabaseRequestItem } from "@/data/types";
 import { useReceiveItems, useAggregatedReceivedItems } from "@/hooks/use-packing-slips";
 import { toast } from "sonner";
+import FileUploadInput from "@/components/FileUploadInput";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
+import { mobileDialogClass, dialogFooterMobileClass, dialogBodyScrollClass } from "@/lib/layout";
 
-// Esquema para la cantidad recibida de un ítem
 const receivedItemSchema = z.object({
   requestItemId: z.string(),
   productName: z.string(),
@@ -36,14 +38,12 @@ const receivedItemSchema = z.object({
   quantityPreviouslyReceived: z.number(),
   quantityReceived: z.preprocess(
     (val) => Number(val),
-    // Solo permitir números enteros no negativos para la recepción normal
-    z.number().int({ message: "La cantidad debe ser un número entero." }).min(0, { message: "La cantidad no puede ser negativa." }) 
+    z.number().int({ message: "La cantidad debe ser un número entero." }).min(0, { message: "La cantidad no puede ser negativa." })
   ),
 });
 
-// Esquema principal del formulario
 const receiveFormSchema = z.object({
-  slipNumber: z.string().optional().nullable(), // Ahora opcional/nullable
+  slipNumber: z.string().optional().nullable(),
   items: z.array(receivedItemSchema).min(1),
 });
 
@@ -64,125 +64,102 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
 }) => {
   const { data: aggregatedReceived, isLoading: isLoadingReceived } = useAggregatedReceivedItems(requestId);
   const receiveItemsMutation = useReceiveItems();
-  
+  const [slipFile, setSlipFile] = React.useState<File | null>(null);
   const PERSIST_KEY = `receiveItemsForm:${requestId}`;
-  
+
   const initialItems = React.useMemo(() => {
     if (!requestItems || !aggregatedReceived) return [];
-
-    return requestItems.map(item => {
-      const previouslyReceived = aggregatedReceived.find(agg => agg.request_item_id === item.id)?.total_received || 0;
+    return requestItems.map((item) => {
+      const previouslyReceived = aggregatedReceived.find((agg) => agg.request_item_id === item.id)?.total_received || 0;
       const remaining = item.quantity - previouslyReceived;
-
       return {
         requestItemId: item.id,
         productName: item.product_name,
         quantityOrdered: item.quantity,
         quantityPreviouslyReceived: previouslyReceived,
-        quantityReceived: remaining > 0 ? remaining : 0, // Sugerir la cantidad restante
+        quantityReceived: remaining > 0 ? remaining : 0,
       };
     });
   }, [requestItems, aggregatedReceived]);
 
   const form = useForm<ReceiveFormValues>({
     resolver: zodResolver(receiveFormSchema),
-    defaultValues: {
-      slipNumber: null, // Inicializar como null
-      items: initialItems,
-    },
-    values: { 
-      slipNumber: null, // Inicializar como null
-      items: initialItems,
-    }
+    defaultValues: { slipNumber: null, items: initialItems },
+    values: { slipNumber: null, items: initialItems },
   });
 
-  const { fields } = useFieldArray({
-    control: form.control,
-    name: "items",
-  });
-  
-  // --- Lógica de Persistencia ---
+  const { fields } = useFieldArray({ control: form.control, name: "items" });
   const watchedValues = useWatch({ control: form.control });
   const [hasRestored, setHasRestored] = React.useState(false);
-  
-  // 1. Restaurar estado al montar (o cuando cambie initialItems)
+
   React.useEffect(() => {
     if (isLoadingReceived || hasRestored) return;
-    
     const raw = localStorage.getItem(PERSIST_KEY);
     if (raw) {
       try {
         const saved = JSON.parse(raw);
-        
-        // Restaurar slipNumber
-        form.setValue('slipNumber', saved.slipNumber ?? null);
-        
-        // Restaurar cantidades recibidas
+        form.setValue("slipNumber", saved.slipNumber ?? null);
         if (saved.items && Array.isArray(saved.items)) {
-          const updatedItems = initialItems.map(initialItem => {
-            const savedItem = saved.items.find((s: any) => s.requestItemId === initialItem.requestItemId);
-            if (savedItem && savedItem.quantityReceived !== undefined) {
-              // Solo restaurar si el valor guardado es no negativo (para evitar restaurar correcciones fallidas)
-              if (savedItem.quantityReceived >= 0) {
-                return { ...initialItem, quantityReceived: savedItem.quantityReceived };
-              }
+          const updatedItems = initialItems.map((initialItem) => {
+            const savedItem = saved.items.find(
+              (s: { requestItemId: string; quantityReceived?: number }) => s.requestItemId === initialItem.requestItemId
+            );
+            if (savedItem && savedItem.quantityReceived !== undefined && savedItem.quantityReceived >= 0) {
+              return { ...initialItem, quantityReceived: savedItem.quantityReceived };
             }
             return initialItem;
           });
-          form.setValue('items', updatedItems as any, { shouldDirty: true });
+          form.setValue("items", updatedItems as ReceiveFormValues["items"], { shouldDirty: true });
         }
-        
         setHasRestored(true);
-      } catch (e) {
-        console.error("Failed to restore receive items form state:", e);
+      } catch {
         localStorage.removeItem(PERSIST_KEY);
       }
     } else {
-        setHasRestored(true); // Marcar como restaurado incluso si no había datos
+      setHasRestored(true);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialItems, isLoadingReceived]); // Dependencias: initialItems y loading
+  }, [initialItems, isLoadingReceived]);
 
-  // 2. Autosave (guardar solo slipNumber y quantityReceived de los items)
   React.useEffect(() => {
     if (!hasRestored) return;
-    
     const id = setTimeout(() => {
-      const dataToSave = {
-        slipNumber: watchedValues.slipNumber,
-        items: watchedValues.items?.map(item => ({
-          requestItemId: item.requestItemId,
-          quantityReceived: item.quantityReceived,
-        })),
-      };
-      localStorage.setItem(PERSIST_KEY, JSON.stringify(dataToSave));
+      localStorage.setItem(
+        PERSIST_KEY,
+        JSON.stringify({
+          slipNumber: watchedValues.slipNumber,
+          items: watchedValues.items?.map((item) => ({
+            requestItemId: item.requestItemId,
+            quantityReceived: item.quantityReceived,
+          })),
+        })
+      );
     }, 500);
     return () => clearTimeout(id);
   }, [watchedValues, PERSIST_KEY, hasRestored]);
-  
-  // 3. Limpiar borrador al cerrar si se ha enviado
-  const clearDraft = React.useCallback(() => {
-    localStorage.removeItem(PERSIST_KEY);
-  }, [PERSIST_KEY]);
-  
-  // --- Fin Lógica de Persistencia ---
 
+  React.useEffect(() => {
+    if (!isOpen) setSlipFile(null);
+  }, [isOpen]);
+
+  const clearDraft = useCallback(() => {
+    localStorage.removeItem(PERSIST_KEY);
+    setSlipFile(null);
+  }, [PERSIST_KEY]);
 
   const handleSubmit = async (data: ReceiveFormValues) => {
     const itemsToReceive = data.items
-      .filter(item => item.quantityReceived > 0) // Solo procesar cantidades positivas
-      .map(item => {
-        const orderedItem = requestItems.find(ri => ri.id === item.requestItemId);
+      .filter((item) => item.quantityReceived > 0)
+      .map((item) => {
+        const orderedItem = requestItems.find((ri) => ri.id === item.requestItemId);
         if (!orderedItem) throw new Error(`Item ${item.requestItemId} not found.`);
-        
         const totalReceived = item.quantityPreviouslyReceived + item.quantityReceived;
-        
-        // Advertir si la cantidad total recibida excede la cantidad pedida
         if (totalReceived > item.quantityOrdered) {
-          toast.error(`Error: La cantidad total recibida para ${item.productName} excede la cantidad pedida (${totalReceived} > ${item.quantityOrdered}).`);
+          toast.error(
+            `Error: La cantidad total recibida para ${item.productName} excede la cantidad pedida (${totalReceived} > ${item.quantityOrdered}).`
+          );
           throw new Error("Quantity received exceeds quantity ordered.");
         }
-        
         return {
           requestItemId: item.requestItemId,
           quantityReceived: item.quantityReceived,
@@ -197,39 +174,29 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
 
     await receiveItemsMutation.mutateAsync({
       requestId,
-      slipNumber: data.slipNumber || "", // Pasar cadena vacía si es null
+      slipNumber: data.slipNumber || "",
+      file: slipFile ?? undefined,
       items: itemsToReceive,
     });
-
-    clearDraft(); // Limpiar borrador al enviar
+    clearDraft();
     onOpenChange(false);
   };
 
   const handleReceiveAll = () => {
-    const currentItems = form.getValues('items');
-    const updatedItems = currentItems.map(item => {
+    const updatedItems = form.getValues("items").map((item) => {
       const quantityRemaining = item.quantityOrdered - item.quantityPreviouslyReceived;
-      return {
-        ...item,
-        quantityReceived: quantityRemaining > 0 ? quantityRemaining : 0,
-      };
+      return { ...item, quantityReceived: quantityRemaining > 0 ? quantityRemaining : 0 };
     });
-    form.setValue('items', updatedItems as any, { shouldDirty: true });
+    form.setValue("items", updatedItems as ReceiveFormValues["items"], { shouldDirty: true });
   };
-  
+
   const handleReceiveAllAndSubmit = () => {
     if (allItemsFullyReceived) {
       toast.info("Todos los artículos ya han sido recibidos completamente.");
       return;
     }
-    
-    // 1. Set all remaining quantities
     handleReceiveAll();
-    
-    // 2. Submit the form
-    setTimeout(() => {
-      form.handleSubmit(handleSubmit)();
-    }, 0);
+    setTimeout(() => form.handleSubmit(handleSubmit)(), 0);
   };
 
   const handleReceiveRemaining = (index: number) => {
@@ -241,11 +208,13 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
     }
   };
 
+  const dialogClass = cn(mobileDialogClass, "sm:max-w-[800px] gap-0 p-4 sm:p-6");
+
   if (isLoadingReceived) {
     return (
       <Dialog open={isOpen} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[800px]">
-          <div className="flex justify-center items-center h-40">
+        <DialogContent className={dialogClass}>
+          <div className="flex justify-center items-center h-40 shrink-0">
             <Loader2 className="h-6 w-6 animate-spin mr-2" /> Cargando estado de recepción...
           </div>
         </DialogContent>
@@ -254,149 +223,181 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
   }
 
   const isSubmitting = receiveItemsMutation.isPending;
-  const allItemsFullyReceived = initialItems.every(item => item.quantityOrdered - item.quantityPreviouslyReceived <= 0);
-  
+  const allItemsFullyReceived = initialItems.every(
+    (item) => item.quantityOrdered - item.quantityPreviouslyReceived <= 0
+  );
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent 
-        className="sm:max-w-[800px]"
-        // CRÍTICO: Prevenir el cierre al hacer clic fuera
-        onPointerDownOutside={(e) => e.preventDefault()}
-      >
-        <DialogHeader>
-          <DialogTitle>Registrar Recepción de Artículos</DialogTitle>
-          <DialogDescription>
-            Introduce el número de albarán (opcional) y la cantidad recibida para cada artículo.
+      <DialogContent className={dialogClass} onPointerDownOutside={(e) => e.preventDefault()}>
+        <DialogHeader className="shrink-0 pr-8">
+          <DialogTitle className="text-base sm:text-lg">Registrar Recepción de Artículos</DialogTitle>
+          <DialogDescription className="text-sm">
+            Número y/o foto del albarán (opcional) y cantidad recibida por artículo.
           </DialogDescription>
+          <p className="text-xs text-blue-700 flex items-start gap-1.5 sm:hidden pt-1">
+            <Info className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
+            <span>
+              ¿Corregir una recepción? Usa el botón <List className="inline h-3 w-3 mx-0.5" /> en el albarán.
+            </span>
+          </p>
         </DialogHeader>
+
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="slipNumber"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Número de Albarán (Opcional)</FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder="ej. SLIP-12345" 
-                        {...field} 
-                        disabled={isSubmitting} 
-                        value={field.value || ""} 
-                        onChange={(e) => field.onChange(e.target.value || null)}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Corrección de Errores</Label>
-                <div className="flex items-center p-3 border rounded-md bg-blue-50 text-blue-700">
+          <div className="flex flex-col flex-1 min-h-0">
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-col flex-1 min-h-0">
+              <div className={cn(dialogBodyScrollClass, "space-y-4 py-2")}>
+                <FormField
+                  control={form.control}
+                  name="slipNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Número de Albarán (Opcional)</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="ej. SLIP-12345"
+                          {...field}
+                          disabled={isSubmitting}
+                          value={field.value || ""}
+                          onChange={(e) => field.onChange(e.target.value || null)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FileUploadInput
+                  label="Foto o archivo del albarán (opcional)"
+                  accept="image/*,application/pdf"
+                  capture="environment"
+                  compact
+                  onChange={(files) => setSlipFile(files?.[0] ?? null)}
+                  disabled={isSubmitting}
+                  currentFileMeta={slipFile ? { name: slipFile.name, size: slipFile.size } : null}
+                />
+
+                <div className="hidden md:block space-y-2">
+                  <Label className="text-sm font-medium">Corrección de Errores</Label>
+                  <div className="flex items-center p-3 border rounded-md bg-blue-50 text-blue-700">
                     <Info className="h-4 w-4 mr-2 flex-shrink-0" />
-                    <p className="text-xs">Para corregir una recepción, usa el botón <List className="inline h-3 w-3 mx-1" /> en el albarán correspondiente.</p>
+                    <p className="text-xs">
+                      Para corregir una recepción, usa el botón <List className="inline h-3 w-3 mx-1" /> en el albarán correspondiente.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <h3 className="text-base sm:text-lg font-semibold">Artículos a Recibir</h3>
+                  {fields.map((item, index) => {
+                    const quantityOrdered = form.watch(`items.${index}.quantityOrdered`);
+                    const quantityPreviouslyReceived = form.watch(`items.${index}.quantityPreviouslyReceived`);
+                    const quantityRemaining = quantityOrdered - quantityPreviouslyReceived;
+                    const isFullyReceived = quantityRemaining <= 0 && quantityPreviouslyReceived > 0;
+                    const currentQuantityReceived = form.watch(`items.${index}.quantityReceived`);
+
+                    return (
+                      <div key={item.id} className="rounded-lg border p-3 space-y-3 bg-card">
+                        <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium truncate" title={item.productName}>
+                              {item.productName}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Pedido: {quantityOrdered} | Recibido: {quantityPreviouslyReceived}
+                            </p>
+                          </div>
+                          <p className="text-sm shrink-0">
+                            <span className="text-muted-foreground">Restante: </span>
+                            <span className={cn("font-bold", quantityRemaining <= 0 ? "text-green-600" : "text-orange-600")}>
+                              {quantityRemaining}
+                            </span>
+                          </p>
+                        </div>
+
+                        <FormField
+                          control={form.control}
+                          name={`items.${index}.quantityReceived`}
+                          render={({ field: quantityField }) => (
+                            <FormItem className="space-y-2">
+                              <FormLabel>Cantidad a Registrar</FormLabel>
+                              <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                                <FormControl className="flex-1 min-w-0">
+                                  <Input
+                                    type="number"
+                                    min={0}
+                                    {...quantityField}
+                                    onChange={(e) => quantityField.onChange(Number(e.target.value))}
+                                    disabled={isSubmitting}
+                                    className={isFullyReceived ? "bg-green-50/50" : ""}
+                                  />
+                                </FormControl>
+                                {quantityRemaining > 0 && (
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size={undefined}
+                                    onClick={() => handleReceiveRemaining(index)}
+                                    disabled={isSubmitting || currentQuantityReceived === quantityRemaining}
+                                    className="w-full sm:w-10 sm:px-0 shrink-0"
+                                    title="Recibir Cantidad Restante"
+                                  >
+                                    <CheckSquare className="h-4 w-4" />
+                                    <span className="ml-2 sm:sr-only">Recibir restante</span>
+                                  </Button>
+                                )}
+                              </div>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
-            </div>
-            
-            {/* Eliminamos la lista de archivos seleccionados */}
 
-            <div className="space-y-4 max-h-[400px] overflow-y-auto p-2 border rounded-md">
-              <h3 className="text-lg font-semibold mb-4">Artículos a Recibir</h3>
-              
-              {fields.map((item, index) => {
-                const quantityOrdered = form.watch(`items.${index}.quantityOrdered`);
-                const quantityPreviouslyReceived = form.watch(`items.${index}.quantityPreviouslyReceived`);
-                const quantityRemaining = quantityOrdered - quantityPreviouslyReceived;
-                const isFullyReceived = quantityRemaining <= 0 && quantityPreviouslyReceived > 0;
-                const currentQuantityReceived = form.watch(`items.${index}.quantityReceived`);
-
-                return (
-                  <div key={item.id} className="grid grid-cols-1 sm:grid-cols-5 gap-4 items-center border-b pb-3 last:border-b-0">
-                    <div className="sm:col-span-2">
-                      <p className="font-medium truncate" title={item.productName}>{item.productName}</p>
-                      <p className="text-xs text-muted-foreground">Pedido: {quantityOrdered} | Recibido: {quantityPreviouslyReceived}</p>
-                    </div>
-                    <div className="sm:col-span-1">
-                      <p className="text-sm text-muted-foreground">Restante:</p>
-                      <p className={`font-bold ${quantityRemaining <= 0 ? 'text-green-600' : 'text-orange-600'}`}>{quantityRemaining}</p>
-                    </div>
-                    <FormField
-                      control={form.control}
-                      name={`items.${index}.quantityReceived`}
-                      render={({ field: quantityField }) => (
-                        <FormItem className="sm:col-span-2 flex items-end space-y-0 gap-2">
-                          <div className="flex-1">
-                            <FormLabel>Cantidad a Registrar</FormLabel>
-                            <FormControl>
-                              <Input 
-                                type="number" 
-                                min={0} // Volvemos a restringir a no negativo para la recepción normal
-                                {...quantityField} 
-                                onChange={(e) => {
-                                  const val = Number(e.target.value);
-                                  quantityField.onChange(val);
-                                }}
-                                disabled={isSubmitting}
-                                className={isFullyReceived ? "bg-green-50/50" : ""}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </div>
-                          
-                          {/* Botón de Recibir Restante (Tick) */}
-                          {quantityRemaining > 0 && (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="icon"
-                              onClick={() => handleReceiveRemaining(index)}
-                              disabled={isSubmitting || currentQuantityReceived === quantityRemaining}
-                              title="Recibir Cantidad Restante"
-                            >
-                              <CheckSquare className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                );
-              })}
-            </div>
-
-            <DialogFooter className="flex flex-col sm:flex-row sm:justify-end sm:space-x-2 pt-4">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
-                Cancelar
-              </Button>
-              <Button 
-                type="button" 
-                variant="secondary" 
-                onClick={handleReceiveAllAndSubmit} 
-                disabled={isSubmitting || allItemsFullyReceived}
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Registrando Todo...
-                  </>
-                ) : (
-                  <>
-                    <CheckCheck className="mr-2 h-4 w-4" /> Recibir Todo y Registrar
-                  </>
-                )}
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Registrando...
-                  </>
-                ) : (
-                  "Registrar Recepción"
-                )}
-              </Button>
-            </DialogFooter>
-          </form>
+              <DialogFooter className={dialogFooterMobileClass}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => onOpenChange(false)}
+                  disabled={isSubmitting}
+                  className="w-full sm:w-auto"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={handleReceiveAllAndSubmit}
+                  disabled={isSubmitting || allItemsFullyReceived}
+                  className="w-full sm:w-auto"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Registrando Todo...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCheck className="mr-2 h-4 w-4 shrink-0" />
+                      <span className="sm:hidden">Recibir todo</span>
+                      <span className="hidden sm:inline">Recibir Todo y Registrar</span>
+                    </>
+                  )}
+                </Button>
+                <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Registrando...
+                    </>
+                  ) : (
+                    "Registrar Recepción"
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </div>
         </Form>
       </DialogContent>
     </Dialog>

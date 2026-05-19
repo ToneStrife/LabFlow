@@ -13,6 +13,8 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
+import { mobileDialogClass, dialogFooterMobileClass } from "@/lib/layout";
 import {
   Form,
   FormControl,
@@ -106,7 +108,7 @@ const MergeRequestsDialog: React.FC<MergeRequestsDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className={cn(mobileDialogClass, "sm:max-w-[425px]")}>
         <DialogHeader>
           <DialogTitle>Fusionar Solicitudes</DialogTitle>
           <DialogDescription>
@@ -149,7 +151,7 @@ const MergeRequestsDialog: React.FC<MergeRequestsDialogProps> = ({
               Advertencia: La Solicitud {sourceRequestNumber} será eliminada después de mover sus artículos.
             </p>
 
-            <DialogFooter>
+            <DialogFooter className={dialogFooterMobileClass}>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
                 Cancelar
               </Button>
