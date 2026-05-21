@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { PlusCircle, Trash2, Check, ChevronsUpDown, Loader2, Search, Zap, RotateCcw, Info } from "lucide-react"; // Importar Info
+import { PlusCircle, Trash2, Check, ChevronsUpDown, Loader2, Search, Zap, RotateCcw, Info, FileScan } from "lucide-react";
 import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
@@ -33,8 +33,11 @@ import { useShippingAddresses, useBillingAddresses } from "@/hooks/use-addresses
 import { getFullName } from "@/hooks/use-profiles";
 import { useInternalFuzzySearch, InternalSearchResult } from "@/hooks/use-internal-search";
 import { useEnrichProductDetails } from "@/hooks/use-ai-enrichment";
+import { useParseQuotePdf } from "@/hooks/use-parse-quote-pdf";
 import { useFormPersistence } from "@/hooks/use-form-persistence";
-import FileUploadInput from "./FileUploadInput"; // Importar FileUploadInput
+import FileUploadInput from "./FileUploadInput";
+import QuoteParsePreviewDialog from "./QuoteParsePreviewDialog";
+import type { ParsedQuoteItem } from "@/data/quote-parse";
 
 // -------------------- Schemas --------------------
 const itemSchema = z.object({
@@ -205,6 +208,7 @@ const RequestForm: React.FC = () => {
   const addRequestMutation = useAddRequest();
   const updateFileMutation = useUpdateRequestFile();
   const updateStatusMutation = useUpdateRequestStatus();
+  const parseQuotePdfMutation = useParseQuotePdf();
 
   const defaultItem = { 
     productName: "", 
@@ -241,6 +245,8 @@ const RequestForm: React.FC = () => {
   
   // Estado local para el objeto File real (solo existe en la sesión actual)
   const [selectedQuoteFile, setSelectedQuoteFile] = React.useState<File | null>(null);
+  const [parsedQuoteItems, setParsedQuoteItems] = React.useState<ParsedQuoteItem[] | null>(null);
+  const [isParsePreviewOpen, setIsParsePreviewOpen] = React.useState(false);
   
   // 1. Autosave de metadata del archivo
   const handleQuoteFileChange = (fileList: FileList | null) => {
@@ -368,6 +374,52 @@ const RequestForm: React.FC = () => {
     });
   };
   
+  const mapParsedToFormItems = (items: ParsedQuoteItem[]): RequestFormValues["items"] =>
+    items.map((item) => ({
+      productName: item.productName,
+      catalogNumber: item.catalogNumber,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice ?? undefined,
+      format: item.format ?? undefined,
+      link: item.link ?? undefined,
+      notes: item.notes ?? undefined,
+      brand: item.brand ?? undefined,
+    }));
+
+  const handleExtractProductsFromPdf = async () => {
+    if (!selectedQuoteFile) {
+      toast.error("Sube un PDF de cotización antes de extraer productos.");
+      return;
+    }
+    if (selectedQuoteFile.type !== "application/pdf") {
+      toast.error("La extracción con IA solo funciona con archivos PDF.");
+      return;
+    }
+
+    try {
+      const { items } = await parseQuotePdfMutation.mutateAsync(selectedQuoteFile);
+      if (items.length === 0) {
+        toast.warning("No se detectaron productos en el PDF.", {
+          description: "Prueba con otro documento o añade los artículos manualmente.",
+        });
+        return;
+      }
+      setParsedQuoteItems(items);
+      setIsParsePreviewOpen(true);
+      toast.success(`${items.length} producto(s) detectado(s). Revisa antes de confirmar.`);
+    } catch {
+      /* toast en el hook */
+    }
+  };
+
+  const handleConfirmParsedItems = () => {
+    if (!parsedQuoteItems?.length) return;
+    replace(mapParsedToFormItems(parsedQuoteItems));
+    setIsParsePreviewOpen(false);
+    setParsedQuoteItems(null);
+    toast.success("Artículos del formulario reemplazados con los datos del PDF.");
+  };
+
   const handleClearForm = () => {
     // Limpiar la persistencia
     clearPersistence();
@@ -390,7 +442,13 @@ const RequestForm: React.FC = () => {
 
   const requesterName = profile ? getFullName(profile) : 'Cargando...';
   const isLoadingAddresses = isLoadingShippingAddresses || isLoadingBillingAddresses;
-  const isSubmitting = addRequestMutation.isPending || updateFileMutation.isPending;
+  const isSubmitting =
+    addRequestMutation.isPending ||
+    updateFileMutation.isPending ||
+    parseQuotePdfMutation.isPending;
+  const isParsingQuote = parseQuotePdfMutation.isPending;
+  const canExtractFromPdf =
+    Boolean(selectedQuoteFile) && selectedQuoteFile?.type === "application/pdf";
   
   // Determinar qué metadata mostrar: solo el archivo seleccionado (si existe)
   const fileMetaToDisplay = selectedQuoteFile ? { name: selectedQuoteFile.name, size: selectedQuoteFile.size } : null;
@@ -568,12 +626,47 @@ const RequestForm: React.FC = () => {
                 />
               </FormControl>
               <FormMessage />
-              <p className="text-sm text-muted-foreground">Si adjuntas una cotización, la solicitud se creará directamente en estado "Cotización Solicitada".</p>
+              <p className="text-sm text-muted-foreground">
+                Si adjuntas una cotización, la solicitud se creará directamente en estado
+                &quot;Cotización Solicitada&quot;.
+              </p>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center pt-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={handleExtractProductsFromPdf}
+                  disabled={isSubmitting || !canExtractFromPdf}
+                  className="w-full sm:w-auto"
+                >
+                  {isParsingQuote ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Extrayendo productos…
+                    </>
+                  ) : (
+                    <>
+                      <FileScan className="mr-2 h-4 w-4" />
+                      Extraer productos del PDF con IA
+                    </>
+                  )}
+                </Button>
+                {!canExtractFromPdf && (
+                  <p className="text-xs text-muted-foreground flex items-start gap-1">
+                    <Info className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                    Sube un PDF para detectar líneas de producto automáticamente.
+                  </p>
+                )}
+              </div>
             </FormItem>
           )}
         />
-        
-        {/* Eliminamos la advertencia de archivo perdido, ya que el campo aparecerá vacío */}
+
+        <QuoteParsePreviewDialog
+          open={isParsePreviewOpen}
+          onOpenChange={setIsParsePreviewOpen}
+          items={parsedQuoteItems ?? []}
+          onConfirm={handleConfirmParsedItems}
+        />
         
         <FormField
           control={form.control}
