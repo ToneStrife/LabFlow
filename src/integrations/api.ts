@@ -329,7 +329,7 @@ export const apiAddRequest = async (data: AddRequestData): Promise<SupabaseReque
   }
 
   try {
-    const recipients = await getNotificationRecipients('notify_on_new_request', ['Admin', 'Account Manager']);
+    const recipients = await getNotificationRecipients('notify_on_new_request', ['Admin']);
     const recipientIds = recipients.map(m => m.id);
     const requester = await getRequesterProfile(requesterId);
     const requesterName = requester ? `${requester.first_name || ''} ${requester.last_name || ''}`.trim() : 'Unkown Requester';

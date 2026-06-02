@@ -75,12 +75,12 @@ const AppRoutes = () => {
         <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
         <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
         <Route path="/new-request" element={<PrivateRoute><NewRequest /></PrivateRoute>} />
-        <Route path="/vendors" element={<PrivateRoute requiredRoles={["Account Manager", "Admin"]}><Vendors /></PrivateRoute>} />
+        <Route path="/vendors" element={<PrivateRoute requiredRoles={["Admin"]}><Vendors /></PrivateRoute>} />
         <Route path="/requests/:id" element={<PrivateRoute><RequestDetails /></PrivateRoute>} />
         <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
         <Route path="/admin" element={<PrivateRoute requiredRoles={["Admin"]}><AdminPage /></PrivateRoute>} /> {/* Nueva Ruta de Admin */}
-        <Route path="/inventory" element={<PrivateRoute requiredRoles={["Account Manager", "Admin"]}><Inventory /></PrivateRoute>} />
-        <Route path="/expenditures" element={<PrivateRoute requiredRoles={["Account Manager", "Admin"]}><Expenditures /></PrivateRoute>} /> {/* Nueva Ruta de Gastos */}
+        <Route path="/inventory" element={<PrivateRoute requiredRoles={["Requester", "Account Manager", "Admin"]}><Inventory /></PrivateRoute>} />
+        <Route path="/expenditures" element={<PrivateRoute requiredRoles={["Admin"]}><Expenditures /></PrivateRoute>} /> {/* Nueva Ruta de Gastos */}
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Layout>

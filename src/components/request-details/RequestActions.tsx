@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { SupabaseRequest } from "@/data/types";
 import { useSession } from "@/components/SessionContextProvider";
+import { canApprovePendingRequest, canPerformWorkflowAction } from "@/lib/permissions";
 
 interface RequestActionsProps {
   request: SupabaseRequest;
@@ -43,17 +44,30 @@ const RequestActions: React.FC<RequestActionsProps> = ({
   onSendQuoteRequest,
 }) => {
   const { profile } = useSession();
-  
-  const isManager = profile?.role === "Admin" || profile?.role === "Account Manager";
+  const role = profile?.role;
+  const canApprove = canApprovePendingRequest(role);
+  const canWorkflow = canPerformWorkflowAction(role, request.status);
 
-  if (!isManager) {
-    return <p className="text-sm text-muted-foreground italic">No tienes permisos para realizar acciones en esta solicitud.</p>;
+  if (request.status === "Pending" && !canApprove) {
+    return (
+      <p className="text-sm text-muted-foreground italic">
+        Pendiente de aprobación por un administrador.
+      </p>
+    );
+  }
+
+  if (!canWorkflow && request.status !== "Received") {
+    return (
+      <p className="text-sm text-muted-foreground italic">
+        No tienes permisos para realizar acciones en esta solicitud.
+      </p>
+    );
   }
 
   return (
     <div className="flex flex-col space-y-2">
-      {/* PENDING: Approve or Request Quote */}
-      {request.status === "Pending" && (
+      {/* PENDING: Approve or Request Quote — Admin only */}
+      {request.status === "Pending" && canApprove && (
         <>
           <Button 
             onClick={() => onSendQuoteRequest(request)} 
@@ -81,7 +95,7 @@ const RequestActions: React.FC<RequestActionsProps> = ({
       )}
 
       {/* QUOTE REQUESTED: Upload Quote or Send PO Request */}
-      {request.status === "Quote Requested" && (
+      {request.status === "Quote Requested" && canWorkflow && (
         <>
           {!request.quote_url ? (
             <Button 
@@ -112,7 +126,7 @@ const RequestActions: React.FC<RequestActionsProps> = ({
       )}
 
       {/* PO REQUESTED: Mark as Ordered */}
-      {request.status === "PO Requested" && (
+      {request.status === "PO Requested" && canWorkflow && (
         <>
           <Button 
             onClick={handleUploadPOAndOrder} 
@@ -133,7 +147,7 @@ const RequestActions: React.FC<RequestActionsProps> = ({
       )}
 
       {/* ORDERED: Mark as Received or Send Confirmation */}
-      {request.status === "Ordered" && (
+      {request.status === "Ordered" && canWorkflow && (
         <>
           <Button 
             onClick={handleMarkAsReceived} 

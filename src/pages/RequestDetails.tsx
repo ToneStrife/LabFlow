@@ -36,6 +36,7 @@ import PackingSlipsList from "@/components/request-details/PackingSlipsList";
 import InvoicesList from "@/components/request-details/InvoicesList";
 import { toast } from "sonner";
 import { useSession } from "@/components/SessionContextProvider";
+import { isAdmin, canEditRequestDetails, canDeleteRequest, canOverrideStatus } from "@/lib/permissions";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAggregatedReceivedItems } from "@/hooks/use-packing-slips";
 import { generateSignedUrl } from "@/utils/supabase-storage";
@@ -62,8 +63,8 @@ const getFileNameFromPath = (filePath: string): string => {
 const RequestDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { profile } = useSession();
-  const isAdmin = profile?.role === 'Admin';
+  const { profile, session } = useSession();
+  const userIsAdmin = isAdmin(profile?.role);
   
   const { data: requests, isLoading: isLoadingRequests } = useRequests();
   const { data: vendors, isLoading: isLoadingVendors } = useVendors();
@@ -363,7 +364,8 @@ const RequestDetails: React.FC = () => {
     );
   }
   
-  const isEditableByRole = profile?.role === "Admin" || profile?.role === "Account Manager";
+  const isEditableByRole = canEditRequestDetails(profile?.role, request.status);
+  const canDelete = canDeleteRequest(profile?.role, session?.user?.id, request.requester_id);
   const vendor = vendors?.find(v => v.id === request.vendor_id);
   const displayRequestNumber = request.request_number || `#${request.id.substring(0, 8)}`;
 
@@ -382,8 +384,8 @@ const RequestDetails: React.FC = () => {
               <Button variant="outline" size="icon" disabled={updateStatusMutation.isPending || deleteRequestMutation.isPending}><MoreVertical className="h-4 w-4" /></Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              {isEditableByRole && <DropdownMenuItem onClick={() => { setNewStatus(request.status); setIsStatusOverrideDialogOpen(true); }}><Edit className="mr-2 h-4 w-4" /> Cambiar Estado Manualmente</DropdownMenuItem>}
-              {isEditableByRole && <><DropdownMenuSeparator /><DropdownMenuItem onClick={() => setIsDeleteDialogOpen(true)} className="text-red-600"><Trash2 className="mr-2 h-4 w-4" /> Eliminar Solicitud</DropdownMenuItem></>}
+              {canOverrideStatus(profile?.role) && <DropdownMenuItem onClick={() => { setNewStatus(request.status); setIsStatusOverrideDialogOpen(true); }}><Edit className="mr-2 h-4 w-4" /> Cambiar Estado Manualmente</DropdownMenuItem>}
+              {canDelete && <><DropdownMenuSeparator /><DropdownMenuItem onClick={() => setIsDeleteDialogOpen(true)} className="text-red-600"><Trash2 className="mr-2 h-4 w-4" /> Eliminar Solicitud</DropdownMenuItem></>}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -392,7 +394,7 @@ const RequestDetails: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           <RequestSummaryCard request={request} vendor={vendor} profiles={profiles} onEditDetails={() => setIsEditMetadataDialogOpen(true)} isEditable={isEditableByRole} />
-          <RequestItemsTable items={request.items} isEditable={true} />
+          <RequestItemsTable items={request.items} isEditable={isEditableByRole} />
         </div>
         
         <div className="lg:col-span-1 space-y-6">
@@ -411,7 +413,7 @@ const RequestDetails: React.FC = () => {
               openCancelRequestDialog={() => setIsCancelDialogOpen(true)}
               onSendQuoteRequest={handleSendQuoteRequest}
             />
-            {isAdmin && (
+            {userIsAdmin && (
                 <Button 
                     variant="secondary" 
                     className="w-full mt-2 justify-start" 
@@ -426,7 +428,7 @@ const RequestDetails: React.FC = () => {
           <PackingSlipsList requestId={request.id} onOpenReceiveItemsDialog={handleOpenReceiveItemsDialog} requestNumber={displayRequestNumber} />
           
           {/* CRÍTICO: Envolver InvoicesList en check de isAdmin */}
-          {isAdmin && <InvoicesList requestId={request.id} onOpenInvoiceDialog={() => setIsInvoiceItemsDialogOpen(true)} />}
+          {userIsAdmin && <InvoicesList requestId={request.id} onOpenInvoiceDialog={() => setIsInvoiceItemsDialogOpen(true)} />}
         </div>
       </div>
       

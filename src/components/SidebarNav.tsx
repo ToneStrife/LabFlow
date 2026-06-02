@@ -36,19 +36,19 @@ const navItems: NavItem[] = [
     title: "Proveedores",
     href: "/vendors",
     icon: <Users className="mr-2 h-4 w-4" />,
-    roles: ["Account Manager", "Admin"],
+    roles: ["Admin"],
   },
   {
     title: "Inventario",
     href: "/inventory",
     icon: <Warehouse className="mr-2 h-4 w-4" />,
-    roles: ["Account Manager", "Admin"],
+    roles: ["Requester", "Account Manager", "Admin"],
   },
   {
     title: "Gastos",
     href: "/expenditures",
     icon: <DollarSign className="mr-2 h-4 w-4" />,
-    roles: ["Account Manager", "Admin"],
+    roles: ["Admin"],
   },
   {
     title: "Admin",

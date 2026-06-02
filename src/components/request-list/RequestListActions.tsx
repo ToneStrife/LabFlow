@@ -24,6 +24,8 @@ import {
 import { SupabaseRequest } from "@/data/types";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
+import { useSession } from "@/components/SessionContextProvider";
+import { canApprovePendingRequest, canMergeRequest, canPerformWorkflowAction } from "@/lib/permissions";
 
 interface RequestListActionsProps {
   request: SupabaseRequest;
@@ -57,7 +59,11 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
   className,
 }) => {
   const isMobile = useIsMobile();
-  const isMergeAllowed = request.status === "Pending";
+  const { profile } = useSession();
+  const role = profile?.role;
+  const canApprove = canApprovePendingRequest(role);
+  const canMerge = canMergeRequest(role) && request.status === "Pending";
+  const canWorkflow = canPerformWorkflowAction(role, request.status);
 
   const iconButtons = (
     <>
@@ -71,7 +77,7 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
         <Eye className="h-4 w-4" />
       </Button>
 
-      {isMergeAllowed && (
+      {canMerge && (
         <Button
           variant="ghost"
           size="icon"
@@ -84,7 +90,7 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
         </Button>
       )}
 
-      {request.status === "Pending" && (
+      {request.status === "Pending" && canApprove && (
         <>
           <Button
             variant="ghost"
@@ -119,7 +125,7 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
         </>
       )}
 
-      {request.status === "Quote Requested" && !request.quote_url && (
+      {request.status === "Quote Requested" && !request.quote_url && canWorkflow && (
         <>
           <Button
             variant="ghost"
@@ -144,7 +150,7 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
         </>
       )}
 
-      {request.status === "Quote Requested" && request.quote_url && request.account_manager_id && (
+      {request.status === "Quote Requested" && request.quote_url && request.account_manager_id && canWorkflow && (
         <Button
           variant="ghost"
           size="icon"
@@ -157,7 +163,7 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
         </Button>
       )}
 
-      {request.status === "PO Requested" && (
+      {request.status === "PO Requested" && canWorkflow && (
         <>
           <Button
             variant="ghost"
@@ -182,7 +188,7 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
         </>
       )}
 
-      {request.status === "Ordered" && (
+      {request.status === "Ordered" && canWorkflow && (
         <>
           <Button
             variant="ghost"
@@ -228,14 +234,14 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
-            {isMergeAllowed && (
+            {canMerge && (
               <DropdownMenuItem onClick={() => onMerge(request)} disabled={isUpdatingStatus}>
                 <Combine className="mr-2 h-4 w-4 text-purple-600" /> Fusionar solicitud
               </DropdownMenuItem>
             )}
-            {request.status === "Pending" && (
+            {request.status === "Pending" && canApprove && (
               <>
-                {isMergeAllowed && <DropdownMenuSeparator />}
+                {canMerge && <DropdownMenuSeparator />}
                 <DropdownMenuItem onClick={() => onSendQuoteRequest(request)} disabled={isUpdatingStatus}>
                   <Mail className="mr-2 h-4 w-4 text-blue-500" /> Solicitar cotización
                 </DropdownMenuItem>
@@ -247,7 +253,7 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
                 </DropdownMenuItem>
               </>
             )}
-            {request.status === "Quote Requested" && !request.quote_url && (
+            {request.status === "Quote Requested" && !request.quote_url && canWorkflow && (
               <>
                 <DropdownMenuItem onClick={() => onEnterQuoteDetails(request)} disabled={isUpdatingStatus}>
                   <FileText className="mr-2 h-4 w-4 text-blue-600" /> Subir cotización
@@ -257,12 +263,12 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
                 </DropdownMenuItem>
               </>
             )}
-            {request.status === "Quote Requested" && request.quote_url && request.account_manager_id && (
+            {request.status === "Quote Requested" && request.quote_url && request.account_manager_id && canWorkflow && (
               <DropdownMenuItem onClick={() => onSendPORequest(request)} disabled={isUpdatingStatus}>
                 <Mail className="mr-2 h-4 w-4 text-orange-600" /> Solicitar PO
               </DropdownMenuItem>
             )}
-            {request.status === "PO Requested" && (
+            {request.status === "PO Requested" && canWorkflow && (
               <>
                 <DropdownMenuItem onClick={() => onMarkAsOrdered(request)} disabled={isUpdatingStatus}>
                   <Package className="mr-2 h-4 w-4 text-green-700" /> Marcar como pedido
@@ -272,7 +278,7 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
                 </DropdownMenuItem>
               </>
             )}
-            {request.status === "Ordered" && (
+            {request.status === "Ordered" && canWorkflow && (
               <>
                 <DropdownMenuItem onClick={() => onMarkAsReceived(request)} disabled={isUpdatingStatus}>
                   <Receipt className="mr-2 h-4 w-4 text-purple-600" /> Recibir artículos
