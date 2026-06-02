@@ -68,8 +68,17 @@ export const apiGetProfiles = async (): Promise<Profile[]> => {
 };
 
 export const apiUpdateProfile = async (id: string, data: Partial<Profile>): Promise<void> => {
-  const { error } = await supabase.from('profiles').update(data).eq('id', id);
+  const { data: updated, error } = await supabase
+    .from('profiles')
+    .update(data)
+    .eq('id', id)
+    .select('id')
+    .maybeSingle();
+
   if (error) throw new Error(error.message);
+  if (!updated) {
+    throw new Error('No se pudo actualizar el perfil. Comprueba tus permisos.');
+  }
 };
 
 export const apiDeleteProfile = async (id: string): Promise<void> => {
