@@ -9,6 +9,39 @@ const corsHeaders = {
 
 // Dirección de correo electrónico para añadir en CC (opcional, mantenida de la versión anterior)
 const CC_EMAIL = 'cjaranda@go.ugr.es';
+const BUCKET_NAME = 'LabFlow';
+
+const resolveStoragePath = (urlOrPath: string): string => {
+  if (!urlOrPath.startsWith('http://') && !urlOrPath.startsWith('https://')) {
+    return urlOrPath;
+  }
+
+  try {
+    const parsed = new URL(urlOrPath);
+    const signMarker = '/object/sign/LabFlow/';
+    const publicMarker = '/object/public/LabFlow/';
+    const signIndex = parsed.pathname.indexOf(signMarker);
+    if (signIndex !== -1) {
+      return decodeURIComponent(parsed.pathname.slice(signIndex + signMarker.length).split('?')[0]);
+    }
+    const publicIndex = parsed.pathname.indexOf(publicMarker);
+    if (publicIndex !== -1) {
+      return decodeURIComponent(parsed.pathname.slice(publicIndex + publicMarker.length).split('?')[0]);
+    }
+  } catch {
+    // fall through
+  }
+
+  return urlOrPath;
+};
+
+const getContentType = (filename: string): string => {
+  const lower = filename.toLowerCase();
+  if (lower.endsWith('.pdf')) return 'application/pdf';
+  if (lower.endsWith('.png')) return 'image/png';
+  if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
+  return 'application/octet-stream';
+};
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -65,29 +98,27 @@ serve(async (req) => {
       );
 
       for (const attachment of attachments) {
-        try {
-          const filePath = attachment.url; 
-          console.log(`[send-email] Descargando adjunto: ${attachment.name} desde: ${filePath}`);
+        const filePath = resolveStoragePath(attachment.url);
+        console.log(`[send-email] Descargando adjunto: ${attachment.name} desde: ${filePath}`);
 
-          const { data: fileBlob, error: downloadError } = await supabaseAdmin.storage
-            .from('LabFlow')
-            .download(filePath);
+        const { data: fileBlob, error: downloadError } = await supabaseAdmin.storage
+          .from(BUCKET_NAME)
+          .download(filePath);
 
-          if (downloadError) {
-            console.error(`[send-email] Error al descargar ${attachment.name}:`, downloadError);
-            continue;
-          }
-
-          if (fileBlob) {
-            const fileArrayBuffer = await fileBlob.arrayBuffer();
-            processedAttachments.push({
-              filename: attachment.name,
-              content: new Uint8Array(fileArrayBuffer),
-            });
-          }
-        } catch (e) {
-          console.error(`[send-email] Error procesando adjunto ${attachment.name}:`, e);
+        if (downloadError) {
+          throw new Error(`No se pudo descargar el adjunto "${attachment.name}": ${downloadError.message}`);
         }
+
+        if (!fileBlob || fileBlob.size === 0) {
+          throw new Error(`El adjunto "${attachment.name}" está vacío o no es válido.`);
+        }
+
+        const fileArrayBuffer = await fileBlob.arrayBuffer();
+        processedAttachments.push({
+          filename: attachment.name,
+          content: new Uint8Array(fileArrayBuffer),
+          contentType: getContentType(attachment.name),
+        });
       }
     }
 

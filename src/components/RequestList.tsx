@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import RequestListToolbar from "@/components/request-list/RequestListToolbar";
 import RequestListTable from "@/components/request-list/RequestListTable";
 import { toast } from "sonner";
-import { generateSignedUrl } from "@/utils/supabase-storage";
+import { buildStorageAttachment, openEmailDialogAfterClose } from "@/utils/email-attachments";
 import { useSession } from "@/components/SessionContextProvider";
 import { useProjects } from "@/hooks/use-projects";
 import { useEmailTemplates } from "@/hooks/use-email-templates";
@@ -26,23 +26,6 @@ import ApproveRequestListDialog from "@/components/request-list/ApproveRequestLi
 import { cn } from "@/lib/utils";
 import { mobileDialogClass, dialogFooterMobileClass } from "@/lib/layout";
 
-
-// Función auxiliar para obtener el nombre de archivo legible (copiada de RequestFilesCard.tsx)
-const getFileNameFromPath = (filePath: string): string => {
-  if (!filePath) return "Archivo";
-  try {
-    const pathParts = filePath.split('/');
-    const encodedFileName = pathParts[pathParts.length - 1];
-    const decodedFileName = decodeURIComponent(encodedFileName);
-    
-    // Eliminar el prefijo de timestamp (ej. "1678886400000_")
-    const nameWithoutPrefix = decodedFileName.substring(decodedFileName.indexOf('_') + 1);
-    return nameWithoutPrefix || decodedFileName || "Archivo"; // Fallback si algo sale mal
-  } catch (e) {
-    console.error("Could not parse filename from path", e);
-    return "Archivo";
-  }
-};
 
 // Definir el orden de prioridad de los estados
 // Los números más bajos van ARRIBA (mayor prioridad de acción)
@@ -111,31 +94,28 @@ const RequestList: React.FC = () => {
   };
 
   const handleSendEmail = async (emailData: EmailFormValues) => {
-    const attachmentsToSend = (emailData as any).attachmentsForSend || emailData.attachments;
-    
     await sendEmailMutation.mutateAsync({
       to: emailData.to!,
       subject: emailData.subject,
       body: emailData.body,
-      attachments: attachmentsToSend,
+      attachments: emailData.attachments,
     });
     setIsEmailDialogOpen(false);
   };
 
-  const handleSendPORequest = async (request: SupabaseRequest) => {
-    if (!request.account_manager_id) {
-      toast.error("No se puede enviar la solicitud de PO.", { description: "No hay un gerente de cuenta asignado a esta solicitud." });
-      return;
-    }
-    if (!request.quote_url) {
-      toast.error("No se puede enviar la solicitud de PO.", { description: "El archivo de cotización no está disponible." });
-      return;
-    }
-
+  const buildPORequestEmailInitialData = async (request: SupabaseRequest) => {
     const poRequestTemplate = emailTemplates?.find(t => t.template_name === 'PO Request');
     if (!poRequestTemplate) {
       toast.error("Plantilla de correo electrónico 'PO Request' no encontrada. Por favor, crea una en el panel de Admin.");
-      return;
+      return null;
+    }
+    if (!request.account_manager_id) {
+      toast.error("No se puede enviar la solicitud de PO.", { description: "No hay un gerente de cuenta asignado a esta solicitud." });
+      return null;
+    }
+    if (!request.quote_url) {
+      toast.error("No se puede enviar la solicitud de PO.", { description: "El archivo de cotización no está disponible." });
+      return null;
     }
 
     const context = {
@@ -149,29 +129,24 @@ const RequestList: React.FC = () => {
       billingAddress: billingAddresses?.find(a => a.id === request.billing_address_id),
     };
 
-    let attachmentsForDialog = [];
-    let attachmentsForSend = [];
-    
-    if (request.quote_url) {
-      const fileName = getFileNameFromPath(request.quote_url);
-      
-      const signedUrl = await generateSignedUrl(request.quote_url);
-      if (signedUrl) {
-        attachmentsForDialog.push({ name: fileName, url: signedUrl });
-      } else {
-        toast.warning("No se pudo generar la URL firmada para el archivo de cotización. El enlace adjunto en el diálogo podría estar roto.");
-      }
-      
-      attachmentsForSend.push({ name: fileName, url: request.quote_url });
+    const { forDialog, forSend } = await buildStorageAttachment(request.quote_url);
+    if (forDialog.length === 0) {
+      toast.warning("No se pudo generar la URL firmada para el archivo de cotización. El enlace adjunto en el diálogo podría estar roto.");
     }
 
-    setEmailInitialData({
+    return {
       to: getAccountManagerEmail(request.account_manager_id),
       subject: processTextTemplate(poRequestTemplate.subject_template, context),
       body: processEmailTemplate(poRequestTemplate.body_template, context),
-      attachments: attachmentsForDialog,
-      attachmentsForSend: attachmentsForSend,
-    });
+      attachments: forDialog,
+      attachmentsForSend: forSend,
+    };
+  };
+
+  const handleSendPORequest = async (request: SupabaseRequest) => {
+    const emailData = await buildPORequestEmailInitialData(request);
+    if (!emailData) return;
+    setEmailInitialData(emailData);
     setIsEmailDialogOpen(true);
   };
 
@@ -207,16 +182,31 @@ const RequestList: React.FC = () => {
         shippingAddress: shippingAddresses?.find(a => a.id === request.shipping_address_id),
         billingAddress: billingAddresses?.find(a => a.id === request.billing_address_id),
       };
-      
-      setEmailInitialData({
+
+      const emailData = {
         to: getVendorEmail(request.vendor_id),
         subject: processTextTemplate(quoteTemplate.subject_template, context),
         body: processEmailTemplate(quoteTemplate.body_template, context),
-      });
-      setIsApproveListDialogOpen(false);
-      setIsEmailDialogOpen(true);
+      };
+
+      openEmailDialogAfterClose(
+        () => setIsApproveListDialogOpen(false),
+        () => {
+          setEmailInitialData(emailData);
+          setIsEmailDialogOpen(true);
+        }
+      );
     } else {
-      setIsApproveListDialogOpen(false);
+      const emailData = await buildPORequestEmailInitialData({ ...request, status: "PO Requested" });
+      if (!emailData) return;
+
+      openEmailDialogAfterClose(
+        () => setIsApproveListDialogOpen(false),
+        () => {
+          setEmailInitialData(emailData);
+          setIsEmailDialogOpen(true);
+        }
+      );
     }
   };
 

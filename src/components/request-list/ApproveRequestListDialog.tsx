@@ -39,14 +39,14 @@ const ApproveRequestListDialog: React.FC<ApproveRequestListDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className={cn(mobileDialogClass, "sm:max-w-[425px]")}>
         <DialogHeader>
           <DialogTitle>Aprobar Solicitud {request.request_number || request.id.substring(0, 8)}</DialogTitle>
           <DialogDescription>
             Elige cómo proceder con esta solicitud.
           </DialogDescription>
         </DialogHeader>
-        <DialogFooter className="flex flex-col sm:flex-row sm:justify-end sm:space-x-2">
+        <DialogFooter className={cn(dialogFooterMobileClass, "flex flex-col sm:flex-row sm:justify-end sm:space-x-2")}>
           <Button variant="outline" onClick={() => onApproveOnly(request)} disabled={isSubmitting}>
             {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : approveOnlyText}
           </Button>

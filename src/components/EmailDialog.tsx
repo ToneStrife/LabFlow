@@ -21,16 +21,16 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Paperclip } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { mobileDialogClass } from "@/lib/layout";
-import RichTextEditor from './RichTextEditor'; // Importar el nuevo componente
+import RichTextEditor from './RichTextEditor';
+import type { EmailAttachment } from "@/utils/email-attachments";
 
 const attachmentSchema = z.object({
   name: z.string(),
-  url: z.string(), // Esta URL puede ser la ruta de almacenamiento o la URL firmada
+  url: z.string(),
 });
 
 const emailFormSchema = z.object({
@@ -38,8 +38,8 @@ const emailFormSchema = z.object({
   subject: z.string().min(1, { message: "El asunto es obligatorio." }),
   body: z.string().min(1, { message: "El cuerpo del correo no puede estar vacío." }),
   fromName: z.string().optional(),
-  attachments: z.array(attachmentSchema).optional(), // Adjuntos para mostrar en el diálogo (usando URL firmada)
-  attachmentsForSend: z.array(attachmentSchema).optional(), // Adjuntos para enviar (usando ruta de almacenamiento)
+  attachments: z.array(attachmentSchema).optional(),
+  attachmentsForSend: z.array(attachmentSchema).optional(),
 });
 
 export type EmailFormValues = z.infer<typeof emailFormSchema>;
@@ -59,6 +59,14 @@ const EmailDialog: React.FC<EmailDialogProps> = ({
   onSend,
   isSending,
 }) => {
+  const attachmentsForSendRef = React.useRef<EmailAttachment[]>([]);
+
+  React.useEffect(() => {
+    if (isOpen) {
+      attachmentsForSendRef.current = initialData.attachmentsForSend || [];
+    }
+  }, [initialData, isOpen]);
+
   const form = useForm<EmailFormValues>({
     resolver: zodResolver(emailFormSchema),
     defaultValues: {
@@ -67,37 +75,35 @@ const EmailDialog: React.FC<EmailDialogProps> = ({
       body: initialData.body || "",
       fromName: initialData.fromName || "",
       attachments: initialData.attachments || [],
-      attachmentsForSend: initialData.attachmentsForSend || [],
     },
-    values: { // Use values to ensure form updates when initialData changes
+    values: {
       to: initialData.to || "",
       subject: initialData.subject || "",
       body: initialData.body || "",
       fromName: initialData.fromName || "",
       attachments: initialData.attachments || [],
-      attachmentsForSend: initialData.attachmentsForSend || [],
     },
   });
 
   const handleSubmit = async (data: EmailFormValues) => {
-    // Si attachmentsForSend existe, lo usamos para el envío real, ya que contiene las rutas de almacenamiento.
-    // Si no existe, usamos attachments (comportamiento por defecto).
-    const dataToSend = {
+    const storageAttachments =
+      attachmentsForSendRef.current.length > 0
+        ? attachmentsForSendRef.current
+        : data.attachments;
+
+    await onSend({
       ...data,
-      attachments: data.attachmentsForSend && data.attachmentsForSend.length > 0 
-        ? data.attachmentsForSend 
-        : data.attachments,
-    };
-    
-    await onSend(dataToSend);
-    form.reset(); // Reset form after sending
+      attachments: storageAttachments,
+    });
+    form.reset();
+    attachmentsForSendRef.current = [];
   };
 
-  React.useEffect(() => {
-    if (!isOpen) {
-      form.reset(); // Reset form when dialog closes
-    }
-  }, [isOpen, form]);
+  const handleCancel = () => {
+    form.reset();
+    attachmentsForSendRef.current = [];
+    onOpenChange(false);
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -105,7 +111,7 @@ const EmailDialog: React.FC<EmailDialogProps> = ({
         <DialogHeader>
           <DialogTitle>Redactar Correo Electrónico</DialogTitle>
           <DialogDescription>
-            Este es un sistema de correo simulado. El contenido del correo se registrará en la consola.
+            Revisa el contenido y envía el correo cuando esté listo.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -143,7 +149,6 @@ const EmailDialog: React.FC<EmailDialogProps> = ({
                 <FormItem>
                   <FormLabel>Cuerpo</FormLabel>
                   <FormControl>
-                    {/* Usar el nuevo RichTextEditor */}
                     <RichTextEditor 
                       value={field.value} 
                       onChange={field.onChange} 
@@ -172,7 +177,6 @@ const EmailDialog: React.FC<EmailDialogProps> = ({
               <div className="space-y-2">
                 <FormLabel>Adjuntos (Clic para previsualizar)</FormLabel>
                 <div className="flex flex-wrap gap-2">
-                  {/* Usamos 'attachments' aquí porque contiene las URL firmadas para la vista previa */}
                   {form.watch("attachments")!.map((attachment, index) => (
                     <Badge key={index} variant="secondary" className="flex items-center gap-1">
                       <Paperclip className="h-3 w-3" />
@@ -185,7 +189,7 @@ const EmailDialog: React.FC<EmailDialogProps> = ({
               </div>
             )}
             <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4 shrink-0">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSending}>
+              <Button type="button" variant="outline" onClick={handleCancel} disabled={isSending}>
                 Cancelar
               </Button>
               <Button type="submit" disabled={isSending}>

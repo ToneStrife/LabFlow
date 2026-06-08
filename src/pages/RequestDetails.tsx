@@ -39,26 +39,10 @@ import { useSession } from "@/components/SessionContextProvider";
 import { isAdmin, canEditRequestDetails, canDeleteRequest, canOverrideStatus } from "@/lib/permissions";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAggregatedReceivedItems } from "@/hooks/use-packing-slips";
-import { generateSignedUrl } from "@/utils/supabase-storage";
+import { buildStorageAttachment, openEmailDialogAfterClose } from "@/utils/email-attachments";
 import { RequestStatus as RequestStatusType, Vendor, Profile, AccountManager, Project, ShippingAddress, BillingAddress } from "@/data/types";
 import { cn } from "@/lib/utils";
 import { pageContainerClass, mobileDialogClass, dialogFooterMobileClass } from "@/lib/layout";
-
-const getFileNameFromPath = (filePath: string): string => {
-  if (!filePath) return "Archivo";
-  try {
-    const pathParts = filePath.split('/');
-    const encodedFileName = pathParts[pathParts.length - 1];
-    const decodedFileName = decodeURIComponent(encodedFileName);
-    const parts = decodedFileName.split('_');
-    if (parts.length > 1 && !isNaN(Number(parts[0]))) {
-      return parts.slice(1).join('_');
-    }
-    return decodedFileName.substring(decodedFileName.indexOf('_') + 1) || decodedFileName || "Archivo";
-  } catch (e) {
-    return "Archivo";
-  }
-};
 
 const RequestDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -114,12 +98,11 @@ const RequestDetails: React.FC = () => {
   };
 
   const handleSendEmail = async (emailData: EmailFormValues) => {
-    const attachmentsToSend = (emailData.attachmentsForSend || emailData.attachments || []) as { name: string; url: string }[];
     await sendEmailMutation.mutateAsync({
       to: emailData.to!,
       subject: emailData.subject,
       body: emailData.body,
-      attachments: attachmentsToSend,
+      attachments: emailData.attachments,
     });
     setIsEmailDialogOpen(false);
   };
@@ -143,22 +126,16 @@ const RequestDetails: React.FC = () => {
       billingAddress: billingAddresses?.find(a => a.id === request.billing_address_id),
     };
 
-    let attachmentsForDialog: { name: string; url: string }[] = [];
-    let attachmentsForSend: { name: string; url: string }[] = [];
-    
-    if (request.quote_url) {
-      const fileName = getFileNameFromPath(request.quote_url);
-      const signedUrl = await generateSignedUrl(request.quote_url);
-      if (signedUrl) attachmentsForDialog.push({ name: fileName, url: signedUrl });
-      attachmentsForSend.push({ name: fileName, url: request.quote_url });
-    }
+    const { forDialog, forSend } = request.quote_url
+      ? await buildStorageAttachment(request.quote_url)
+      : { forDialog: [], forSend: [] };
 
     setEmailInitialData({
       to: getAccountManagerEmail(request.account_manager_id),
       subject: processTextTemplate(poRequestTemplate.subject_template, context as any),
       body: processEmailTemplate(poRequestTemplate.body_template, context as any),
-      attachments: attachmentsForDialog,
-      attachmentsForSend: attachmentsForSend,
+      attachments: forDialog,
+      attachmentsForSend: forSend,
     });
 
     setIsEmailDialogOpen(true);
@@ -197,13 +174,49 @@ const RequestDetails: React.FC = () => {
           billingAddress: billingAddresses?.find(a => a.id === requestToApprove.billing_address_id),
         };
         
-        setEmailInitialData({
+        const emailData = {
           to: getVendorEmail(requestToApprove.vendor_id),
           subject: processTextTemplate(quoteTemplate.subject_template, context as any),
           body: processEmailTemplate(quoteTemplate.body_template, context as any),
-        });
-        setIsApproveRequestDialogOpen(false);
-        setIsEmailDialogOpen(true);
+        };
+
+        openEmailDialogAfterClose(
+          () => setIsApproveRequestDialogOpen(false),
+          () => {
+            setEmailInitialData(emailData);
+            setIsEmailDialogOpen(true);
+          }
+        );
+      } else if (requestToApprove.quote_url && requestToApprove.account_manager_id) {
+        const poRequestTemplate = emailTemplates?.find(t => t.template_name === 'PO Request');
+        if (!poRequestTemplate) return;
+
+        const poContext = {
+          request: { ...requestToApprove, status: "PO Requested" as const },
+          vendor: vendors?.find(v => v.id === requestToApprove.vendor_id),
+          requesterProfile: profiles?.find(p => p.id === requestToApprove.requester_id),
+          accountManager: accountManagers?.find(am => am.id === requestToApprove.account_manager_id),
+          projects: projects,
+          actorProfile: profile,
+          shippingAddress: shippingAddresses?.find(a => a.id === requestToApprove.shipping_address_id),
+          billingAddress: billingAddresses?.find(a => a.id === requestToApprove.billing_address_id),
+        };
+
+        const { forDialog, forSend } = await buildStorageAttachment(requestToApprove.quote_url);
+
+        openEmailDialogAfterClose(
+          () => setIsApproveRequestDialogOpen(false),
+          () => {
+            setEmailInitialData({
+              to: getAccountManagerEmail(requestToApprove.account_manager_id),
+              subject: processTextTemplate(poRequestTemplate.subject_template, poContext as any),
+              body: processEmailTemplate(poRequestTemplate.body_template, poContext as any),
+              attachments: forDialog,
+              attachmentsForSend: forSend,
+            });
+            setIsEmailDialogOpen(true);
+          }
+        );
       } else {
         setIsApproveRequestDialogOpen(false);
       }
@@ -251,21 +264,19 @@ const RequestDetails: React.FC = () => {
       billingAddress: billingAddresses?.find(a => a.id === request.billing_address_id),
     };
     
-    let attachmentsForDialog: { name: string; url: string }[] = [];
-    let attachmentsForSend: { name: string; url: string }[] = [];
-    
+    const attachmentsForDialog: { name: string; url: string }[] = [];
+    const attachmentsForSend: { name: string; url: string }[] = [];
+
     if (request.quote_url) {
-      const fileName = getFileNameFromPath(request.quote_url);
-      const signedUrl = await generateSignedUrl(request.quote_url);
-      if (signedUrl) attachmentsForDialog.push({ name: fileName, url: signedUrl });
-      attachmentsForSend.push({ name: fileName, url: request.quote_url });
+      const quoteAttachment = await buildStorageAttachment(request.quote_url);
+      attachmentsForDialog.push(...quoteAttachment.forDialog);
+      attachmentsForSend.push(...quoteAttachment.forSend);
     }
-    
+
     if (request.po_url) {
-      const fileName = getFileNameFromPath(request.po_url);
-      const signedUrl = await generateSignedUrl(request.po_url);
-      if (signedUrl) attachmentsForDialog.push({ name: fileName, url: signedUrl });
-      attachmentsForSend.push({ name: fileName, url: request.po_url });
+      const poAttachment = await buildStorageAttachment(request.po_url);
+      attachmentsForDialog.push(...poAttachment.forDialog);
+      attachmentsForSend.push(...poAttachment.forSend);
     }
 
     setEmailInitialData({
