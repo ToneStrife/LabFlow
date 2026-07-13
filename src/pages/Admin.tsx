@@ -74,11 +74,12 @@ type EmailTemplateFormValues = z.infer<typeof emailTemplateFormSchema>;
 
 const availablePlaceholders = [
   "{{request.id}}", "{{request.status}}", "{{request.notes}}", "{{request.quote_url}}",
-  "{{request.po_number}}", "{{request.po_url}}", "{{request.slip_url}}", "{{requester.full_name}}",
+  "{{request.po_number}}", "{{request.po_url}}", "{{request.slip_url}}", "{{request.project_codes}}",
+  "{{requester.full_name}}",
   "{{requester.email}}", "{{vendor.name}}", "{{vendor.contact_person}}", "{{vendor.email}}",
   "{{account_manager.full_name}}", "{{account_manager.email}}", "{{items_list}}", "{{cta_button}}",
   "{{message}}", "{{actor.full_name}}", "{{order.itemName}}", "{{order.id}}",
-  "{{shipping_address}}", "{{billing_address}}", // Nuevos placeholders de dirección
+  "{{shipping_address}}", "{{billing_address}}",
 ];
 
 // Mapeo de nombres de plantillas para la UI

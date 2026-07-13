@@ -70,7 +70,11 @@ const RequestDetails: React.FC = () => {
 
   const [isEmailDialogOpen, setIsEmailDialogOpen] = React.useState(false);
   const [emailInitialData, setEmailInitialData] = React.useState<Partial<EmailFormValues>>({});
-  
+  const [pendingStatusOnEmailSend, setPendingStatusOnEmailSend] = React.useState<{
+    requestId: string;
+    status: RequestStatusType;
+  } | null>(null);
+
   const [isApproveRequestDialogOpen, setIsApproveRequestDialogOpen] = React.useState(false);
   const [requestToApprove, setRequestToApprove] = React.useState<SupabaseRequest | null>(null);
 
@@ -97,6 +101,11 @@ const RequestDetails: React.FC = () => {
     return manager?.email || "";
   };
 
+  const handleEmailDialogOpenChange = (open: boolean) => {
+    setIsEmailDialogOpen(open);
+    if (!open) setPendingStatusOnEmailSend(null);
+  };
+
   const handleSendEmail = async (emailData: EmailFormValues) => {
     await sendEmailMutation.mutateAsync({
       to: emailData.to!,
@@ -104,6 +113,15 @@ const RequestDetails: React.FC = () => {
       body: emailData.body,
       attachments: emailData.attachments,
     });
+
+    if (pendingStatusOnEmailSend) {
+      await updateStatusMutation.mutateAsync({
+        id: pendingStatusOnEmailSend.requestId,
+        status: pendingStatusOnEmailSend.status,
+      });
+      setPendingStatusOnEmailSend(null);
+    }
+
     setIsEmailDialogOpen(false);
   };
 
@@ -130,6 +148,7 @@ const RequestDetails: React.FC = () => {
       ? await buildStorageAttachment(request.quote_url)
       : { forDialog: [], forSend: [] };
 
+    setPendingStatusOnEmailSend({ requestId: request.id, status: "PO Requested" });
     setEmailInitialData({
       to: getAccountManagerEmail(request.account_manager_id),
       subject: processTextTemplate(poRequestTemplate.subject_template, context as any),
@@ -493,7 +512,7 @@ const RequestDetails: React.FC = () => {
         <DialogContent><DialogHeader><DialogTitle>Revertir Recepción</DialogTitle></DialogHeader><DialogFooter><Button variant="outline" onClick={() => setIsRevertReceptionDialogOpen(false)}>Cancelar</Button><Button variant="destructive" onClick={handleRevertReception}>Confirmar</Button></DialogFooter></DialogContent>
       </Dialog>
 
-      <EmailDialog isOpen={isEmailDialogOpen} onOpenChange={setIsEmailDialogOpen} initialData={emailInitialData} onSend={handleSendEmail} isSending={sendEmailMutation.isPending} />
+      <EmailDialog isOpen={isEmailDialogOpen} onOpenChange={handleEmailDialogOpenChange} initialData={emailInitialData} onSend={handleSendEmail} isSending={sendEmailMutation.isPending} />
       <FileUploadDialog isOpen={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen} onUpload={handleFileUpload} isUploading={updateFileMutation.isPending} fileType={fileTypeToUpload} />
       {request && request.items && <ReceiveItemsDialog isOpen={isReceiveItemsDialogOpen} onOpenChange={setIsReceiveItemsDialogOpen} requestId={request.id} requestItems={request.items} />}
       {request && request.items && <InvoiceItemsDialog isOpen={isInvoiceItemsDialogOpen} onOpenChange={setIsInvoiceItemsDialogOpen} requestId={request.id} requestItems={request.items} />}

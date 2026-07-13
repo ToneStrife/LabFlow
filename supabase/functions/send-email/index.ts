@@ -114,10 +114,12 @@ serve(async (req) => {
         }
 
         const fileArrayBuffer = await fileBlob.arrayBuffer();
+        console.log(`[send-email] Adjunto listo: ${attachment.name} (${fileBlob.size} bytes)`);
         processedAttachments.push({
           filename: attachment.name,
           content: new Uint8Array(fileArrayBuffer),
           contentType: getContentType(attachment.name),
+          encoding: "binary",
         });
       }
     }

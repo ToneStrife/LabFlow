@@ -59,7 +59,11 @@ const RequestList: React.FC = () => {
 
   const [isEmailDialogOpen, setIsEmailDialogOpen] = React.useState(false);
   const [emailInitialData, setEmailInitialData] = React.useState<Partial<EmailFormValues>>({});
-  
+  const [pendingStatusOnEmailSend, setPendingStatusOnEmailSend] = React.useState<{
+    requestId: string;
+    status: RequestStatus;
+  } | null>(null);
+
   const [isReceiveItemsDialogOpen, setIsReceiveItemsDialogOpen] = React.useState(false);
   const [requestToReceive, setRequestToReceive] = React.useState<SupabaseRequest | null>(null);
   
@@ -93,6 +97,11 @@ const RequestList: React.FC = () => {
     return accountManagers?.find(am => am.id === managerId)?.email || "";
   };
 
+  const handleEmailDialogOpenChange = (open: boolean) => {
+    setIsEmailDialogOpen(open);
+    if (!open) setPendingStatusOnEmailSend(null);
+  };
+
   const handleSendEmail = async (emailData: EmailFormValues) => {
     await sendEmailMutation.mutateAsync({
       to: emailData.to!,
@@ -100,6 +109,15 @@ const RequestList: React.FC = () => {
       body: emailData.body,
       attachments: emailData.attachments,
     });
+
+    if (pendingStatusOnEmailSend) {
+      await updateStatusMutation.mutateAsync({
+        id: pendingStatusOnEmailSend.requestId,
+        status: pendingStatusOnEmailSend.status,
+      });
+      setPendingStatusOnEmailSend(null);
+    }
+
     setIsEmailDialogOpen(false);
   };
 
@@ -146,6 +164,7 @@ const RequestList: React.FC = () => {
   const handleSendPORequest = async (request: SupabaseRequest) => {
     const emailData = await buildPORequestEmailInitialData(request);
     if (!emailData) return;
+    setPendingStatusOnEmailSend({ requestId: request.id, status: "PO Requested" });
     setEmailInitialData(emailData);
     setIsEmailDialogOpen(true);
   };
@@ -385,7 +404,7 @@ const RequestList: React.FC = () => {
 
       <EmailDialog
         isOpen={isEmailDialogOpen}
-        onOpenChange={setIsEmailDialogOpen}
+        onOpenChange={handleEmailDialogOpenChange}
         initialData={emailInitialData}
         onSend={handleSendEmail}
         isSending={sendEmailMutation.isPending}
