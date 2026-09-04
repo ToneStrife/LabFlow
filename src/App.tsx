@@ -9,16 +9,17 @@ import NewRequest from "./pages/NewRequest";
 import Vendors from "./pages/Vendors";
 import RequestDetails from "./pages/RequestDetails";
 import Profile from "./pages/Profile";
-import AdminPage from "./pages/Admin"; // Importar la nueva página de Admin
-import Inventory from "./pages/Inventory"; 
-import Expenditures from "./pages/Expenditures"; // Importar la nueva página de Gastos
+import AdminPage from "./pages/Admin";
+import Inventory from "./pages/Inventory";
+import Expenditures from "./pages/Expenditures";
 import NotFound from "./pages/NotFound";
 import { SessionContextProvider, useSession } from "./components/SessionContextProvider";
 import React from "react";
 import Login from "./pages/Login";
+import ResetPassword from "./pages/ResetPassword";
 import { Loader2 } from "lucide-react";
-import { Profile as UserProfileType } from "@/data/types"; // Corrected import
-import FirebaseInitializer from "./components/FirebaseInitializer"; // Importar el inicializador
+import { Profile as UserProfileType } from "@/data/types";
+import FirebaseInitializer from "./components/FirebaseInitializer";
 
 const queryClient = new QueryClient();
 
@@ -26,7 +27,6 @@ const PrivateRoute: React.FC<{ children: React.ReactNode; requiredRoles?: UserPr
   const { session, profile, loading } = useSession();
 
   if (loading) {
-    // Si el contexto está cargando (incluyendo la carga inicial de sesión/perfil)
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin mr-2" /> Loading authentication...
@@ -35,11 +35,9 @@ const PrivateRoute: React.FC<{ children: React.ReactNode; requiredRoles?: UserPr
   }
 
   if (!session) {
-    // Si no hay sesión, redirigir a login
     return <Navigate to="/login" replace />;
   }
-  
-  // CRÍTICO: Si hay sesión pero el perfil aún no se ha cargado (lo cual debería ser raro si SessionContextProvider funciona bien, pero es un buen fallback)
+
   if (session && !profile) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -48,7 +46,6 @@ const PrivateRoute: React.FC<{ children: React.ReactNode; requiredRoles?: UserPr
     );
   }
 
-  // Si se requieren roles y el perfil existe, verificar el rol
   if (requiredRoles && profile && !requiredRoles.includes(profile.role)) {
     return <Navigate to="/dashboard" replace />;
   }
@@ -60,7 +57,6 @@ const AppRoutes = () => {
   const { loading } = useSession();
 
   if (loading) {
-    // Si el contexto está cargando, mostramos un loader global antes de renderizar el Layout
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin mr-2" /> Loading application...
@@ -72,15 +68,16 @@ const AppRoutes = () => {
     <Layout>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
         <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
         <Route path="/new-request" element={<PrivateRoute><NewRequest /></PrivateRoute>} />
         <Route path="/vendors" element={<PrivateRoute requiredRoles={["Admin"]}><Vendors /></PrivateRoute>} />
         <Route path="/requests/:id" element={<PrivateRoute><RequestDetails /></PrivateRoute>} />
         <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
-        <Route path="/admin" element={<PrivateRoute requiredRoles={["Admin"]}><AdminPage /></PrivateRoute>} /> {/* Nueva Ruta de Admin */}
+        <Route path="/admin" element={<PrivateRoute requiredRoles={["Admin"]}><AdminPage /></PrivateRoute>} />
         <Route path="/inventory" element={<PrivateRoute requiredRoles={["Requester", "Account Manager", "Admin"]}><Inventory /></PrivateRoute>} />
-        <Route path="/expenditures" element={<PrivateRoute requiredRoles={["Admin"]}><Expenditures /></PrivateRoute>} /> {/* Nueva Ruta de Gastos */}
+        <Route path="/expenditures" element={<PrivateRoute requiredRoles={["Admin"]}><Expenditures /></PrivateRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Layout>
@@ -94,7 +91,7 @@ const App = () => (
       <Sonner />
       <HashRouter future={{ v7_relativeSplatPath: true }}>
         <SessionContextProvider>
-          <FirebaseInitializer /> {/* Inicializar Firebase aquí */}
+          <FirebaseInitializer />
           <AppRoutes />
         </SessionContextProvider>
       </HashRouter>

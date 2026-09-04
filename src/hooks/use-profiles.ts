@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Profile } from "@/data/types"; 
 import { toast } from "sonner";
-import { apiGetProfiles, apiUpdateProfile, apiDeleteProfile, apiInviteUser } from "@/integrations/api";
+import { apiGetProfiles, apiUpdateProfile, apiDeleteProfile, apiInviteUser, apiResetUserPassword } from "@/integrations/api";
 
 // useAccountManagerProfiles se ha eliminado y se reemplaza por useAccountManagers en src/hooks/use-account-managers.ts
 // export const useAccountManagerProfiles = () => {
@@ -98,6 +98,22 @@ export const useDeleteProfile = () => {
     },
     onError: (error) => {
       toast.error("Fallo al eliminar el perfil.", {
+        description: error.message,
+      });
+    },
+  });
+};
+
+export const useResetUserPassword = () => {
+  return useMutation<void, Error, string>({
+    mutationFn: async (userId) => apiResetUserPassword(userId),
+    onSuccess: () => {
+      toast.success("Email de restablecimiento enviado.", {
+        description: "El usuario recibirá un enlace para crear una nueva contraseña.",
+      });
+    },
+    onError: (error) => {
+      toast.error("Fallo al enviar el restablecimiento.", {
         description: error.message,
       });
     },

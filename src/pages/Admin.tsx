@@ -24,7 +24,7 @@ import { Project } from "@/data/types";
 // Users imports
 import UserTable from "@/components/UserTable";
 import InviteUserDialog, { InviteUserFormValues } from "@/components/InviteUserDialog";
-import { useAllProfiles, useInviteUser, useUpdateProfile, useDeleteProfile } from "@/hooks/use-profiles";
+import { useAllProfiles, useInviteUser, useUpdateProfile, useDeleteProfile, useResetUserPassword } from "@/hooks/use-profiles";
 import { useSession } from "@/components/SessionContextProvider";
 import { Profile } from "@/data/types"; // Corrected import
 
@@ -115,6 +115,7 @@ const AdminPage = () => {
   const inviteUserMutation = useInviteUser();
   const updateProfileMutation = useUpdateProfile();
   const deleteProfileMutation = useDeleteProfile();
+  const resetUserPasswordMutation = useResetUserPassword();
   const [isInviteUserDialogOpen, setIsInviteUserDialogOpen] = React.useState(false);
 
   // --- Hooks for Email Templates ---
@@ -200,6 +201,9 @@ const AdminPage = () => {
       return;
     }
     await deleteProfileMutation.mutateAsync(userId);
+  };
+  const handleResetUserPassword = async (userId: string) => {
+    await resetUserPasswordMutation.mutateAsync(userId);
   };
 
   // --- Handlers for Addresses ---
@@ -339,7 +343,16 @@ const AdminPage = () => {
               </Dialog>
             </CardHeader>
             <CardContent>
-              <UserTable users={allProfiles || []} onRoleChange={handleUpdateUserRole} onDelete={handleDeleteUser} currentUserId={currentUserProfile?.id} isUpdatingRole={updateProfileMutation.isPending} isDeletingUser={deleteProfileMutation.isPending} />
+              <UserTable
+                users={allProfiles || []}
+                onRoleChange={handleUpdateUserRole}
+                onDelete={handleDeleteUser}
+                onResetPassword={handleResetUserPassword}
+                currentUserId={currentUserProfile?.id}
+                isUpdatingRole={updateProfileMutation.isPending}
+                isDeletingUser={deleteProfileMutation.isPending}
+                isResettingPassword={resetUserPasswordMutation.isPending}
+              />
             </CardContent>
           </Card>
           <Dialog open={isEditAddressDialogOpen} onOpenChange={setIsEditAddressDialogOpen}>

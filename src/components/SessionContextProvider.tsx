@@ -5,7 +5,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Profile } from "@/data/types";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Session, User } from '@supabase/supabase-js';
+import { Session } from '@supabase/supabase-js';
+import { useNavigate } from "react-router-dom";
 
 interface SessionContextType {
   session: Session | null;
@@ -22,6 +23,7 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   // Función unificada para obtener la sesión y el perfil
   const fetchSessionAndProfile = async (currentSession: Session | null) => {
@@ -68,14 +70,22 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
     loadInitialSession();
 
     // 2. Configurar el listener de cambios de estado de autenticación
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, nextSession) => {
       console.log("Auth State Change:", event);
+
+      if (event === 'PASSWORD_RECOVERY') {
+        setLoading(true);
+        fetchSessionAndProfile(nextSession).then(() => {
+          navigate("/reset-password", { replace: true });
+        });
+        return;
+      }
       
       // Si el usuario inicia sesión o se refresca la sesión, recargamos todo
       if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') {
         // Establecer loading en true temporalmente para evitar renderizados intermedios
         setLoading(true); 
-        fetchSessionAndProfile(session);
+        fetchSessionAndProfile(nextSession);
         
         // Invalidar consultas relacionadas con el usuario
         queryClient.invalidateQueries({ queryKey: ["session"] });
@@ -92,7 +102,7 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, [queryClient]); // Dependencias solo queryClient
+  }, [queryClient, navigate]);
 
   const login = async () => {
     console.log("Simulating login. Redirecting to login page handled by App.tsx");

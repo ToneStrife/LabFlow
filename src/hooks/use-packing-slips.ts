@@ -285,7 +285,8 @@ interface ReceiveItemsData {
   items: {
     requestItemId: string;
     quantityReceived: number;
-    itemDetails: SupabaseRequestItem; // Para actualizar inventario
+    storageLocation?: string | null;
+    itemDetails: SupabaseRequestItem;
   }[];
 }
 
@@ -349,6 +350,17 @@ export const useReceiveItems = () => {
             format_in: item.itemDetails.format,
           });
           if (inventoryError) throw new Error(`Fallo al actualizar el inventario para ${item.itemDetails.product_name}: ${inventoryError.message}`);
+
+          if (item.storageLocation) {
+            const { error: locationError } = await supabase
+              .from('inventory')
+              .update({ location: item.storageLocation })
+              .eq('catalog_number', item.itemDetails.catalog_number)
+              .eq('product_name', item.itemDetails.product_name);
+            if (locationError) {
+              console.error("Error updating inventory location:", locationError);
+            }
+          }
         }
       }
       

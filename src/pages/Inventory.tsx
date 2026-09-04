@@ -62,7 +62,8 @@ const Inventory = () => {
     return inventoryItems.filter(item => 
       item.product_name.toLowerCase().includes(lowerCaseSearch) ||
       item.catalog_number.toLowerCase().includes(lowerCaseSearch) ||
-      (item.brand && item.brand.toLowerCase().includes(lowerCaseSearch))
+      (item.brand && item.brand.toLowerCase().includes(lowerCaseSearch)) ||
+      (item.location && item.location.toLowerCase().includes(lowerCaseSearch))
     );
   }, [inventoryItems, searchTerm]);
   

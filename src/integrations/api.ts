@@ -15,6 +15,7 @@ import {
   UserNotificationPreferences, 
   SupabaseRequestItem, 
 } from "@/data/types";
+import { buildAuthRedirectTo } from "@/lib/auth-redirect";
 
 // Mantener las importaciones de mock data para otras tablas hasta que se conviertan
 import {
@@ -113,14 +114,7 @@ interface InviteUserData {
 
 export const apiInviteUser = async (data: InviteUserData): Promise<any> => {
   const { email, first_name, last_name, role } = data;
-  
-  // Construir la URL de redirección compatible con HashRouter y GitHub Pages
-  // Esto asegura que el enlace lleve a https://.../LabFlow/#/login o similar
-  const origin = window.location.origin;
-  const path = window.location.pathname.split('/')[1]; // Captura 'LabFlow' si existe
-  const redirectTo = path 
-    ? `${origin}/${path}/#/dashboard` 
-    : `${origin}/#/dashboard`;
+  const redirectTo = buildAuthRedirectTo("/dashboard");
 
   const { data: edgeFunctionData, error } = await supabase.functions.invoke('invite-user', {
     body: JSON.stringify({ email, first_name, last_name, role, redirectTo }),
@@ -137,6 +131,25 @@ export const apiInviteUser = async (data: InviteUserData): Promise<any> => {
     throw new Error(errorMessage);
   }
   return edgeFunctionData;
+};
+
+export const apiResetUserPassword = async (userId: string): Promise<void> => {
+  const redirectTo = buildAuthRedirectTo("/reset-password");
+
+  const { data: edgeFunctionData, error } = await supabase.functions.invoke('reset-user-password', {
+    body: JSON.stringify({ userId, redirectTo }),
+    method: 'POST',
+  });
+
+  if (error) {
+    let errorMessage = 'Failed to send password reset email.';
+    if (edgeFunctionData && typeof edgeFunctionData === 'object' && 'error' in edgeFunctionData) {
+      errorMessage = (edgeFunctionData as any).error;
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+    throw new Error(errorMessage);
+  }
 };
 
 
@@ -643,13 +656,24 @@ export const apiAddInventoryItem = async (data: InventoryItemFormData): Promise<
   const { data: newItem, error } = await supabase.rpc('add_or_update_inventory_item', {
     product_name_in: data.product_name,
     catalog_number_in: data.catalog_number,
-    brand_in: data.brand || null, 
+    brand_in: data.brand || null,
     quantity_in: data.quantity,
-    unit_price_in: data.unit_price || null, 
-    format_in: data.format || null, 
+    unit_price_in: data.unit_price || null,
+    format_in: data.format || null,
   }).single();
   if (error) throw new Error(error.message);
-  return newItem as InventoryItem; 
+
+  if (data.location) {
+    const { data: withLocation, error: locationError } = await supabase
+      .from('inventory')
+      .update({ location: data.location })
+      .eq('id', (newItem as InventoryItem).id)
+      .select()
+      .single();
+    if (!locationError && withLocation) return withLocation as InventoryItem;
+  }
+
+  return newItem as InventoryItem;
 };
 
 export const apiUpdateInventoryItem = async (id: string, data: Partial<InventoryItemFormData>): Promise<InventoryItem> => {

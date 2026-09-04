@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { SupabaseRequest } from "@/data/types";
 import { useSession } from "@/components/SessionContextProvider";
-import { canApprovePendingRequest, canPerformWorkflowAction } from "@/lib/permissions";
+import { canApprovePendingRequest, canPerformWorkflowAction, canReceivePackages } from "@/lib/permissions";
 
 interface RequestActionsProps {
   request: SupabaseRequest;
@@ -47,6 +47,7 @@ const RequestActions: React.FC<RequestActionsProps> = ({
   const role = profile?.role;
   const canApprove = canApprovePendingRequest(role);
   const canWorkflow = canPerformWorkflowAction(role, request.status);
+  const canReceive = canReceivePackages(role, request.status);
 
   if (request.status === "Pending" && !canApprove) {
     return (
@@ -147,7 +148,7 @@ const RequestActions: React.FC<RequestActionsProps> = ({
       )}
 
       {/* ORDERED: Mark as Received or Send Confirmation */}
-      {request.status === "Ordered" && canWorkflow && (
+      {request.status === "Ordered" && canReceive && (
         <>
           <Button 
             onClick={handleMarkAsReceived} 
@@ -156,7 +157,7 @@ const RequestActions: React.FC<RequestActionsProps> = ({
           >
             <Receipt className="mr-2 h-4 w-4" /> Recibir Artículos
           </Button>
-          {request.po_url && (
+          {request.po_url && canWorkflow && (
             <Button 
               variant="outline" 
               onClick={() => handleMarkAsOrderedAndSendEmail(request)} 
@@ -166,14 +167,16 @@ const RequestActions: React.FC<RequestActionsProps> = ({
               <Mail className="mr-2 h-4 w-4" /> Reenviar Confirmación Pedido
             </Button>
           )}
-          <Button 
-            variant="outline" 
-            onClick={openCancelRequestDialog} 
-            className="w-full justify-start text-red-600 border-red-200 hover:bg-red-50" 
-            disabled={isUpdatingStatus}
-          >
-            <XCircle className="mr-2 h-4 w-4" /> Cancelar Solicitud
-          </Button>
+          {canWorkflow && (
+            <Button 
+              variant="outline" 
+              onClick={openCancelRequestDialog} 
+              className="w-full justify-start text-red-600 border-red-200 hover:bg-red-50" 
+              disabled={isUpdatingStatus}
+            >
+              <XCircle className="mr-2 h-4 w-4" /> Cancelar Solicitud
+            </Button>
+          )}
         </>
       )}
 

@@ -30,6 +30,7 @@ const inventoryFormSchema = z.object({
     z.number().min(0, { message: "El precio unitario no puede ser negativo." }).nullable().optional()
   ),
   format: z.string().optional().nullable(),
+  location: z.string().optional().nullable(),
 });
 
 export type InventoryFormValues = z.infer<typeof inventoryFormSchema>;
@@ -51,6 +52,7 @@ const InventoryForm: React.FC<InventoryFormProps> = ({ initialData, onSubmit, on
       quantity: initialData.quantity,
       unit_price: initialData.unit_price,
       format: initialData.format,
+      location: initialData.location,
     } : {
       product_name: "",
       catalog_number: "",
@@ -58,6 +60,7 @@ const InventoryForm: React.FC<InventoryFormProps> = ({ initialData, onSubmit, on
       quantity: 0,
       unit_price: null,
       format: null,
+      location: null,
     },
   });
 
@@ -141,6 +144,25 @@ const InventoryForm: React.FC<InventoryFormProps> = ({ initialData, onSubmit, on
               <FormLabel>Formato (Opcional)</FormLabel>
               <FormControl>
                 <Input placeholder="ej. 200pack 8cs of 25" {...field} disabled={isSubmitting} value={field.value || ""} onChange={(e) => field.onChange(e.target.value || null)} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="location"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Ubicación (Opcional)</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="ej. Nevera 2 / Estantería B"
+                  {...field}
+                  disabled={isSubmitting}
+                  value={field.value || ""}
+                  onChange={(e) => field.onChange(e.target.value || null)}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>

@@ -61,6 +61,7 @@ const InventoryTable: React.FC<InventoryTableProps> = ({ items, onEdit, onDelete
             <TableHead className="hidden sm:table-cell">Marca</TableHead>
             <TableHead>Catálogo #</TableHead>
             <TableHead>Cantidad</TableHead>
+            <TableHead className="hidden sm:table-cell">Ubicación</TableHead>
             <TableHead className="hidden md:table-cell">Precio Unitario</TableHead>
             <TableHead className="hidden lg:table-cell">Formato</TableHead>
             <TableHead className="hidden lg:table-cell">Añadido el</TableHead>
@@ -70,7 +71,7 @@ const InventoryTable: React.FC<InventoryTableProps> = ({ items, onEdit, onDelete
         <TableBody>
           {items.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
+              <TableCell colSpan={10} className="h-24 text-center text-muted-foreground">
                 No se encontraron artículos en el inventario.
               </TableCell>
             </TableRow>
@@ -90,6 +91,7 @@ const InventoryTable: React.FC<InventoryTableProps> = ({ items, onEdit, onDelete
                   <TableCell className="hidden sm:table-cell">{item.brand || "N/A"}</TableCell>
                   <TableCell>{item.catalog_number}</TableCell>
                   <TableCell>{item.quantity}</TableCell>
+                  <TableCell className="hidden sm:table-cell">{item.location || "—"}</TableCell>
                   <TableCell className="hidden md:table-cell">{item.unit_price ? `€${Number(item.unit_price).toFixed(2)}` : "N/A"}</TableCell>
                   <TableCell className="hidden lg:table-cell">{item.format || "N/A"}</TableCell>
                   <TableCell className="hidden lg:table-cell">{format(new Date(item.added_at), 'yyyy-MM-dd')}</TableCell>

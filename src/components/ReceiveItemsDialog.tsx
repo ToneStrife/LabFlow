@@ -46,6 +46,7 @@ const receivedItemSchema = z.object({
     (val) => Number(val),
     z.number().int({ message: "La cantidad debe ser un número entero." }).min(0, { message: "La cantidad no puede ser negativa." })
   ),
+  storageLocation: z.string().optional().nullable(),
 });
 
 const receiveFormSchema = z.object({
@@ -106,7 +107,8 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
         productName: item.product_name,
         quantityOrdered: item.quantity,
         quantityPreviouslyReceived: previouslyReceived,
-        quantityReceived: remaining > 0 ? remaining : 0,
+        quantityReceived: 0,
+        storageLocation: null,
       };
     });
   }, [requestItems, aggregatedReceived]);
@@ -134,7 +136,11 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
               (s: { requestItemId: string; quantityReceived?: number }) => s.requestItemId === initialItem.requestItemId
             );
             if (savedItem && savedItem.quantityReceived !== undefined && savedItem.quantityReceived >= 0) {
-              return { ...initialItem, quantityReceived: savedItem.quantityReceived };
+              return {
+                ...initialItem,
+                quantityReceived: savedItem.quantityReceived,
+                storageLocation: savedItem.storageLocation ?? initialItem.storageLocation,
+              };
             }
             return initialItem;
           });
@@ -160,6 +166,7 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
           items: watchedValues.items?.map((item) => ({
             requestItemId: item.requestItemId,
             quantityReceived: item.quantityReceived,
+            storageLocation: item.storageLocation ?? null,
           })),
         })
       );
@@ -263,6 +270,7 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
         return {
           requestItemId: item.requestItemId,
           quantityReceived: item.quantityReceived,
+          storageLocation: item.storageLocation?.trim() || null,
           itemDetails: orderedItem,
         };
       });
@@ -455,6 +463,26 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
                                   </Button>
                                 )}
                               </div>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name={`items.${index}.storageLocation`}
+                          render={({ field: locationField }) => (
+                            <FormItem>
+                              <FormLabel>Ubicación (opcional)</FormLabel>
+                              <FormControl>
+                                <Input
+                                  placeholder="ej. Nevera 2 / Estantería B"
+                                  {...locationField}
+                                  value={locationField.value || ""}
+                                  onChange={(e) => locationField.onChange(e.target.value || null)}
+                                  disabled={isSubmitting}
+                                />
+                              </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}

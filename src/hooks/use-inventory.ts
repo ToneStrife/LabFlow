@@ -23,10 +23,11 @@ export const useInventory = () => {
 export interface InventoryItemFormData {
   product_name: string;
   catalog_number: string;
-  brand: string | null | undefined; // Nullable in DB, optional in form
+  brand: string | null | undefined;
   quantity: number;
-  unit_price: number | null | undefined; // Nullable in DB, optional in form
-  format: string | null | undefined; // Nullable in DB, optional in form
+  unit_price: number | null | undefined;
+  format: string | null | undefined;
+  location: string | null | undefined;
 }
 
 // Add Inventory Item
@@ -42,6 +43,7 @@ export const useAddInventoryItem = () => {
         quantity: data.quantity,
         unit_price: data.unit_price || null,
         format: data.format || null,
+        location: data.location || null,
       };
       return apiAddInventoryItem(dataToSubmit);
     },

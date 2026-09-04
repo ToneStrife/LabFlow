@@ -25,7 +25,7 @@ import { SupabaseRequest } from "@/data/types";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { useSession } from "@/components/SessionContextProvider";
-import { canApprovePendingRequest, canMergeRequest, canPerformWorkflowAction } from "@/lib/permissions";
+import { canApprovePendingRequest, canMergeRequest, canPerformWorkflowAction, canReceivePackages } from "@/lib/permissions";
 
 interface RequestListActionsProps {
   request: SupabaseRequest;
@@ -64,6 +64,7 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
   const canApprove = canApprovePendingRequest(role);
   const canMerge = canMergeRequest(role) && request.status === "Pending";
   const canWorkflow = canPerformWorkflowAction(role, request.status);
+  const canReceive = canReceivePackages(role, request.status);
 
   const iconButtons = (
     <>
@@ -188,28 +189,32 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
         </>
       )}
 
-      {request.status === "Ordered" && canWorkflow && (
+      {request.status === "Ordered" && (
         <>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onMarkAsReceived(request)}
-            title="Marcar como Recibido"
-            disabled={isUpdatingStatus}
-            className="shrink-0"
-          >
-            <Receipt className="h-4 w-4 text-purple-600" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onCancel(request)}
-            title="Cancelar Solicitud"
-            disabled={isUpdatingStatus}
-            className="shrink-0"
-          >
-            <XCircle className="h-4 w-4 text-red-600" />
-          </Button>
+          {canReceive && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onMarkAsReceived(request)}
+              title="Marcar como Recibido"
+              disabled={isUpdatingStatus}
+              className="shrink-0"
+            >
+              <Receipt className="h-4 w-4 text-purple-600" />
+            </Button>
+          )}
+          {canWorkflow && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onCancel(request)}
+              title="Cancelar Solicitud"
+              disabled={isUpdatingStatus}
+              className="shrink-0"
+            >
+              <XCircle className="h-4 w-4 text-red-600" />
+            </Button>
+          )}
         </>
       )}
     </>
@@ -278,14 +283,18 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
                 </DropdownMenuItem>
               </>
             )}
-            {request.status === "Ordered" && canWorkflow && (
+            {request.status === "Ordered" && (canReceive || canWorkflow) && (
               <>
-                <DropdownMenuItem onClick={() => onMarkAsReceived(request)} disabled={isUpdatingStatus}>
-                  <Receipt className="mr-2 h-4 w-4 text-purple-600" /> Recibir artículos
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onCancel(request)} disabled={isUpdatingStatus} className="text-red-600">
-                  <XCircle className="mr-2 h-4 w-4" /> Cancelar
-                </DropdownMenuItem>
+                {canReceive && (
+                  <DropdownMenuItem onClick={() => onMarkAsReceived(request)} disabled={isUpdatingStatus}>
+                    <Receipt className="mr-2 h-4 w-4 text-purple-600" /> Recibir artículos
+                  </DropdownMenuItem>
+                )}
+                {canWorkflow && (
+                  <DropdownMenuItem onClick={() => onCancel(request)} disabled={isUpdatingStatus} className="text-red-600">
+                    <XCircle className="mr-2 h-4 w-4" /> Cancelar
+                  </DropdownMenuItem>
+                )}
               </>
             )}
           </DropdownMenuContent>

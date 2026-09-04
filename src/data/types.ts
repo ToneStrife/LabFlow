@@ -177,6 +177,7 @@ export interface InventoryItem {
   quantity: number;
   unit_price: number | null;
   format: string | null;
+  location: string | null;
   added_at: string;
   last_updated: string;
 }

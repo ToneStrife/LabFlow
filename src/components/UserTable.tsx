@@ -10,9 +10,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Trash2, Loader2 } from "lucide-react";
+import { Trash2, Loader2, KeyRound } from "lucide-react";
 import { getFullName } from "@/hooks/use-profiles";
-import { Profile } from "@/data/types"; // Corrected import source
+import { Profile } from "@/data/types";
 import {
   Select,
   SelectContent,
@@ -20,24 +20,27 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { toast } from "sonner";
 
 interface UserTableProps {
   users: Profile[];
   onRoleChange: (userId: string, newRole: Profile['role']) => void;
   onDelete: (userId: string) => void;
-  currentUserId?: string; // ID del usuario actualmente logueado
+  onResetPassword: (userId: string) => void;
+  currentUserId?: string;
   isUpdatingRole: boolean;
   isDeletingUser: boolean;
+  isResettingPassword: boolean;
 }
 
 const UserTable: React.FC<UserTableProps> = ({
   users,
   onRoleChange,
   onDelete,
+  onResetPassword,
   currentUserId,
   isUpdatingRole,
   isDeletingUser,
+  isResettingPassword,
 }) => {
   const availableRoles: Profile['role'][] = ["Requester", "Account Manager", "Admin"];
 
@@ -68,7 +71,7 @@ const UserTable: React.FC<UserTableProps> = ({
                   <Select
                     value={user.role}
                     onValueChange={(newRole: Profile['role']) => onRoleChange(user.id, newRole)}
-                    disabled={user.id === currentUserId || isUpdatingRole} // No permitir cambiar el rol del propio usuario o si ya se está actualizando
+                    disabled={user.id === currentUserId || isUpdatingRole}
                   >
                     <SelectTrigger className="w-[180px]">
                       <SelectValue placeholder="Seleccionar rol" />
@@ -82,19 +85,28 @@ const UserTable: React.FC<UserTableProps> = ({
                     </SelectContent>
                   </Select>
                 </TableCell>
-                <TableCell className="text-right">
+                <TableCell className="text-right space-x-1">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => onResetPassword(user.id)}
+                    title="Enviar restablecimiento de contraseña"
+                    disabled={isResettingPassword}
+                  >
+                    {isResettingPassword ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <KeyRound className="h-4 w-4" />
+                    )}
+                  </Button>
                   <Button
                     variant="destructive"
                     size="icon"
                     onClick={() => onDelete(user.id)}
                     title="Eliminar Usuario"
-                    disabled={user.id === currentUserId || isDeletingUser} // No permitir eliminar el propio usuario o si ya se está eliminando
+                    disabled={user.id === currentUserId || isDeletingUser}
                   >
-                    {isDeletingUser && user.id === currentUserId ? ( // Mostrar loader solo si es el usuario que se está eliminando
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Trash2 className="h-4 w-4" />
-                    )}
+                    <Trash2 className="h-4 w-4" />
                   </Button>
                 </TableCell>
               </TableRow>

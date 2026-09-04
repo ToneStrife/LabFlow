@@ -20,6 +20,12 @@ export function canPerformWorkflowAction(role?: UserRole, status?: RequestStatus
   return true;
 }
 
+/** Any authenticated role can receive packages for Ordered requests. */
+export function canReceivePackages(role?: UserRole, status?: RequestStatus): boolean {
+  if (!role || !status) return false;
+  return status === "Ordered";
+}
+
 export function canEditRequestDetails(role?: UserRole, status?: RequestStatus): boolean {
   return canPerformWorkflowAction(role, status);
 }
