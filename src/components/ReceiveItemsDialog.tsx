@@ -22,12 +22,23 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Loader2, CheckSquare, CheckCheck, Info, List } from "lucide-react";
+import {
+  Loader2,
+  CheckCheck,
+  Camera,
+  Package,
+  ClipboardCheck,
+  Minus,
+  Plus,
+  MapPin,
+  ArrowLeft,
+  ArrowRight,
+  FileText,
+} from "lucide-react";
 import { SupabaseRequestItem } from "@/data/types";
 import { useReceiveItems, useAggregatedReceivedItems } from "@/hooks/use-packing-slips";
 import { toast } from "sonner";
 import FileUploadInput from "@/components/FileUploadInput";
-import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { mobileDialogClass, dialogFooterMobileClass, dialogBodyScrollClass } from "@/lib/layout";
 import {
@@ -44,7 +55,10 @@ const receivedItemSchema = z.object({
   quantityPreviouslyReceived: z.number(),
   quantityReceived: z.preprocess(
     (val) => Number(val),
-    z.number().int({ message: "La cantidad debe ser un número entero." }).min(0, { message: "La cantidad no puede ser negativa." })
+    z
+      .number()
+      .int({ message: "La cantidad debe ser un número entero." })
+      .min(0, { message: "La cantidad no puede ser negativa." })
   ),
   storageLocation: z.string().optional().nullable(),
 });
@@ -55,6 +69,13 @@ const receiveFormSchema = z.object({
 });
 
 type ReceiveFormValues = z.infer<typeof receiveFormSchema>;
+type WizardStep = 1 | 2 | 3;
+
+const STEP_META: { id: WizardStep; label: string; icon: React.ElementType }[] = [
+  { id: 1, label: "Albarán", icon: Camera },
+  { id: 2, label: "Artículos", icon: Package },
+  { id: 3, label: "Confirmar", icon: ClipboardCheck },
+];
 
 interface ReceiveItemsDialogProps {
   isOpen: boolean;
@@ -72,6 +93,7 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
   const { data: aggregatedReceived, isLoading: isLoadingReceived } = useAggregatedReceivedItems(requestId);
   const receiveItemsMutation = useReceiveItems();
   const [slipFile, setSlipFile] = React.useState<File | null>(null);
+  const [step, setStep] = React.useState<WizardStep>(1);
   const filePickerActiveRef = React.useRef(false);
   const suppressCloseUntilRef = React.useRef(0);
   const reopenAttemptedRef = React.useRef(false);
@@ -88,6 +110,10 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
     return () => mq.removeEventListener("change", update);
   }, []);
 
+  React.useEffect(() => {
+    if (isOpen) setStep(1);
+  }, [isOpen, requestId]);
+
   const extendSuppressClose = useCallback((ms: number) => {
     suppressCloseUntilRef.current = Date.now() + ms;
   }, []);
@@ -100,23 +126,22 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
   const initialItems = React.useMemo(() => {
     if (!requestItems || !aggregatedReceived) return [];
     return requestItems.map((item) => {
-      const previouslyReceived = aggregatedReceived.find((agg) => agg.request_item_id === item.id)?.total_received || 0;
-      const remaining = item.quantity - previouslyReceived;
+      const previouslyReceived =
+        aggregatedReceived.find((agg) => agg.request_item_id === item.id)?.total_received || 0;
       return {
         requestItemId: item.id,
         productName: item.product_name,
         quantityOrdered: item.quantity,
         quantityPreviouslyReceived: previouslyReceived,
         quantityReceived: 0,
-        storageLocation: null,
+        storageLocation: null as string | null,
       };
     });
   }, [requestItems, aggregatedReceived]);
 
   const form = useForm<ReceiveFormValues>({
     resolver: zodResolver(receiveFormSchema),
-    defaultValues: { slipNumber: null, items: initialItems },
-    values: { slipNumber: null, items: initialItems },
+    defaultValues: { slipNumber: null, items: [] },
   });
 
   const { fields } = useFieldArray({ control: form.control, name: "items" });
@@ -124,16 +149,21 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
   const [hasRestored, setHasRestored] = React.useState(false);
 
   React.useEffect(() => {
-    if (isLoadingReceived || hasRestored) return;
+    if (isLoadingReceived || !initialItems.length || hasRestored) return;
+
+    let slipNumber: string | null = null;
+    let items = initialItems;
+
     const raw = localStorage.getItem(PERSIST_KEY);
     if (raw) {
       try {
         const saved = JSON.parse(raw);
-        form.setValue("slipNumber", saved.slipNumber ?? null);
+        slipNumber = saved.slipNumber ?? null;
         if (saved.items && Array.isArray(saved.items)) {
-          const updatedItems = initialItems.map((initialItem) => {
+          items = initialItems.map((initialItem) => {
             const savedItem = saved.items.find(
-              (s: { requestItemId: string; quantityReceived?: number }) => s.requestItemId === initialItem.requestItemId
+              (s: { requestItemId: string; quantityReceived?: number; storageLocation?: string | null }) =>
+                s.requestItemId === initialItem.requestItemId
             );
             if (savedItem && savedItem.quantityReceived !== undefined && savedItem.quantityReceived >= 0) {
               return {
@@ -144,17 +174,20 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
             }
             return initialItem;
           });
-          form.setValue("items", updatedItems as ReceiveFormValues["items"], { shouldDirty: true });
         }
-        setHasRestored(true);
       } catch {
         localStorage.removeItem(PERSIST_KEY);
       }
-    } else {
-      setHasRestored(true);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+
+    form.reset({ slipNumber, items });
+    setHasRestored(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialItems, isLoadingReceived]);
+
+  React.useEffect(() => {
+    setHasRestored(false);
+  }, [requestId]);
 
   React.useEffect(() => {
     if (!hasRestored) return;
@@ -215,7 +248,7 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
         };
         sessionStorage.setItem(SLIP_FILE_KEY, JSON.stringify(payload));
       } catch {
-        /* sessionStorage optional — ignore quota errors */
+        /* sessionStorage optional */
       }
     },
     [SLIP_FILE_KEY]
@@ -252,6 +285,7 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
     sessionStorage.removeItem(SLIP_FILE_KEY);
     sessionStorage.removeItem(RECEIVING_FLAG_KEY);
     setSlipFile(null);
+    setStep(1);
   }, [PERSIST_KEY, SLIP_FILE_KEY, RECEIVING_FLAG_KEY]);
 
   const handleSubmit = async (data: ReceiveFormValues) => {
@@ -276,7 +310,8 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
       });
 
     if (itemsToReceive.length === 0) {
-      toast.error("Por favor, especifica al menos una cantidad de artículo positiva para registrar.");
+      toast.error("Marca al menos un artículo con cantidad mayor que 0.");
+      setStep(2);
       return;
     }
 
@@ -298,25 +333,51 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
     form.setValue("items", updatedItems as ReceiveFormValues["items"], { shouldDirty: true });
   };
 
-  const handleReceiveAllAndSubmit = () => {
+  const handleReceiveAllAndGoToSummary = () => {
     if (allItemsFullyReceived) {
       toast.info("Todos los artículos ya han sido recibidos completamente.");
       return;
     }
     handleReceiveAll();
-    setTimeout(() => form.handleSubmit(handleSubmit)(), 0);
+    setStep(3);
   };
 
-  const handleReceiveRemaining = (index: number) => {
+  const adjustQuantity = (index: number, delta: number) => {
     const item = form.getValues(`items.${index}`);
-    const quantityRemaining = item.quantityOrdered - item.quantityPreviouslyReceived;
-    if (quantityRemaining > 0) {
-      form.setValue(`items.${index}.quantityReceived`, quantityRemaining, { shouldDirty: true });
-      toast.info(`Recibidas ${quantityRemaining} unidades restantes de ${item.productName}.`);
+    const remaining = item.quantityOrdered - item.quantityPreviouslyReceived;
+    const next = Math.max(0, Math.min(remaining > 0 ? remaining : 0, (item.quantityReceived || 0) + delta));
+    form.setValue(`items.${index}.quantityReceived`, next, { shouldDirty: true });
+  };
+
+  const setRemaining = (index: number) => {
+    const item = form.getValues(`items.${index}`);
+    const remaining = item.quantityOrdered - item.quantityPreviouslyReceived;
+    if (remaining > 0) {
+      form.setValue(`items.${index}.quantityReceived`, remaining, { shouldDirty: true });
     }
   };
 
-  const dialogClass = cn(mobileDialogClass, "sm:max-w-[800px] gap-0 p-4 sm:p-6");
+  const goNext = () => {
+    if (step === 1) {
+      setStep(2);
+      return;
+    }
+    if (step === 2) {
+      const marked = form.getValues("items").filter((i) => i.quantityReceived > 0).length;
+      if (marked === 0) {
+        toast.error("Indica la cantidad de al menos un artículo.");
+        return;
+      }
+      setStep(3);
+    }
+  };
+
+  const goBack = () => {
+    if (step === 2) setStep(1);
+    else if (step === 3) setStep(2);
+  };
+
+  const dialogClass = cn(mobileDialogClass, "sm:max-w-[640px] gap-0 p-4 sm:p-6");
 
   if (isLoadingReceived) {
     return (
@@ -334,6 +395,12 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
   const allItemsFullyReceived = initialItems.every(
     (item) => item.quantityOrdered - item.quantityPreviouslyReceived <= 0
   );
+  const watchedItems = watchedValues.items || [];
+  const markedCount = watchedItems.filter((i) => (i.quantityReceived || 0) > 0).length;
+  const pendingItemCount = initialItems.filter(
+    (i) => i.quantityOrdered - i.quantityPreviouslyReceived > 0
+  ).length;
+  const summaryItems = watchedItems.filter((i) => (i.quantityReceived || 0) > 0);
 
   return (
     <Dialog open={isOpen} onOpenChange={handleDialogOpenChange} modal={!useNonModalDialog}>
@@ -344,153 +411,318 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
         onFocusOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
-        <DialogHeader className="shrink-0 pr-8">
-          <DialogTitle className="text-base sm:text-lg">Registrar Recepción de Artículos</DialogTitle>
-          <DialogDescription className="text-sm">
-            Número y/o foto del albarán (opcional) y cantidad recibida por artículo.
+        <DialogHeader className="shrink-0 pr-8 space-y-3">
+          <DialogTitle className="text-base sm:text-lg">Recibir paquete</DialogTitle>
+          <DialogDescription className="sr-only">
+            Asistente para registrar la recepción de artículos.
           </DialogDescription>
-          <p className="text-xs text-blue-700 flex items-start gap-1.5 sm:hidden pt-1">
-            <Info className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
-            <span>
-              ¿Corregir una recepción? Usa el botón <List className="inline h-3 w-3 mx-0.5" /> en el albarán.
-            </span>
-          </p>
+
+          <nav aria-label="Pasos de recepción" className="flex items-center gap-1 sm:gap-2">
+            {STEP_META.map((s, idx) => {
+              const Icon = s.icon;
+              const active = step === s.id;
+              const done = step > s.id;
+              return (
+                <React.Fragment key={s.id}>
+                  {idx > 0 && (
+                    <div
+                      className={cn(
+                        "h-0.5 flex-1 rounded-full min-w-2",
+                        done || active ? "bg-primary" : "bg-muted"
+                      )}
+                    />
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (s.id < step) setStep(s.id);
+                    }}
+                    disabled={s.id > step}
+                    className={cn(
+                      "flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-medium transition-colors shrink-0",
+                      active && "bg-primary text-primary-foreground",
+                      done && !active && "bg-primary/15 text-primary",
+                      !active && !done && "bg-muted text-muted-foreground"
+                    )}
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">{s.label}</span>
+                    <span className="sm:hidden">{s.id}</span>
+                  </button>
+                </React.Fragment>
+              );
+            })}
+          </nav>
         </DialogHeader>
 
         <Form {...form}>
           <div className="flex flex-col flex-1 min-h-0">
             <form onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-col flex-1 min-h-0">
-              <div className={cn(dialogBodyScrollClass, "space-y-4 py-2")}>
-                <FormField
-                  control={form.control}
-                  name="slipNumber"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Número de Albarán (Opcional)</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="ej. SLIP-12345"
-                          {...field}
-                          disabled={isSubmitting}
-                          value={field.value || ""}
-                          onChange={(e) => field.onChange(e.target.value || null)}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FileUploadInput
-                  label="Foto o archivo del albarán (opcional)"
-                  accept="image/*,application/pdf"
-                  capture="environment"
-                  compact
-                  compressImages
-                  onPickerActiveChange={handlePickerActiveChange}
-                  onChange={handleSlipFileChange}
-                  disabled={isSubmitting}
-                  currentFileMeta={slipFile ? { name: slipFile.name, size: slipFile.size } : null}
-                />
-
-                <div className="hidden md:block space-y-2">
-                  <Label className="text-sm font-medium">Corrección de Errores</Label>
-                  <div className="flex items-center p-3 border rounded-md bg-blue-50 text-blue-700">
-                    <Info className="h-4 w-4 mr-2 flex-shrink-0" />
-                    <p className="text-xs">
-                      Para corregir una recepción, usa el botón <List className="inline h-3 w-3 mx-1" /> en el albarán correspondiente.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <h3 className="text-base sm:text-lg font-semibold">Artículos a Recibir</h3>
-                  {fields.map((item, index) => {
-                    const quantityOrdered = form.watch(`items.${index}.quantityOrdered`);
-                    const quantityPreviouslyReceived = form.watch(`items.${index}.quantityPreviouslyReceived`);
-                    const quantityRemaining = quantityOrdered - quantityPreviouslyReceived;
-                    const isFullyReceived = quantityRemaining <= 0 && quantityPreviouslyReceived > 0;
-                    const currentQuantityReceived = form.watch(`items.${index}.quantityReceived`);
-
-                    return (
-                      <div key={item.id} className="rounded-lg border p-3 space-y-3 bg-card">
-                        <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
-                          <div className="min-w-0 flex-1">
-                            <p className="font-medium truncate" title={item.productName}>
-                              {item.productName}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              Pedido: {quantityOrdered} | Recibido: {quantityPreviouslyReceived}
-                            </p>
-                          </div>
-                          <p className="text-sm shrink-0">
-                            <span className="text-muted-foreground">Restante: </span>
-                            <span className={cn("font-bold", quantityRemaining <= 0 ? "text-green-600" : "text-orange-600")}>
-                              {quantityRemaining}
-                            </span>
+              <div className={cn(dialogBodyScrollClass, "space-y-4 py-3")}>
+                {step === 1 && (
+                  <div className="space-y-5">
+                    <div className="rounded-xl border bg-muted/30 p-4 sm:p-5 space-y-3">
+                      <div className="flex items-start gap-3">
+                        <div className="rounded-full bg-primary/10 p-2.5 shrink-0">
+                          <Camera className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-base">Foto del albarán</h3>
+                          <p className="text-sm text-muted-foreground mt-0.5">
+                            Opcional. Puedes saltar este paso si no tienes el documento a mano.
                           </p>
                         </div>
+                      </div>
+                      <FileUploadInput
+                        label="Adjuntar albarán"
+                        accept="image/*,application/pdf"
+                        capture="environment"
+                        compressImages
+                        onPickerActiveChange={handlePickerActiveChange}
+                        onChange={handleSlipFileChange}
+                        disabled={isSubmitting}
+                        currentFileMeta={slipFile ? { name: slipFile.name, size: slipFile.size } : null}
+                      />
+                    </div>
 
-                        <FormField
-                          control={form.control}
-                          name={`items.${index}.quantityReceived`}
-                          render={({ field: quantityField }) => (
-                            <FormItem className="space-y-2">
-                              <FormLabel>Cantidad a Registrar</FormLabel>
-                              <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-                                <FormControl className="flex-1 min-w-0">
-                                  <Input
-                                    type="number"
-                                    min={0}
-                                    {...quantityField}
-                                    onChange={(e) => quantityField.onChange(Number(e.target.value))}
-                                    disabled={isSubmitting}
-                                    className={isFullyReceived ? "bg-green-50/50" : ""}
-                                  />
-                                </FormControl>
-                                {quantityRemaining > 0 && (
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size={undefined}
-                                    onClick={() => handleReceiveRemaining(index)}
-                                    disabled={isSubmitting || currentQuantityReceived === quantityRemaining}
-                                    className="w-full sm:w-10 sm:px-0 shrink-0"
-                                    title="Recibir Cantidad Restante"
-                                  >
-                                    <CheckSquare className="h-4 w-4" />
-                                    <span className="ml-2 sm:sr-only">Recibir restante</span>
-                                  </Button>
+                    <FormField
+                      control={form.control}
+                      name="slipNumber"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Número de albarán (opcional)</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="ej. SLIP-12345"
+                              {...field}
+                              disabled={isSubmitting}
+                              value={field.value || ""}
+                              onChange={(e) => field.onChange(e.target.value || null)}
+                              className="h-11"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                )}
+
+                {step === 2 && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between gap-2 sticky top-0 z-10 bg-background/95 backdrop-blur py-1">
+                      <p className="text-sm text-muted-foreground">
+                        <span className="font-semibold text-foreground">{markedCount}</span>
+                        {" / "}
+                        {pendingItemCount || fields.length} con cantidad
+                      </p>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={handleReceiveAllAndGoToSummary}
+                        disabled={isSubmitting || allItemsFullyReceived}
+                      >
+                        <CheckCheck className="h-4 w-4" />
+                        Recibir todo
+                      </Button>
+                    </div>
+
+                    {fields.map((item, index) => {
+                      const quantityOrdered = form.watch(`items.${index}.quantityOrdered`);
+                      const quantityPreviouslyReceived = form.watch(
+                        `items.${index}.quantityPreviouslyReceived`
+                      );
+                      const quantityRemaining = quantityOrdered - quantityPreviouslyReceived;
+                      const isFullyReceived = quantityRemaining <= 0 && quantityPreviouslyReceived > 0;
+                      const currentQty = form.watch(`items.${index}.quantityReceived`) || 0;
+                      const hasQty = currentQty > 0;
+
+                      return (
+                        <div
+                          key={item.id}
+                          className={cn(
+                            "rounded-xl border p-4 space-y-3 transition-colors",
+                            hasQty && "border-primary/40 bg-primary/5",
+                            isFullyReceived && "opacity-60 bg-muted/40"
+                          )}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="font-medium leading-snug" title={item.productName}>
+                                {item.productName}
+                              </p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Pedido {quantityOrdered}
+                                {quantityPreviouslyReceived > 0 &&
+                                  ` · Ya recibido ${quantityPreviouslyReceived}`}
+                              </p>
+                            </div>
+                            <div
+                              className={cn(
+                                "text-sm font-bold tabular-nums shrink-0 rounded-md px-2 py-1",
+                                quantityRemaining <= 0
+                                  ? "bg-green-100 text-green-700"
+                                  : "bg-orange-100 text-orange-800"
+                              )}
+                            >
+                              {quantityRemaining <= 0 ? "OK" : `Faltan ${quantityRemaining}`}
+                            </div>
+                          </div>
+
+                          {!isFullyReceived && (
+                            <>
+                              <FormField
+                                control={form.control}
+                                name={`items.${index}.quantityReceived`}
+                                render={({ field: quantityField }) => (
+                                  <FormItem className="space-y-2">
+                                    <FormLabel className="text-xs text-muted-foreground">
+                                      Cantidad a recibir
+                                    </FormLabel>
+                                    <div className="flex items-center gap-2">
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="icon"
+                                        className="h-11 w-11 shrink-0"
+                                        onClick={() => adjustQuantity(index, -1)}
+                                        disabled={isSubmitting || currentQty <= 0}
+                                        aria-label="Restar uno"
+                                      >
+                                        <Minus className="h-5 w-5" />
+                                      </Button>
+                                      <FormControl>
+                                        <Input
+                                          type="number"
+                                          min={0}
+                                          max={quantityRemaining}
+                                          {...quantityField}
+                                          onChange={(e) => {
+                                            const raw = Number(e.target.value);
+                                            const capped = Math.max(
+                                              0,
+                                              Math.min(quantityRemaining, Number.isFinite(raw) ? raw : 0)
+                                            );
+                                            quantityField.onChange(capped);
+                                          }}
+                                          disabled={isSubmitting}
+                                          className="h-11 text-center text-lg font-semibold tabular-nums"
+                                        />
+                                      </FormControl>
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="icon"
+                                        className="h-11 w-11 shrink-0"
+                                        onClick={() => adjustQuantity(index, 1)}
+                                        disabled={isSubmitting || currentQty >= quantityRemaining}
+                                        aria-label="Sumar uno"
+                                      >
+                                        <Plus className="h-5 w-5" />
+                                      </Button>
+                                      <Button
+                                        type="button"
+                                        variant="secondary"
+                                        className="h-11 shrink-0 px-3"
+                                        onClick={() => setRemaining(index)}
+                                        disabled={
+                                          isSubmitting ||
+                                          quantityRemaining <= 0 ||
+                                          currentQty === quantityRemaining
+                                        }
+                                      >
+                                        Todo
+                                      </Button>
+                                    </div>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+
+                              <FormField
+                                control={form.control}
+                                name={`items.${index}.storageLocation`}
+                                render={({ field: locationField }) => (
+                                  <FormItem>
+                                    <FormLabel className="text-xs text-muted-foreground flex items-center gap-1">
+                                      <MapPin className="h-3 w-3" /> Ubicación (opcional)
+                                    </FormLabel>
+                                    <FormControl>
+                                      <Input
+                                        placeholder="ej. Nevera 2 / Estantería B"
+                                        {...locationField}
+                                        value={locationField.value || ""}
+                                        onChange={(e) =>
+                                          locationField.onChange(e.target.value || null)
+                                        }
+                                        disabled={isSubmitting}
+                                        className="h-10"
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            </>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {step === 3 && (
+                  <div className="space-y-4">
+                    <div className="rounded-xl border bg-muted/30 p-4 space-y-2">
+                      <h3 className="font-semibold flex items-center gap-2">
+                        <FileText className="h-4 w-4" /> Albarán
+                      </h3>
+                      <p className="text-sm">
+                        <span className="text-muted-foreground">Número: </span>
+                        {watchedValues.slipNumber || "—"}
+                      </p>
+                      <p className="text-sm">
+                        <span className="text-muted-foreground">Archivo: </span>
+                        {slipFile?.name || "Sin foto"}
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <h3 className="font-semibold">
+                        Se registrarán {summaryItems.length} artículo
+                        {summaryItems.length === 1 ? "" : "s"}
+                      </h3>
+                      {summaryItems.length === 0 ? (
+                        <p className="text-sm text-muted-foreground rounded-lg border border-dashed p-4 text-center">
+                          No hay cantidades marcadas. Vuelve al paso anterior.
+                        </p>
+                      ) : (
+                        <ul className="divide-y rounded-xl border overflow-hidden">
+                          {summaryItems.map((item) => (
+                            <li
+                              key={item.requestItemId}
+                              className="flex items-start justify-between gap-3 p-3 bg-card"
+                            >
+                              <div className="min-w-0">
+                                <p className="font-medium text-sm leading-snug">{item.productName}</p>
+                                {item.storageLocation && (
+                                  <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+                                    <MapPin className="h-3 w-3" />
+                                    {item.storageLocation}
+                                  </p>
                                 )}
                               </div>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name={`items.${index}.storageLocation`}
-                          render={({ field: locationField }) => (
-                            <FormItem>
-                              <FormLabel>Ubicación (opcional)</FormLabel>
-                              <FormControl>
-                                <Input
-                                  placeholder="ej. Nevera 2 / Estantería B"
-                                  {...locationField}
-                                  value={locationField.value || ""}
-                                  onChange={(e) => locationField.onChange(e.target.value || null)}
-                                  disabled={isSubmitting}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
+                              <span className="font-bold tabular-nums text-primary shrink-0">
+                                ×{item.quantityReceived}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <DialogFooter className={dialogFooterMobileClass}>
@@ -498,42 +730,52 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
                   type="button"
                   variant="outline"
                   onClick={() => {
-                    clearDraft();
-                    handleDialogOpenChange(false);
+                    if (step === 1) {
+                      clearDraft();
+                      handleDialogOpenChange(false);
+                    } else {
+                      goBack();
+                    }
                   }}
                   disabled={isSubmitting}
                   className="w-full sm:w-auto"
                 >
-                  Cancelar
-                </Button>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={handleReceiveAllAndSubmit}
-                  disabled={isSubmitting || allItemsFullyReceived}
-                  className="w-full sm:w-auto"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Registrando Todo...
-                    </>
+                  {step === 1 ? (
+                    "Cancelar"
                   ) : (
                     <>
-                      <CheckCheck className="mr-2 h-4 w-4 shrink-0" />
-                      <span className="sm:hidden">Recibir todo</span>
-                      <span className="hidden sm:inline">Recibir Todo y Registrar</span>
+                      <ArrowLeft className="h-4 w-4" /> Atrás
                     </>
                   )}
                 </Button>
-                <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Registrando...
-                    </>
-                  ) : (
-                    "Registrar Recepción"
-                  )}
-                </Button>
+
+                {step < 3 ? (
+                  <Button
+                    type="button"
+                    onClick={goNext}
+                    disabled={isSubmitting}
+                    className="w-full sm:w-auto"
+                  >
+                    {step === 1 ? "Continuar" : "Revisar"}
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
+                ) : (
+                  <Button
+                    type="submit"
+                    disabled={isSubmitting || summaryItems.length === 0}
+                    className="w-full sm:w-auto"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Registrando...
+                      </>
+                    ) : (
+                      <>
+                        <ClipboardCheck className="h-4 w-4" /> Confirmar recepción
+                      </>
+                    )}
+                  </Button>
+                )}
               </DialogFooter>
             </form>
           </div>
