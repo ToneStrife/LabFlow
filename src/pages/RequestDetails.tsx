@@ -23,8 +23,8 @@ import { useEmailTemplates } from "@/hooks/use-email-templates";
 import { useShippingAddresses, useBillingAddresses } from "@/hooks/use-addresses";
 import { processEmailTemplate, processTextTemplate } from "@/utils/email-templating";
 import EmailDialog, { EmailFormValues } from "@/components/EmailDialog";
-import ReceiveItemsDialog from "@/components/ReceiveItemsDialog";
 import InvoiceItemsDialog from "@/components/request-details/InvoiceItemsDialog";
+import { useReceiveWizard } from "@/components/ReceiveWizardProvider";
 
 import RequestSummaryCard from "@/components/request-details/RequestSummaryCard";
 import RequestItemsTable from "@/components/request-details/RequestItemsTable";
@@ -48,6 +48,7 @@ const RequestDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { profile, session } = useSession();
+  const { openReceive } = useReceiveWizard();
   const userIsAdmin = isAdmin(profile?.role);
   
   const { data: requests, isLoading: isLoadingRequests } = useRequests();
@@ -83,7 +84,6 @@ const RequestDetails: React.FC = () => {
 
   const [isEditMetadataDialogOpen, setIsEditMetadataDialogOpen] = React.useState(false);
   const [isStatusOverrideDialogOpen, setIsStatusOverrideDialogOpen] = React.useState(false);
-  const [isReceiveItemsDialogOpen, setIsReceiveItemsDialogOpen] = React.useState(false);
   const [isInvoiceItemsDialogOpen, setIsInvoiceItemsDialogOpen] = React.useState(false);
   const [isRevertReceptionDialogOpen, setIsRevertReceptionDialogOpen] = React.useState(false);
   
@@ -243,7 +243,7 @@ const RequestDetails: React.FC = () => {
   };
 
   const handleOpenReceiveItemsDialog = () => {
-    if (request?.items && request.items.length > 0) setIsReceiveItemsDialogOpen(true);
+    if (request?.items && request.items.length > 0) openReceive(request.id);
   };
 
   const handleUploadClick = (fileType: FileType) => {
@@ -514,7 +514,6 @@ const RequestDetails: React.FC = () => {
 
       <EmailDialog isOpen={isEmailDialogOpen} onOpenChange={handleEmailDialogOpenChange} initialData={emailInitialData} onSend={handleSendEmail} isSending={sendEmailMutation.isPending} />
       <FileUploadDialog isOpen={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen} onUpload={handleFileUpload} isUploading={updateFileMutation.isPending} fileType={fileTypeToUpload} />
-      {request && request.items && <ReceiveItemsDialog isOpen={isReceiveItemsDialogOpen} onOpenChange={setIsReceiveItemsDialogOpen} requestId={request.id} requestItems={request.items} />}
       {request && request.items && <InvoiceItemsDialog isOpen={isInvoiceItemsDialogOpen} onOpenChange={setIsInvoiceItemsDialogOpen} requestId={request.id} requestItems={request.items} />}
     </div>
   );

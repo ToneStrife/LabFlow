@@ -19,12 +19,12 @@ import { useSession } from "@/components/SessionContextProvider";
 import { useProjects } from "@/hooks/use-projects";
 import { useEmailTemplates } from "@/hooks/use-email-templates";
 import { processTextTemplate, processEmailTemplate } from "@/utils/email-templating";
-import ReceiveItemsDialog from "@/components/ReceiveItemsDialog";
 import MergeRequestsDialog from "@/components/MergeRequestsDialog";
 import { useShippingAddresses, useBillingAddresses } from "@/hooks/use-addresses";
 import ApproveRequestListDialog from "@/components/request-list/ApproveRequestListDialog";
 import { cn } from "@/lib/utils";
 import { mobileDialogClass, dialogFooterMobileClass } from "@/lib/layout";
+import { useReceiveWizard } from "@/components/ReceiveWizardProvider";
 
 
 // Definir el orden de prioridad de los estados
@@ -53,6 +53,7 @@ const RequestList: React.FC = () => {
 
   const updateStatusMutation = useUpdateRequestStatus();
   const sendEmailMutation = useSendEmail();
+  const { openReceive } = useReceiveWizard();
 
   const [searchTerm, setSearchTerm] = React.useState<string>("");
   const [filterStatus, setFilterStatus] = React.useState<RequestStatus | "All" | "Active">("All"); // Changed default to "All"
@@ -63,9 +64,6 @@ const RequestList: React.FC = () => {
     requestId: string;
     status: RequestStatus;
   } | null>(null);
-
-  const [isReceiveItemsDialogOpen, setIsReceiveItemsDialogOpen] = React.useState(false);
-  const [requestToReceive, setRequestToReceive] = React.useState<SupabaseRequest | null>(null);
   
   const [isDenyDialogOpen, setIsDenyDialogOpen] = React.useState(false);
   const [isCancelDialogOpen, setIsCancelDialogOpen] = React.useState(false);
@@ -242,8 +240,7 @@ const RequestList: React.FC = () => {
       toast.error("No se pueden recibir artículos.", { description: "La solicitud no tiene artículos." });
       return;
     }
-    setRequestToReceive(request);
-    setIsReceiveItemsDialogOpen(true);
+    openReceive(request.id);
   };
   
   const handleDenyRequest = (request: SupabaseRequest) => {
@@ -409,15 +406,6 @@ const RequestList: React.FC = () => {
         onSend={handleSendEmail}
         isSending={sendEmailMutation.isPending}
       />
-      
-      {requestToReceive && requestToReceive.items && (
-        <ReceiveItemsDialog
-          isOpen={isReceiveItemsDialogOpen}
-          onOpenChange={setIsReceiveItemsDialogOpen}
-          requestId={requestToReceive.id}
-          requestItems={requestToReceive.items}
-        />
-      )}
       
       {sourceRequestToMerge && (
         <MergeRequestsDialog

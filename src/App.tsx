@@ -20,6 +20,7 @@ import ResetPassword from "./pages/ResetPassword";
 import { Loader2 } from "lucide-react";
 import { Profile as UserProfileType } from "@/data/types";
 import FirebaseInitializer from "./components/FirebaseInitializer";
+import { ReceiveWizardProvider } from "./components/ReceiveWizardProvider";
 
 const queryClient = new QueryClient();
 
@@ -92,7 +93,9 @@ const App = () => (
       <HashRouter future={{ v7_relativeSplatPath: true }}>
         <SessionContextProvider>
           <FirebaseInitializer />
-          <AppRoutes />
+          <ReceiveWizardProvider>
+            <AppRoutes />
+          </ReceiveWizardProvider>
         </SessionContextProvider>
       </HashRouter>
     </TooltipProvider>

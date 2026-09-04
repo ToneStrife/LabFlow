@@ -49,6 +49,13 @@ import {
   fileToDataUrl,
   type PersistedSlipFile,
 } from "@/utils/image-file";
+import {
+  ACTIVE_RECEIVE_REQUEST_KEY,
+  receiveFlagKey,
+  receiveFormKey,
+  receiveSlipFileKey,
+  receiveStepKey,
+} from "@/lib/receive-wizard-storage";
 
 const receivedItemSchema = z.object({
   requestItemId: z.string(),
@@ -100,11 +107,10 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
   const [portalReady, setPortalReady] = React.useState(false);
   const filePickerActiveRef = React.useRef(false);
   const suppressCloseUntilRef = React.useRef(0);
-  const reopenAttemptedRef = React.useRef(false);
-  const PERSIST_KEY = `receiveItemsForm:${requestId}`;
-  const SLIP_FILE_KEY = `receiveItemsSlipFile:${requestId}`;
-  const RECEIVING_FLAG_KEY = `receiveItemsReceiving:${requestId}`;
-  const STEP_KEY = `receiveItemsStep:${requestId}`;
+  const PERSIST_KEY = receiveFormKey(requestId);
+  const SLIP_FILE_KEY = receiveSlipFileKey(requestId);
+  const RECEIVING_FLAG_KEY = receiveFlagKey(requestId);
+  const STEP_KEY = receiveStepKey(requestId);
 
   React.useEffect(() => {
     setPortalReady(true);
@@ -229,7 +235,6 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
 
   React.useEffect(() => {
     if (!isOpen) return;
-    reopenAttemptedRef.current = false;
     sessionStorage.setItem(RECEIVING_FLAG_KEY, "1");
     const raw = sessionStorage.getItem(SLIP_FILE_KEY);
     if (!raw) return;
@@ -241,18 +246,8 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
     }
   }, [isOpen, SLIP_FILE_KEY, RECEIVING_FLAG_KEY]);
 
-  // Tras cámara: el navegador puede desmontar la UI; reabrir wizard fullscreen
-  React.useEffect(() => {
-    if (isOpen) return;
-    const receiving = sessionStorage.getItem(RECEIVING_FLAG_KEY) === "1";
-    if (!receiving || reopenAttemptedRef.current) return;
-    const hasSlipDraft = Boolean(sessionStorage.getItem(SLIP_FILE_KEY));
-    const hasFormDraft = Boolean(localStorage.getItem(PERSIST_KEY));
-    if (!hasSlipDraft && !hasFormDraft) return;
-    reopenAttemptedRef.current = true;
-    const id = window.setTimeout(() => onOpenChange(true), 100);
-    return () => window.clearTimeout(id);
-  }, [isOpen, onOpenChange, RECEIVING_FLAG_KEY, SLIP_FILE_KEY, PERSIST_KEY]);
+  // El wizard se mantiene abierto vía ReceiveWizardProvider + sessionStorage
+  // (sobrevive a la cámara del móvil sin depender del estado local del padre).
 
   const persistSlipFile = useCallback(
     async (file: File | null) => {
@@ -308,6 +303,7 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
     sessionStorage.removeItem(SLIP_FILE_KEY);
     sessionStorage.removeItem(RECEIVING_FLAG_KEY);
     sessionStorage.removeItem(STEP_KEY);
+    sessionStorage.removeItem(ACTIVE_RECEIVE_REQUEST_KEY);
     setSlipFile(null);
     setStep(1);
   }, [PERSIST_KEY, SLIP_FILE_KEY, RECEIVING_FLAG_KEY, STEP_KEY]);
