@@ -14,12 +14,16 @@ import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
 import { Loader2 } from "lucide-react";
 import { Profile as UserProfileType } from "@/data/types";
-import FirebaseInitializer from "./components/FirebaseInitializer";
+
 import { ReceiveWizardProvider } from "./components/ReceiveWizardProvider";
 
 // Estas paginas arrastran las librerias pesadas (graficas, editor de texto
 // enriquecido, tablas de administracion). Cargarlas solo cuando se visitan
 // evita meterlas en el paquete inicial.
+// Firebase solo sirve para las notificaciones push, que no hacen falta para
+// pintar la primera pantalla.
+const FirebaseInitializer = React.lazy(() => import("./components/FirebaseInitializer"));
+
 const NewRequest = React.lazy(() => import("./pages/NewRequest"));
 const Vendors = React.lazy(() => import("./pages/Vendors"));
 const RequestDetails = React.lazy(() => import("./pages/RequestDetails"));
@@ -107,7 +111,9 @@ const App = () => (
       <Sonner />
       <HashRouter future={{ v7_relativeSplatPath: true }}>
         <SessionContextProvider>
-          <FirebaseInitializer />
+          <React.Suspense fallback={null}>
+            <FirebaseInitializer />
+          </React.Suspense>
           <ReceiveWizardProvider>
             <AppRoutes />
           </ReceiveWizardProvider>

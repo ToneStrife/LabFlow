@@ -25,7 +25,9 @@ import { Loader2, Paperclip } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { mobileDialogClass } from "@/lib/layout";
-import RichTextEditor from './RichTextEditor';
+// Quill pesa 111 KB comprimidos y solo hace falta al escribir un correo.
+// Cargándolo aquí sale del paquete inicial de toda la aplicación.
+const RichTextEditor = React.lazy(() => import('./RichTextEditor'));
 import { normalizeAttachments, type EmailAttachment } from "@/utils/email-attachments";
 
 const attachmentSchema = z.object({
@@ -149,12 +151,18 @@ const EmailDialog: React.FC<EmailDialogProps> = ({
                 <FormItem>
                   <FormLabel>Cuerpo</FormLabel>
                   <FormControl>
-                    <RichTextEditor 
-                      value={field.value} 
-                      onChange={field.onChange} 
-                      disabled={isSending} 
-                      placeholder="Escribe el cuerpo del correo aquí..."
-                    />
+                    <React.Suspense
+                      fallback={
+                        <div className="h-40 animate-pulse rounded-md border bg-muted/40" />
+                      }
+                    >
+                      <RichTextEditor
+                        value={field.value}
+                        onChange={field.onChange}
+                        disabled={isSending}
+                        placeholder="Escribe el cuerpo del correo aquí..."
+                      />
+                    </React.Suspense>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
