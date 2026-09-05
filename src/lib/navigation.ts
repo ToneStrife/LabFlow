@@ -1,5 +1,6 @@
 import {
   ShoppingCart,
+  FolderOpen,
   Users,
   User,
   Warehouse,
@@ -28,6 +29,7 @@ export const navItems: NavItem[] = [
   { title: "Panel de Control", href: "/dashboard", icon: ShoppingCart, roles: TODOS },
   { title: "Proveedores", href: "/vendors", icon: Users, roles: SOLO_ADMIN },
   { title: "Inventario", href: "/inventory", icon: Warehouse, roles: TODOS },
+  { title: "Documentos", href: "/documents", icon: FolderOpen, roles: TODOS },
   { title: "Gastos", href: "/expenditures", icon: DollarSign, roles: SOLO_ADMIN },
   { title: "Admin", href: "/admin", icon: Shield, roles: SOLO_ADMIN },
 ];

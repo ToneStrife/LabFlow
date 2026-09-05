@@ -31,6 +31,7 @@ const Profile = React.lazy(() => import("./pages/Profile"));
 const AdminPage = React.lazy(() => import("./pages/Admin"));
 const Inventory = React.lazy(() => import("./pages/Inventory"));
 const Expenditures = React.lazy(() => import("./pages/Expenditures"));
+const Documentos = React.lazy(() => import("./pages/Documentos"));
 
 const queryClient = new QueryClient();
 
@@ -96,6 +97,7 @@ const AppRoutes = () => {
         <Route path="/admin" element={<PrivateRoute requiredRoles={["Admin"]}><AdminPage /></PrivateRoute>} />
         <Route path="/inventory" element={<PrivateRoute requiredRoles={["Requester", "Account Manager", "Admin"]}><Inventory /></PrivateRoute>} />
         <Route path="/expenditures" element={<PrivateRoute requiredRoles={["Admin"]}><Expenditures /></PrivateRoute>} />
+        <Route path="/documents" element={<PrivateRoute><Documentos /></PrivateRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
       </React.Suspense>
