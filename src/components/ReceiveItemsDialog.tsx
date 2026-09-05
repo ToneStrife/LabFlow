@@ -429,6 +429,26 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
   ).length;
   const summaryItems = watchedItems.filter((i) => (i.quantityReceived || 0) > 0);
 
+  /**
+   * Con muchos artículos, lo que todavía no ha llegado quedaba enterrado bajo
+   * lo ya recibido. Aquí se pintan primero los pendientes.
+   *
+   * Importante: esto reordena solo la presentación, no el array del formulario.
+   * Cada campo sigue usando su índice original, que es lo que lo ata a su
+   * artículo al enviar. Y la clave de orden (lo que falta según lo ya recibido
+   * antes de abrir el asistente) no cambia mientras tecleas, así que ninguna
+   * tarjeta salta de sitio al escribir una cantidad.
+   */
+  const ordenDeVisualizacion = React.useMemo(() => {
+    const restante = (indice: number) => {
+      const original = initialItems[indice];
+      return original ? original.quantityOrdered - original.quantityPreviouslyReceived : 0;
+    };
+    return fields
+      .map((item, index) => ({ item, index }))
+      .sort((a, b) => (restante(a.index) > 0 ? 0 : 1) - (restante(b.index) > 0 ? 0 : 1));
+  }, [fields, initialItems]);
+
   const stepNav = (
     <nav aria-label="Pasos de recepción" className="flex w-full items-start">
       {STEP_META.map((s, idx) => {
@@ -578,7 +598,7 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
                     </div>
                   </div>
 
-                  {fields.map((item, index) => {
+                  {ordenDeVisualizacion.map(({ item, index }) => {
                     const quantityOrdered = form.watch(`items.${index}.quantityOrdered`);
                     const quantityPreviouslyReceived = form.watch(
                       `items.${index}.quantityPreviouslyReceived`

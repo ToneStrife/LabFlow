@@ -32,10 +32,13 @@ export interface Etapa {
  */
 export const WorkflowStrip: React.FC<{ etapas: Etapa[] }> = ({ etapas }) => (
   <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
+    {/* En el móvil las cinco fases apiladas ocupaban media pantalla antes de
+        llegar a lo que de verdad se usa desde el teléfono. Aquí van en una
+        sola fila deslizable de unos 70 px; a partir de tablet, en rejilla. */}
     <div
       className={cn(
-        "grid divide-y sm:divide-x sm:divide-y-0",
-        "grid-cols-1 sm:grid-cols-2",
+        "flex snap-x overflow-x-auto divide-x",
+        "sm:grid sm:overflow-visible sm:grid-cols-2 sm:divide-y-0",
         etapas.length >= 5 ? "lg:grid-cols-5" : "lg:grid-cols-4"
       )}
     >
@@ -50,7 +53,8 @@ export const WorkflowStrip: React.FC<{ etapas: Etapa[] }> = ({ etapas }) => (
             type="button"
             onClick={etapa.onSelect}
             className={cn(
-              "group relative p-4 text-left transition-colors",
+              "group relative shrink-0 snap-start p-3 text-left transition-colors",
+              "min-w-[7.5rem] sm:min-w-0 sm:p-4",
               "hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
             )}
           >
@@ -63,16 +67,19 @@ export const WorkflowStrip: React.FC<{ etapas: Etapa[] }> = ({ etapas }) => (
             />
 
             <div className="flex items-center gap-2">
-              <span className={cn("flex h-7 w-7 shrink-0 items-center justify-center rounded-md", tono.caja)}>
-                <Icono className={cn("h-4 w-4", tono.icono)} />
+              <span className={cn("flex h-6 w-6 shrink-0 items-center justify-center rounded-md sm:h-7 sm:w-7", tono.caja)}>
+                <Icono className={cn("h-3.5 w-3.5 sm:h-4 sm:w-4", tono.icono)} />
               </span>
-              <span className="truncate text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <span className="truncate text-[10px] font-semibold uppercase tracking-wide text-muted-foreground sm:text-[11px]">
                 {etapa.etiqueta}
               </span>
             </div>
 
-            <p className="tabular-figures mt-3 font-mono text-3xl font-semibold leading-none">{etapa.valor}</p>
-            <p className="mt-1.5 truncate text-xs text-muted-foreground">{etapa.pie}</p>
+            <p className="tabular-figures mt-1.5 font-mono text-xl font-semibold leading-none sm:mt-3 sm:text-3xl">
+              {etapa.valor}
+            </p>
+            {/* El pie explica la fase; en el móvil no cabe y la etiqueta ya basta */}
+            <p className="mt-1.5 hidden truncate text-xs text-muted-foreground sm:block">{etapa.pie}</p>
 
             {/* Flecha en el borde interior: marca que esto es un recorrido */}
             {!esUltima && (
