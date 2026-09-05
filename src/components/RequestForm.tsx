@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { PlusCircle, Trash2, Check, ChevronsUpDown, Loader2, Search, Zap, RotateCcw, Info, FileScan } from "lucide-react";
+import { PlusCircle, Trash2, Check, ChevronsUpDown, Loader2, Search, Zap, RotateCcw, Info, FileScan, ClipboardList, Package, type LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
@@ -151,7 +151,7 @@ const ItemAutofillControls: React.FC<ItemAutofillControlsProps> = ({ index, form
         {isEnriching ? (
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
         ) : (
-          <Zap className="mr-2 h-4 w-4 text-yellow-600" />
+          <Zap className="mr-2 h-4 w-4 text-yellow-600 dark:text-yellow-400" />
         )}
         Enriquecer por IA
       </Button>
@@ -197,6 +197,28 @@ const ItemAutofillControls: React.FC<ItemAutofillControlsProps> = ({ index, form
   );
 };
 
+
+/** Bloque del formulario con cabecera propia. Antes todo flotaba suelto
+ *  sobre el lienzo, sin agrupar y sin la estructura de tarjetas del resto. */
+const SeccionFormulario: React.FC<{
+  titulo: string;
+  descripcion?: string;
+  icono: LucideIcon;
+  children: React.ReactNode;
+}> = ({ titulo, descripcion, icono: Icono, children }) => (
+  <section className="overflow-hidden rounded-xl border bg-card">
+    <header className="flex items-start gap-3 border-b bg-muted/30 px-4 py-3">
+      <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+        <Icono className="h-4 w-4" />
+      </span>
+      <div className="min-w-0">
+        <h2 className="text-sm font-semibold leading-tight">{titulo}</h2>
+        {descripcion && <p className="mt-0.5 text-xs text-muted-foreground">{descripcion}</p>}
+      </div>
+    </header>
+    <div className="space-y-4 p-4">{children}</div>
+  </section>
+);
 
 const RequestForm: React.FC = () => {
   const { session, profile } = useSession();
@@ -457,7 +479,8 @@ const RequestForm: React.FC = () => {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+        <SeccionFormulario titulo="Datos de la solicitud" icono={ClipboardList}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormItem>
             <FormLabel>Solicitante</FormLabel>
@@ -496,7 +519,7 @@ const RequestForm: React.FC = () => {
             name="shippingAddressId"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Dirección de Envío</FormLabel>
+                <FormLabel>Dirección de envío</FormLabel>
                 <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingAddresses || isSubmitting}>
                   <FormControl>
                     <SelectTrigger>
@@ -518,7 +541,7 @@ const RequestForm: React.FC = () => {
             name="billingAddressId"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Dirección de Facturación</FormLabel>
+                <FormLabel>Dirección de facturación</FormLabel>
                 <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingAddresses || isSubmitting}>
                   <FormControl>
                     <SelectTrigger>
@@ -543,7 +566,7 @@ const RequestForm: React.FC = () => {
             name="accountManagerId"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Gerente de Cuenta (Opcional)</FormLabel>
+                <FormLabel>Gerente de cuenta <span className="font-normal normal-case text-muted-foreground">(opcional)</span></FormLabel>
                 <Select onValueChange={field.onChange} value={field.value || "unassigned"} disabled={isLoadingAccountManagers || isSubmitting}>
                   <FormControl>
                     <SelectTrigger><SelectValue placeholder={isLoadingAccountManagers ? "Cargando gerentes..." : "Selecciona un gerente de cuenta"} /></SelectTrigger>
@@ -564,7 +587,7 @@ const RequestForm: React.FC = () => {
             name="projectCodes"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Códigos de Proyecto (Opcional)</FormLabel>
+                <FormLabel>Códigos de proyecto <span className="font-normal normal-case text-muted-foreground">(opcional)</span></FormLabel>
                 <Popover>
                   <PopoverTrigger asChild>
                     <FormControl>
@@ -609,16 +632,21 @@ const RequestForm: React.FC = () => {
           />
         </div>
         
-        <h2 className="text-xl font-semibold mt-8 mb-4">Archivos Adjuntos (Opcional)</h2>
+        </SeccionFormulario>
+
+        <SeccionFormulario
+          titulo="Cotización y notas"
+          icono={FileScan}
+          descripcion="Si adjuntas la cotización, la solicitud se creará ya en estado «Cotización solicitada»."
+        >
         <FormField
           control={form.control}
           name="quoteFile"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Adjuntar Cotización (Si ya la tienes)</FormLabel>
               <FormControl>
                 <FileUploadInput 
-                    label="Subir Archivo de Cotización (Opcional)"
+                    label="Adjuntar cotización, si ya la tienes"
                     onChange={handleQuoteFileChange} 
                     disabled={isSubmitting} 
                     accept="image/*,application/pdf"
@@ -626,11 +654,7 @@ const RequestForm: React.FC = () => {
                 />
               </FormControl>
               <FormMessage />
-              <p className="text-sm text-muted-foreground">
-                Si adjuntas una cotización, la solicitud se creará directamente en estado
-                &quot;Cotización Solicitada&quot;.
-              </p>
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center pt-2">
+              <div className="flex flex-col gap-2 pt-1 sm:flex-row sm:items-center">
                 <Button
                   type="button"
                   variant="secondary"
@@ -673,7 +697,7 @@ const RequestForm: React.FC = () => {
           name="notes"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Notas Generales de la Solicitud (Opcional)</FormLabel>
+              <FormLabel>Notas generales <span className="font-normal normal-case text-muted-foreground">(opcional)</span></FormLabel>
               <FormControl>
                 <Textarea
                   placeholder="Cualquier detalle general sobre esta solicitud..."
@@ -684,24 +708,39 @@ const RequestForm: React.FC = () => {
             </FormItem>
           )}
         />
-        <h2 className="text-xl font-semibold">Artículos</h2>
-        <div className="space-y-6">
+        </SeccionFormulario>
+
+        <SeccionFormulario
+          titulo="Artículos"
+          icono={Package}
+          descripcion="Puedes añadir varios artículos a una misma solicitud."
+        >
+        <div className="space-y-4">
           {fields.map((field, index) => (
-            <div key={field.id} className="border p-4 rounded-md relative bg-muted/20 space-y-4">
-              
-              {/* Encabezado y Botón de Eliminar */}
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-medium text-primary">Artículo #{index + 1}</h3>
-                {fields.length > 1 && (
-                  <Button type="button" variant="destructive" size="icon" onClick={() => remove(index)} className="h-8 w-8 flex-shrink-0" title="Eliminar Artículo">
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-              
-              {/* Autofill Controls (Ahora debajo del encabezado) */}
-              <div className="flex justify-end">
-                <ItemAutofillControls index={index} form={form} />
+            <div key={field.id} className="relative space-y-4 rounded-xl border bg-card p-4">
+              {/* Numero, ayudas de relleno y borrado, todo en una sola fila */}
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-3">
+                <h3 className="flex items-center gap-2 text-sm font-semibold">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 font-mono text-xs text-primary">
+                    {index + 1}
+                  </span>
+                  Artículo
+                </h3>
+                <div className="flex items-center gap-2">
+                  <ItemAutofillControls index={index} form={form} />
+                  {fields.length > 1 && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => remove(index)}
+                      className="h-8 w-8 flex-shrink-0 text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-950/50"
+                      title="Eliminar artículo"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -722,7 +761,7 @@ const RequestForm: React.FC = () => {
                   name={`items.${index}.catalogNumber`}
                   render={({ field: itemField }) => (
                     <FormItem>
-                      <FormLabel>Número de Catálogo</FormLabel>
+                      <FormLabel>Número de catálogo</FormLabel>
                       <FormControl><Input placeholder="ej. 18265017" {...itemField} /></FormControl>
                       <FormMessage />
                     </FormItem>
@@ -733,7 +772,7 @@ const RequestForm: React.FC = () => {
                   name={`items.${index}.productName`}
                   render={({ field: itemField }) => (
                     <FormItem className="sm:col-span-2 lg:col-span-2">
-                      <FormLabel>Nombre del Producto</FormLabel>
+                      <FormLabel>Nombre del producto</FormLabel>
                       <FormControl><Input placeholder="ej. Células Competentes E. coli DH5a" {...itemField} /></FormControl>
                       <FormMessage />
                     </FormItem>
@@ -758,7 +797,7 @@ const RequestForm: React.FC = () => {
                   render={({ field: itemField }) => {
                     return (
                       <FormItem>
-                        <FormLabel>Precio Unitario (Opcional)</FormLabel>
+                        <FormLabel>Precio unitario <span className="font-normal normal-case text-muted-foreground">(opcional)</span></FormLabel>
                         <FormControl><Input type="number" step="0.01" placeholder="ej. 120.50 €" {...itemField} value={itemField.value === undefined || itemField.value === null ? "" : itemField.value} onChange={(e) => itemField.onChange(e.target.value === "" ? undefined : Number(e.target.value))} /></FormControl>
                         <FormMessage />
                       </FormItem>
@@ -770,7 +809,7 @@ const RequestForm: React.FC = () => {
                   name={`items.${index}.format`}
                   render={({ field: itemField }) => (
                     <FormItem>
-                      <FormLabel>Formato (Opcional)</FormLabel>
+                      <FormLabel>Formato <span className="font-normal normal-case text-muted-foreground">(opcional)</span></FormLabel>
                       <FormControl><Input placeholder="ej. 500 mL" {...itemField} value={itemField.value || ""} onChange={(e) => itemField.onChange(e.target.value || undefined)} /></FormControl>
                       <FormMessage />
                     </FormItem>
@@ -781,7 +820,7 @@ const RequestForm: React.FC = () => {
                   name={`items.${index}.link`}
                   render={({ field: itemField }) => (
                     <FormItem>
-                      <FormLabel>Enlace del Producto (Opcional)</FormLabel>
+                      <FormLabel>Enlace <span className="font-normal normal-case text-muted-foreground">(opcional)</span></FormLabel>
                       <FormControl><Input type="url" placeholder="ej. https://www.vendor.com/product" {...itemField} value={itemField.value || ""} onChange={(e) => itemField.onChange(e.target.value || undefined)} /></FormControl>
                       <FormMessage />
                     </FormItem>
@@ -794,7 +833,7 @@ const RequestForm: React.FC = () => {
                   name={`items.${index}.notes`}
                   render={({ field: itemField }) => (
                     <FormItem className="sm:col-span-2 lg:col-span-4">
-                      <FormLabel>Notas (Opcional)</FormLabel>
+                      <FormLabel>Notas <span className="font-normal normal-case text-muted-foreground">(opcional)</span></FormLabel>
                       <FormControl><Textarea placeholder="Cualquier requisito o detalle específico..." {...itemField} value={itemField.value || ""} onChange={(e) => itemField.onChange(e.target.value || undefined)} /></FormControl>
                       <FormMessage />
                     </FormItem>
@@ -804,16 +843,24 @@ const RequestForm: React.FC = () => {
             </div>
           ))}
         </div>
-        <Button type="button" variant="outline" onClick={() => append(defaultItem)} className="w-full">
-          <PlusCircle className="mr-2 h-4 w-4" /> Añadir Otro Artículo
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => append(defaultItem)}
+          className="w-full border-dashed"
+        >
+          <PlusCircle className="mr-2 h-4 w-4" /> Añadir otro artículo
         </Button>
-        
-        <div className="flex justify-between space-x-4">
-            <Button type="button" variant="outline" onClick={handleClearForm} disabled={isSubmitting} className="text-red-600 border-red-300 hover:bg-red-50">
-                <RotateCcw className="h-4 w-4 mr-2" /> Limpiar Formulario
+        </SeccionFormulario>
+
+        {/* Con varios articulos el formulario se hace largo; las acciones
+            acompañan al usuario en vez de quedarse al final del todo. */}
+        <div className="sticky bottom-0 z-20 flex flex-col-reverse gap-2 rounded-xl border bg-card/95 p-3 shadow-lg backdrop-blur sm:flex-row sm:items-center sm:justify-between">
+            <Button type="button" variant="outline" onClick={handleClearForm} disabled={isSubmitting} className="text-red-600 dark:text-red-400 border-red-300 dark:border-red-900 hover:bg-red-50 dark:hover:bg-red-950/50">
+                <RotateCcw className="h-4 w-4 mr-2" /> Limpiar formulario
             </Button>
-            <Button type="submit" className="flex-1" disabled={isSubmitting}>
-                {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : "Enviar Solicitud"}
+            <Button type="submit" className="sm:min-w-52" disabled={isSubmitting}>
+                {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : "Enviar solicitud"}
             </Button>
         </div>
       </form>

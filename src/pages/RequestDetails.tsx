@@ -39,7 +39,7 @@ import { useSession } from "@/components/SessionContextProvider";
 import { isAdmin, canEditRequestDetails, canDeleteRequest, canOverrideStatus } from "@/lib/permissions";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAggregatedReceivedItems } from "@/hooks/use-packing-slips";
-import { buildStorageAttachment, openEmailDialogAfterClose } from "@/utils/email-attachments";
+import { buildStorageAttachment, openEmailDialogAfterClose, normalizeAttachments } from "@/utils/email-attachments";
 import { RequestStatus as RequestStatusType, Vendor, Profile, AccountManager, Project, ShippingAddress, BillingAddress } from "@/data/types";
 import { cn } from "@/lib/utils";
 import { pageContainerClass, mobileDialogClass, dialogFooterMobileClass } from "@/lib/layout";
@@ -111,7 +111,7 @@ const RequestDetails: React.FC = () => {
       to: emailData.to!,
       subject: emailData.subject,
       body: emailData.body,
-      attachments: emailData.attachments,
+      attachments: normalizeAttachments(emailData.attachments),
     });
 
     if (pendingStatusOnEmailSend) {
@@ -401,12 +401,20 @@ const RequestDetails: React.FC = () => {
 
   return (
     <div className={pageContainerClass}>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6">
-        <Button variant="outline" onClick={() => navigate("/dashboard")} className="w-fit shrink-0">
-          <ArrowLeft className="mr-2 h-4 w-4" /> Volver al Panel
+      {/* El titulo iba a la derecha del todo, separado del boton de volver.
+          Ahora el enlace de vuelta hace de miga de pan encima y el titulo
+          empieza a la izquierda, donde se lee primero. */}
+      <div className="mb-4 sm:mb-6 space-y-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => navigate("/dashboard")}
+          className="w-fit -ml-2 h-8 px-2 text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="mr-1.5 h-4 w-4" /> Volver al panel
         </Button>
         <div className="flex items-center justify-between gap-2 min-w-0">
-          <h1 className="text-xl sm:text-3xl font-bold text-gray-800 dark:text-gray-100 truncate min-w-0">
+          <h1 className="text-xl sm:text-3xl font-bold text-foreground truncate min-w-0">
             Solicitud {displayRequestNumber}
           </h1>
           <DropdownMenu>
@@ -415,7 +423,7 @@ const RequestDetails: React.FC = () => {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               {canOverrideStatus(profile?.role) && <DropdownMenuItem onClick={() => { setNewStatus(request.status); setIsStatusOverrideDialogOpen(true); }}><Edit className="mr-2 h-4 w-4" /> Cambiar Estado Manualmente</DropdownMenuItem>}
-              {canDelete && <><DropdownMenuSeparator /><DropdownMenuItem onClick={() => setIsDeleteDialogOpen(true)} className="text-red-600"><Trash2 className="mr-2 h-4 w-4" /> Eliminar Solicitud</DropdownMenuItem></>}
+              {canDelete && <><DropdownMenuSeparator /><DropdownMenuItem onClick={() => setIsDeleteDialogOpen(true)} className="text-red-600 dark:text-red-400"><Trash2 className="mr-2 h-4 w-4" /> Eliminar Solicitud</DropdownMenuItem></>}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

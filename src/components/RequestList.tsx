@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import RequestListToolbar from "@/components/request-list/RequestListToolbar";
 import RequestListTable from "@/components/request-list/RequestListTable";
 import { toast } from "sonner";
-import { buildStorageAttachment, openEmailDialogAfterClose } from "@/utils/email-attachments";
+import { buildStorageAttachment, openEmailDialogAfterClose, normalizeAttachments } from "@/utils/email-attachments";
 import { useSession } from "@/components/SessionContextProvider";
 import { useProjects } from "@/hooks/use-projects";
 import { useEmailTemplates } from "@/hooks/use-email-templates";
@@ -39,7 +39,13 @@ const STATUS_ORDER: Record<RequestStatus, number> = {
   "Cancelled": 92,
 };
 
-const RequestList: React.FC = () => {
+interface RequestListProps {
+  /** Estado con el que arranca el filtro. Lo usa el panel para que al pulsar
+   *  una fase del recorrido la lista aparezca ya filtrada por esa fase. */
+  estadoInicial?: RequestStatus | "All" | "Active";
+}
+
+const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
   const navigate = useNavigate();
   const { session, profile } = useSession();
   const { data: requests, isLoading: isLoadingRequests, error: requestsError } = useRequests();
@@ -56,7 +62,13 @@ const RequestList: React.FC = () => {
   const { openReceive } = useReceiveWizard();
 
   const [searchTerm, setSearchTerm] = React.useState<string>("");
-  const [filterStatus, setFilterStatus] = React.useState<RequestStatus | "All" | "Active">("All"); // Changed default to "All"
+  const [filterStatus, setFilterStatus] = React.useState<RequestStatus | "All" | "Active">(estadoInicial);
+
+  // Si el panel pide otra fase, el filtro la recoge sin dejar de ser editable
+  // desde la barra de herramientas.
+  React.useEffect(() => {
+    setFilterStatus(estadoInicial);
+  }, [estadoInicial]);
 
   const [isEmailDialogOpen, setIsEmailDialogOpen] = React.useState(false);
   const [emailInitialData, setEmailInitialData] = React.useState<Partial<EmailFormValues>>({});
@@ -105,7 +117,7 @@ const RequestList: React.FC = () => {
       to: emailData.to!,
       subject: emailData.subject,
       body: emailData.body,
-      attachments: emailData.attachments,
+      attachments: normalizeAttachments(emailData.attachments),
     });
 
     if (pendingStatusOnEmailSend) {
@@ -371,7 +383,7 @@ const RequestList: React.FC = () => {
   }
 
   if (requestsError) {
-    return <div className="text-red-500">Error al cargar solicitudes: {requestsError.message}</div>;
+    return <div className="text-red-500 dark:text-red-400">Error al cargar solicitudes: {requestsError.message}</div>;
   }
 
   return (

@@ -103,7 +103,7 @@ const FileRow: React.FC<FileRowProps> = ({ label, filePath, fileType, onUploadCl
               size="sm" 
               onClick={handleViewClick} 
               disabled={buttonDisabled}
-              className="text-xs text-blue-600 hover:underline flex items-center p-0 h-auto truncate max-w-[150px] sm:max-w-[200px]"
+              className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center p-0 h-auto truncate max-w-[150px] sm:max-w-[200px]"
               title={getFileNameFromPath(filePath)}
             >
               {isGenerating ? (

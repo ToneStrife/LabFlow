@@ -60,7 +60,7 @@ const ExpenditureTable: React.FC<ExpenditureTableProps> = ({ expenditures, proje
                     <TableCell className="text-xs text-muted-foreground">
                       {expenditure.request_id ? expenditure.request_id.substring(0, 8) : 'N/A'}
                     </TableCell>
-                    <TableCell className="text-right font-semibold text-red-600">
+                    <TableCell className="text-right font-semibold text-red-600 dark:text-red-400">
                       {expenditure.amount.toFixed(2)}
                     </TableCell>
                     <TableCell className="text-center">
@@ -79,7 +79,7 @@ const ExpenditureTable: React.FC<ExpenditureTableProps> = ({ expenditures, proje
                           onClick={() => onDelete(expenditure.id)}
                           aria-label="Eliminar"
                         >
-                          <Trash2 className="h-4 w-4 text-red-500" />
+                          <Trash2 className="h-4 w-4 text-red-500 dark:text-red-400" />
                         </Button>
                       </div>
                     </TableCell>

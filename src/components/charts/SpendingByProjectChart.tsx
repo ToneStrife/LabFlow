@@ -18,7 +18,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     return (
       <div className="p-2 bg-white border rounded-md shadow-lg text-sm">
         <p className="font-bold">{label}</p>
-        <p className="text-muted-foreground">Gasto: <span className="font-semibold text-red-600">€{payload[0].value.toFixed(2)}</span></p>
+        <p className="text-muted-foreground">Gasto: <span className="font-semibold text-red-600 dark:text-red-400">€{payload[0].value.toFixed(2)}</span></p>
       </div>
     );
   }

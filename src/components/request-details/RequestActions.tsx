@@ -72,14 +72,14 @@ const RequestActions: React.FC<RequestActionsProps> = ({
         <>
           <Button 
             onClick={() => onSendQuoteRequest(request)} 
-            className="w-full justify-start bg-blue-600 hover:bg-blue-700" 
+            className="w-full justify-start" 
             disabled={isUpdatingStatus}
           >
             <Mail className="mr-2 h-4 w-4" /> Solicitar Cotización (Correo)
           </Button>
           <Button 
             onClick={() => openApproveRequestDialog(request)} 
-            className="w-full justify-start bg-green-600 hover:bg-green-700" 
+            className="w-full justify-start bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-600" 
             disabled={isUpdatingStatus}
           >
             <CheckCircle className="mr-2 h-4 w-4" /> Aprobar Solicitud
@@ -87,7 +87,7 @@ const RequestActions: React.FC<RequestActionsProps> = ({
           <Button 
             variant="outline" 
             onClick={openDenyRequestDialog} 
-            className="w-full justify-start text-red-600 border-red-200 hover:bg-red-50" 
+            className="w-full justify-start text-red-600 dark:text-red-400 border-red-200 dark:border-red-900 hover:bg-red-50 dark:hover:bg-red-950/50" 
             disabled={isUpdatingStatus}
           >
             <Ban className="mr-2 h-4 w-4" /> Denegar Solicitud
@@ -101,7 +101,7 @@ const RequestActions: React.FC<RequestActionsProps> = ({
           {!request.quote_url ? (
             <Button 
               onClick={handleUploadQuote} 
-              className="w-full justify-start bg-blue-600 hover:bg-blue-700" 
+              className="w-full justify-start" 
               disabled={isUpdatingStatus}
             >
               <FileText className="mr-2 h-4 w-4" /> Subir Cotización
@@ -109,7 +109,7 @@ const RequestActions: React.FC<RequestActionsProps> = ({
           ) : (
             <Button 
               onClick={() => handleSendPORequest(request)} 
-              className="w-full justify-start bg-orange-600 hover:bg-orange-700" 
+              className="w-full justify-start" 
               disabled={isUpdatingStatus}
             >
               <Send className="mr-2 h-4 w-4" /> Solicitar PO (Cómprame)
@@ -118,7 +118,7 @@ const RequestActions: React.FC<RequestActionsProps> = ({
           <Button 
             variant="outline" 
             onClick={openDenyRequestDialog} 
-            className="w-full justify-start text-red-600 border-red-200 hover:bg-red-50" 
+            className="w-full justify-start text-red-600 dark:text-red-400 border-red-200 dark:border-red-900 hover:bg-red-50 dark:hover:bg-red-950/50" 
             disabled={isUpdatingStatus}
           >
             <Ban className="mr-2 h-4 w-4" /> Denegar Solicitud
@@ -131,7 +131,7 @@ const RequestActions: React.FC<RequestActionsProps> = ({
         <>
           <Button 
             onClick={handleUploadPOAndOrder} 
-            className="w-full justify-start bg-green-700 hover:bg-green-800" 
+            className="w-full justify-start" 
             disabled={isUpdatingStatus}
           >
             <Package className="mr-2 h-4 w-4" /> Marcar como Pedido
@@ -139,7 +139,7 @@ const RequestActions: React.FC<RequestActionsProps> = ({
           <Button 
             variant="outline" 
             onClick={openCancelRequestDialog} 
-            className="w-full justify-start text-red-600 border-red-200 hover:bg-red-50" 
+            className="w-full justify-start text-red-600 dark:text-red-400 border-red-200 dark:border-red-900 hover:bg-red-50 dark:hover:bg-red-950/50" 
             disabled={isUpdatingStatus}
           >
             <XCircle className="mr-2 h-4 w-4" /> Cancelar Solicitud
@@ -152,7 +152,7 @@ const RequestActions: React.FC<RequestActionsProps> = ({
         <>
           <Button 
             onClick={handleMarkAsReceived} 
-            className="w-full justify-start bg-purple-600 hover:bg-purple-700" 
+            className="w-full justify-start" 
             disabled={isUpdatingStatus}
           >
             <Receipt className="mr-2 h-4 w-4" /> Recibir Artículos
@@ -171,7 +171,7 @@ const RequestActions: React.FC<RequestActionsProps> = ({
             <Button 
               variant="outline" 
               onClick={openCancelRequestDialog} 
-              className="w-full justify-start text-red-600 border-red-200 hover:bg-red-50" 
+              className="w-full justify-start text-red-600 dark:text-red-400 border-red-200 dark:border-red-900 hover:bg-red-50 dark:hover:bg-red-950/50" 
               disabled={isUpdatingStatus}
             >
               <XCircle className="mr-2 h-4 w-4" /> Cancelar Solicitud
@@ -182,7 +182,7 @@ const RequestActions: React.FC<RequestActionsProps> = ({
 
       {/* RECEIVED: No actions usually needed here */}
       {request.status === "Received" && (
-        <p className="text-sm text-green-600 font-medium flex items-center">
+        <p className="text-sm text-green-600 dark:text-green-400 font-medium flex items-center">
           <CheckCircle className="mr-2 h-4 w-4" /> Solicitud completada y recibida.
         </p>
       )}

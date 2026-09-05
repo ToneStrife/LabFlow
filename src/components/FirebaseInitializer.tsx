@@ -2,7 +2,7 @@
 
 import React, { useEffect } from 'react';
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { firebaseConfig } from '@/config/firebase';
+import { firebaseConfig, isFirebaseConfigured } from '@/config/firebase';
 import { toast as sonnerToast } from 'sonner'; // Usamos sonner para mostrar la notificación en el cliente
 import { getMessaging, onMessage } from 'firebase/messaging';
 import { useNavigate } from 'react-router-dom';
@@ -12,6 +12,15 @@ const FirebaseInitializer: React.FC = () => {
   
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      if (!isFirebaseConfigured()) {
+        // Caso normal en desarrollo local: las notificaciones push simplemente
+        // no funcionan. No es un error que merezca molestar al usuario.
+        console.info(
+          '[Firebase] Sin configuracion (VITE_FIREBASE_*). Las notificaciones push quedan desactivadas.'
+        );
+        return;
+      }
+
       if (!getApps().length) {
         try {
           // Determinar la ruta base dinámicamente
@@ -52,8 +61,21 @@ const FirebaseInitializer: React.FC = () => {
             return () => unsubscribe();
 
           }).catch(error => {
-            console.error("Error getting Service Worker registration:", error);
-            sonnerToast.error("Error de Service Worker", { description: "Fallo al obtener el registro del Service Worker." });
+            // Aqui cae tanto un fallo del Service Worker como uno de Firebase.
+            // Distinguirlos, porque antes todo se anunciaba como error de Service Worker.
+            const esErrorDeFirebase = String(error?.name || "").includes("FirebaseError");
+            console.error(
+              esErrorDeFirebase ? "Firebase messaging failed to start:" : "Error getting Service Worker registration:",
+              error
+            );
+            sonnerToast.error(
+              esErrorDeFirebase ? "Error de Firebase" : "Error de Service Worker",
+              {
+                description: esErrorDeFirebase
+                  ? "No se pudo arrancar la mensajeria. Revisa la configuracion de Firebase."
+                  : "Fallo al obtener el registro del Service Worker.",
+              }
+            );
           });
           
         } catch (error) {

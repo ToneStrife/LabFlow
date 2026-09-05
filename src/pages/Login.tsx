@@ -12,6 +12,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { buildAuthRedirectTo } from "@/lib/auth-redirect";
+import { FlaskConical } from "lucide-react";
+import { useTheme } from "next-themes";
 
 const Login: React.FC = () => {
   const { session, loading } = useSession();
@@ -19,6 +21,7 @@ const Login: React.FC = () => {
   const [showForgotPassword, setShowForgotPassword] = React.useState(false);
   const [forgotEmail, setForgotEmail] = React.useState("");
   const [isSendingReset, setIsSendingReset] = React.useState(false);
+  const { resolvedTheme } = useTheme();
 
   React.useEffect(() => {
     if (session) {
@@ -61,16 +64,21 @@ const Login: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-canvas py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+        <div className="flex flex-col items-center text-center">
+          <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
+            <FlaskConical className="h-6 w-6" />
+          </span>
+          <h1 className="mt-4 text-2xl font-extrabold tracking-tight text-foreground">LabFlow</h1>
+          <p className="text-sm text-muted-foreground">Gestión de solicitudes de laboratorio</p>
+          <h2 className="mt-6 text-lg font-semibold text-foreground">
             {showForgotPassword ? "Restablecer contraseña" : "Inicia sesión en tu cuenta"}
           </h2>
         </div>
 
         {showForgotPassword ? (
-          <form onSubmit={handleForgotPassword} className="space-y-4 bg-white p-6 rounded-lg border shadow-sm">
+          <form onSubmit={handleForgotPassword} className="space-y-4 bg-card p-6 rounded-lg border shadow-sm">
             <p className="text-sm text-muted-foreground">
               Introduce el email de tu cuenta y te enviaremos un enlace para crear una nueva contraseña.
             </p>
@@ -107,6 +115,7 @@ const Login: React.FC = () => {
           </form>
         ) : (
           <>
+            <div className="bg-card p-6 rounded-lg border shadow-sm">
             <Auth
               supabaseClient={supabase}
               providers={[]}
@@ -123,9 +132,10 @@ const Login: React.FC = () => {
                   },
                 },
               }}
-              theme="light"
+              theme={resolvedTheme === "dark" ? "dark" : "light"}
               redirectTo={buildAuthRedirectTo("/dashboard")}
             />
+            </div>
             <div className="text-center space-y-2">
               <button
                 type="button"

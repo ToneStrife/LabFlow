@@ -35,12 +35,16 @@
 
     --radius: 0.5rem;
 
+    /* Lienzo: el fondo del area de contenido, un punto por debajo de las
+       tarjetas para que estas se despeguen sin necesidad de sombra fuerte. */
+    --canvas: 210 40% 98%;
+
     /* Sidebar: Usar un color oscuro y saturado para el fondo y el primario para el acento */
     --sidebar-background: 222.2 47.4% 11.2%; /* Dark Blue/Navy */
     --sidebar-foreground: 210 40% 98%; /* Light text */
 
     --sidebar-primary: 217.2 91.2% 59.8%; /* Primary Blue */
-    --sidebar-primary-foreground: 222.2 47.4% 11.2%; /* Dark text on primary */
+    --sidebar-primary-foreground: 210 40% 98%; /* Texto claro sobre el azul primario */
 
     --sidebar-accent: 222.2 47.4% 17.2%; /* Slightly lighter dark blue for hover */
     --sidebar-accent-foreground: 210 40% 98%;
@@ -51,13 +55,18 @@
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
+    /* Antes el fondo y las tarjetas eran el mismo color exacto, asi que en
+       modo oscuro las tarjetas desaparecian. Ahora hay tres niveles:
+       lienzo, fondo y tarjeta. */
+    --canvas: 222.2 47.4% 6%;
+
+    --background: 222.2 47.4% 8%;
     --foreground: 210 40% 98%;
 
-    --card: 222.2 84% 4.9%;
+    --card: 222.2 40% 12%;
     --card-foreground: 210 40% 98%;
 
-    --popover: 222.2 84% 4.9%;
+    --popover: 222.2 40% 12%;
     --popover-foreground: 210 40% 98%;
 
     /* Primary: Mantener el mismo tono vibrante */
@@ -76,16 +85,16 @@
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
+    --border: 217.2 32.6% 20%;
+    --input: 217.2 32.6% 20%;
     --ring: 217.2 91.2% 59.8%;
     
     /* Sidebar Dark Mode: Invertir para mantener el contraste */
     --sidebar-background: 222.2 84% 4.9%; /* Darker background */
     --sidebar-foreground: 210 40% 98%;
     --sidebar-primary: 217.2 91.2% 59.8%;
-    --sidebar-primary-foreground: 222.2 47.4% 11.2%;
-    --sidebar-accent: 222.2 84% 8.9%;
+    --sidebar-primary-foreground: 210 40% 98%;
+    --sidebar-accent: 222.2 84% 12.9%;
     --sidebar-accent-foreground: 210 40% 98%;
     --sidebar-border: 217.2 32.6% 17.5%;
     --sidebar-ring: 217.2 91.2% 59.8%;
@@ -99,5 +108,18 @@
 
   body {
     @apply bg-background text-foreground;
+    /* Inter mejora bastante con estas dos activadas */
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Los titulos piden un poco menos de aire entre letras que el texto */
+  h1, h2, h3 {
+    letter-spacing: -0.02em;
+  }
+
+  /* Cifras de la misma anchura: las columnas de numeros dejan de bailar */
+  .tabular-figures {
+    font-variant-numeric: tabular-nums;
   }
 }

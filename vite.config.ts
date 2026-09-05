@@ -23,6 +23,22 @@ export default defineConfig(({ mode }) => ({
   },
   // Set base path for GitHub Pages deployment
   base: mode === 'production' ? '/LabFlow/' : '/',
+
+  build: {
+    // Las librerias pesadas van a trozos propios: el navegador solo descarga
+    // las graficas cuando entras en Gastos, y el editor cuando escribes un correo.
+    rollupOptions: {
+      output: {
+        manualChunks(id: string) {
+          if (!id.includes('node_modules')) return;
+          if (id.includes('firebase') || id.includes('@firebase')) return 'firebase';
+          if (id.includes('recharts') || id.includes('/d3-')) return 'charts';
+          if (id.includes('quill')) return 'editor';
+          if (id.includes('@supabase')) return 'supabase';
+        },
+      },
+    },
+  },
   
   // Inyectar variables de entorno en el Service Worker estático
   define: {

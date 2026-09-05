@@ -26,7 +26,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { mobileDialogClass } from "@/lib/layout";
 import RichTextEditor from './RichTextEditor';
-import type { EmailAttachment } from "@/utils/email-attachments";
+import { normalizeAttachments, type EmailAttachment } from "@/utils/email-attachments";
 
 const attachmentSchema = z.object({
   name: z.string(),
@@ -63,7 +63,7 @@ const EmailDialog: React.FC<EmailDialogProps> = ({
 
   React.useEffect(() => {
     if (isOpen) {
-      attachmentsForSendRef.current = initialData.attachmentsForSend || [];
+      attachmentsForSendRef.current = normalizeAttachments(initialData.attachmentsForSend);
     }
   }, [initialData, isOpen]);
 

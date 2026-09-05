@@ -293,7 +293,7 @@ const AdminPage = () => {
   }
 
   if (error) {
-    return <div className="p-4 sm:p-6 text-red-600">Error: {error.message}</div>;
+    return <div className="p-4 sm:p-6 text-red-600 dark:text-red-400">Error: {error.message}</div>;
   }
 
   return (
@@ -496,7 +496,7 @@ const AdminPage = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <NotificationSenderForm />
-              <p className="text-sm text-red-500">
+              <p className="text-sm text-red-500 dark:text-red-400">
                 Nota: Si no recibes la notificación, verifica que las claves `FIREBASE_PRIVATE_KEY`, `FIREBASE_CLIENT_EMAIL` y `FIREBASE_PROJECT_ID` estén configuradas correctamente en los secretos de Supabase y que hayas aceptado los permisos de notificación en tu navegador.
               </p>
             </CardContent>

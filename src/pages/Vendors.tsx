@@ -75,7 +75,7 @@ const Vendors = () => {
 
   if (error) {
     return (
-      <div className="p-4 sm:p-6 text-red-600">
+      <div className="p-4 sm:p-6 text-red-600 dark:text-red-400">
         Error al cargar proveedores: {error.message}
       </div>
     );

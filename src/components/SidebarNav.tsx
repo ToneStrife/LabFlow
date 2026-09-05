@@ -3,111 +3,66 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { Package, ShoppingCart, Users, User, Warehouse, Shield, DollarSign } from "lucide-react";
 import { useSession } from "@/components/SessionContextProvider";
-import { Profile } from "@/data/types"; // Corrected import
+import { navItems } from "@/lib/navigation";
 
 interface SidebarNavProps extends React.HTMLAttributes<HTMLElement> {
   isMobile?: boolean;
   onLinkClick?: () => void;
 }
 
-interface NavItem {
-  title: string;
-  href: string;
-  icon: JSX.Element;
-  roles: Profile['role'][]; // Corrected type
-}
-
-const navItems: NavItem[] = [
-  {
-    title: "Panel de Control",
-    href: "/dashboard",
-    icon: <ShoppingCart className="mr-2 h-4 w-4" />,
-    roles: ["Requester", "Account Manager", "Admin"],
-  },
-  {
-    title: "Nueva Solicitud",
-    href: "/new-request",
-    icon: <Package className="mr-2 h-4 w-4" />,
-    roles: ["Requester", "Account Manager", "Admin"],
-  },
-  {
-    title: "Proveedores",
-    href: "/vendors",
-    icon: <Users className="mr-2 h-4 w-4" />,
-    roles: ["Admin"],
-  },
-  {
-    title: "Inventario",
-    href: "/inventory",
-    icon: <Warehouse className="mr-2 h-4 w-4" />,
-    roles: ["Requester", "Account Manager", "Admin"],
-  },
-  {
-    title: "Gastos",
-    href: "/expenditures",
-    icon: <DollarSign className="mr-2 h-4 w-4" />,
-    roles: ["Admin"],
-  },
-  {
-    title: "Admin",
-    href: "/admin",
-    icon: <Shield className="mr-2 h-4 w-4" />,
-    roles: ["Admin"],
-  },
-  {
-    title: "Perfil",
-    href: "/profile",
-    icon: <User className="mr-2 h-4 w-4" />,
-    roles: ["Requester", "Account Manager", "Admin"],
-  },
-];
-
 export function SidebarNav({ className, onLinkClick, ...props }: SidebarNavProps) {
   const { profile } = useSession();
   const userRole = profile?.role;
 
-  // Si profile es null, no deberíamos llegar aquí, pero si lo hacemos, no renderizamos nada.
   if (!userRole) {
     return (
-      <div className="flex items-center px-3 py-2 text-sm text-muted-foreground">
+      <div className="flex items-center px-3 py-2 text-sm text-sidebar-foreground/60">
         No hay elementos de navegación disponibles.
       </div>
     );
   }
 
-  const visibleNavItems = navItems.filter(item => item.roles.includes(userRole));
+  const visibleNavItems = navItems.filter((item) => item.roles.includes(userRole));
 
   return (
-    <nav
-      className={cn(
-        "flex flex-col space-y-1",
-        className
-      )}
-      {...props}
-    >
+    <nav className={cn("flex flex-col space-y-0.5", className)} {...props}>
       {visibleNavItems.length > 0 ? (
-        visibleNavItems.map((item) => (
-          <NavLink
-            key={item.href}
-            to={item.href}
-            className={({ isActive }) =>
-              cn(
-                "flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                isActive
-                  ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                  : "text-sidebar-foreground"
-              )
-            }
-            onClick={onLinkClick}
-          >
-            {item.icon}
-            {item.title}
-          </NavLink>
-        ))
+        visibleNavItems.map((item) => {
+          const Icono = item.icon;
+          return (
+            <NavLink
+              key={item.href}
+              to={item.href}
+              className={({ isActive }) =>
+                cn(
+                  "group relative flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors",
+                  // barra indicadora a la izquierda, solo visible en el activo
+                  "before:absolute before:left-0 before:top-1/2 before:h-5 before:w-1 before:-translate-y-1/2",
+                  "before:rounded-r-full before:bg-sidebar-primary before:transition-opacity",
+                  isActive
+                    ? "bg-sidebar-accent text-sidebar-accent-foreground before:opacity-100"
+                    : "text-sidebar-foreground/70 before:opacity-0 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
+                )
+              }
+              onClick={onLinkClick}
+            >
+              {({ isActive }) => (
+                <>
+                  <Icono
+                    className={cn(
+                      "h-4 w-4 shrink-0 transition-colors",
+                      isActive ? "text-sidebar-primary" : "text-sidebar-foreground/50 group-hover:text-sidebar-foreground"
+                    )}
+                  />
+                  {item.title}
+                </>
+              )}
+            </NavLink>
+          );
+        })
       ) : (
-        <div className="flex items-center px-3 py-2 text-sm text-muted-foreground">
+        <div className="flex items-center px-3 py-2 text-sm text-sidebar-foreground/60">
           No hay elementos de navegación disponibles para tu rol.
         </div>
       )}

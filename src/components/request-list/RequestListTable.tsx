@@ -10,7 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { RequestStatus, SupabaseRequest, Vendor, Profile } from "@/data/types";
+import { SupabaseRequest, Vendor, Profile } from "@/data/types";
 import { useAccountManagers } from "@/hooks/use-account-managers";
 import { format } from "date-fns";
 import RequestListActions from "./RequestListActions";
@@ -19,6 +19,8 @@ import { getFullName } from "@/hooks/use-profiles";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Link } from "react-router-dom"; // Importar Link
+import { cn } from "@/lib/utils";
+import { getRequestStatusLabel, getRequestStatusBadgeClass } from "@/lib/request-status";
 
 interface RequestListTableProps {
   requests: SupabaseRequest[];
@@ -36,25 +38,6 @@ interface RequestListTableProps {
   onMerge: (request: SupabaseRequest) => void;
   onSendQuoteRequest: (request: SupabaseRequest) => void;
 }
-
-const getStatusBadgeVariant = (status: RequestStatus) => {
-  switch (status) {
-    case "Pending":
-      return "secondary";
-    case "Quote Requested":
-    case "PO Requested":
-      return "destructive";
-    case "Ordered":
-      return "default";
-    case "Received":
-      return "success";
-    case "Denied":
-    case "Cancelled":
-      return "destructive";
-    default:
-      return "secondary";
-  }
-};
 
 const RequestCard: React.FC<{ request: SupabaseRequest; vendor?: Vendor; requesterName: string; date: string; actionProps: Omit<RequestListTableProps, 'requests' | 'vendors' | 'profiles'> }> = ({
   request,
@@ -75,14 +58,8 @@ const RequestCard: React.FC<{ request: SupabaseRequest; vendor?: Vendor; request
           </Link>
           <span className="text-xs font-medium text-muted-foreground">{vendor?.name || "N/A"}</span>
         </CardTitle>
-        <Badge variant={getStatusBadgeVariant(request.status)} className="text-xs shrink-0 self-start sm:self-auto">
-          {request.status === "Pending" && "Pendiente"}
-          {request.status === "Quote Requested" && "Cot. Solicitada"}
-          {request.status === "PO Requested" && "PO Solicitado"}
-          {request.status === "Ordered" && "Pedido"}
-          {request.status === "Received" && "Recibido"}
-          {request.status === "Denied" && "Denegada"}
-          {request.status === "Cancelled" && "Cancelada"}
+        <Badge variant="outline" className={cn("text-xs shrink-0 self-start sm:self-auto", getRequestStatusBadgeClass(request.status))}>
+          {getRequestStatusLabel(request.status)}
         </Badge>
       </CardHeader>
       <CardContent className="p-4 pt-2 space-y-3">
@@ -197,14 +174,8 @@ const RequestListTable: React.FC<RequestListTableProps> = ({
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={getStatusBadgeVariant(request.status)}>
-                      {request.status === "Pending" && "Pendiente"}
-                      {request.status === "Quote Requested" && "Cot. Solicitada"}
-                      {request.status === "PO Requested" && "PO Solicitado"}
-                      {request.status === "Ordered" && "Pedido"}
-                      {request.status === "Received" && "Recibido"}
-                      {request.status === "Denied" && "Denegada"}
-                      {request.status === "Cancelled" && "Cancelada"}
+                    <Badge variant="outline" className={getRequestStatusBadgeClass(request.status)}>
+                      {getRequestStatusLabel(request.status)}
                     </Badge>
                   </TableCell>
                   <TableCell>{date}</TableCell>

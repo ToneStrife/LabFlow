@@ -21,6 +21,18 @@ export const getFileNameFromPath = (filePath: string): string => {
   }
 };
 
+/**
+ * Los adjuntos que vienen del formulario llegan con name y url opcionales,
+ * mientras que el envio los exige. Esto descarta los incompletos en lugar de
+ * dejar que el tipo mienta.
+ */
+export const normalizeAttachments = (
+  attachments?: Array<{ name?: string; url?: string }> | null
+): EmailAttachment[] =>
+  (attachments ?? []).filter(
+    (adjunto): adjunto is EmailAttachment => Boolean(adjunto?.name && adjunto?.url)
+  );
+
 export const buildStorageAttachment = async (
   storagePath: string
 ): Promise<{ forDialog: EmailAttachment[]; forSend: EmailAttachment[] }> => {

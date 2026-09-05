@@ -13,4 +13,17 @@ export const firebaseConfig = {
 
 // El VAPID Key es necesario para la autenticación de notificaciones push.
 // Genera esto en la configuración de FCM de tu proyecto de Firebase.
+/**
+ * Firebase solo esta configurado si las VITE_FIREBASE_* estan presentes.
+ * En local no lo estan (los valores se inyectan en el workflow de GitHub),
+ * asi que sin esta comprobacion firebase lanza
+ * "Installations: Missing App configuration value" y la app muestra
+ * un error enganoso de Service Worker.
+ */
+export function isFirebaseConfigured(): boolean {
+  return Boolean(
+    firebaseConfig.apiKey && firebaseConfig.projectId && firebaseConfig.appId
+  );
+}
+
 export const VAPID_KEY = "BEPxPZAQQh5qHVKQ3FeIfC3arZHDVNbE3xxQ_ci-mE98mNc9FrD8oLke-Of7KqLClFBjvV7_Ci33rIAkeX2esrA";

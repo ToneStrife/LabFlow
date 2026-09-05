@@ -23,7 +23,7 @@ const PendingItemsList: React.FC = () => {
   }
 
   if (error) {
-    return <div className="text-red-500 p-4">Error: {error.message}</div>;
+    return <div className="text-red-500 dark:text-red-400 p-4">Error: {error.message}</div>;
   }
 
   const groupedByRequest = React.useMemo(() => {
@@ -42,9 +42,9 @@ const PendingItemsList: React.FC = () => {
   }, [pendingItems]);
 
   return (
-    <Card className="shadow-md border-orange-200">
-      <CardHeader className="bg-orange-50/50">
-        <CardTitle className="text-lg flex items-center text-orange-800">
+    <Card className="shadow-sm border-amber-200 dark:border-amber-900/70">
+      <CardHeader className="bg-amber-50/70 dark:bg-amber-950/30 border-b border-amber-200/60 dark:border-amber-900/50">
+        <CardTitle className="text-lg flex items-center text-amber-800 dark:text-amber-300">
           <PackageSearch className="mr-2 h-5 w-5" /> Artículos Pendientes de Recibir
         </CardTitle>
       </CardHeader>
@@ -130,7 +130,7 @@ const PendingItemsList: React.FC = () => {
                       </Link>
                     </TableCell>
                     <TableCell className="text-center">{item.quantityOrdered}</TableCell>
-                    <TableCell className="text-center text-green-600">{item.quantityReceived}</TableCell>
+                    <TableCell className="text-center text-green-600 dark:text-green-400">{item.quantityReceived}</TableCell>
                     <TableCell className="text-right">
                       <Badge variant="destructive" className="font-bold">
                         {item.quantityPending}

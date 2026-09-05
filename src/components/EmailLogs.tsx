@@ -43,7 +43,7 @@ const EmailLogs: React.FC = () => {
   }
 
   if (error) {
-    return <div className="text-red-500">Error al cargar registros de correo: {error.message}</div>;
+    return <div className="text-red-500 dark:text-red-400">Error al cargar registros de correo: {error.message}</div>;
   }
 
   return (
@@ -89,7 +89,7 @@ const EmailLogs: React.FC = () => {
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <span className="text-red-500 flex items-center cursor-help">
+                              <span className="text-red-500 dark:text-red-400 flex items-center cursor-help">
                                 <Info className="h-4 w-4 mr-1" /> Error
                               </span>
                             </TooltipTrigger>

@@ -4,7 +4,7 @@ import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { SupabaseRequest, RequestStatus, Address, Vendor, Profile, AccountManager, Project } from "@/data/types"; // Corrected imports
+import { SupabaseRequest, Address, Vendor, Profile, AccountManager, Project } from "@/data/types"; // Corrected imports
 import { useAccountManagers } from "@/hooks/use-account-managers"; // Usar el nuevo hook
 import { useProjects } from "@/hooks/use-projects"; // Usar el nuevo hook
 import { useShippingAddresses, useBillingAddresses } from "@/hooks/use-addresses"; // Importar hooks de direcciones
@@ -14,6 +14,7 @@ import { Edit, Loader2 } from "lucide-react";
 import { generateSignedUrl } from "@/utils/supabase-storage"; // Importar utilidad
 import { getFullName } from "@/hooks/use-profiles"; // Importar getFullName
 import { toast } from "sonner"; // Importar toast
+import { getRequestStatusLabel, getRequestStatusBadgeClass } from "@/lib/request-status";
 
 interface RequestSummaryCardProps {
   request: SupabaseRequest;
@@ -22,23 +23,6 @@ interface RequestSummaryCardProps {
   onEditDetails: () => void; // Nuevo prop para manejar la edición
   isEditable: boolean; // Nuevo prop para controlar si se puede editar
 }
-
-const getStatusBadgeVariant = (status: RequestStatus) => {
-  switch (status) {
-    case "Pending":
-      return "secondary";
-    case "Quote Requested":
-      return "outline";
-    case "PO Requested":
-      return "destructive";
-    case "Ordered":
-      return "default";
-    case "Received":
-      return "success"; // Now 'success' is a valid variant
-    default:
-      return "secondary";
-  }
-};
 
 const formatAddress = (address: Address | undefined) => {
   if (!address) return "N/A";
@@ -108,7 +92,9 @@ const RequestSummaryCard: React.FC<RequestSummaryCardProps> = ({ request, vendor
           <span>{vendor?.name || "N/A"}</span>
         </CardTitle>
         <div className="flex items-center space-x-2">
-          <Badge variant={getStatusBadgeVariant(request.status)}>{request.status}</Badge>
+          <Badge variant="outline" className={getRequestStatusBadgeClass(request.status)}>
+            {getRequestStatusLabel(request.status)}
+          </Badge>
           {isEditable && (
             <Button variant="outline" size="icon" onClick={onEditDetails} title="Editar Detalles de la Solicitud">
               <Edit className="h-4 w-4" />
@@ -161,7 +147,7 @@ const RequestSummaryCard: React.FC<RequestSummaryCardProps> = ({ request, vendor
                   size="sm" 
                   onClick={handleViewQuote} 
                   disabled={isGeneratingQuoteUrl}
-                  className="p-0 h-auto text-blue-500"
+                  className="p-0 h-auto text-blue-500 dark:text-blue-400"
                 >
                   {isGeneratingQuoteUrl ? (
                     <Loader2 className="h-4 w-4 animate-spin mr-1" />
@@ -183,7 +169,7 @@ const RequestSummaryCard: React.FC<RequestSummaryCardProps> = ({ request, vendor
             <Separator />
             <div>
               <p className="text-sm text-muted-foreground mb-1">Notas</p>
-              <p className="text-sm italic text-gray-700">{request.notes}</p>
+              <p className="text-sm italic text-muted-foreground">{request.notes}</p>
             </div>
           </>
         )}

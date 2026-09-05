@@ -2,15 +2,18 @@
 
 import React from "react";
 import RequestForm from "@/components/RequestForm";
-import { pageContainerClass } from "@/lib/layout";
 
 const NewRequest = () => {
   return (
-    <div className={pageContainerClass}>
-      <h1 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6">Crear Nueva Solicitud</h1>
-      <p className="text-lg text-muted-foreground mb-8">
-        Rellena el siguiente formulario para enviar una nueva solicitud de productos de laboratorio. Puedes añadir múltiples artículos a una sola solicitud.
-      </p>
+    // Más estrecho que el resto de páginas: una línea de formulario de 1000 px
+    // se lee mal, el ojo pierde la relación entre etiqueta y campo.
+    <div className="mx-auto w-full min-w-0 max-w-4xl space-y-5">
+      <div>
+        <h2 className="text-2xl font-bold tracking-tight">Nueva solicitud</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Rellena los datos, adjunta la cotización si ya la tienes y añade los artículos.
+        </p>
+      </div>
       <RequestForm />
     </div>
   );

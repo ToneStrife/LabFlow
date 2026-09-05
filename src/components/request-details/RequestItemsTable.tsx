@@ -106,7 +106,7 @@ const RequestItemsTable: React.FC<RequestItemsTableProps> = ({ items, isEditable
                   <Button variant="outline" size="sm" className="flex-1" onClick={() => handleEditItem(item)}>
                     <Edit className="h-4 w-4 mr-2" /> Editar
                   </Button>
-                  <Button variant="outline" size="sm" className="text-red-500" onClick={() => handleDeleteItem(item.id)}>
+                  <Button variant="outline" size="sm" className="text-red-500 dark:text-red-400" onClick={() => handleDeleteItem(item.id)}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
@@ -166,7 +166,7 @@ const RequestItemsTable: React.FC<RequestItemsTableProps> = ({ items, isEditable
                   {isEditable && (
                     <TableCell className="text-right">
                       <Button variant="ghost" size="icon" onClick={() => handleEditItem(item)} className="mr-1"><Edit className="h-4 w-4" /></Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDeleteItem(item.id)} className="text-red-500"><Trash2 className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleDeleteItem(item.id)} className="text-red-500 dark:text-red-400"><Trash2 className="h-4 w-4" /></Button>
                     </TableCell>
                   )}
                 </TableRow>

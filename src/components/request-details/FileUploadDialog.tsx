@@ -170,7 +170,7 @@ const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
           {fileType === "po" && (
             <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-2 sm:gap-4">
               <Label htmlFor="poNumber" className="sm:text-right">
-                Número de PO {fileType === "po" && !selectedFile ? <span className="text-red-500">*</span> : "(Opcional)"}
+                Número de PO {fileType === "po" && !selectedFile ? <span className="text-red-500 dark:text-red-400">*</span> : "(Opcional)"}
               </Label>
               <Input
                 id="poNumber"

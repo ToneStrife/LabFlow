@@ -1,7 +1,7 @@
 import { getToken } from "firebase/messaging";
 import { getApp } from 'firebase/app';
 import { getMessaging } from 'firebase/messaging';
-import { VAPID_KEY } from '@/config/firebase';
+import { VAPID_KEY, isFirebaseConfigured } from '@/config/firebase';
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 
@@ -26,6 +26,13 @@ const getBasePath = () => window.location.pathname.includes('/LabFlow/') ? '/Lab
 
 
 export async function registerPushToken(userId: string) {
+  if (!isFirebaseConfigured()) {
+    toast.info("Notificaciones push no disponibles", {
+      description: "Esta version no tiene configurado Firebase.",
+    });
+    return null;
+  }
+
   const messaging = getFirebaseMessaging();
   if (!messaging) {
     toast.error("Error de Firebase", { description: "El sistema de mensajería no está inicializado." });

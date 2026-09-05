@@ -35,6 +35,7 @@ import {
   ArrowRight,
   FileText,
   X,
+  Check,
 } from "lucide-react";
 import { SupabaseRequestItem } from "@/data/types";
 import { useReceiveItems, useAggregatedReceivedItems } from "@/hooks/use-packing-slips";
@@ -104,6 +105,12 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
   const receiveItemsMutation = useReceiveItems();
   const [slipFile, setSlipFile] = React.useState<File | null>(null);
   const [step, setStep] = React.useState<WizardStep>(1);
+  // El boton principal ocupa el mismo sitio en los tres pasos, y en el tercero
+  // pasa a ser "Confirmar recepcion", que escribe en la base de datos y no se
+  // deshace solo. Dos toques seguidos en el mismo punto (o un toque que llega
+  // justo despues de redibujar) confirmaban la recepcion sin que nadie hubiera
+  // leido el resumen. El boton queda inerte un instante al entrar al paso 3.
+  const [confirmacionArmada, setConfirmacionArmada] = React.useState(false);
   const [portalReady, setPortalReady] = React.useState(false);
   const filePickerActiveRef = React.useRef(false);
   const suppressCloseUntilRef = React.useRef(0);
@@ -139,6 +146,16 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
     if (!isOpen) return;
     sessionStorage.setItem(STEP_KEY, String(step));
   }, [step, isOpen, STEP_KEY]);
+
+  React.useEffect(() => {
+    if (step !== 3) {
+      setConfirmacionArmada(false);
+      return;
+    }
+    setConfirmacionArmada(false);
+    const id = setTimeout(() => setConfirmacionArmada(true), 500);
+    return () => clearTimeout(id);
+  }, [step]);
 
   const extendSuppressClose = useCallback((ms: number) => {
     suppressCloseUntilRef.current = Date.now() + ms;
@@ -309,6 +326,10 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
   }, [PERSIST_KEY, SLIP_FILE_KEY, RECEIVING_FLAG_KEY, STEP_KEY]);
 
   const handleSubmit = async (data: ReceiveFormValues) => {
+    // Si el envio llega antes de que el boton este armado, viene de un toque
+    // heredado del paso anterior, no de una decision.
+    if (!confirmacionArmada) return;
+
     const itemsToReceive = data.items
       .filter((item) => item.quantityReceived > 0)
       .map((item) => {
@@ -409,7 +430,7 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
   const summaryItems = watchedItems.filter((i) => (i.quantityReceived || 0) > 0);
 
   const stepNav = (
-    <nav aria-label="Pasos de recepción" className="flex items-center gap-1.5 w-full">
+    <nav aria-label="Pasos de recepción" className="flex w-full items-start">
       {STEP_META.map((s, idx) => {
         const Icon = s.icon;
         const active = step === s.id;
@@ -417,12 +438,14 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
         return (
           <React.Fragment key={s.id}>
             {idx > 0 && (
-              <div
-                className={cn(
-                  "h-0.5 flex-1 rounded-full min-w-2",
-                  done || active ? "bg-primary" : "bg-muted"
-                )}
-              />
+              <div className="mt-[15px] h-0.5 min-w-3 flex-1 overflow-hidden rounded-full bg-muted">
+                <div
+                  className={cn(
+                    "h-full rounded-full bg-primary transition-all duration-300",
+                    done || active ? "w-full" : "w-0"
+                  )}
+                />
+              </div>
             )}
             <button
               type="button"
@@ -430,15 +453,26 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
                 if (s.id < step) setStep(s.id);
               }}
               disabled={s.id > step}
-              className={cn(
-                "flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-medium transition-colors shrink-0",
-                active && "bg-primary text-primary-foreground",
-                done && !active && "bg-primary/15 text-primary",
-                !active && !done && "bg-muted text-muted-foreground"
-              )}
+              className="flex shrink-0 flex-col items-center gap-1.5 px-1 disabled:cursor-default"
             >
-              <Icon className="h-3.5 w-3.5" />
-              <span className={cn(isMobile ? "inline" : "hidden sm:inline")}>{s.label}</span>
+              <span
+                className={cn(
+                  "flex h-8 w-8 items-center justify-center rounded-full border-2 transition-colors",
+                  active && "border-primary bg-primary text-primary-foreground",
+                  done && !active && "border-primary bg-primary/10 text-primary",
+                  !active && !done && "border-muted bg-muted text-muted-foreground"
+                )}
+              >
+                {done ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
+              </span>
+              <span
+                className={cn(
+                  "text-[11px] font-medium transition-colors",
+                  active ? "text-foreground" : done ? "text-primary" : "text-muted-foreground"
+                )}
+              >
+                {s.label}
+              </span>
             </button>
           </React.Fragment>
         );
@@ -495,7 +529,7 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
                             disabled={isSubmitting}
                             value={field.value || ""}
                             onChange={(e) => field.onChange(e.target.value || null)}
-                            className="h-12 text-base"
+                            className="h-12 font-mono text-base"
                           />
                         </FormControl>
                         <FormMessage />
@@ -507,22 +541,41 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
 
               {step === 2 && (
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between gap-2 sticky top-0 z-10 bg-background py-2">
-                    <p className="text-sm text-muted-foreground">
-                      <span className="font-semibold text-foreground">{markedCount}</span>
-                      {" / "}
-                      {pendingItemCount || fields.length} con cantidad
-                    </p>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      onClick={handleReceiveAllAndGoToSummary}
-                      disabled={isSubmitting || allItemsFullyReceived}
-                    >
-                      <CheckCheck className="h-4 w-4" />
-                      Recibir todo
-                    </Button>
+                  <div className="sticky top-0 z-10 space-y-2 bg-background py-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm text-muted-foreground">
+                        <span className="tabular-figures font-mono font-semibold text-foreground">
+                          {markedCount}
+                        </span>
+                        {" / "}
+                        <span className="tabular-figures font-mono">
+                          {pendingItemCount || fields.length}
+                        </span>
+                        {" con cantidad"}
+                      </p>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={handleReceiveAllAndGoToSummary}
+                        disabled={isSubmitting || allItemsFullyReceived}
+                      >
+                        <CheckCheck className="h-4 w-4" />
+                        Recibir todo
+                      </Button>
+                    </div>
+                    {/* Cuanto queda por marcar, de un vistazo */}
+                    <div className="h-1 w-full overflow-hidden rounded-full bg-muted">
+                      <div
+                        className="h-full rounded-full bg-primary transition-all duration-300"
+                        style={{
+                          width: `${Math.min(
+                            100,
+                            (markedCount / Math.max(1, pendingItemCount || fields.length)) * 100
+                          )}%`,
+                        }}
+                      />
+                    </div>
                   </div>
 
                   {fields.map((item, index) => {
@@ -539,17 +592,17 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
                       <div
                         key={item.id}
                         className={cn(
-                          "rounded-2xl border p-4 space-y-3 transition-colors",
+                          "rounded-xl border p-3 space-y-2.5 transition-colors sm:p-3.5",
                           hasQty && "border-primary/40 bg-primary/5",
                           isFullyReceived && "opacity-60 bg-muted/40"
                         )}
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
-                            <p className="font-medium leading-snug text-base" title={item.productName}>
+                            <p className="text-sm font-medium leading-snug" title={item.productName}>
                               {item.productName}
                             </p>
-                            <p className="text-xs text-muted-foreground mt-1">
+                            <p className="mt-0.5 text-xs text-muted-foreground">
                               Pedido {quantityOrdered}
                               {quantityPreviouslyReceived > 0 &&
                                 ` · Ya recibido ${quantityPreviouslyReceived}`}
@@ -557,10 +610,10 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
                           </div>
                           <div
                             className={cn(
-                              "text-sm font-bold tabular-nums shrink-0 rounded-md px-2 py-1",
+                              "shrink-0 rounded-md px-2 py-0.5 font-mono text-xs font-bold tabular-nums",
                               quantityRemaining <= 0
-                                ? "bg-green-100 text-green-700"
-                                : "bg-orange-100 text-orange-800"
+                                ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
+                                : "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
                             )}
                           >
                             {quantityRemaining <= 0 ? "OK" : `Faltan ${quantityRemaining}`}
@@ -568,21 +621,23 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
                         </div>
 
                         {!isFullyReceived && (
-                          <>
+                          // En escritorio, cantidad y ubicacion comparten fila:
+                          // con tres articulos el dialogo se hacia enorme.
+                          <div className="grid gap-2.5 sm:grid-cols-2 sm:items-start sm:gap-3">
                             <FormField
                               control={form.control}
                               name={`items.${index}.quantityReceived`}
                               render={({ field: quantityField }) => (
-                                <FormItem className="space-y-2">
-                                  <FormLabel className="text-xs text-muted-foreground">
+                                <FormItem className="space-y-1.5">
+                                  <FormLabel className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
                                     Cantidad a recibir
                                   </FormLabel>
-                                  <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-1.5">
                                     <Button
                                       type="button"
                                       variant="outline"
                                       size="icon"
-                                      className="h-12 w-12 shrink-0"
+                                      className="h-11 w-11 shrink-0 sm:h-9 sm:w-9"
                                       onClick={() => adjustQuantity(index, -1)}
                                       disabled={isSubmitting || currentQty <= 0}
                                       aria-label="Restar uno"
@@ -608,14 +663,14 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
                                           quantityField.onChange(capped);
                                         }}
                                         disabled={isSubmitting}
-                                        className="h-12 text-center text-xl font-semibold tabular-nums"
+                                        className="h-11 min-w-0 text-center font-mono text-lg font-semibold tabular-nums sm:h-9"
                                       />
                                     </FormControl>
                                     <Button
                                       type="button"
                                       variant="outline"
                                       size="icon"
-                                      className="h-12 w-12 shrink-0"
+                                      className="h-11 w-11 shrink-0 sm:h-9 sm:w-9"
                                       onClick={() => adjustQuantity(index, 1)}
                                       disabled={isSubmitting || currentQty >= quantityRemaining}
                                       aria-label="Sumar uno"
@@ -625,7 +680,7 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
                                     <Button
                                       type="button"
                                       variant="secondary"
-                                      className="h-12 shrink-0 px-4"
+                                      className="h-11 shrink-0 px-3 sm:h-9"
                                       onClick={() => setRemaining(index)}
                                       disabled={
                                         isSubmitting ||
@@ -645,8 +700,8 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
                               control={form.control}
                               name={`items.${index}.storageLocation`}
                               render={({ field: locationField }) => (
-                                <FormItem>
-                                  <FormLabel className="text-xs text-muted-foreground flex items-center gap-1">
+                                <FormItem className="space-y-1.5">
+                                  <FormLabel className="flex items-center gap-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
                                     <MapPin className="h-3 w-3" /> Ubicación (opcional)
                                   </FormLabel>
                                   <FormControl>
@@ -658,14 +713,14 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
                                         locationField.onChange(e.target.value || null)
                                       }
                                       disabled={isSubmitting}
-                                      className="h-11"
+                                      className="h-11 sm:h-9"
                                     />
                                   </FormControl>
                                   <FormMessage />
                                 </FormItem>
                               )}
                             />
-                          </>
+                          </div>
                         )}
                       </div>
                     );
@@ -675,51 +730,76 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
 
               {step === 3 && (
                 <div className="space-y-4">
-                  <div className="rounded-2xl border bg-muted/40 p-4 space-y-2">
-                    <h3 className="font-semibold flex items-center gap-2">
-                      <FileText className="h-4 w-4" /> Albarán
-                    </h3>
-                    <p className="text-sm">
-                      <span className="text-muted-foreground">Número: </span>
-                      {watchedValues.slipNumber || "—"}
-                    </p>
-                    <p className="text-sm">
-                      <span className="text-muted-foreground">Archivo: </span>
-                      {slipFile?.name || "Sin foto"}
-                    </p>
+                  {/* Bloque del albaran: dos datos, leidos de un vistazo */}
+                  <div className="overflow-hidden rounded-2xl border bg-card">
+                    <div className="flex items-center gap-2 border-b bg-muted/40 px-4 py-2.5">
+                      <FileText className="h-4 w-4 text-muted-foreground" />
+                      <h3 className="text-sm font-semibold">Albarán</h3>
+                    </div>
+                    <dl className="divide-y">
+                      <div className="flex items-baseline justify-between gap-3 px-4 py-2.5">
+                        <dt className="text-sm text-muted-foreground">Número</dt>
+                        <dd className="truncate font-mono text-sm font-medium">
+                          {watchedValues.slipNumber || "—"}
+                        </dd>
+                      </div>
+                      <div className="flex items-baseline justify-between gap-3 px-4 py-2.5">
+                        <dt className="shrink-0 text-sm text-muted-foreground">Archivo</dt>
+                        <dd
+                          className={cn(
+                            "truncate text-sm",
+                            slipFile ? "font-medium" : "text-muted-foreground"
+                          )}
+                        >
+                          {slipFile?.name || "Sin foto"}
+                        </dd>
+                      </div>
+                    </dl>
                   </div>
 
                   <div className="space-y-2">
-                    <h3 className="font-semibold">
+                    <h3 className="text-sm font-semibold">
                       Se registrarán {summaryItems.length} artículo
                       {summaryItems.length === 1 ? "" : "s"}
                     </h3>
                     {summaryItems.length === 0 ? (
-                      <p className="text-sm text-muted-foreground rounded-lg border border-dashed p-4 text-center">
+                      <p className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
                         No hay cantidades marcadas. Vuelve al paso anterior.
                       </p>
                     ) : (
-                      <ul className="divide-y rounded-2xl border overflow-hidden">
-                        {summaryItems.map((item) => (
-                          <li
-                            key={item.requestItemId}
-                            className="flex items-start justify-between gap-3 p-4 bg-card"
-                          >
-                            <div className="min-w-0">
-                              <p className="font-medium text-sm leading-snug">{item.productName}</p>
-                              {item.storageLocation && (
-                                <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
-                                  <MapPin className="h-3 w-3" />
-                                  {item.storageLocation}
-                                </p>
-                              )}
-                            </div>
-                            <span className="font-bold tabular-nums text-primary shrink-0 text-lg">
-                              ×{item.quantityReceived}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
+                      <div className="overflow-hidden rounded-2xl border">
+                        <ul className="divide-y">
+                          {summaryItems.map((item) => (
+                            <li
+                              key={item.requestItemId}
+                              className="flex items-start justify-between gap-3 bg-card p-4"
+                            >
+                              <div className="min-w-0">
+                                <p className="text-sm font-medium leading-snug">{item.productName}</p>
+                                {item.storageLocation && (
+                                  <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                                    <MapPin className="h-3 w-3 shrink-0" />
+                                    <span className="truncate">{item.storageLocation}</span>
+                                  </p>
+                                )}
+                              </div>
+                              <span className="tabular-figures shrink-0 font-mono text-lg font-bold text-primary">
+                                ×{item.quantityReceived}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                        {/* Cierre de la cuenta, como en un albaran de verdad */}
+                        <div className="flex items-center justify-between gap-3 border-t bg-muted/40 px-4 py-3">
+                          <span className="text-sm font-medium">Total de unidades</span>
+                          <span className="tabular-figures font-mono text-lg font-bold">
+                            {summaryItems.reduce(
+                              (total, item) => total + (item.quantityReceived || 0),
+                              0
+                            )}
+                          </span>
+                        </div>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -771,8 +851,8 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
           ) : (
             <Button
               type="submit"
-              disabled={isSubmitting || summaryItems.length === 0}
-              className="w-full h-12 text-base"
+              disabled={isSubmitting || summaryItems.length === 0 || !confirmacionArmada}
+              className="h-12 w-full bg-emerald-600 text-base text-white hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-600"
             >
               {isSubmitting ? (
                 <>
@@ -847,7 +927,7 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
     >
       <DialogContent
         className={cn(
-          "!flex !flex-col max-h-[90dvh] overflow-hidden gap-0 p-6 sm:max-w-[640px]"
+          "!flex !flex-col max-h-[90dvh] overflow-hidden gap-0 p-6 sm:max-w-[720px]"
         )}
         onPointerDownOutside={(e) => e.preventDefault()}
         onInteractOutside={(e) => e.preventDefault()}

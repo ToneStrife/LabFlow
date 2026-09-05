@@ -87,7 +87,7 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
           disabled={isUpdatingStatus}
           className="shrink-0"
         >
-          <Combine className="h-4 w-4 text-purple-600" />
+          <Combine className="h-4 w-4 text-purple-600 dark:text-purple-400" />
         </Button>
       )}
 
@@ -101,7 +101,7 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
             disabled={isUpdatingStatus}
             className="shrink-0"
           >
-            <Mail className="h-4 w-4 text-blue-500" />
+            <Mail className="h-4 w-4 text-blue-500 dark:text-blue-400" />
           </Button>
           <Button
             variant="ghost"
@@ -111,7 +111,7 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
             disabled={isUpdatingStatus}
             className="shrink-0"
           >
-            <CheckCircle className="h-4 w-4 text-green-600" />
+            <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
           </Button>
           <Button
             variant="ghost"
@@ -121,7 +121,7 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
             disabled={isUpdatingStatus}
             className="shrink-0"
           >
-            <Ban className="h-4 w-4 text-red-600" />
+            <Ban className="h-4 w-4 text-red-600 dark:text-red-400" />
           </Button>
         </>
       )}
@@ -136,7 +136,7 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
             disabled={isUpdatingStatus}
             className="shrink-0"
           >
-            <FileText className="h-4 w-4 text-blue-600" />
+            <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
           </Button>
           <Button
             variant="ghost"
@@ -146,7 +146,7 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
             disabled={isUpdatingStatus}
             className="shrink-0"
           >
-            <Ban className="h-4 w-4 text-red-600" />
+            <Ban className="h-4 w-4 text-red-600 dark:text-red-400" />
           </Button>
         </>
       )}
@@ -160,7 +160,7 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
           disabled={isUpdatingStatus}
           className="shrink-0"
         >
-          <Mail className="h-4 w-4 text-orange-600" />
+          <Mail className="h-4 w-4 text-orange-600 dark:text-orange-400" />
         </Button>
       )}
 
@@ -174,7 +174,7 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
             disabled={isUpdatingStatus}
             className="shrink-0"
           >
-            <Package className="h-4 w-4 text-green-700" />
+            <Package className="h-4 w-4 text-green-700 dark:text-green-400" />
           </Button>
           <Button
             variant="ghost"
@@ -184,7 +184,7 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
             disabled={isUpdatingStatus}
             className="shrink-0"
           >
-            <XCircle className="h-4 w-4 text-red-600" />
+            <XCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
           </Button>
         </>
       )}
@@ -200,7 +200,7 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
               disabled={isUpdatingStatus}
               className="shrink-0"
             >
-              <Receipt className="h-4 w-4 text-purple-600" />
+              <Receipt className="h-4 w-4 text-purple-600 dark:text-purple-400" />
             </Button>
           )}
           {canWorkflow && (
@@ -212,7 +212,7 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
               disabled={isUpdatingStatus}
               className="shrink-0"
             >
-              <XCircle className="h-4 w-4 text-red-600" />
+              <XCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
             </Button>
           )}
         </>
@@ -241,19 +241,19 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
           <DropdownMenuContent align="end" className="w-56">
             {canMerge && (
               <DropdownMenuItem onClick={() => onMerge(request)} disabled={isUpdatingStatus}>
-                <Combine className="mr-2 h-4 w-4 text-purple-600" /> Fusionar solicitud
+                <Combine className="mr-2 h-4 w-4 text-purple-600 dark:text-purple-400" /> Fusionar solicitud
               </DropdownMenuItem>
             )}
             {request.status === "Pending" && canApprove && (
               <>
                 {canMerge && <DropdownMenuSeparator />}
                 <DropdownMenuItem onClick={() => onSendQuoteRequest(request)} disabled={isUpdatingStatus}>
-                  <Mail className="mr-2 h-4 w-4 text-blue-500" /> Solicitar cotización
+                  <Mail className="mr-2 h-4 w-4 text-blue-500 dark:text-blue-400" /> Solicitar cotización
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => onApprove(request)} disabled={isUpdatingStatus}>
-                  <CheckCircle className="mr-2 h-4 w-4 text-green-600" /> Aprobar
+                  <CheckCircle className="mr-2 h-4 w-4 text-green-600 dark:text-green-400" /> Aprobar
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onDeny(request)} disabled={isUpdatingStatus} className="text-red-600">
+                <DropdownMenuItem onClick={() => onDeny(request)} disabled={isUpdatingStatus} className="text-red-600 dark:text-red-400">
                   <Ban className="mr-2 h-4 w-4" /> Denegar
                 </DropdownMenuItem>
               </>
@@ -261,24 +261,24 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
             {request.status === "Quote Requested" && !request.quote_url && canWorkflow && (
               <>
                 <DropdownMenuItem onClick={() => onEnterQuoteDetails(request)} disabled={isUpdatingStatus}>
-                  <FileText className="mr-2 h-4 w-4 text-blue-600" /> Subir cotización
+                  <FileText className="mr-2 h-4 w-4 text-blue-600 dark:text-blue-400" /> Subir cotización
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onDeny(request)} disabled={isUpdatingStatus} className="text-red-600">
+                <DropdownMenuItem onClick={() => onDeny(request)} disabled={isUpdatingStatus} className="text-red-600 dark:text-red-400">
                   <Ban className="mr-2 h-4 w-4" /> Denegar
                 </DropdownMenuItem>
               </>
             )}
             {request.status === "Quote Requested" && request.quote_url && request.account_manager_id && canWorkflow && (
               <DropdownMenuItem onClick={() => onSendPORequest(request)} disabled={isUpdatingStatus}>
-                <Mail className="mr-2 h-4 w-4 text-orange-600" /> Solicitar PO
+                <Mail className="mr-2 h-4 w-4 text-orange-600 dark:text-orange-400" /> Solicitar PO
               </DropdownMenuItem>
             )}
             {request.status === "PO Requested" && canWorkflow && (
               <>
                 <DropdownMenuItem onClick={() => onMarkAsOrdered(request)} disabled={isUpdatingStatus}>
-                  <Package className="mr-2 h-4 w-4 text-green-700" /> Marcar como pedido
+                  <Package className="mr-2 h-4 w-4 text-green-700 dark:text-green-400" /> Marcar como pedido
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onCancel(request)} disabled={isUpdatingStatus} className="text-red-600">
+                <DropdownMenuItem onClick={() => onCancel(request)} disabled={isUpdatingStatus} className="text-red-600 dark:text-red-400">
                   <XCircle className="mr-2 h-4 w-4" /> Cancelar
                 </DropdownMenuItem>
               </>
@@ -287,11 +287,11 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
               <>
                 {canReceive && (
                   <DropdownMenuItem onClick={() => onMarkAsReceived(request)} disabled={isUpdatingStatus}>
-                    <Receipt className="mr-2 h-4 w-4 text-purple-600" /> Recibir artículos
+                    <Receipt className="mr-2 h-4 w-4 text-purple-600 dark:text-purple-400" /> Recibir artículos
                   </DropdownMenuItem>
                 )}
                 {canWorkflow && (
-                  <DropdownMenuItem onClick={() => onCancel(request)} disabled={isUpdatingStatus} className="text-red-600">
+                  <DropdownMenuItem onClick={() => onCancel(request)} disabled={isUpdatingStatus} className="text-red-600 dark:text-red-400">
                     <XCircle className="mr-2 h-4 w-4" /> Cancelar
                   </DropdownMenuItem>
                 )}

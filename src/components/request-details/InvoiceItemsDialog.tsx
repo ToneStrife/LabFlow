@@ -175,7 +175,7 @@ const InvoiceItemsDialog: React.FC<InvoiceItemsDialogProps> = ({
                     </div>
                     <div className="text-center">
                       <p className="text-xs text-muted-foreground">Pendiente</p>
-                      <p className={`font-bold ${remaining > 0 ? 'text-orange-600' : 'text-green-600'}`}>{remaining}</p>
+                      <p className={`font-bold ${remaining > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-green-600 dark:text-green-400'}`}>{remaining}</p>
                     </div>
                     <FormField
                       control={form.control}

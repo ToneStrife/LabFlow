@@ -1,3 +1,4 @@
+import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -5,14 +6,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
 import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
-import NewRequest from "./pages/NewRequest";
-import Vendors from "./pages/Vendors";
-import RequestDetails from "./pages/RequestDetails";
-import Profile from "./pages/Profile";
-import AdminPage from "./pages/Admin";
-import Inventory from "./pages/Inventory";
-import Expenditures from "./pages/Expenditures";
 import NotFound from "./pages/NotFound";
+
 import { SessionContextProvider, useSession } from "./components/SessionContextProvider";
 import React from "react";
 import Login from "./pages/Login";
@@ -21,6 +16,17 @@ import { Loader2 } from "lucide-react";
 import { Profile as UserProfileType } from "@/data/types";
 import FirebaseInitializer from "./components/FirebaseInitializer";
 import { ReceiveWizardProvider } from "./components/ReceiveWizardProvider";
+
+// Estas paginas arrastran las librerias pesadas (graficas, editor de texto
+// enriquecido, tablas de administracion). Cargarlas solo cuando se visitan
+// evita meterlas en el paquete inicial.
+const NewRequest = React.lazy(() => import("./pages/NewRequest"));
+const Vendors = React.lazy(() => import("./pages/Vendors"));
+const RequestDetails = React.lazy(() => import("./pages/RequestDetails"));
+const Profile = React.lazy(() => import("./pages/Profile"));
+const AdminPage = React.lazy(() => import("./pages/Admin"));
+const Inventory = React.lazy(() => import("./pages/Inventory"));
+const Expenditures = React.lazy(() => import("./pages/Expenditures"));
 
 const queryClient = new QueryClient();
 
@@ -67,10 +73,17 @@ const AppRoutes = () => {
 
   return (
     <Layout>
+      <React.Suspense
+        fallback={
+          <div className="flex items-center justify-center py-24 text-muted-foreground">
+            <Loader2 className="h-6 w-6 animate-spin mr-2" /> Cargando página...
+          </div>
+        }
+      >
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
         <Route path="/new-request" element={<PrivateRoute><NewRequest /></PrivateRoute>} />
         <Route path="/vendors" element={<PrivateRoute requiredRoles={["Admin"]}><Vendors /></PrivateRoute>} />
@@ -81,11 +94,13 @@ const AppRoutes = () => {
         <Route path="/expenditures" element={<PrivateRoute requiredRoles={["Admin"]}><Expenditures /></PrivateRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
+      </React.Suspense>
     </Layout>
   );
 };
 
 const App = () => (
+  <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
@@ -100,6 +115,7 @@ const App = () => (
       </HashRouter>
     </TooltipProvider>
   </QueryClientProvider>
+  </ThemeProvider>
 );
 
 export default App;

@@ -75,7 +75,7 @@ const Expenditures = () => {
   }
 
   if (expendituresError) {
-    return <div className="p-4 sm:p-6 text-red-600">Error: {expendituresError.message}</div>;
+    return <div className="p-4 sm:p-6 text-red-600 dark:text-red-400">Error: {expendituresError.message}</div>;
   }
   
   const unaccountedCount = unaccountedRequests?.length || 0;
@@ -137,7 +137,7 @@ const Expenditures = () => {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-red-600">€{analytics.totalSpent.toFixed(2)}</div>
+            <div className="text-3xl font-bold text-red-600 dark:text-red-400">€{analytics.totalSpent.toFixed(2)}</div>
             <p className="text-xs text-muted-foreground mt-1">
               Total acumulado de todos los gastos.
             </p>

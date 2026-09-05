@@ -203,7 +203,7 @@ const ImportExpendituresDialog: React.FC<ImportExpendituresDialogProps> = ({
         </div>
         
         <div className="flex justify-between items-center pt-4 border-t">
-            <p className="text-lg font-bold">Total a Importar: <span className="text-red-600">€{totalImportAmount.toFixed(2)}</span></p>
+            <p className="text-lg font-bold">Total a Importar: <span className="text-red-600 dark:text-red-400">€{totalImportAmount.toFixed(2)}</span></p>
         </div>
 
         <DialogFooter>

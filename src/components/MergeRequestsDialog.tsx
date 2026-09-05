@@ -147,7 +147,7 @@ const MergeRequestsDialog: React.FC<MergeRequestsDialogProps> = ({
                 />
             </div>
             
-            <p className="text-sm text-red-500">
+            <p className="text-sm text-red-500 dark:text-red-400">
               Advertencia: La Solicitud {sourceRequestNumber} será eliminada después de mover sus artículos.
             </p>
 

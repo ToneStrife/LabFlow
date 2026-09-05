@@ -20,7 +20,7 @@ const CustomTooltip = ({ active, payload }: any) => {
     return (
       <div className="p-2 bg-white border rounded-md shadow-lg text-sm">
         <p className="font-bold">{data.name}</p>
-        <p className="text-muted-foreground">Gasto: <span className="font-semibold text-red-600">€{data.value.toFixed(2)}</span></p>
+        <p className="text-muted-foreground">Gasto: <span className="font-semibold text-red-600 dark:text-red-400">€{data.value.toFixed(2)}</span></p>
         <p className="text-muted-foreground">Porcentaje: <span className="font-semibold">{percentage}%</span></p>
       </div>
     );
