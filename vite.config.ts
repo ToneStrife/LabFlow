@@ -25,19 +25,11 @@ export default defineConfig(({ mode }) => ({
   base: mode === 'production' ? '/LabFlow/' : '/',
 
   build: {
-    // Las librerias pesadas van a trozos propios: el navegador solo descarga
-    // las graficas cuando entras en Gastos, y el editor cuando escribes un correo.
-    rollupOptions: {
-      output: {
-        manualChunks(id: string) {
-          if (!id.includes('node_modules')) return;
-          if (id.includes('firebase') || id.includes('@firebase')) return 'firebase';
-          if (id.includes('recharts') || id.includes('/d3-')) return 'charts';
-          if (id.includes('quill')) return 'editor';
-          if (id.includes('@supabase')) return 'supabase';
-        },
-      },
-    },
+    // Sin manualChunks a mano: separar las librerias por nombre rompia el orden
+    // de evaluacion entre trozos (el editor tocaba React antes de que existiera)
+    // y la app se quedaba en blanco en produccion. El troceado sale ya de la
+    // carga perezosa de las paginas, que Rollup resuelve con el orden correcto.
+    chunkSizeWarningLimit: 900,
   },
   
   // Inyectar variables de entorno en el Service Worker estático
