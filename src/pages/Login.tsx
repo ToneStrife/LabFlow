@@ -167,9 +167,20 @@ const Login: React.FC = () => {
         {forgotStep === "code" && (
           <form onSubmit={handleVerifyCode} className="space-y-4 bg-card p-6 rounded-lg border shadow-sm">
             <p className="text-sm text-muted-foreground">
-              Escribe el código que hemos enviado a{" "}
-              <span className="font-medium text-foreground">{forgotEmail}</span>. Caduca en una hora.
+              Escribe el código de 6 dígitos que has recibido por correo. Caduca en una hora.
             </p>
+            <div className="space-y-2">
+              <Label htmlFor="otp-email">Email</Label>
+              <Input
+                id="otp-email"
+                type="email"
+                autoComplete="email"
+                value={forgotEmail}
+                onChange={(e) => setForgotEmail(e.target.value)}
+                disabled={isVerifying}
+                required
+              />
+            </div>
             <div className="space-y-2">
               <Label htmlFor="otp-code">Código</Label>
               <InputOTP
@@ -210,6 +221,15 @@ const Login: React.FC = () => {
             >
               No me ha llegado, enviar otro
             </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              className="w-full"
+              onClick={cancelForgot}
+              disabled={isVerifying}
+            >
+              Volver al inicio de sesión
+            </Button>
           </form>
         )}
 
@@ -243,6 +263,14 @@ const Login: React.FC = () => {
                 onClick={() => setForgotStep("email")}
               >
                 ¿Has olvidado la contraseña?
+              </button>
+              <br />
+              <button
+                type="button"
+                className="text-sm text-muted-foreground hover:underline"
+                onClick={() => setForgotStep("code")}
+              >
+                Ya tengo un código
               </button>
               <p className="text-sm text-muted-foreground">
                 Si no tienes cuenta, contacta con un administrador para recibir una invitación.
