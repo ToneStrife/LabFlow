@@ -3,7 +3,8 @@
 import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Loader2, MapPin, DollarSign, Users, Briefcase, Shield, Mail, ScrollText, Bell } from "lucide-react"; // Añadir iconos para pestañas
+import { PlusCircle, Loader2, MapPin, DollarSign, Users, Briefcase, Shield, Mail, ScrollText, Bell, KeyRound } from "lucide-react"; // Añadir iconos para pestañas
+import PermissionsMatrix from "@/components/PermissionsMatrix";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -327,7 +328,22 @@ const AdminPage = () => {
           <TabsTrigger value="notifications" className="flex items-center gap-2 px-4 py-2">
             <Bell className="h-4 w-4" /> Notificaciones
           </TabsTrigger>
+          <TabsTrigger value="permissions" className="flex items-center gap-2 px-4 py-2">
+            <KeyRound className="h-4 w-4" /> Permisos
+          </TabsTrigger>
         </TabsList>
+
+        {/* Permisos */}
+        <TabsContent value="permissions" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-xl">Permisos</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <PermissionsMatrix />
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* Users Tab */}
         <TabsContent value="users" className="mt-6">

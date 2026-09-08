@@ -14,11 +14,9 @@ export interface NavItem {
   title: string;
   href: string;
   icon: LucideIcon;
-  roles: Profile["role"][];
+  /** Permiso que hace falta para verlo. Sin permiso, lo ve todo el mundo. */
+  permission?: string;
 }
-
-const TODOS: Profile["role"][] = ["Requester", "Account Manager", "Admin"];
-const SOLO_ADMIN: Profile["role"][] = ["Admin"];
 
 /**
  * Secciones de la aplicacion. Vive fuera de SidebarNav porque la cabecera
@@ -26,12 +24,12 @@ const SOLO_ADMIN: Profile["role"][] = ["Admin"];
  * repetir el nombre de la app en todas las pantallas.
  */
 export const navItems: NavItem[] = [
-  { title: "Panel de Control", href: "/dashboard", icon: ShoppingCart, roles: TODOS },
-  { title: "Proveedores", href: "/vendors", icon: Users, roles: SOLO_ADMIN },
-  { title: "Inventario", href: "/inventory", icon: Warehouse, roles: TODOS },
-  { title: "Documentos", href: "/documents", icon: FolderOpen, roles: TODOS },
-  { title: "Gastos", href: "/expenditures", icon: DollarSign, roles: SOLO_ADMIN },
-  { title: "Admin", href: "/admin", icon: Shield, roles: SOLO_ADMIN },
+  { title: "Panel de Control", href: "/dashboard", icon: ShoppingCart },
+  { title: "Proveedores", href: "/vendors", icon: Users, permission: "vendors.view" },
+  { title: "Inventario", href: "/inventory", icon: Warehouse, permission: "inventory.view" },
+  { title: "Documentos", href: "/documents", icon: FolderOpen, permission: "documents.view" },
+  { title: "Gastos", href: "/expenditures", icon: DollarSign, permission: "expenditures.view" },
+  { title: "Admin", href: "/admin", icon: Shield, permission: "users.manage" },
 ];
 
 /** Paginas que no salen en el menu pero si necesitan titulo en la cabecera. */

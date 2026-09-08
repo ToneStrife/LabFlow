@@ -3,6 +3,7 @@
 import React from "react";
 import VendorTable from "@/components/VendorTable";
 import { Button } from "@/components/ui/button";
+import { useCan } from "@/hooks/use-permissions";
 import { PlusCircle, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import VendorForm from "@/components/VendorForm";
@@ -22,6 +23,8 @@ const Vendors = () => {
   const addVendorMutation = useAddVendor();
   const updateVendorMutation = useUpdateVendor();
   const deleteVendorMutation = useDeleteVendor();
+
+  const { can } = useCan();
 
   const [isAddVendorDialogOpen, setIsAddVendorDialogOpen] = React.useState(false);
   const [isEditVendorDialogOpen, setIsEditVendorDialogOpen] = React.useState(false);
@@ -85,9 +88,12 @@ const Vendors = () => {
     <div className={pageContainerClass}>
       <div className={cn(pageHeaderClass, "items-center mb-2 sm:mb-6")}>
         <h1 className="text-2xl sm:text-3xl font-bold">Directorio de Proveedores</h1>
+        {/* Sin permiso para gestionarlos, la pantalla es de solo lectura: el
+            servidor lo rechazaria igual, pero es feo ofrecer un boton que
+            luego da error. */}
         <Dialog open={isAddVendorDialogOpen} onOpenChange={setIsAddVendorDialogOpen}>
           <DialogTrigger asChild>
-            <Button>
+            <Button className={can("vendors.manage") ? undefined : "hidden"}>
               <PlusCircle className="mr-2 h-4 w-4" /> Añadir Nuevo Proveedor
             </Button>
           </DialogTrigger>
@@ -104,7 +110,7 @@ const Vendors = () => {
         </Dialog>
       </div>
       <p className="text-lg text-muted-foreground mb-8">
-        Esta página permite a los gerentes de cuenta ver y gestionar la información de los proveedores.
+        Directorio de proveedores del laboratorio, con sus contactos y marcas.
       </p>
       <VendorTable
         vendors={vendors || []}

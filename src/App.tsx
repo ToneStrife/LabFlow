@@ -13,7 +13,7 @@ import React from "react";
 import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
 import { Loader2 } from "lucide-react";
-import { Profile as UserProfileType } from "@/data/types";
+import { useCan } from "@/hooks/use-permissions";
 
 import { ReceiveWizardProvider } from "./components/ReceiveWizardProvider";
 
@@ -35,8 +35,9 @@ const Documentos = React.lazy(() => import("./pages/Documentos"));
 
 const queryClient = new QueryClient();
 
-const PrivateRoute: React.FC<{ children: React.ReactNode; requiredRoles?: UserProfileType['role'][] }> = ({ children, requiredRoles }) => {
+const PrivateRoute: React.FC<{ children: React.ReactNode; requiredPermission?: string }> = ({ children, requiredPermission }) => {
   const { session, profile, loading } = useSession();
+  const { can, cargandoPermisos } = useCan();
 
   if (loading) {
     return (
@@ -58,7 +59,17 @@ const PrivateRoute: React.FC<{ children: React.ReactNode; requiredRoles?: UserPr
     );
   }
 
-  if (requiredRoles && profile && !requiredRoles.includes(profile.role)) {
+  // Sin esperar a los permisos echariamos de la pantalla a quien si puede
+  // entrar, solo porque la respuesta todavia no ha llegado.
+  if (requiredPermission && cargandoPermisos) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin mr-2" /> Comprobando permisos...
+      </div>
+    );
+  }
+
+  if (requiredPermission && !can(requiredPermission)) {
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -91,13 +102,13 @@ const AppRoutes = () => {
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
         <Route path="/new-request" element={<PrivateRoute><NewRequest /></PrivateRoute>} />
-        <Route path="/vendors" element={<PrivateRoute requiredRoles={["Admin"]}><Vendors /></PrivateRoute>} />
+        <Route path="/vendors" element={<PrivateRoute requiredPermission="vendors.view"><Vendors /></PrivateRoute>} />
         <Route path="/requests/:id" element={<PrivateRoute><RequestDetails /></PrivateRoute>} />
         <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
-        <Route path="/admin" element={<PrivateRoute requiredRoles={["Admin"]}><AdminPage /></PrivateRoute>} />
-        <Route path="/inventory" element={<PrivateRoute requiredRoles={["Requester", "Account Manager", "Admin"]}><Inventory /></PrivateRoute>} />
-        <Route path="/expenditures" element={<PrivateRoute requiredRoles={["Admin"]}><Expenditures /></PrivateRoute>} />
-        <Route path="/documents" element={<PrivateRoute><Documentos /></PrivateRoute>} />
+        <Route path="/admin" element={<PrivateRoute requiredPermission="users.manage"><AdminPage /></PrivateRoute>} />
+        <Route path="/inventory" element={<PrivateRoute requiredPermission="inventory.view"><Inventory /></PrivateRoute>} />
+        <Route path="/expenditures" element={<PrivateRoute requiredPermission="expenditures.view"><Expenditures /></PrivateRoute>} />
+        <Route path="/documents" element={<PrivateRoute requiredPermission="documents.view"><Documentos /></PrivateRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
       </React.Suspense>

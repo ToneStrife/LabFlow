@@ -3,8 +3,8 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { useSession } from "@/components/SessionContextProvider";
 import { navItems } from "@/lib/navigation";
+import { useCan } from "@/hooks/use-permissions";
 
 interface SidebarNavProps extends React.HTMLAttributes<HTMLElement> {
   isMobile?: boolean;
@@ -12,18 +12,17 @@ interface SidebarNavProps extends React.HTMLAttributes<HTMLElement> {
 }
 
 export function SidebarNav({ className, onLinkClick, ...props }: SidebarNavProps) {
-  const { profile } = useSession();
-  const userRole = profile?.role;
+  const { can, cargandoPermisos } = useCan();
 
-  if (!userRole) {
+  if (cargandoPermisos) {
     return (
       <div className="flex items-center px-3 py-2 text-sm text-sidebar-foreground/60">
-        No hay elementos de navegación disponibles.
+        Cargando menú...
       </div>
     );
   }
 
-  const visibleNavItems = navItems.filter((item) => item.roles.includes(userRole));
+  const visibleNavItems = navItems.filter((item) => can(item.permission));
 
   return (
     <nav className={cn("flex flex-col space-y-0.5", className)} {...props}>
@@ -63,7 +62,7 @@ export function SidebarNav({ className, onLinkClick, ...props }: SidebarNavProps
         })
       ) : (
         <div className="flex items-center px-3 py-2 text-sm text-sidebar-foreground/60">
-          No hay elementos de navegación disponibles para tu rol.
+          No hay secciones disponibles con tus permisos.
         </div>
       )}
     </nav>
