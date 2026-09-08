@@ -108,8 +108,9 @@ export const useResetUserPassword = () => {
   return useMutation<void, Error, string>({
     mutationFn: async (userId) => apiResetUserPassword(userId),
     onSuccess: () => {
-      toast.success("Email de restablecimiento enviado.", {
-        description: "El usuario recibirá un enlace para crear una nueva contraseña.",
+      toast.success("Código de restablecimiento enviado.", {
+        description:
+          "El usuario recibirá un código de 6 dígitos. Tiene que entrar en LabFlow, pulsar \"Ya tengo un código\" y escribirlo con su email.",
       });
     },
     onError: (error) => {
