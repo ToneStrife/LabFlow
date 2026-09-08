@@ -82,27 +82,57 @@ export const apiUpdateProfile = async (id: string, data: Partial<Profile>): Prom
   }
 };
 
-export const apiDeleteProfile = async (id: string): Promise<void> => {
+/**
+ * Llama a una Edge Function de gestion de usuarios.
+ *
+ * Arregla dos cosas que antes fallaban a ciegas. Una, refresca la sesion
+ * antes de llamar: el token caduca y la funcion responde 401 sin explicar
+ * nada. Y dos, saca el mensaje real del cuerpo de la respuesta, que
+ * supabase-js guarda en error.context y no en error.message, de ahi el
+ * "Edge Function returned a non-2xx status code" que no dice nada.
+ */
+const invocarFuncionDeUsuarios = async (
+  nombre: string,
+  cuerpo: Record<string, unknown>,
+): Promise<any> => {
   const { data: { session }, error: refreshError } = await supabase.auth.refreshSession();
   if (refreshError || !session) {
-    throw new Error("Failed to refresh session. Please log in again.");
+    throw new Error("Tu sesión ha caducado. Vuelve a iniciar sesión e inténtalo de nuevo.");
   }
 
-  const { data: edgeFunctionData, error } = await supabase.functions.invoke('delete-user', {
-    body: JSON.stringify({ userIdToDelete: id }),
+  const { data, error } = await supabase.functions.invoke(nombre, {
+    body: JSON.stringify(cuerpo),
     method: 'POST',
   });
 
-  if (error) {
-    let errorMessage = 'Failed to delete user via Edge Function.';
-    if (edgeFunctionData && typeof edgeFunctionData === 'object' && 'error' in edgeFunctionData) {
-        errorMessage = (edgeFunctionData as any).error;
-    } else if (error.message) {
-        errorMessage = error.message;
-    }
-    throw new Error(errorMessage);
+  if (!error) return data;
+
+  let mensaje = error.message;
+
+  if (data && typeof data === 'object' && 'error' in data) {
+    mensaje = (data as any).error;
   }
-  return edgeFunctionData;
+
+  const contexto = (error as any).context;
+  if (contexto instanceof Response) {
+    try {
+      const cuerpoError = await contexto.clone().json();
+      if (cuerpoError?.error) mensaje = cuerpoError.error;
+    } catch {
+      // La respuesta no era JSON: nos quedamos con lo que traiga el error.
+    }
+    if (contexto.status === 401) {
+      mensaje = "Tu sesión ha caducado. Vuelve a iniciar sesión e inténtalo de nuevo.";
+    } else if (contexto.status === 403) {
+      mensaje = "Hace falta ser administrador para esto.";
+    }
+  }
+
+  throw new Error(mensaje);
+};
+
+export const apiDeleteProfile = async (id: string): Promise<void> => {
+  await invocarFuncionDeUsuarios('delete-user', { userIdToDelete: id });
 };
 
 interface InviteUserData {
@@ -114,42 +144,21 @@ interface InviteUserData {
 
 export const apiInviteUser = async (data: InviteUserData): Promise<any> => {
   const { email, first_name, last_name, role } = data;
-  const redirectTo = buildAuthReturnUrl();
 
-  const { data: edgeFunctionData, error } = await supabase.functions.invoke('invite-user', {
-    body: JSON.stringify({ email, first_name, last_name, role, redirectTo }),
-    method: 'POST',
+  return invocarFuncionDeUsuarios('invite-user', {
+    email,
+    first_name,
+    last_name,
+    role,
+    redirectTo: buildAuthReturnUrl(),
   });
-
-  if (error) {
-    let errorMessage = 'Failed to invite user via Edge Function.';
-    if (edgeFunctionData && typeof edgeFunctionData === 'object' && 'error' in edgeFunctionData) {
-        errorMessage = (edgeFunctionData as any).error;
-    } else if (error.message) {
-        errorMessage = error.message;
-    }
-    throw new Error(errorMessage);
-  }
-  return edgeFunctionData;
 };
 
 export const apiResetUserPassword = async (userId: string): Promise<void> => {
-  const redirectTo = buildAuthReturnUrl();
-
-  const { data: edgeFunctionData, error } = await supabase.functions.invoke('reset-user-password', {
-    body: JSON.stringify({ userId, redirectTo }),
-    method: 'POST',
+  await invocarFuncionDeUsuarios('reset-user-password', {
+    userId,
+    redirectTo: buildAuthReturnUrl(),
   });
-
-  if (error) {
-    let errorMessage = 'Failed to send password reset email.';
-    if (edgeFunctionData && typeof edgeFunctionData === 'object' && 'error' in edgeFunctionData) {
-      errorMessage = (edgeFunctionData as any).error;
-    } else if (error.message) {
-      errorMessage = error.message;
-    }
-    throw new Error(errorMessage);
-  }
 };
 
 

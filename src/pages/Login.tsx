@@ -267,7 +267,7 @@ const Login: React.FC = () => {
               <br />
               <button
                 type="button"
-                className="text-sm text-muted-foreground hover:underline"
+                className="text-sm font-medium text-primary hover:underline"
                 onClick={() => setForgotStep("code")}
               >
                 Ya tengo un código
