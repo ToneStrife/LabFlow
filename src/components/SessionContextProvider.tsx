@@ -85,9 +85,20 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
       return;
     }
 
-    if (isPasswordSetupLink && session) {
+    if (isPasswordSetupLink) {
       authLinkHandled.current = true;
-      navigate("/reset-password", { replace: true });
+
+      if (session) {
+        navigate("/reset-password", { replace: true });
+        return;
+      }
+
+      // Venia un token en el enlace pero no ha servido para abrir sesion:
+      // caducado o ya usado. Sin esto el usuario se queda mirando el 404.
+      toast.error("El enlace ya no sirve.", {
+        description: "Puede que haya caducado o que ya lo hayas usado. Pide uno nuevo.",
+      });
+      navigate("/login", { replace: true });
     }
   }, [loading, session, navigate]);
 
