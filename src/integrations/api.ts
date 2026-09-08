@@ -15,7 +15,7 @@ import {
   UserNotificationPreferences, 
   SupabaseRequestItem, 
 } from "@/data/types";
-import { buildAuthRedirectTo } from "@/lib/auth-redirect";
+import { buildAuthReturnUrl } from "@/lib/auth-redirect";
 
 // Mantener las importaciones de mock data para otras tablas hasta que se conviertan
 import {
@@ -114,7 +114,7 @@ interface InviteUserData {
 
 export const apiInviteUser = async (data: InviteUserData): Promise<any> => {
   const { email, first_name, last_name, role } = data;
-  const redirectTo = buildAuthRedirectTo("/dashboard");
+  const redirectTo = buildAuthReturnUrl();
 
   const { data: edgeFunctionData, error } = await supabase.functions.invoke('invite-user', {
     body: JSON.stringify({ email, first_name, last_name, role, redirectTo }),
@@ -134,7 +134,7 @@ export const apiInviteUser = async (data: InviteUserData): Promise<any> => {
 };
 
 export const apiResetUserPassword = async (userId: string): Promise<void> => {
-  const redirectTo = buildAuthRedirectTo("/reset-password");
+  const redirectTo = buildAuthReturnUrl();
 
   const { data: edgeFunctionData, error } = await supabase.functions.invoke('reset-user-password', {
     body: JSON.stringify({ userId, redirectTo }),

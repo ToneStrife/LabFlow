@@ -1,12 +1,13 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useLayoutEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Profile } from "@/data/types";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Session } from '@supabase/supabase-js';
 import { useNavigate } from "react-router-dom";
+import { initialAuthHash, isPasswordSetupLink } from "@/lib/auth-hash";
 
 interface SessionContextType {
   session: Session | null;
@@ -59,6 +60,36 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
     // Solo establecer loading en false después de que el perfil haya sido procesado
     setLoading(false);
   };
+
+  // Encaminar la vuelta de los correos de Supabase Auth. Supabase deja sus
+  // parametros en el fragmento de la URL, que HashRouter interpreta como una
+  // ruta inexistente: sin esto, el enlace del correo acaba en el 404 de la
+  // app. Esperamos a que loading sea false para no navegar antes de que
+  // supabase-js haya leido el token del fragmento, y usamos useLayoutEffect
+  // para redirigir antes de pintar el 404.
+  // Solo la primera vez: initialAuthHash no cambia en toda la vida de la
+  // pagina, asi que sin este cerrojo el usuario volveria a /reset-password (o
+  // a /login) cada vez que la sesion cambiase.
+  const authLinkHandled = React.useRef(false);
+
+  useLayoutEffect(() => {
+    if (loading || authLinkHandled.current) return;
+
+    if (initialAuthHash.error) {
+      authLinkHandled.current = true;
+      toast.error("El enlace no es válido o ha caducado.", {
+        description:
+          "Pide uno nuevo desde \"¿Has olvidado la contraseña?\" o a un administrador.",
+      });
+      navigate("/login", { replace: true });
+      return;
+    }
+
+    if (isPasswordSetupLink && session) {
+      authLinkHandled.current = true;
+      navigate("/reset-password", { replace: true });
+    }
+  }, [loading, session, navigate]);
 
   useEffect(() => {
     // 1. Cargar la sesión inicial

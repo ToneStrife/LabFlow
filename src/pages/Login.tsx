@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { buildAuthRedirectTo } from "@/lib/auth-redirect";
+import { buildAuthReturnUrl } from "@/lib/auth-redirect";
 import { FlaskConical } from "lucide-react";
 import { useTheme } from "next-themes";
 
@@ -39,7 +39,7 @@ const Login: React.FC = () => {
 
     setIsSendingReset(true);
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: buildAuthRedirectTo("/reset-password"),
+      redirectTo: buildAuthReturnUrl(),
     });
     setIsSendingReset(false);
 
@@ -133,7 +133,7 @@ const Login: React.FC = () => {
                 },
               }}
               theme={resolvedTheme === "dark" ? "dark" : "light"}
-              redirectTo={buildAuthRedirectTo("/dashboard")}
+              redirectTo={buildAuthReturnUrl()}
             />
             </div>
             <div className="text-center space-y-2">

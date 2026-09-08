@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Loader2, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { useSession } from "@/components/SessionContextProvider";
+import { isInviteLink } from "@/lib/auth-hash";
 
 const ResetPassword: React.FC = () => {
   const navigate = useNavigate();
@@ -18,9 +19,13 @@ const ResetPassword: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = React.useState("");
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
+  // Esta pantalla sirve para dos casos: el que ha olvidado la contraseña y el
+  // invitado que entra por primera vez y todavía no tiene ninguna.
+  const isInvite = isInviteLink;
+
   React.useEffect(() => {
     if (!loading && !session) {
-      toast.error("El enlace de restablecimiento no es válido o ha expirado.");
+      toast.error("El enlace no es válido o ha caducado.");
       navigate("/login", { replace: true });
     }
   }, [loading, session, navigate]);
@@ -45,7 +50,11 @@ const ResetPassword: React.FC = () => {
       return;
     }
 
-    toast.success("Contraseña actualizada. Ya puedes iniciar sesión.");
+    toast.success(
+      isInvite
+        ? "Contraseña guardada. Ya puedes iniciar sesión."
+        : "Contraseña actualizada. Ya puedes iniciar sesión.",
+    );
     await supabase.auth.signOut();
     navigate("/login", { replace: true });
   };
@@ -63,16 +72,19 @@ const ResetPassword: React.FC = () => {
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Lock className="h-5 w-5" /> Nueva contraseña
+            <Lock className="h-5 w-5" />{" "}
+            {isInvite ? "Elige tu contraseña" : "Nueva contraseña"}
           </CardTitle>
           <CardDescription>
-            Elige una contraseña nueva para tu cuenta de Labflow.
+            {isInvite
+              ? "Te han invitado a LabFlow. Elige una contraseña para tu cuenta."
+              : "Elige una contraseña nueva para tu cuenta de LabFlow."}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="password">Nueva contraseña</Label>
+              <Label htmlFor="password">{isInvite ? "Contraseña" : "Nueva contraseña"}</Label>
               <Input
                 id="password"
                 type="password"
