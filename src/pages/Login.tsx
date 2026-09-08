@@ -80,22 +80,33 @@ const Login: React.FC = () => {
 
     setIsVerifying(true);
     goingToPasswordForm.current = true;
-    const { error } = await supabase.auth.verifyOtp({
-      email: forgotEmail.trim(),
-      token,
-      type: "recovery",
-    });
+
+    // El mismo campo sirve para los dos correos que mandan código, el de
+    // restablecer contraseña y el de invitación, y no hay forma de saber
+    // cuál es solo mirando el número. Probamos los dos tipos: un intento
+    // con el tipo que no toca simplemente no valida, no gasta el código.
+    const email = forgotEmail.trim();
+    let esInvitacion = false;
+
+    let { error } = await supabase.auth.verifyOtp({ email, token, type: "recovery" });
+
+    if (error) {
+      const segundoIntento = await supabase.auth.verifyOtp({ email, token, type: "invite" });
+      error = segundoIntento.error;
+      esInvitacion = !segundoIntento.error;
+    }
+
     setIsVerifying(false);
 
     if (error) {
       goingToPasswordForm.current = false;
       toast.error("El código no vale.", {
-        description: "Comprueba que lo has copiado bien, o pide uno nuevo.",
+        description: "Comprueba que lo has copiado bien, que el email es el mismo al que llegó, o pide uno nuevo.",
       });
       return;
     }
 
-    navigate("/reset-password", { replace: true });
+    navigate("/reset-password", { replace: true, state: { invitacion: esInvitacion } });
   };
 
   const cancelForgot = () => {
@@ -122,7 +133,7 @@ const Login: React.FC = () => {
           <h1 className="mt-4 text-2xl font-extrabold tracking-tight text-foreground">LabFlow</h1>
           <p className="text-sm text-muted-foreground">Gestión de solicitudes de laboratorio</p>
           <h2 className="mt-6 text-lg font-semibold text-foreground">
-            {forgotStep === "none" ? "Inicia sesión en tu cuenta" : "Restablecer contraseña"}
+            {forgotStep === "none" ? "Inicia sesión en tu cuenta" : "Acceder con un código"}
           </h2>
         </div>
 
@@ -272,6 +283,9 @@ const Login: React.FC = () => {
               >
                 Ya tengo un código
               </button>
+              <p className="text-xs text-muted-foreground">
+                Si te han invitado a LabFlow, entra por aquí con el código que has recibido.
+              </p>
               <p className="text-sm text-muted-foreground">
                 Si no tienes cuenta, contacta con un administrador para recibir una invitación.
               </p>

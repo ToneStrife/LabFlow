@@ -51,8 +51,8 @@ export const useInviteUser = () => {
     onSuccess: (invitedUser) => {
       queryClient.invalidateQueries({ queryKey: ["allProfiles"] });
       queryClient.invalidateQueries({ queryKey: ["accountManagers"] });
-      toast.success("Invitación enviada exitosamente!", {
-        description: `Email: ${invitedUser.user.email}`,
+      toast.success("Invitación enviada.", {
+        description: `${invitedUser.user.email} recibirá un código de 6 dígitos. Tiene que entrar en LabFlow, pulsar "Ya tengo un código" y escribirlo con su email para elegir contraseña.`,
       });
     },
     onError: (error) => {

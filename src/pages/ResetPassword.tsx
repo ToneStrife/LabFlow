@@ -2,7 +2,7 @@
 
 import React from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,14 +14,18 @@ import { isInviteLink } from "@/lib/auth-hash";
 
 const ResetPassword: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { session, loading } = useSession();
   const [password, setPassword] = React.useState("");
   const [confirmPassword, setConfirmPassword] = React.useState("");
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   // Esta pantalla sirve para dos casos: el que ha olvidado la contraseña y el
-  // invitado que entra por primera vez y todavía no tiene ninguna.
-  const isInvite = isInviteLink;
+  // invitado que entra por primera vez y todavía no tiene ninguna. Con los
+  // códigos de 6 dígitos quien lo sabe es el login, que nos lo pasa aquí;
+  // isInviteLink cubre los enlaces antiguos que sigan por ahí.
+  const isInvite =
+    isInviteLink || (location.state as { invitacion?: boolean } | null)?.invitacion === true;
 
   React.useEffect(() => {
     if (!loading && !session) {
