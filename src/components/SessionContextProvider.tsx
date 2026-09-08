@@ -21,6 +21,9 @@ const SessionContext = createContext<SessionContextType | undefined>(undefined);
 
 export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [session, setSession] = useState<Session | null>(null);
+  // De quien es la sesion que ya tenemos cargada, para distinguir un cambio
+  // de usuario de una simple revalidacion del token.
+  const usuarioCargadoRef = React.useRef<string | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const queryClient = useQueryClient();
@@ -29,12 +32,14 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
   // Función unificada para obtener la sesión y el perfil
   const fetchSessionAndProfile = async (currentSession: Session | null) => {
     if (!currentSession) {
+      usuarioCargadoRef.current = null;
       setSession(null);
       setProfile(null);
       setLoading(false);
       return;
     }
 
+    usuarioCargadoRef.current = currentSession.user.id;
     setSession(currentSession);
     
     // 1. Intentar obtener el perfil
@@ -123,17 +128,31 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
         return;
       }
       
-      // Si el usuario inicia sesión o se refresca la sesión, recargamos todo
       if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') {
-        // Establecer loading en true temporalmente para evitar renderizados intermedios
-        setLoading(true); 
+        // Ojo con lo que se hace aqui. Al volver a esta pestaña del navegador,
+        // supabase-js revalida la sesion y dispara uno de estos eventos. Si
+        // pusieramos loading en true, AppRoutes cambiaria a la pantalla de
+        // carga y desmontaria toda la aplicacion para volver a montarla: se
+        // cerraria el dialogo que tuvieras abierto, perdiendo lo escrito, y
+        // las paginas volverian al principio. Asi que la sesion se actualiza
+        // en segundo plano, sin tocar loading.
+        const mismoUsuario = usuarioCargadoRef.current === (nextSession?.user?.id ?? null);
+
+        if (mismoUsuario) {
+          // Solo ha cambiado el token. El perfil sigue siendo el mismo, asi
+          // que no hace falta volver a pedirlo ni invalidar nada.
+          setSession(nextSession);
+          return;
+        }
+
         fetchSessionAndProfile(nextSession);
-        
+
         // Invalidar consultas relacionadas con el usuario
         queryClient.invalidateQueries({ queryKey: ["session"] });
         queryClient.invalidateQueries({ queryKey: ["allProfiles"] });
         queryClient.invalidateQueries({ queryKey: ["accountManagers"] });
       } else if (event === 'SIGNED_OUT') {
+        usuarioCargadoRef.current = null;
         setSession(null);
         setProfile(null);
         setLoading(false);

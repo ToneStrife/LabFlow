@@ -33,7 +33,17 @@ const Inventory = React.lazy(() => import("./pages/Inventory"));
 const Expenditures = React.lazy(() => import("./pages/Expenditures"));
 const Documentos = React.lazy(() => import("./pages/Documentos"));
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // Al volver a la pestaña, react-query recarga por defecto todas las
+      // consultas activas. En una pantalla con un formulario abierto eso se
+      // nota como un parpadeo y como listas que se reordenan bajo el cursor.
+      // Los datos se siguen refrescando al navegar y despues de cada cambio.
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 const PrivateRoute: React.FC<{ children: React.ReactNode; requiredPermission?: string }> = ({ children, requiredPermission }) => {
   const { session, profile, loading } = useSession();
