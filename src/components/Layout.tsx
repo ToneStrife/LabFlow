@@ -21,6 +21,7 @@ import { getFullName } from "@/hooks/use-profiles";
 import { ThemeToggle } from "./ThemeToggle";
 import { getPageTitle, ROL_ETIQUETA } from "@/lib/navigation";
 import SedeSelector from "@/components/SedeSelector";
+import { GRUPO } from "@/lib/sedes";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -28,15 +29,24 @@ interface LayoutProps {
 
 /** Marca de la barra lateral. */
 const Marca: React.FC<{ onClick?: () => void }> = ({ onClick }) => (
-  <Link to="/dashboard" className="group flex items-center gap-2.5" onClick={onClick}>
-    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary text-white shadow-sm transition-transform group-hover:scale-105">
-      <FlaskConical className="h-5 w-5" />
-    </span>
-    <span className="flex min-w-0 flex-col leading-none">
-      <span className="text-xl font-extrabold tracking-tight text-sidebar-foreground">LabFlow</span>
-      <span className="mt-1 truncate text-[11px] font-medium text-sidebar-foreground/60">
-        Solicitudes de laboratorio
+  <Link to="/dashboard" className="group flex flex-col gap-3" onClick={onClick}>
+    <span className="flex items-center gap-2.5">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary text-white shadow-sm transition-transform group-hover:scale-105">
+        <FlaskConical className="h-5 w-5" />
       </span>
+      <span className="flex min-w-0 flex-col leading-none">
+        <span className="text-xl font-extrabold tracking-tight text-sidebar-foreground">LabFlow</span>
+        <span className="mt-1 truncate text-[11px] font-medium text-sidebar-foreground/60">
+          Solicitudes de laboratorio
+        </span>
+      </span>
+    </span>
+    <span className="rounded-lg bg-white px-2.5 py-2 shadow-sm ring-1 ring-white/10">
+      <img
+        src={GRUPO.logoUrl}
+        alt={GRUPO.nombre}
+        className="h-8 w-auto max-w-full object-contain"
+      />
     </span>
   </Link>
 );

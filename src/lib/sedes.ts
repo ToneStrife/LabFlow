@@ -55,11 +55,17 @@ export const resolveAddressSedeId = (address: {
   if (address.sede_id) return address.sede_id;
 
   const name = address.name?.toLowerCase() ?? "";
+  if (!name) return null;
+
+  // Alias comunes por si el nombre de la dirección no es exactamente el id
+  const alias: Record<string, string[]> = {
+    cibm: ["cibm", "centro de investigaciones", "biomedic", "biomédic"],
+    farmacia: ["farmacia", "farma", "facultad de farmacia", "farbioq"],
+  };
+
   for (const sede of SEDES) {
-    if (name.includes(sede.id) || name.includes(sede.name.toLowerCase())) {
-      return sede.id;
-    }
-    if (sede.descripcion && name.includes(sede.descripcion.toLowerCase())) {
+    const tokens = alias[sede.id] ?? [sede.id, sede.name.toLowerCase()];
+    if (tokens.some((token) => name.includes(token))) {
       return sede.id;
     }
   }

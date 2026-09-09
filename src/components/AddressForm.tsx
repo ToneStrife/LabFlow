@@ -14,8 +14,11 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
 import { Address } from "@/data/types";
+import SedeDot from "@/components/SedeDot";
+import { SEDES, TODAS_LAS_SEDES } from "@/lib/sedes";
 
 const addressFormSchema = z.object({
   name: z.string().min(1, { message: "El nombre de la dirección es obligatorio." }),
@@ -25,7 +28,8 @@ const addressFormSchema = z.object({
   state: z.string().min(1, { message: "El Estado/Provincia es obligatorio." }),
   zip_code: z.string().min(1, { message: "El Código Postal es obligatorio." }),
   country: z.string().min(1, { message: "El País es obligatorio." }),
-  cif: z.string().optional().nullable(), // Nuevo campo CIF
+  cif: z.string().optional().nullable(),
+  sede_id: z.string().optional().nullable(),
 });
 
 export type AddressFormValues = z.infer<typeof addressFormSchema>;
@@ -49,6 +53,7 @@ const AddressForm: React.FC<AddressFormProps> = ({ initialData, onSubmit, onCanc
       zip_code: initialData.zip_code,
       country: initialData.country,
       cif: initialData.cif || null,
+      sede_id: initialData.sede_id || null,
     } : {
       name: "",
       address_line_1: "",
@@ -58,11 +63,15 @@ const AddressForm: React.FC<AddressFormProps> = ({ initialData, onSubmit, onCanc
       zip_code: "",
       country: "",
       cif: null,
+      sede_id: null,
     },
   });
 
   const handleSubmit = (data: AddressFormValues) => {
-    onSubmit(data);
+    onSubmit({
+      ...data,
+      sede_id: data.sede_id === TODAS_LAS_SEDES || !data.sede_id ? null : data.sede_id,
+    });
   };
 
   return (
@@ -75,6 +84,38 @@ const AddressForm: React.FC<AddressFormProps> = ({ initialData, onSubmit, onCanc
             <FormItem>
               <FormLabel>Nombre de la Dirección (ej. Laboratorio Principal, Almacén)</FormLabel>
               <FormControl><Input {...field} disabled={isSubmitting} /></FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="sede_id"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Sede</FormLabel>
+              <Select
+                onValueChange={field.onChange}
+                value={field.value || TODAS_LAS_SEDES}
+                disabled={isSubmitting}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona sede" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value={TODAS_LAS_SEDES}>Sin sede asignada</SelectItem>
+                  {SEDES.map((sede) => (
+                    <SelectItem key={sede.id} value={sede.id}>
+                      <span className="flex items-center gap-2">
+                        <SedeDot color={sede.color} />
+                        {sede.name}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}
