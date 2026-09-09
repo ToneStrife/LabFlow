@@ -125,14 +125,14 @@ const PendingItemsList: React.FC = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {pendingItems?.length === 0 ? (
+              {itemsForSede.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
                     ¡Todo al día! No hay artículos pendientes de recibir.
                   </TableCell>
                 </TableRow>
               ) : (
-                pendingItems?.map((item) => (
+                itemsForSede.map((item) => (
                   <TableRow key={item.requestItemId} className="hover:bg-muted/30">
                     <TableCell className="font-medium">
                       <div className="flex flex-col">
