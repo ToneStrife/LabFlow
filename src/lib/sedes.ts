@@ -83,6 +83,17 @@ export const filterAddressesBySede = <T extends { name?: string | null; sede_id?
   return addresses.filter((address) => resolveAddressSedeId(address) === sedeActiva);
 };
 
+/** Dirección de envío por defecto de la sede; si no hay, la primera disponible */
+export const getDefaultShippingAddressId = <T extends { id: string; name?: string | null; sede_id?: string | null }>(
+  addresses: T[] | undefined,
+  sedeActiva: string | null | undefined
+): string => {
+  if (!addresses?.length) return "";
+  if (!sedeActiva) return addresses[0].id;
+  const deLaSede = addresses.find((address) => resolveAddressSedeId(address) === sedeActiva);
+  return deLaSede?.id ?? addresses[0].id;
+};
+
 export const requestMatchesSede = (
   shippingAddressId: string | null | undefined,
   shippingAddresses: { id: string; name?: string | null; sede_id?: string | null }[] | undefined,

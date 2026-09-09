@@ -39,7 +39,7 @@ import FileUploadInput from "./FileUploadInput";
 import QuoteParsePreviewDialog from "./QuoteParsePreviewDialog";
 import type { ParsedQuoteItem } from "@/data/quote-parse";
 import { useSedeActiva } from "@/components/SedeContextProvider";
-import { filterAddressesBySede } from "@/lib/sedes";
+import { getDefaultShippingAddressId } from "@/lib/sedes";
 
 // -------------------- Schemas --------------------
 const itemSchema = z.object({
@@ -306,30 +306,43 @@ const RequestForm: React.FC = () => {
     }
   }, [session, form]);
 
-  const filteredShippingAddresses = React.useMemo(
-    () => filterAddressesBySede(shippingAddresses, sedeActiva),
-    [shippingAddresses, sedeActiva]
-  );
-  const filteredBillingAddresses = React.useMemo(
-    () => filterAddressesBySede(billingAddresses, sedeActiva),
-    [billingAddresses, sedeActiva]
-  );
+  // Envío: todas las direcciones disponibles; la sede solo elige el valor por defecto.
+  // Facturación: siempre libre, sin filtrar por sede.
+  const previousSedeRef = React.useRef<string | null | undefined>(undefined);
+  const shippingInicializadoRef = React.useRef(false);
 
   React.useEffect(() => {
+    if (!shippingAddresses?.length) return;
+
+    const sedeCambio =
+      previousSedeRef.current !== undefined && previousSedeRef.current !== sedeActiva;
+    previousSedeRef.current = sedeActiva;
+
     const currentShippingId = form.getValues("shippingAddressId");
-    const shippingStillValid = filteredShippingAddresses.some((address) => address.id === currentShippingId);
-    if (!shippingStillValid) {
-      form.setValue("shippingAddressId", filteredShippingAddresses[0]?.id ?? "");
+    const shippingExiste = shippingAddresses.some((address) => address.id === currentShippingId);
+
+    if (!shippingInicializadoRef.current) {
+      shippingInicializadoRef.current = true;
+      // Respeta lo persistido si sigue siendo válido; si no, usa el default de la sede
+      if (!currentShippingId || !shippingExiste) {
+        form.setValue("shippingAddressId", getDefaultShippingAddressId(shippingAddresses, sedeActiva));
+      }
+      return;
     }
-  }, [filteredShippingAddresses, form]);
+
+    if (sedeCambio || !shippingExiste) {
+      form.setValue("shippingAddressId", getDefaultShippingAddressId(shippingAddresses, sedeActiva));
+    }
+  }, [shippingAddresses, sedeActiva, form]);
 
   React.useEffect(() => {
+    if (!billingAddresses?.length) return;
     const currentBillingId = form.getValues("billingAddressId");
-    const billingStillValid = filteredBillingAddresses.some((address) => address.id === currentBillingId);
-    if (!billingStillValid) {
-      form.setValue("billingAddressId", filteredBillingAddresses[0]?.id ?? "");
+    const billingExiste = billingAddresses.some((address) => address.id === currentBillingId);
+    if (!currentBillingId || !billingExiste) {
+      form.setValue("billingAddressId", billingAddresses[0].id);
     }
-  }, [filteredBillingAddresses, form]);
+  }, [billingAddresses, form]);
 
 
   const { fields, append, remove, replace } = useFieldArray({ // Añadir replace
@@ -402,8 +415,8 @@ const RequestForm: React.FC = () => {
       vendorId: "",
       requesterId: session.user.id,
       accountManagerId: "unassigned",
-      shippingAddressId: filterAddressesBySede(shippingAddresses, sedeActiva)[0]?.id || "",
-      billingAddressId: filterAddressesBySede(billingAddresses, sedeActiva)[0]?.id || "",
+      shippingAddressId: getDefaultShippingAddressId(shippingAddresses, sedeActiva),
+      billingAddressId: billingAddresses?.[0]?.id || "",
       items: [defaultItem],
       quoteFile: undefined,
       projectCodes: [],
@@ -467,8 +480,8 @@ const RequestForm: React.FC = () => {
       vendorId: "",
       requesterId: session?.user?.id || "",
       accountManagerId: "unassigned",
-      shippingAddressId: filterAddressesBySede(shippingAddresses, sedeActiva)[0]?.id || "",
-      billingAddressId: filterAddressesBySede(billingAddresses, sedeActiva)[0]?.id || "",
+      shippingAddressId: getDefaultShippingAddressId(shippingAddresses, sedeActiva),
+      billingAddressId: billingAddresses?.[0]?.id || "",
       items: [defaultItem],
       quoteFile: undefined,
       projectCodes: [],
@@ -510,7 +523,7 @@ const RequestForm: React.FC = () => {
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {filteredShippingAddresses.map((address) => (
+                    {shippingAddresses?.map((address) => (
                       <SelectItem key={address.id} value={address.id}>{address.name}</SelectItem>
                     ))}
                   </SelectContent>
@@ -532,7 +545,7 @@ const RequestForm: React.FC = () => {
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {filteredBillingAddresses.map((address) => (
+                    {billingAddresses?.map((address) => (
                       <SelectItem key={address.id} value={address.id}>{address.name}</SelectItem>
                     ))}
                   </SelectContent>
