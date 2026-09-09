@@ -28,14 +28,16 @@ export const SEDES: Sede[] = [
     id: "cibm",
     name: "CIBM",
     color: "#2563eb",
-    descripcion: "Centro de Investigaciones Biomédicas",
+    descripcion: "Centro de Investigación Biomédica · Universidad de Granada",
+    heroImageUrl: sedeAssetUrl("sedes/cibm-hero.jpg"),
     heroGradient: "linear-gradient(135deg, #1e3a8a 0%, #2563eb 42%, #60a5fa 100%)",
   },
   {
     id: "farmacia",
     name: "Farmacia",
     color: "#9333ea",
-    descripcion: "Unidad de Farmacia",
+    descripcion: "Facultad de Farmacia · Universidad de Granada",
+    heroImageUrl: sedeAssetUrl("sedes/farmacia-hero.jpg"),
     heroGradient:
       "linear-gradient(135deg, #581c87 0%, #9333ea 38%, #a855f7 62%, #c4b5fd 100%)",
   },
