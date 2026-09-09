@@ -24,11 +24,14 @@ import { useSession } from "@/components/SessionContextProvider";
 import { WorkflowStrip, type Etapa } from "@/components/dashboard/WorkflowStrip";
 import { RequestStatus } from "@/data/types";
 import { getFullName } from "@/hooks/use-profiles";
+import SedeHeroBanner from "@/components/SedeHeroBanner";
+import { useSedeActiva } from "@/components/SedeContextProvider";
 
 type Pestana = "pending-items" | "pending-invoices" | "all-requests";
 
 const Dashboard = () => {
   const { profile } = useSession();
+  const { sedeActiva } = useSedeActiva();
   const isAdmin = profile?.role === "Admin";
 
   const { data: requests, isLoading: isLoadingRequests, error } = useRequests();
@@ -130,14 +133,20 @@ const Dashboard = () => {
 
   return (
     <div className={pageContainerClass}>
+      <SedeHeroBanner />
+
       <div>
         <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
           {nombreCorto ? `Hola, ${nombreCorto}` : "Panel de control"}
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          {totalPendiente === 0
-            ? "No hay nada esperándote. Todo al día."
-            : `Tienes ${totalPendiente} ${totalPendiente === 1 ? "cosa" : "cosas"} esperando: pulsa una fase para ir a ella.`}
+          {sedeActiva
+            ? totalPendiente === 0
+              ? "No hay nada esperándote en esta sede. Todo al día."
+              : `Tienes ${totalPendiente} ${totalPendiente === 1 ? "cosa" : "cosas"} esperando en esta sede: pulsa una fase para ir a ella.`
+            : totalPendiente === 0
+              ? "No hay nada esperándote. Todo al día."
+              : `Tienes ${totalPendiente} ${totalPendiente === 1 ? "cosa" : "cosas"} esperando: pulsa una fase para ir a ella.`}
         </p>
       </div>
 

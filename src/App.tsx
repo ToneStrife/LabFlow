@@ -17,6 +17,7 @@ import { useCan } from "@/hooks/use-permissions";
 
 import { ReceiveWizardProvider } from "./components/ReceiveWizardProvider";
 import { SedeContextProvider } from "./components/SedeContextProvider";
+import SedeThemeEffect from "./components/SedeThemeEffect";
 
 // Estas paginas arrastran las librerias pesadas (graficas, editor de texto
 // enriquecido, tablas de administracion). Cargarlas solo cuando se visitan
@@ -136,6 +137,7 @@ const App = () => (
       <HashRouter future={{ v7_relativeSplatPath: true }}>
         <SessionContextProvider>
           <SedeContextProvider>
+            <SedeThemeEffect />
             <React.Suspense fallback={null}>
               <FirebaseInitializer />
             </React.Suspense>
