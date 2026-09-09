@@ -10,6 +10,7 @@ export const TODAS_LAS_SEDES = "all";
 
 export const SEDES: Sede[] = [
   { id: "cibm", name: "CIBM", color: "#2563eb" },
+  { id: "farmacia", name: "Farmacia", color: "#059669" },
 ];
 
 export const getSedeById = (id: string | null | undefined): Sede | undefined =>
