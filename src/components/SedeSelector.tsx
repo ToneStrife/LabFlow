@@ -11,7 +11,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import SedeDot from "@/components/SedeDot";
 import { useSedeActiva } from "@/components/SedeContextProvider";
-import { SEDES, TODAS_LAS_SEDES, getSedeById, getSedeLabel } from "@/lib/sedes";
+import { SEDES, getSedeById, getSedeLabel } from "@/lib/sedes";
+
 const SedeSelector: React.FC = () => {
   const { sedeActiva, setSedeActiva } = useSedeActiva();
   const sedeActual = sedeActiva ? getSedeById(sedeActiva) : null;
@@ -20,13 +21,21 @@ const SedeSelector: React.FC = () => {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" className="h-8 gap-1.5 px-2.5" title="Cambiar sede">
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 gap-1.5 px-2.5"
+          title="Cambiar sede"
+          aria-label={`Sede: ${etiqueta}`}
+        >
           {sedeActual ? (
             <SedeDot color={sedeActual.color} />
           ) : (
             <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
           )}
-          <span className="hidden max-w-[7rem] truncate sm:inline">{etiqueta}</span>
+          <span className="max-w-[6.5rem] truncate text-xs sm:max-w-[7.5rem] sm:text-sm">
+            {etiqueta}
+          </span>
           <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground" />
         </Button>
       </DropdownMenuTrigger>

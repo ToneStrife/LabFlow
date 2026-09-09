@@ -39,9 +39,17 @@ interface AddressFormProps {
   onSubmit: (data: AddressFormValues) => void;
   onCancel?: () => void;
   isSubmitting: boolean;
+  /** Solo las de envío necesitan sede para el filtro del dashboard */
+  showSede?: boolean;
 }
 
-const AddressForm: React.FC<AddressFormProps> = ({ initialData, onSubmit, onCancel, isSubmitting }) => {
+const AddressForm: React.FC<AddressFormProps> = ({
+  initialData,
+  onSubmit,
+  onCancel,
+  isSubmitting,
+  showSede = false,
+}) => {
   const form = useForm<AddressFormValues>({
     resolver: zodResolver(addressFormSchema),
     defaultValues: initialData ? {
@@ -70,7 +78,11 @@ const AddressForm: React.FC<AddressFormProps> = ({ initialData, onSubmit, onCanc
   const handleSubmit = (data: AddressFormValues) => {
     onSubmit({
       ...data,
-      sede_id: data.sede_id === TODAS_LAS_SEDES || !data.sede_id ? null : data.sede_id,
+      sede_id: showSede
+        ? data.sede_id === TODAS_LAS_SEDES || !data.sede_id
+          ? null
+          : data.sede_id
+        : null,
     });
   };
 
@@ -88,6 +100,7 @@ const AddressForm: React.FC<AddressFormProps> = ({ initialData, onSubmit, onCanc
             </FormItem>
           )}
         />
+        {showSede && (
         <FormField
           control={form.control}
           name="sede_id"
@@ -120,6 +133,7 @@ const AddressForm: React.FC<AddressFormProps> = ({ initialData, onSubmit, onCanc
             </FormItem>
           )}
         />
+        )}
         <FormField
           control={form.control}
           name="cif"

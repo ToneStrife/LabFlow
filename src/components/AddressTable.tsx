@@ -13,22 +13,31 @@ import { Button } from "@/components/ui/button";
 import { Edit, Trash2 } from "lucide-react";
 import { Address } from "@/data/types";
 import SedeDot from "@/components/SedeDot";
-import { getSedeById, resolveAddressSedeId } from "@/lib/sedes";
+import { getSedeById, inferSedeIdFromName } from "@/lib/sedes";
 
 interface AddressTableProps {
   addresses: Address[];
   onEdit: (address: Address) => void;
   onDelete: (addressId: string) => void;
+  /** Mostrar columna de sede (solo direcciones de envío) */
+  showSede?: boolean;
 }
 
-const AddressTable: React.FC<AddressTableProps> = ({ addresses, onEdit, onDelete }) => {
+const AddressTable: React.FC<AddressTableProps> = ({
+  addresses,
+  onEdit,
+  onDelete,
+  showSede = false,
+}) => {
+  const colSpan = showSede ? 7 : 6;
+
   return (
     <div className="rounded-md border">
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead>Nombre</TableHead>
-            <TableHead>Sede</TableHead>
+            {showSede && <TableHead>Sede</TableHead>}
             <TableHead>Línea de Dirección 1</TableHead>
             <TableHead>Ciudad, Estado, CP</TableHead>
             <TableHead>País</TableHead>
@@ -39,27 +48,36 @@ const AddressTable: React.FC<AddressTableProps> = ({ addresses, onEdit, onDelete
         <TableBody>
           {addresses.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+              <TableCell colSpan={colSpan} className="h-24 text-center text-muted-foreground">
                 No se encontraron direcciones.
               </TableCell>
             </TableRow>
           ) : (
             addresses.map((address) => {
-              const sedeId = resolveAddressSedeId(address);
-              const sede = getSedeById(sedeId);
+              const sedeAsignada = getSedeById(address.sede_id);
+              const sedeInferida = !sedeAsignada
+                ? getSedeById(inferSedeIdFromName(address.name))
+                : undefined;
               return (
                 <TableRow key={address.id}>
                   <TableCell className="font-medium">{address.name}</TableCell>
-                  <TableCell>
-                    {sede ? (
-                      <span className="inline-flex items-center gap-1.5 text-sm">
-                        <SedeDot color={sede.color} />
-                        {sede.name}
-                      </span>
-                    ) : (
-                      <span className="text-sm text-muted-foreground">Sin asignar</span>
-                    )}
-                  </TableCell>
+                  {showSede && (
+                    <TableCell>
+                      {sedeAsignada ? (
+                        <span className="inline-flex items-center gap-1.5 text-sm">
+                          <SedeDot color={sedeAsignada.color} />
+                          {sedeAsignada.name}
+                        </span>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">
+                          Sin asignar
+                          {sedeInferida ? (
+                            <span className="ml-1 text-xs">(¿{sedeInferida.name}?)</span>
+                          ) : null}
+                        </span>
+                      )}
+                    </TableCell>
+                  )}
                   <TableCell>{address.address_line_1}</TableCell>
                   <TableCell>{address.city}, {address.state}, {address.zip_code}</TableCell>
                   <TableCell>{address.country}</TableCell>

@@ -12,12 +12,12 @@ import { useReceiveWizard } from "@/components/ReceiveWizardProvider";
 import { useSedeActiva } from "@/components/SedeContextProvider";
 import { useRequests } from "@/hooks/use-requests";
 import { useShippingAddresses } from "@/hooks/use-addresses";
-import { filterRequestsBySede } from "@/lib/sedes";
+import { filterRequestsBySede, getSedeLabel } from "@/lib/sedes";
 
 const PendingItemsList: React.FC = () => {
   const { data: pendingItems, isLoading, error } = usePendingItems();
-  const { data: requests } = useRequests();
-  const { data: shippingAddresses } = useShippingAddresses();
+  const { data: requests, isLoading: isLoadingRequests } = useRequests();
+  const { data: shippingAddresses, isLoading: isLoadingShipping } = useShippingAddresses();
   const { sedeActiva } = useSedeActiva();
   const { openReceive } = useReceiveWizard();
 
@@ -30,6 +30,8 @@ const PendingItemsList: React.FC = () => {
     () => pendingItems?.filter((item) => requestIdsForSede.has(item.requestId)) ?? [],
     [pendingItems, requestIdsForSede]
   );
+
+  const totalSinFiltrar = pendingItems?.length ?? 0;
 
   const groupedByRequest = React.useMemo(() => {
     const groups = new Map<string, typeof itemsForSede>();
@@ -46,7 +48,7 @@ const PendingItemsList: React.FC = () => {
     }));
   }, [itemsForSede]);
 
-  if (isLoading) {
+  if (isLoading || isLoadingRequests || isLoadingShipping) {
     return (
       <div className="flex justify-center items-center h-40">
         <Loader2 className="h-6 w-6 animate-spin mr-2" /> Calculando artículos pendientes...
@@ -58,6 +60,11 @@ const PendingItemsList: React.FC = () => {
     return <div className="text-red-500 dark:text-red-400 p-4">Error: {error.message}</div>;
   }
 
+  const emptyMessage =
+    sedeActiva && totalSinFiltrar > 0
+      ? `No hay artículos pendientes en ${getSedeLabel(sedeActiva)}. Hay ${totalSinFiltrar} en otras sedes o sin sede asignada: cambia el selector arriba o asigna sede a las direcciones de envío.`
+      : "¡Todo al día! No hay artículos pendientes de recibir.";
+
   return (
     <Card className="shadow-sm border-amber-200 dark:border-amber-900/70">
       <CardHeader className="bg-amber-50/70 dark:bg-amber-950/30 border-b border-amber-200/60 dark:border-amber-900/50">
@@ -68,9 +75,7 @@ const PendingItemsList: React.FC = () => {
       <CardContent className="p-0">
         <div className="md:hidden divide-y">
           {groupedByRequest.length === 0 ? (
-            <p className="p-6 text-center text-muted-foreground">
-              ¡Todo al día! No hay artículos pendientes de recibir.
-            </p>
+            <p className="p-6 text-center text-muted-foreground text-sm">{emptyMessage}</p>
           ) : (
             groupedByRequest.map((group) => (
               <div key={group.requestId} className="p-4 space-y-3">
@@ -127,8 +132,8 @@ const PendingItemsList: React.FC = () => {
             <TableBody>
               {itemsForSede.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
-                    ¡Todo al día! No hay artículos pendientes de recibir.
+                  <TableCell colSpan={7} className="h-24 text-center text-muted-foreground text-sm">
+                    {emptyMessage}
                   </TableCell>
                 </TableRow>
               ) : (

@@ -30,6 +30,8 @@ import { useVendors } from "@/hooks/use-vendors";
 import { useShippingAddresses, useBillingAddresses } from "@/hooks/use-addresses";
 import { useAddRequest } from "@/hooks/use-requests";
 import { useSession } from "@/components/SessionContextProvider";
+import { useSedeActiva } from "@/components/SedeContextProvider";
+import { getDefaultShippingAddressId, formatShippingAddressLabel } from "@/lib/sedes";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { SupabaseRequest } from "@/data/types"; // Corrected import
@@ -50,6 +52,7 @@ interface ReorderDialogProps {
 
 const ReorderDialog: React.FC<ReorderDialogProps> = ({ isOpen, onOpenChange, items }) => {
   const { session } = useSession();
+  const { sedeActiva } = useSedeActiva();
   const navigate = useNavigate();
   const { data: vendors, isLoading: isLoadingVendors } = useVendors();
   const { data: shippingAddresses, isLoading: isLoadingShippingAddresses } = useShippingAddresses();
@@ -65,12 +68,12 @@ const ReorderDialog: React.FC<ReorderDialogProps> = ({ isOpen, onOpenChange, ite
     },
   });
 
-  // Establecer valores predeterminados para direcciones
+  // Envío: default de la sede activa, pero se pueden elegir todas
   React.useEffect(() => {
     if (shippingAddresses && shippingAddresses.length > 0 && !form.getValues("shippingAddressId")) {
-      form.setValue("shippingAddressId", shippingAddresses[0].id);
+      form.setValue("shippingAddressId", getDefaultShippingAddressId(shippingAddresses, sedeActiva));
     }
-  }, [shippingAddresses, form]);
+  }, [shippingAddresses, sedeActiva, form]);
 
   React.useEffect(() => {
     if (billingAddresses && billingAddresses.length > 0 && !form.getValues("billingAddressId")) {
@@ -200,7 +203,9 @@ const ReorderDialog: React.FC<ReorderDialogProps> = ({ isOpen, onOpenChange, ite
                       </FormControl>
                       <SelectContent>
                         {shippingAddresses?.map((address) => (
-                          <SelectItem key={address.id} value={address.id}>{address.name}</SelectItem>
+                          <SelectItem key={address.id} value={address.id}>
+                            {formatShippingAddressLabel(address)}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>

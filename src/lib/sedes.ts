@@ -43,44 +43,41 @@ export const SEDES: Sede[] = [
   },
 ];
 
+export const isValidSedeId = (id: string | null | undefined): id is string =>
+  !!id && SEDES.some((sede) => sede.id === id);
+
 export const getSedeById = (id: string | null | undefined): Sede | undefined =>
   id ? SEDES.find((sede) => sede.id === id) : undefined;
 
 export const getSedeLabel = (id: string | null | undefined): string =>
   id ? getSedeById(id)?.name ?? id : "Todas";
 
-/** Resuelve la sede de una dirección: columna sede_id o inferencia por nombre */
+/** Solo sede_id explícito; la inferencia por nombre es solo ayuda visual en Admin */
 export const resolveAddressSedeId = (address: {
   name?: string | null;
   sede_id?: string | null;
 }): string | null => {
-  if (address.sede_id) return address.sede_id;
+  if (address.sede_id && isValidSedeId(address.sede_id)) return address.sede_id;
+  return null;
+};
 
-  const name = address.name?.toLowerCase() ?? "";
-  if (!name) return null;
+/** Inferencia suave por nombre (solo UI, no para filtrar listados) */
+export const inferSedeIdFromName = (name: string | null | undefined): string | null => {
+  const normalized = name?.toLowerCase() ?? "";
+  if (!normalized) return null;
 
-  // Alias comunes por si el nombre de la dirección no es exactamente el id
   const alias: Record<string, string[]> = {
-    cibm: ["cibm", "centro de investigaciones", "biomedic", "biomédic"],
-    farmacia: ["farmacia", "farma", "facultad de farmacia", "farbioq"],
+    cibm: ["cibm", "centro de investigación biomédica", "centro de investigacion biomedica"],
+    farmacia: ["facultad de farmacia", "farmacia"],
   };
 
   for (const sede of SEDES) {
     const tokens = alias[sede.id] ?? [sede.id, sede.name.toLowerCase()];
-    if (tokens.some((token) => name.includes(token))) {
+    if (tokens.some((token) => normalized.includes(token))) {
       return sede.id;
     }
   }
   return null;
-};
-
-export const filterAddressesBySede = <T extends { name?: string | null; sede_id?: string | null }>(
-  addresses: T[] | undefined,
-  sedeActiva: string | null | undefined
-): T[] => {
-  if (!addresses) return [];
-  if (!sedeActiva) return addresses;
-  return addresses.filter((address) => resolveAddressSedeId(address) === sedeActiva);
 };
 
 /** Dirección de envío por defecto de la sede; si no hay, la primera disponible */
@@ -94,13 +91,23 @@ export const getDefaultShippingAddressId = <T extends { id: string; name?: strin
   return deLaSede?.id ?? addresses[0].id;
 };
 
+export const formatShippingAddressLabel = (address: {
+  name: string;
+  sede_id?: string | null;
+}): string => {
+  const sede = getSedeById(resolveAddressSedeId(address));
+  return sede ? `${address.name} · ${sede.name}` : address.name;
+};
+
 export const requestMatchesSede = (
   shippingAddressId: string | null | undefined,
   shippingAddresses: { id: string; name?: string | null; sede_id?: string | null }[] | undefined,
   sedeActiva: string | null
 ): boolean => {
   if (!sedeActiva) return true;
-  const address = shippingAddresses?.find((item) => item.id === shippingAddressId);
+  // Sin lista de direcciones aún: no excluir (evita vaciar listados al cargar)
+  if (!shippingAddresses) return true;
+  const address = shippingAddresses.find((item) => item.id === shippingAddressId);
   if (!address) return false;
   return resolveAddressSedeId(address) === sedeActiva;
 };

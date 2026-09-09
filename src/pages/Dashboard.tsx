@@ -28,7 +28,6 @@ import { RequestStatus } from "@/data/types";
 import { getFullName } from "@/hooks/use-profiles";
 import SedeHeroBanner from "@/components/SedeHeroBanner";
 import { useSedeActiva } from "@/components/SedeContextProvider";
-import { resolveAddressSedeId } from "@/lib/sedes";
 import { Link } from "react-router-dom";
 
 type Pestana = "pending-items" | "pending-invoices" | "all-requests";
@@ -143,7 +142,7 @@ const Dashboard = () => {
   const nombreCorto = getFullName(profile).split(" ")[0];
   const totalPendiente = allPendingItems.length + allPendingInvoices.length;
   const direccionesSinSede =
-    shippingAddresses?.filter((address) => !resolveAddressSedeId(address)).length ?? 0;
+    shippingAddresses?.filter((address) => !address.sede_id).length ?? 0;
 
   const claseTab = cn(
     "relative rounded-none border-b-2 border-transparent bg-transparent px-1 pb-2.5 shadow-none",

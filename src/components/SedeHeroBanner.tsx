@@ -15,7 +15,7 @@ const SedeHeroBanner: React.FC<SedeHeroBannerProps> = ({ className }) => {
 
   const overlay = sede
     ? `linear-gradient(105deg, ${sede.color}dd 0%, ${sede.color}99 38%, rgba(15,10,30,0.45) 100%)`
-    : "linear-gradient(105deg, #1e1b4bee 0%, #4c1d95aa 45%, rgba(15,10,30,0.4) 100%)";
+    : "linear-gradient(105deg, #1e3a5fee 0%, #2563eb99 40%, rgba(15,23,42,0.45) 100%)";
 
   const fondoStyle = sede?.heroImageUrl
     ? {
@@ -26,8 +26,9 @@ const SedeHeroBanner: React.FC<SedeHeroBannerProps> = ({ className }) => {
     : sede
       ? { background: sede.heroGradient }
       : {
+          // Neutro del grupo (no morado de Farmacia) cuando se ven Todas
           background:
-            "linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #4c1d95 70%, #7e22ce 100%)",
+            "linear-gradient(135deg, #0f172a 0%, #1e3a5f 45%, #2563eb 100%)",
         };
 
   return (
@@ -40,9 +41,8 @@ const SedeHeroBanner: React.FC<SedeHeroBannerProps> = ({ className }) => {
     >
       {!sede?.heroImageUrl && (
         <>
-          <div className="pointer-events-none absolute -right-8 -top-10 h-40 w-40 rounded-full bg-fuchsia-300/25 blur-3xl" aria-hidden />
-          <div className="pointer-events-none absolute bottom-0 left-1/3 h-32 w-32 rounded-full bg-cyan-300/20 blur-3xl" aria-hidden />
-          <div className="pointer-events-none absolute right-1/4 top-1/2 h-24 w-24 rounded-full bg-amber-300/15 blur-2xl" aria-hidden />
+          <div className="pointer-events-none absolute -right-8 -top-10 h-40 w-40 rounded-full bg-sky-300/20 blur-3xl" aria-hidden />
+          <div className="pointer-events-none absolute bottom-0 left-1/3 h-32 w-32 rounded-full bg-indigo-300/15 blur-3xl" aria-hidden />
         </>
       )}
 

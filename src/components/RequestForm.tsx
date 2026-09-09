@@ -39,7 +39,7 @@ import FileUploadInput from "./FileUploadInput";
 import QuoteParsePreviewDialog from "./QuoteParsePreviewDialog";
 import type { ParsedQuoteItem } from "@/data/quote-parse";
 import { useSedeActiva } from "@/components/SedeContextProvider";
-import { getDefaultShippingAddressId } from "@/lib/sedes";
+import { getDefaultShippingAddressId, formatShippingAddressLabel } from "@/lib/sedes";
 
 // -------------------- Schemas --------------------
 const itemSchema = z.object({
@@ -309,6 +309,7 @@ const RequestForm: React.FC = () => {
   // Envío: todas las direcciones disponibles; la sede solo elige el valor por defecto.
   // Facturación: siempre libre, sin filtrar por sede.
   const previousSedeRef = React.useRef<string | null | undefined>(undefined);
+  const previousDefaultShippingRef = React.useRef<string>("");
   const shippingInicializadoRef = React.useRef(false);
 
   React.useEffect(() => {
@@ -316,23 +317,32 @@ const RequestForm: React.FC = () => {
 
     const sedeCambio =
       previousSedeRef.current !== undefined && previousSedeRef.current !== sedeActiva;
-    previousSedeRef.current = sedeActiva;
-
+    const defaultDeSede = getDefaultShippingAddressId(shippingAddresses, sedeActiva);
     const currentShippingId = form.getValues("shippingAddressId");
     const shippingExiste = shippingAddresses.some((address) => address.id === currentShippingId);
 
     if (!shippingInicializadoRef.current) {
       shippingInicializadoRef.current = true;
-      // Respeta lo persistido si sigue siendo válido; si no, usa el default de la sede
+      previousSedeRef.current = sedeActiva;
+      previousDefaultShippingRef.current = defaultDeSede;
       if (!currentShippingId || !shippingExiste) {
-        form.setValue("shippingAddressId", getDefaultShippingAddressId(shippingAddresses, sedeActiva));
+        form.setValue("shippingAddressId", defaultDeSede);
       }
       return;
     }
 
-    if (sedeCambio || !shippingExiste) {
-      form.setValue("shippingAddressId", getDefaultShippingAddressId(shippingAddresses, sedeActiva));
+    if (!shippingExiste) {
+      form.setValue("shippingAddressId", defaultDeSede);
+    } else if (sedeCambio) {
+      // Solo cambia el envío si el usuario seguía en el default de la sede anterior
+      const seguiaEnDefault = currentShippingId === previousDefaultShippingRef.current;
+      if (seguiaEnDefault) {
+        form.setValue("shippingAddressId", defaultDeSede);
+      }
     }
+
+    previousSedeRef.current = sedeActiva;
+    previousDefaultShippingRef.current = defaultDeSede;
   }, [shippingAddresses, sedeActiva, form]);
 
   React.useEffect(() => {
@@ -524,7 +534,9 @@ const RequestForm: React.FC = () => {
                   </FormControl>
                   <SelectContent>
                     {shippingAddresses?.map((address) => (
-                      <SelectItem key={address.id} value={address.id}>{address.name}</SelectItem>
+                      <SelectItem key={address.id} value={address.id}>
+                        {formatShippingAddressLabel(address)}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

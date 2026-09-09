@@ -379,7 +379,15 @@ const AdminPage = () => {
           <Dialog open={isEditAddressDialogOpen} onOpenChange={setIsEditAddressDialogOpen}>
             <DialogContent className={cn(mobileDialogClass, "sm:max-w-[425px]")}>
               <DialogHeader><DialogTitle>Editar Dirección</DialogTitle></DialogHeader>
-              {editingAddress && <AddressForm initialData={editingAddress} onSubmit={(data) => handleEditAddress(editingAddress.id, data)} onCancel={() => setIsEditAddressDialogOpen(false)} isSubmitting={updateShippingMutation.isPending || updateBillingMutation.isPending} />}
+              {editingAddress && (
+                <AddressForm
+                  initialData={editingAddress}
+                  onSubmit={(data) => handleEditAddress(editingAddress.id, data)}
+                  onCancel={() => setIsEditAddressDialogOpen(false)}
+                  isSubmitting={updateShippingMutation.isPending || updateBillingMutation.isPending}
+                  showSede={currentAddressType === 'shipping'}
+                />
+              )}
             </DialogContent>
           </Dialog>
         </TabsContent>
@@ -446,7 +454,8 @@ const AdminPage = () => {
               <AddressTable 
                 addresses={shippingAddresses || []} 
                 onEdit={(addr) => openEditAddressDialog(addr, 'shipping')} 
-                onDelete={deleteShippingMutation.mutateAsync} 
+                onDelete={deleteShippingMutation.mutateAsync}
+                showSede
               />
             </CardContent>
           </Card>
@@ -542,6 +551,7 @@ const AdminPage = () => {
             isSubmitting={
               (editingAddress ? (currentAddressType === 'shipping' ? updateShippingMutation.isPending : updateBillingMutation.isPending) : (currentAddressType === 'shipping' ? addShippingMutation.isPending : addBillingMutation.isPending))
             }
+            showSede={currentAddressType === 'shipping'}
           />
         </DialogContent>
       </Dialog>

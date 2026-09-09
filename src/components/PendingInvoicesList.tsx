@@ -10,12 +10,12 @@ import { Link } from "react-router-dom";
 import { useSedeActiva } from "@/components/SedeContextProvider";
 import { useRequests } from "@/hooks/use-requests";
 import { useShippingAddresses } from "@/hooks/use-addresses";
-import { filterRequestsBySede } from "@/lib/sedes";
+import { filterRequestsBySede, getSedeLabel } from "@/lib/sedes";
 
 const PendingInvoicesList: React.FC = () => {
   const { data: pendingInvoices, isLoading, error } = usePendingInvoices();
-  const { data: requests } = useRequests();
-  const { data: shippingAddresses } = useShippingAddresses();
+  const { data: requests, isLoading: isLoadingRequests } = useRequests();
+  const { data: shippingAddresses, isLoading: isLoadingShipping } = useShippingAddresses();
   const { sedeActiva } = useSedeActiva();
 
   const invoicesForSede = React.useMemo(() => {
@@ -25,7 +25,9 @@ const PendingInvoicesList: React.FC = () => {
     return pendingInvoices?.filter((item) => requestIds.has(item.requestId)) ?? [];
   }, [pendingInvoices, requests, shippingAddresses, sedeActiva]);
 
-  if (isLoading) {
+  const totalSinFiltrar = pendingInvoices?.length ?? 0;
+
+  if (isLoading || isLoadingRequests || isLoadingShipping) {
     return (
       <div className="flex justify-center items-center h-40">
         <Loader2 className="h-6 w-6 animate-spin mr-2" /> Buscando artículos sin factura...
@@ -36,6 +38,11 @@ const PendingInvoicesList: React.FC = () => {
   if (error) {
     return <div className="text-red-500 dark:text-red-400 p-4">Error: {error.message}</div>;
   }
+
+  const emptyMessage =
+    sedeActiva && totalSinFiltrar > 0
+      ? `No hay artículos sin factura en ${getSedeLabel(sedeActiva)}. Hay ${totalSinFiltrar} en otras sedes o sin sede asignada.`
+      : "¡Excelente! Todos los artículos pedidos están correctamente facturados.";
 
   return (
     <Card className="shadow-sm border-sky-200 dark:border-sky-900/70">
@@ -61,8 +68,8 @@ const PendingInvoicesList: React.FC = () => {
             <TableBody>
               {invoicesForSede.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
-                    ¡Excelente! Todos los artículos pedidos están correctamente facturados.
+                  <TableCell colSpan={7} className="h-24 text-center text-muted-foreground text-sm">
+                    {emptyMessage}
                   </TableCell>
                 </TableRow>
               ) : (
