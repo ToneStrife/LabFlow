@@ -15,6 +15,8 @@ import {
   Receipt,
 } from "lucide-react";
 import { useRequests } from "@/hooks/use-requests";
+import { useShippingAddresses } from "@/hooks/use-addresses";
+import { filterRequestsBySede } from "@/lib/sedes";
 import { usePendingItems } from "@/hooks/use-pending-items";
 import { usePendingInvoices } from "@/hooks/use-pending-invoices";
 import { cn } from "@/lib/utils";
@@ -35,6 +37,7 @@ const Dashboard = () => {
   const isAdmin = profile?.role === "Admin";
 
   const { data: requests, isLoading: isLoadingRequests, error } = useRequests();
+  const { data: shippingAddresses, isLoading: isLoadingShipping } = useShippingAddresses();
   const { data: pendingItems, isLoading: isLoadingPending } = usePendingItems();
   const { data: pendingInvoices, isLoading: isLoadingInvoices } = usePendingInvoices();
 
@@ -42,11 +45,25 @@ const Dashboard = () => {
   const [filtroEstado, setFiltroEstado] = React.useState<RequestStatus | "All" | "Active">("All");
 
   const allRequests = requests || [];
-  const allPendingItems = pendingItems || [];
-  const allPendingInvoices = pendingInvoices || [];
+  const requestsForSede = React.useMemo(
+    () => filterRequestsBySede(allRequests, shippingAddresses, sedeActiva),
+    [allRequests, shippingAddresses, sedeActiva]
+  );
+
+  const requestIdsForSede = React.useMemo(
+    () => new Set(requestsForSede.map((r) => r.id)),
+    [requestsForSede]
+  );
+
+  const allPendingItems = (pendingItems || []).filter((item) =>
+    requestIdsForSede.has(item.requestId)
+  );
+  const allPendingInvoices = (pendingInvoices || []).filter((item) =>
+    requestIdsForSede.has(item.requestId)
+  );
 
   const cuentaPorEstado = (estado: RequestStatus) =>
-    allRequests.filter((req) => req.status === estado).length;
+    requestsForSede.filter((req) => req.status === estado).length;
 
   /** Ir al historial ya filtrado por una fase concreta. */
   const verHistorialFiltrado = (estado: RequestStatus) => {
@@ -105,7 +122,7 @@ const Dashboard = () => {
     });
   }
 
-  if (isLoadingRequests || isLoadingPending || isLoadingInvoices) {
+  if (isLoadingRequests || isLoadingShipping || isLoadingPending || isLoadingInvoices) {
     return (
       <div className="flex items-center justify-center py-24 text-muted-foreground">
         <Loader2 className="mr-2 h-6 w-6 animate-spin text-primary" /> Cargando panel…

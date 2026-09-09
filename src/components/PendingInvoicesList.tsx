@@ -7,9 +7,23 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, CreditCard, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useSedeActiva } from "@/components/SedeContextProvider";
+import { useRequests } from "@/hooks/use-requests";
+import { useShippingAddresses } from "@/hooks/use-addresses";
+import { filterRequestsBySede } from "@/lib/sedes";
 
 const PendingInvoicesList: React.FC = () => {
   const { data: pendingInvoices, isLoading, error } = usePendingInvoices();
+  const { data: requests } = useRequests();
+  const { data: shippingAddresses } = useShippingAddresses();
+  const { sedeActiva } = useSedeActiva();
+
+  const invoicesForSede = React.useMemo(() => {
+    const requestIds = new Set(
+      filterRequestsBySede(requests, shippingAddresses, sedeActiva).map((r) => r.id)
+    );
+    return pendingInvoices?.filter((item) => requestIds.has(item.requestId)) ?? [];
+  }, [pendingInvoices, requests, shippingAddresses, sedeActiva]);
 
   if (isLoading) {
     return (
@@ -45,14 +59,14 @@ const PendingInvoicesList: React.FC = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {pendingInvoices?.length === 0 ? (
+              {invoicesForSede.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
                     ¡Excelente! Todos los artículos pedidos están correctamente facturados.
                   </TableCell>
                 </TableRow>
               ) : (
-                pendingInvoices?.map((item) => (
+                invoicesForSede.map((item) => (
                   <TableRow key={item.requestItemId} className="hover:bg-muted/30">
                     <TableCell className="font-medium">
                       <div className="flex flex-col">

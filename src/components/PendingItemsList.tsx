@@ -9,10 +9,42 @@ import { Button } from "@/components/ui/button";
 import { Loader2, PackageSearch, Receipt } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useReceiveWizard } from "@/components/ReceiveWizardProvider";
+import { useSedeActiva } from "@/components/SedeContextProvider";
+import { useRequests } from "@/hooks/use-requests";
+import { useShippingAddresses } from "@/hooks/use-addresses";
+import { filterRequestsBySede } from "@/lib/sedes";
 
 const PendingItemsList: React.FC = () => {
   const { data: pendingItems, isLoading, error } = usePendingItems();
+  const { data: requests } = useRequests();
+  const { data: shippingAddresses } = useShippingAddresses();
+  const { sedeActiva } = useSedeActiva();
   const { openReceive } = useReceiveWizard();
+
+  const requestIdsForSede = React.useMemo(() => {
+    const filtered = filterRequestsBySede(requests, shippingAddresses, sedeActiva);
+    return new Set(filtered.map((r) => r.id));
+  }, [requests, shippingAddresses, sedeActiva]);
+
+  const itemsForSede = React.useMemo(
+    () => pendingItems?.filter((item) => requestIdsForSede.has(item.requestId)) ?? [],
+    [pendingItems, requestIdsForSede]
+  );
+
+  const groupedByRequest = React.useMemo(() => {
+    const groups = new Map<string, typeof itemsForSede>();
+    itemsForSede.forEach((item) => {
+      const list = groups.get(item.requestId) || [];
+      list.push(item);
+      groups.set(item.requestId, list);
+    });
+    return Array.from(groups.entries()).map(([requestId, items]) => ({
+      requestId,
+      requestNumber: items[0].requestNumber,
+      vendorName: items[0].vendorName,
+      items,
+    }));
+  }, [itemsForSede]);
 
   if (isLoading) {
     return (
@@ -25,21 +57,6 @@ const PendingItemsList: React.FC = () => {
   if (error) {
     return <div className="text-red-500 dark:text-red-400 p-4">Error: {error.message}</div>;
   }
-
-  const groupedByRequest = React.useMemo(() => {
-    const groups = new Map<string, NonNullable<typeof pendingItems>>();
-    pendingItems?.forEach((item) => {
-      const list = groups.get(item.requestId) || [];
-      list.push(item);
-      groups.set(item.requestId, list);
-    });
-    return Array.from(groups.entries()).map(([requestId, items]) => ({
-      requestId,
-      requestNumber: items[0].requestNumber,
-      vendorName: items[0].vendorName,
-      items,
-    }));
-  }, [pendingItems]);
 
   return (
     <Card className="shadow-sm border-amber-200 dark:border-amber-900/70">

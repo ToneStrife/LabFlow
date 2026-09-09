@@ -21,13 +21,7 @@ const SedeSelector: React.FC = () => {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size="sm" className="h-8 gap-1.5 px-2.5" title="Cambiar sede">
-          {sedeActual?.logoUrl ? (
-            <img
-              src={sedeActual.logoUrl}
-              alt=""
-              className="h-5 w-auto max-w-[4.5rem] object-contain"
-            />
-          ) : sedeActual ? (
+          {sedeActual ? (
             <SedeDot color={sedeActual.color} />
           ) : (
             <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
@@ -54,11 +48,7 @@ const SedeSelector: React.FC = () => {
             className="flex items-center justify-between gap-2"
           >
             <span className="flex items-center gap-2">
-              {sede.logoUrl ? (
-                <img src={sede.logoUrl} alt="" className="h-5 w-auto max-w-[5rem] object-contain" />
-              ) : (
-                <SedeDot color={sede.color} />
-              )}
+              <SedeDot color={sede.color} />
               {sede.name}
             </span>
             {sedeActiva === sede.id && <Check className="h-4 w-4 text-primary" />}
