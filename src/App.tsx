@@ -16,6 +16,7 @@ import { Loader2 } from "lucide-react";
 import { useCan } from "@/hooks/use-permissions";
 
 import { ReceiveWizardProvider } from "./components/ReceiveWizardProvider";
+import { SedeContextProvider } from "./components/SedeContextProvider";
 
 // Estas paginas arrastran las librerias pesadas (graficas, editor de texto
 // enriquecido, tablas de administracion). Cargarlas solo cuando se visitan
@@ -134,12 +135,14 @@ const App = () => (
       <Sonner />
       <HashRouter future={{ v7_relativeSplatPath: true }}>
         <SessionContextProvider>
-          <React.Suspense fallback={null}>
-            <FirebaseInitializer />
-          </React.Suspense>
-          <ReceiveWizardProvider>
-            <AppRoutes />
-          </ReceiveWizardProvider>
+          <SedeContextProvider>
+            <React.Suspense fallback={null}>
+              <FirebaseInitializer />
+            </React.Suspense>
+            <ReceiveWizardProvider>
+              <AppRoutes />
+            </ReceiveWizardProvider>
+          </SedeContextProvider>
         </SessionContextProvider>
       </HashRouter>
     </TooltipProvider>

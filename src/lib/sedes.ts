@@ -17,3 +17,23 @@ export const getSedeById = (id: string | null | undefined): Sede | undefined =>
 
 export const getSedeLabel = (id: string | null | undefined): string =>
   id ? getSedeById(id)?.name ?? id : "Todas";
+
+export const filterAddressesBySede = <T extends { sede_id?: string | null }>(
+  addresses: T[] | undefined,
+  sedeActiva: string | null | undefined
+): T[] => {
+  if (!addresses) return [];
+  if (!sedeActiva) return addresses;
+  return addresses.filter((address) => !address.sede_id || address.sede_id === sedeActiva);
+};
+
+export const requestMatchesSede = (
+  shippingAddressId: string | null | undefined,
+  shippingAddresses: { id: string; sede_id?: string | null }[] | undefined,
+  sedeActiva: string | null
+): boolean => {
+  if (!sedeActiva) return true;
+  const address = shippingAddresses?.find((item) => item.id === shippingAddressId);
+  if (!address) return true;
+  return !address.sede_id || address.sede_id === sedeActiva;
+};

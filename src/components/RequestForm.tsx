@@ -38,9 +38,8 @@ import { useFormPersistence } from "@/hooks/use-form-persistence";
 import FileUploadInput from "./FileUploadInput";
 import QuoteParsePreviewDialog from "./QuoteParsePreviewDialog";
 import type { ParsedQuoteItem } from "@/data/quote-parse";
-import SedeDot from "@/components/SedeDot";
-import { SEDES, TODAS_LAS_SEDES } from "@/lib/sedes";
-import { Address } from "@/data/types";
+import { useSedeActiva } from "@/components/SedeContextProvider";
+import { filterAddressesBySede } from "@/lib/sedes";
 
 // -------------------- Schemas --------------------
 const itemSchema = z.object({
@@ -64,7 +63,6 @@ const formSchema = z.object({
   vendorId: z.string().min(1, { message: "El proveedor es obligatorio." }),
   requesterId: z.string().min(1, { message: "El ID del solicitante es obligatorio." }), 
   accountManagerId: z.string().optional(),
-  sedeId: z.string().optional(),
   shippingAddressId: z.string().min(1, { message: "La dirección de envío es obligatoria." }),
   billingAddressId: z.string().min(1, { message: "La dirección de facturación es obligatoria." }),
   items: z.array(itemSchema).min(1, { message: "Se requiere al menos un artículo." }),
@@ -74,12 +72,6 @@ const formSchema = z.object({
 });
 
 type RequestFormValues = z.infer<typeof formSchema>;
-
-const filterAddressesBySede = (addresses: Address[] | undefined, sedeId: string | undefined): Address[] => {
-  if (!addresses) return [];
-  if (!sedeId || sedeId === TODAS_LAS_SEDES) return addresses;
-  return addresses.filter((address) => !address.sede_id || address.sede_id === sedeId);
-};
 
 // -------------------- Item Autofill Controls --------------------
 interface ItemAutofillControlsProps {
@@ -232,6 +224,7 @@ const SeccionFormulario: React.FC<{
 
 const RequestForm: React.FC = () => {
   const { session, profile } = useSession();
+  const { sedeActiva } = useSedeActiva();
   const { data: vendors, isLoading: isLoadingVendors } = useVendors();
   const { data: accountManagers, isLoading: isLoadingAccountManagers } = useAccountManagers();
   const { data: projects, isLoading: isLoadingProjects } = useProjects();
@@ -259,7 +252,6 @@ const RequestForm: React.FC = () => {
       vendorId: "",
       requesterId: session?.user?.id || "",
       accountManagerId: "unassigned",
-      sedeId: profile?.default_sede_id ?? TODAS_LAS_SEDES,
       shippingAddressId: "",
       billingAddressId: "",
       items: [defaultItem],
@@ -271,7 +263,7 @@ const RequestForm: React.FC = () => {
   
   // --- PERSISTENCIA DEL FORMULARIO ---
   const fieldsToPersist: (keyof RequestFormValues)[] = [
-    "vendorId", "accountManagerId", "sedeId", "shippingAddressId", "billingAddressId", 
+    "vendorId", "accountManagerId", "shippingAddressId", "billingAddressId", 
     "items", "projectCodes", "notes"
   ];
   const { clearPersistence } = useFormPersistence(form, "newRequestFormState", fieldsToPersist);
@@ -314,21 +306,14 @@ const RequestForm: React.FC = () => {
     }
   }, [session, form]);
 
-  const selectedSedeId = form.watch("sedeId");
   const filteredShippingAddresses = React.useMemo(
-    () => filterAddressesBySede(shippingAddresses, selectedSedeId),
-    [shippingAddresses, selectedSedeId]
+    () => filterAddressesBySede(shippingAddresses, sedeActiva),
+    [shippingAddresses, sedeActiva]
   );
   const filteredBillingAddresses = React.useMemo(
-    () => filterAddressesBySede(billingAddresses, selectedSedeId),
-    [billingAddresses, selectedSedeId]
+    () => filterAddressesBySede(billingAddresses, sedeActiva),
+    [billingAddresses, sedeActiva]
   );
-
-  React.useEffect(() => {
-    if (profile?.default_sede_id && !form.getValues("sedeId")) {
-      form.setValue("sedeId", profile.default_sede_id);
-    }
-  }, [profile, form]);
 
   React.useEffect(() => {
     const currentShippingId = form.getValues("shippingAddressId");
@@ -417,9 +402,8 @@ const RequestForm: React.FC = () => {
       vendorId: "",
       requesterId: session.user.id,
       accountManagerId: "unassigned",
-      sedeId: profile?.default_sede_id ?? TODAS_LAS_SEDES,
-      shippingAddressId: filterAddressesBySede(shippingAddresses, profile?.default_sede_id ?? TODAS_LAS_SEDES)[0]?.id || "",
-      billingAddressId: filterAddressesBySede(billingAddresses, profile?.default_sede_id ?? TODAS_LAS_SEDES)[0]?.id || "",
+      shippingAddressId: filterAddressesBySede(shippingAddresses, sedeActiva)[0]?.id || "",
+      billingAddressId: filterAddressesBySede(billingAddresses, sedeActiva)[0]?.id || "",
       items: [defaultItem],
       quoteFile: undefined,
       projectCodes: [],
@@ -483,9 +467,8 @@ const RequestForm: React.FC = () => {
       vendorId: "",
       requesterId: session?.user?.id || "",
       accountManagerId: "unassigned",
-      sedeId: profile?.default_sede_id ?? TODAS_LAS_SEDES,
-      shippingAddressId: filterAddressesBySede(shippingAddresses, profile?.default_sede_id ?? TODAS_LAS_SEDES)[0]?.id || "",
-      billingAddressId: filterAddressesBySede(billingAddresses, profile?.default_sede_id ?? TODAS_LAS_SEDES)[0]?.id || "",
+      shippingAddressId: filterAddressesBySede(shippingAddresses, sedeActiva)[0]?.id || "",
+      billingAddressId: filterAddressesBySede(billingAddresses, sedeActiva)[0]?.id || "",
       items: [defaultItem],
       quoteFile: undefined,
       projectCodes: [],
@@ -514,66 +497,6 @@ const RequestForm: React.FC = () => {
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
         <SeccionFormulario titulo="Datos de la solicitud" icono={ClipboardList}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormItem>
-            <FormLabel>Solicitante</FormLabel>
-            <FormControl>
-              <Input value={requesterName} readOnly disabled />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-          <FormField
-            control={form.control}
-            name="vendorId"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Proveedor</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingVendors || isSubmitting}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder={isLoadingVendors ? "Cargando proveedores..." : "Selecciona un proveedor"} />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {vendors?.map((vendor) => (
-                      <SelectItem key={vendor.id} value={vendor.id}>{vendor.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <FormField
-            control={form.control}
-            name="sedeId"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Sede</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value || TODAS_LAS_SEDES} disabled={isSubmitting}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecciona sede" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value={TODAS_LAS_SEDES}>Todas</SelectItem>
-                    {SEDES.map((sede) => (
-                      <SelectItem key={sede.id} value={sede.id}>
-                        <span className="flex items-center gap-2">
-                          <SedeDot color={sede.color} />
-                          {sede.name}
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
           <FormField
             control={form.control}
             name="shippingAddressId"
@@ -611,6 +534,38 @@ const RequestForm: React.FC = () => {
                   <SelectContent>
                     {filteredBillingAddresses.map((address) => (
                       <SelectItem key={address.id} value={address.id}>{address.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormItem>
+            <FormLabel>Solicitante</FormLabel>
+            <FormControl>
+              <Input value={requesterName} readOnly disabled />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+          <FormField
+            control={form.control}
+            name="vendorId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Proveedor</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingVendors || isSubmitting}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder={isLoadingVendors ? "Cargando proveedores..." : "Selecciona un proveedor"} />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {vendors?.map((vendor) => (
+                      <SelectItem key={vendor.id} value={vendor.id}>{vendor.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

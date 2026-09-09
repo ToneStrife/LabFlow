@@ -25,6 +25,8 @@ import ApproveRequestListDialog from "@/components/request-list/ApproveRequestLi
 import { cn } from "@/lib/utils";
 import { mobileDialogClass, dialogFooterMobileClass } from "@/lib/layout";
 import { useReceiveWizard } from "@/components/ReceiveWizardProvider";
+import { useSedeActiva } from "@/components/SedeContextProvider";
+import { requestMatchesSede } from "@/lib/sedes";
 
 
 // Definir el orden de prioridad de los estados
@@ -48,6 +50,7 @@ interface RequestListProps {
 const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
   const navigate = useNavigate();
   const { session, profile } = useSession();
+  const { sedeActiva } = useSedeActiva();
   const { data: requests, isLoading: isLoadingRequests, error: requestsError } = useRequests();
   const { data: vendors, isLoading: isLoadingVendors } = useVendors();
   const { data: profiles, isLoading: isLoadingProfiles } = useAllProfiles();
@@ -355,7 +358,13 @@ const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
         matchesStatus = request.status === filterStatus;
       }
 
-      return matchesSearchTerm && matchesStatus;
+      const matchesSede = requestMatchesSede(
+        request.shipping_address_id,
+        shippingAddresses,
+        sedeActiva
+      );
+
+      return matchesSearchTerm && matchesStatus && matchesSede;
     });
 
     // Aplicar ordenación por estado y luego por fecha de creación (más reciente primero)
@@ -371,7 +380,7 @@ const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
       // Esto asegura que dentro de un mismo estado, el más reciente aparezca primero.
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
-  }, [requests, searchTerm, filterStatus, vendors, profiles, accountManagers]);
+  }, [requests, searchTerm, filterStatus, vendors, profiles, accountManagers, shippingAddresses, sedeActiva]);
 
 
   if (isLoadingRequests || isLoadingVendors || isLoadingProfiles || isLoadingAccountManagers || isLoadingProjects || isLoadingEmailTemplates || isLoadingShippingAddresses || isLoadingBillingAddresses) {

@@ -20,6 +20,7 @@ import {
 import { getFullName } from "@/hooks/use-profiles";
 import { ThemeToggle } from "./ThemeToggle";
 import { getPageTitle, ROL_ETIQUETA } from "@/lib/navigation";
+import SedeSelector from "@/components/SedeSelector";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -165,6 +166,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           </h1>
 
           <div className="ml-auto flex shrink-0 items-center gap-1">
+            {shouldRenderNav && <SedeSelector />}
             {/* En la propia pantalla de nueva solicitud el botón no lleva
                 a ningún sitio, así que no se muestra. */}
             {shouldRenderNav && location.pathname !== "/new-request" && (
