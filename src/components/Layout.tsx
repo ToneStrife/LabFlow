@@ -27,7 +27,7 @@ interface LayoutProps {
   children: React.ReactNode;
 }
 
-/** Marca de la barra lateral. */
+/** Marca de la barra lateral: LabFlow + logo FarBioQ bien visible. */
 const Marca: React.FC<{ onClick?: () => void }> = ({ onClick }) => (
   <Link to="/dashboard" className="group flex flex-col gap-3" onClick={onClick}>
     <span className="flex items-center gap-2.5">
@@ -41,11 +41,11 @@ const Marca: React.FC<{ onClick?: () => void }> = ({ onClick }) => (
         </span>
       </span>
     </span>
-    <span className="rounded-lg bg-white px-2.5 py-2 shadow-sm ring-1 ring-white/10">
+    <span className="flex items-center justify-center rounded-xl bg-white px-3 py-3.5 shadow-md ring-1 ring-black/5 transition-transform group-hover:scale-[1.02]">
       <img
         src={GRUPO.logoUrl}
         alt={GRUPO.nombre}
-        className="h-8 w-auto max-w-full object-contain"
+        className="h-14 w-auto max-w-[13.5rem] object-contain"
       />
     </span>
   </Link>
