@@ -196,6 +196,9 @@ const AdminPage = () => {
     }
     await updateProfileMutation.mutateAsync({ id: userId, data: { role: newRole } });
   };
+  const handleUpdateUserDefaultSede = async (userId: string, sedeId: string | null) => {
+    await updateProfileMutation.mutateAsync({ id: userId, data: { default_sede_id: sedeId } });
+  };
   const handleDeleteUser = async (userId: string) => {
     if (currentUserProfile?.id === userId) {
       toast.error("No puedes eliminar tu propia cuenta.");
@@ -362,10 +365,12 @@ const AdminPage = () => {
               <UserTable
                 users={allProfiles || []}
                 onRoleChange={handleUpdateUserRole}
+                onDefaultSedeChange={handleUpdateUserDefaultSede}
                 onDelete={handleDeleteUser}
                 onResetPassword={handleResetUserPassword}
                 currentUserId={currentUserProfile?.id}
                 isUpdatingRole={updateProfileMutation.isPending}
+                isUpdatingDefaultSede={updateProfileMutation.isPending}
                 isDeletingUser={deleteProfileMutation.isPending}
                 isResettingPassword={resetUserPasswordMutation.isPending}
               />

@@ -63,7 +63,7 @@ export const apiFuzzySearchInternal = async (searchTerm: string): Promise<FuzzyS
 
 // --- API de Perfiles (Usuarios del sistema) ---
 export const apiGetProfiles = async (): Promise<Profile[]> => {
-  const { data, error } = await supabase.from('profiles').select('id, first_name, last_name, email, avatar_url, updated_at, role, notify_on_status_change, notify_on_new_request');
+  const { data, error } = await supabase.from('profiles').select('id, first_name, last_name, email, avatar_url, updated_at, role, default_sede_id, notify_on_status_change, notify_on_new_request');
   if (error) throw new Error(error.message);
   return data as Profile[];
 };

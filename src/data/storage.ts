@@ -66,6 +66,7 @@ export let mockProfiles: Profile[] = [
     avatar_url: null,
     updated_at: new Date().toISOString(),
     role: "Requester",
+    default_sede_id: null,
     notify_on_status_change: true, // Added
     notify_on_new_request: false, // Added
   },
@@ -77,6 +78,7 @@ export let mockProfiles: Profile[] = [
     avatar_url: null,
     updated_at: new Date().toISOString(),
     role: "Account Manager",
+    default_sede_id: null,
     notify_on_status_change: true, // Added
     notify_on_new_request: true, // Added
   },
@@ -88,6 +90,7 @@ export let mockProfiles: Profile[] = [
     avatar_url: null,
     updated_at: new Date().toISOString(),
     role: "Admin", // Assuming Admin is the Lab Manager
+    default_sede_id: null,
     notify_on_status_change: true, // Added
     notify_on_new_request: true, // Added
   },

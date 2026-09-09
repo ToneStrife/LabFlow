@@ -29,6 +29,8 @@ export interface Profile {
   avatar_url: string | null;
   updated_at: string | null;
   role: "Requester" | "Account Manager" | "Admin";
+  /** NULL = puede ver todas las sedes */
+  default_sede_id: string | null;
   
   // Preferencias de Notificación
   notify_on_status_change: boolean;
@@ -86,6 +88,7 @@ export interface Address {
   zip_code: string;
   country: string;
   cif: string | null;
+  sede_id: string | null;
 }
 
 export interface ShippingAddress extends Address {}

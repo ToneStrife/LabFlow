@@ -31,6 +31,7 @@ interface ProfileUpdateFormData {
   last_name?: string | null;
   email?: string | null; 
   role?: "Requester" | "Account Manager" | "Admin";
+  default_sede_id?: string | null;
   notify_on_status_change?: boolean; // Added
   notify_on_new_request?: boolean; // Added
 }

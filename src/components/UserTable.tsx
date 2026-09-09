@@ -20,14 +20,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import SedeDot from "@/components/SedeDot";
+import { SEDES, TODAS_LAS_SEDES } from "@/lib/sedes";
 
 interface UserTableProps {
   users: Profile[];
   onRoleChange: (userId: string, newRole: Profile['role']) => void;
+  onDefaultSedeChange: (userId: string, sedeId: string | null) => void;
   onDelete: (userId: string) => void;
   onResetPassword: (userId: string) => void;
   currentUserId?: string;
   isUpdatingRole: boolean;
+  isUpdatingDefaultSede: boolean;
   isDeletingUser: boolean;
   isResettingPassword: boolean;
 }
@@ -35,10 +39,12 @@ interface UserTableProps {
 const UserTable: React.FC<UserTableProps> = ({
   users,
   onRoleChange,
+  onDefaultSedeChange,
   onDelete,
   onResetPassword,
   currentUserId,
   isUpdatingRole,
+  isUpdatingDefaultSede,
   isDeletingUser,
   isResettingPassword,
 }) => {
@@ -52,13 +58,14 @@ const UserTable: React.FC<UserTableProps> = ({
             <TableHead>Nombre</TableHead>
             <TableHead>Email</TableHead>
             <TableHead>Rol</TableHead>
+            <TableHead>Sede por defecto</TableHead>
             <TableHead className="text-right">Acciones</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {users.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+              <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
                 No se encontraron usuarios.
               </TableCell>
             </TableRow>
@@ -80,6 +87,33 @@ const UserTable: React.FC<UserTableProps> = ({
                       {availableRoles.map((role) => (
                         <SelectItem key={role} value={role}>
                           {role}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </TableCell>
+                <TableCell>
+                  <Select
+                    value={user.default_sede_id ?? TODAS_LAS_SEDES}
+                    onValueChange={(value) =>
+                      onDefaultSedeChange(
+                        user.id,
+                        value === TODAS_LAS_SEDES ? null : value
+                      )
+                    }
+                    disabled={isUpdatingDefaultSede}
+                  >
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Seleccionar sede" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={TODAS_LAS_SEDES}>Todas</SelectItem>
+                      {SEDES.map((sede) => (
+                        <SelectItem key={sede.id} value={sede.id}>
+                          <span className="flex items-center gap-2">
+                            <SedeDot color={sede.color} />
+                            {sede.name}
+                          </span>
                         </SelectItem>
                       ))}
                     </SelectContent>

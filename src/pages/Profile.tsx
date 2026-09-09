@@ -13,6 +13,8 @@ import { useNavigate } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
 import NotificationPreferences from "@/components/NotificationPreferences";
 import { supabase } from "@/integrations/supabase/client";
+import SedeDot from "@/components/SedeDot";
+import { getSedeById, getSedeLabel } from "@/lib/sedes";
 
 const Profile: React.FC = () => {
   const { session, profile, loading, logout } = useSession();
@@ -83,6 +85,22 @@ const Profile: React.FC = () => {
                 <Label htmlFor="lastName">Apellido</Label>
                 <Input id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} />
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Sede por defecto</Label>
+              <div className="flex items-center gap-2 rounded-md border bg-muted/30 px-3 py-2 text-sm">
+                {profile.default_sede_id && getSedeById(profile.default_sede_id) ? (
+                  <>
+                    <SedeDot color={getSedeById(profile.default_sede_id)!.color} />
+                    <span>{getSedeLabel(profile.default_sede_id)}</span>
+                  </>
+                ) : (
+                  <span className="text-muted-foreground">Todas</span>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Un administrador puede cambiarla desde Gestión de usuarios.
+              </p>
             </div>
             <Button type="submit" disabled={updateProfileMutation.isPending} className="w-full">
               {updateProfileMutation.isPending ? <Loader2 className="animate-spin mr-2" /> : "Guardar Cambios"}
