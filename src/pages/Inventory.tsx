@@ -7,12 +7,15 @@ import { PlusCircle, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useInventory, useAddInventoryItem, useUpdateInventoryItem, useDeleteInventoryItem, InventoryItem, InventoryItemFormData } from "@/hooks/use-inventory";
 import InventoryForm, { InventoryFormValues } from "@/components/InventoryForm";
-import InventoryToolbar from "@/components/InventoryToolbar"; // Importar Toolbar
+import InventoryToolbar from "@/components/InventoryToolbar";
 import ReorderDialog from "@/components/ReorderDialog";
 import { pageContainerClass, pageHeaderClass, mobileDialogClass } from "@/lib/layout";
 import { cn } from "@/lib/utils";
+import { useSedeActiva } from "@/components/SedeContextProvider";
+import { getSedeLabel } from "@/lib/sedes";
 
 const Inventory = () => {
+  const { sedeActiva } = useSedeActiva();
   const { data: inventoryItems, isLoading, error } = useInventory();
   const addInventoryItemMutation = useAddInventoryItem();
   const updateInventoryItemMutation = useUpdateInventoryItem();
@@ -21,15 +24,12 @@ const Inventory = () => {
   const [isAddInventoryDialogOpen, setIsAddInventoryDialogOpen] = React.useState(false);
   const [isEditInventoryDialogOpen, setIsEditInventoryDialogOpen] = React.useState(false);
   const [editingInventoryItem, setEditingInventoryItem] = React.useState<InventoryItem | undefined>(undefined);
-  
-  // Estados para búsqueda y reorder
+
   const [searchTerm, setSearchTerm] = React.useState("");
   const [selectedItems, setSelectedItems] = React.useState<string[]>([]);
   const [isReorderDialogOpen, setIsReorderDialogOpen] = React.useState(false);
 
   const handleAddInventoryItem = async (newItemData: InventoryFormValues) => {
-    // InventoryFormValues es compatible con InventoryItemFormData, pero debemos asegurar que los campos requeridos estén presentes.
-    // El formulario ya garantiza que product_name, catalog_number y quantity existen.
     await addInventoryItemMutation.mutateAsync(newItemData as InventoryItemFormData);
     setIsAddInventoryDialogOpen(false);
   };
@@ -48,30 +48,34 @@ const Inventory = () => {
     setEditingInventoryItem(item);
     setIsEditInventoryDialogOpen(true);
   };
-  
+
   const handleReorder = () => {
     if (selectedItems.length > 0) {
       setIsReorderDialogOpen(true);
     }
   };
 
-  // Filtrado de ítems
   const filteredItems = React.useMemo(() => {
     if (!inventoryItems) return [];
     const lowerCaseSearch = searchTerm.toLowerCase();
-    return inventoryItems.filter(item => 
-      item.product_name.toLowerCase().includes(lowerCaseSearch) ||
-      item.catalog_number.toLowerCase().includes(lowerCaseSearch) ||
-      (item.brand && item.brand.toLowerCase().includes(lowerCaseSearch)) ||
-      (item.location && item.location.toLowerCase().includes(lowerCaseSearch))
-    );
-  }, [inventoryItems, searchTerm]);
-  
-  // Ítems seleccionados para reorder
+    return inventoryItems.filter((item) => {
+      if (sedeActiva && item.sede_id !== sedeActiva) return false;
+      return (
+        item.product_name.toLowerCase().includes(lowerCaseSearch) ||
+        item.catalog_number.toLowerCase().includes(lowerCaseSearch) ||
+        (item.brand && item.brand.toLowerCase().includes(lowerCaseSearch)) ||
+        (item.location && item.location.toLowerCase().includes(lowerCaseSearch))
+      );
+    });
+  }, [inventoryItems, searchTerm, sedeActiva]);
+
+  React.useEffect(() => {
+    setSelectedItems([]);
+  }, [sedeActiva]);
+
   const itemsToReorder = React.useMemo(() => {
     return inventoryItems?.filter(item => selectedItems.includes(item.id)) || [];
   }, [inventoryItems, selectedItems]);
-
 
   if (isLoading) {
     return (
@@ -112,16 +116,18 @@ const Inventory = () => {
         </Dialog>
       </div>
       <p className="text-lg text-muted-foreground mb-8">
-        Gestiona el inventario de productos de tu laboratorio.
+        {sedeActiva
+          ? `Stock de ${getSedeLabel(sedeActiva)}. Cambia la sede en la cabecera para ver otra.`
+          : "Stock de todas las sedes. Usa el selector de sede para filtrar."}
       </p>
-      
+
       <InventoryToolbar
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
         selectedItemCount={selectedItems.length}
         onReorder={handleReorder}
       />
-      
+
       <div className="mt-6">
         <InventoryTable
           items={filteredItems}
@@ -129,10 +135,10 @@ const Inventory = () => {
           onDelete={handleDeleteInventoryItem}
           selectedItems={selectedItems}
           onSelectChange={setSelectedItems}
+          showSede={!sedeActiva}
         />
       </div>
 
-      {/* Edit Inventory Item Dialog */}
       <Dialog open={isEditInventoryDialogOpen} onOpenChange={setIsEditInventoryDialogOpen}>
         <DialogContent className={cn(mobileDialogClass, "sm:max-w-[425px]")}>
           <DialogHeader>
@@ -148,14 +154,13 @@ const Inventory = () => {
           )}
         </DialogContent>
       </Dialog>
-      
-      {/* Reorder Dialog */}
+
       {itemsToReorder.length > 0 && (
         <ReorderDialog
           isOpen={isReorderDialogOpen}
           onOpenChange={(open) => {
             setIsReorderDialogOpen(open);
-            if (!open) setSelectedItems([]); // Limpiar selección al cerrar
+            if (!open) setSelectedItems([]);
           }}
           items={itemsToReorder}
         />

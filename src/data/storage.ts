@@ -235,6 +235,7 @@ export let mockInventory: InventoryItem[] = [
     unit_price: 50.00,
     format: "500 units",
     location: null,
+    sede_id: null,
     added_at: new Date(Date.now() - 86400000 * 15).toISOString(),
     last_updated: new Date(Date.now() - 86400000 * 15).toISOString(),
   },
