@@ -351,10 +351,10 @@ const AdminPage = () => {
         {/* Users Tab */}
         <TabsContent value="users" className="mt-6">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-2">
-              <CardTitle className="text-xl">Gestión de Usuarios</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-2 space-y-0 py-4">
+              <CardTitle className="text-lg">Usuarios</CardTitle>
               <Dialog open={isInviteUserDialogOpen} onOpenChange={setIsInviteUserDialogOpen}>
-                <DialogTrigger asChild><Button size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Invitar Nuevo Usuario</Button></DialogTrigger>
+                <DialogTrigger asChild><Button size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Invitar</Button></DialogTrigger>
                 <DialogContent className={cn(mobileDialogClass, "sm:max-w-[425px]")}>
                   <DialogHeader><DialogTitle>Invitar Nuevo Usuario</DialogTitle></DialogHeader>
                   <InviteUserDialog onSubmit={handleInviteUser} onCancel={() => setIsInviteUserDialogOpen(false)} isSubmitting={inviteUserMutation.isPending} />
