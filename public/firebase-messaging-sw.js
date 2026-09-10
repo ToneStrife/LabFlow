@@ -52,21 +52,22 @@ try {
   messaging.onBackgroundMessage((payload) => {
     console.log('[firebase-messaging-sw.js] Background message:', payload);
 
-    const basePath = getBasePath();
-    const n = payload.notification || {};
-    const notificationTitle = n.title || 'Notificación';
-    
-    // Asegurar que el icono use la ruta base
-    const iconPath = basePath + 'favicon.png'; 
-    
-    const notificationOptions = {
-      body: n.body || '',
-      icon: iconPath,
-      image: n.image,
-      data: payload.data || {},
-    };
+    // Si el payload ya trae "notification" / webpush.notification, FCM la muestra
+    // solo. Volver a llamar a showNotification provoca el famoso duplicado.
+    if (payload.notification) {
+      return;
+    }
 
-    self.registration.showNotification(notificationTitle, notificationOptions);
+    const basePath = getBasePath();
+    const data = payload.data || {};
+    const notificationTitle = data.title || 'Notificación';
+    const iconPath = basePath + 'favicon.png';
+
+    self.registration.showNotification(notificationTitle, {
+      body: data.body || '',
+      icon: iconPath,
+      data,
+    });
   });
 } catch (e) {
   console.error('[firebase-messaging-sw.js] messaging init error:', e);

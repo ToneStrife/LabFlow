@@ -1,92 +1,91 @@
 "use client";
 
-import React, { useEffect } from 'react';
-import { initializeApp, getApps, getApp } from 'firebase/app';
-import { firebaseConfig, isFirebaseConfigured } from '@/config/firebase';
-import { toast as sonnerToast } from 'sonner'; // Usamos sonner para mostrar la notificación en el cliente
-import { getMessaging, onMessage } from 'firebase/messaging';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect } from "react";
+import { initializeApp, getApps } from "firebase/app";
+import { firebaseConfig, isFirebaseConfigured } from "@/config/firebase";
+import { toast as sonnerToast } from "sonner";
+import { getMessaging, onMessage, type Unsubscribe } from "firebase/messaging";
+import { useNavigate } from "react-router-dom";
 
 const FirebaseInitializer: React.FC = () => {
   const navigate = useNavigate();
-  
+
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      if (!isFirebaseConfigured()) {
-        // Caso normal en desarrollo local: las notificaciones push simplemente
-        // no funcionan. No es un error que merezca molestar al usuario.
-        console.info(
-          '[Firebase] Sin configuracion (VITE_FIREBASE_*). Las notificaciones push quedan desactivadas.'
-        );
-        return;
-      }
+    if (typeof window === "undefined") return;
 
-      if (!getApps().length) {
-        try {
-          // Determinar la ruta base dinámicamente
-          const basePath = window.location.pathname.includes('/LabFlow/') ? '/LabFlow/' : '/';
-          
-          // 1. Obtener el registro del Service Worker en la ruta base
-          navigator.serviceWorker.getRegistration(basePath).then(registration => {
-            // 2. Clonar la configuración para añadir la ruta del Service Worker
-            const configWithSW = {
-              ...firebaseConfig,
-              // Pasar el objeto de registro del Service Worker
-              serviceWorkerRegistration: registration,
-            };
-            
-            const app = initializeApp(configWithSW);
-            console.log("Firebase App initialized successfully with SW registration.");
-            
-            // 3. Configurar el listener onMessage para mensajes en primer plano
-            const messaging = getMessaging(app);
-            
-            const unsubscribe = onMessage(messaging, (payload) => {
-                console.log('Foreground message received:', payload);
-                
-                const notification = payload.notification;
-                const data = payload.data;
-                const link = data?.link;
-
-                sonnerToast(notification?.title || "Notificación", {
-                    description: notification?.body || data?.body || "Mensaje recibido.",
-                    action: link ? {
-                        label: "Ver",
-                        onClick: () => navigate(link),
-                    } : undefined,
-                    duration: 10000, // Mostrar por 10 segundos
-                });
-            });
-            
-            return () => unsubscribe();
-
-          }).catch(error => {
-            // Aqui cae tanto un fallo del Service Worker como uno de Firebase.
-            // Distinguirlos, porque antes todo se anunciaba como error de Service Worker.
-            const esErrorDeFirebase = String(error?.name || "").includes("FirebaseError");
-            console.error(
-              esErrorDeFirebase ? "Firebase messaging failed to start:" : "Error getting Service Worker registration:",
-              error
-            );
-            sonnerToast.error(
-              esErrorDeFirebase ? "Error de Firebase" : "Error de Service Worker",
-              {
-                description: esErrorDeFirebase
-                  ? "No se pudo arrancar la mensajeria. Revisa la configuracion de Firebase."
-                  : "Fallo al obtener el registro del Service Worker.",
-              }
-            );
-          });
-          
-        } catch (error) {
-          console.error("Firebase initialization failed:", error);
-          sonnerToast.error("Error de Firebase", { description: "Fallo al inicializar la aplicación de Firebase." });
-        }
-      }
+    if (!isFirebaseConfigured()) {
+      console.info(
+        "[Firebase] Sin configuracion (VITE_FIREBASE_*). Las notificaciones push quedan desactivadas."
+      );
+      return;
     }
+
+    let unsubscribe: Unsubscribe | undefined;
+    let cancelled = false;
+
+    const basePath = window.location.pathname.includes("/LabFlow/") ? "/LabFlow/" : "/";
+
+    const start = async () => {
+      try {
+        const registration = await navigator.serviceWorker.getRegistration(basePath);
+        if (cancelled) return;
+
+        const configWithSW = {
+          ...firebaseConfig,
+          serviceWorkerRegistration: registration,
+        };
+
+        const app = getApps().length ? getApps()[0]! : initializeApp(configWithSW);
+        const messaging = getMessaging(app);
+
+        unsubscribe = onMessage(messaging, (payload) => {
+          console.log("Foreground message received:", payload);
+
+          const notification = payload.notification;
+          const data = payload.data;
+          const link = data?.link;
+
+          sonnerToast(notification?.title || "Notificación", {
+            description: notification?.body || data?.body || "Mensaje recibido.",
+            action: link
+              ? {
+                  label: "Ver",
+                  onClick: () => navigate(link),
+                }
+              : undefined,
+            duration: 10000,
+          });
+        });
+      } catch (error: unknown) {
+        if (cancelled) return;
+        const err = error as { name?: string };
+        const esErrorDeFirebase = String(err?.name || "").includes("FirebaseError");
+        console.error(
+          esErrorDeFirebase
+            ? "Firebase messaging failed to start:"
+            : "Error getting Service Worker registration:",
+          error
+        );
+        sonnerToast.error(
+          esErrorDeFirebase ? "Error de Firebase" : "Error de Service Worker",
+          {
+            description: esErrorDeFirebase
+              ? "No se pudo arrancar la mensajeria. Revisa la configuracion de Firebase."
+              : "Fallo al obtener el registro del Service Worker.",
+          }
+        );
+      }
+    };
+
+    void start();
+
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
+    };
   }, [navigate]);
 
-  return null; // Este componente no renderiza nada visible
+  return null;
 };
 
 export default FirebaseInitializer;
