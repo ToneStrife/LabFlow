@@ -22,10 +22,12 @@ import {
 } from "@/components/ui/select";
 import SedeDot from "@/components/SedeDot";
 import { SEDES, TODAS_LAS_SEDES } from "@/lib/sedes";
+import { ROL_ETIQUETA } from "@/lib/navigation";
+import { cn } from "@/lib/utils";
 
 interface UserTableProps {
   users: Profile[];
-  onRoleChange: (userId: string, newRole: Profile['role']) => void;
+  onRoleChange: (userId: string, newRole: Profile["role"]) => void;
   onDefaultSedeChange: (userId: string, sedeId: string | null) => void;
   onDelete: (userId: string) => void;
   onResetPassword: (userId: string) => void;
@@ -48,51 +50,56 @@ const UserTable: React.FC<UserTableProps> = ({
   isDeletingUser,
   isResettingPassword,
 }) => {
-  const availableRoles: Profile['role'][] = ["Requester", "Account Manager", "Admin"];
+  const availableRoles: Profile["role"][] = ["Requester", "Account Manager", "Admin"];
 
   return (
-    <div className="rounded-md border">
+    <div className="rounded-md border overflow-x-auto">
       <Table>
         <TableHeader>
-          <TableRow>
-            <TableHead>Nombre</TableHead>
-            <TableHead>Email</TableHead>
-            <TableHead>Rol</TableHead>
-            <TableHead>Sede por defecto</TableHead>
-            <TableHead className="text-right">Acciones</TableHead>
+          <TableRow className="hover:bg-transparent">
+            <TableHead className="h-9 px-3">Usuario</TableHead>
+            <TableHead className="h-9 px-3 w-[9.5rem]">Rol</TableHead>
+            <TableHead className="h-9 px-3 w-[8.5rem]">Sede</TableHead>
+            <TableHead className="h-9 px-3 w-[5.5rem] text-right">Acciones</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {users.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+              <TableCell colSpan={4} className="h-20 text-center text-muted-foreground">
                 No se encontraron usuarios.
               </TableCell>
             </TableRow>
           ) : (
             users.map((user) => (
               <TableRow key={user.id}>
-                <TableCell className="font-medium">{getFullName(user)}</TableCell>
-                <TableCell>{user.email || "N/A"}</TableCell>
-                <TableCell>
+                <TableCell className="px-3 py-2 align-middle">
+                  <div className="min-w-0 leading-tight">
+                    <p className="truncate text-sm font-medium">{getFullName(user)}</p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {user.email || "Sin email"}
+                    </p>
+                  </div>
+                </TableCell>
+                <TableCell className="px-3 py-2">
                   <Select
                     value={user.role}
-                    onValueChange={(newRole: Profile['role']) => onRoleChange(user.id, newRole)}
+                    onValueChange={(newRole: Profile["role"]) => onRoleChange(user.id, newRole)}
                     disabled={user.id === currentUserId || isUpdatingRole}
                   >
-                    <SelectTrigger className="w-[180px]">
-                      <SelectValue placeholder="Seleccionar rol" />
+                    <SelectTrigger className="h-8 w-full min-w-[8.5rem] text-xs">
+                      <SelectValue placeholder="Rol" />
                     </SelectTrigger>
                     <SelectContent>
                       {availableRoles.map((role) => (
-                        <SelectItem key={role} value={role}>
-                          {role}
+                        <SelectItem key={role} value={role} className="text-xs">
+                          {ROL_ETIQUETA[role] ?? role}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </TableCell>
-                <TableCell>
+                <TableCell className="px-3 py-2">
                   <Select
                     value={user.default_sede_id ?? TODAS_LAS_SEDES}
                     onValueChange={(value) =>
@@ -103,13 +110,15 @@ const UserTable: React.FC<UserTableProps> = ({
                     }
                     disabled={isUpdatingDefaultSede}
                   >
-                    <SelectTrigger className="w-[180px]">
-                      <SelectValue placeholder="Seleccionar sede" />
+                    <SelectTrigger className="h-8 w-full min-w-[7.5rem] text-xs">
+                      <SelectValue placeholder="Sede" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value={TODAS_LAS_SEDES}>Todas</SelectItem>
+                      <SelectItem value={TODAS_LAS_SEDES} className="text-xs">
+                        Todas
+                      </SelectItem>
                       {SEDES.map((sede) => (
-                        <SelectItem key={sede.id} value={sede.id}>
+                        <SelectItem key={sede.id} value={sede.id} className="text-xs">
                           <span className="flex items-center gap-2">
                             <SedeDot color={sede.color} />
                             {sede.name}
@@ -119,29 +128,35 @@ const UserTable: React.FC<UserTableProps> = ({
                     </SelectContent>
                   </Select>
                 </TableCell>
-                <TableCell className="text-right space-x-1">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => onResetPassword(user.id)}
-                    title="Enviar restablecimiento de contraseña"
-                    disabled={isResettingPassword}
-                  >
-                    {isResettingPassword ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <KeyRound className="h-4 w-4" />
-                    )}
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="icon"
-                    onClick={() => onDelete(user.id)}
-                    title="Eliminar Usuario"
-                    disabled={user.id === currentUserId || isDeletingUser}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                <TableCell className="px-3 py-2 text-right">
+                  <div className="inline-flex items-center gap-0.5">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => onResetPassword(user.id)}
+                      title="Restablecer contraseña"
+                      disabled={isResettingPassword}
+                    >
+                      {isResettingPassword ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <KeyRound className="h-3.5 w-3.5" />
+                      )}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={cn(
+                        "h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      )}
+                      onClick={() => onDelete(user.id)}
+                      title="Eliminar usuario"
+                      disabled={user.id === currentUserId || isDeletingUser}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))
