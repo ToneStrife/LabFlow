@@ -6,7 +6,6 @@ async function getAccessToken(clientEmail: string, privateKeyPem: string) {
   const scope = 'https://www.googleapis.com/auth/firebase.messaging'
   const aud = 'https://oauth2.googleapis.com/token'
 
-  // jose entiende el PEM directamente (con \n reales)
   const alg = 'RS256'
   const key = await importPKCS8(privateKeyPem, alg)
 
@@ -37,6 +36,36 @@ async function getAccessToken(clientEmail: string, privateKeyPem: string) {
   return data.access_token as string
 }
 
+type TokenRow = {
+  token: string
+  user_id: string | null
+  last_used?: string | null
+  created_at?: string | null
+}
+
+/** Un token por usuario (el más reciente). Evita la doble alerta por tokens viejos. */
+function latestTokenPerUser(rows: TokenRow[]): string[] {
+  const best = new Map<string, TokenRow>()
+  const orphans: string[] = []
+
+  for (const row of rows) {
+    if (!row.user_id) {
+      orphans.push(row.token)
+      continue
+    }
+    const prev = best.get(row.user_id)
+    if (!prev) {
+      best.set(row.user_id, row)
+      continue
+    }
+    const prevTs = Date.parse(prev.last_used || prev.created_at || '') || 0
+    const nextTs = Date.parse(row.last_used || row.created_at || '') || 0
+    if (nextTs >= prevTs) best.set(row.user_id, row)
+  }
+
+  return [...Array.from(best.values()).map((r) => r.token), ...orphans]
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, {
@@ -53,7 +82,6 @@ serve(async (req) => {
   try {
     const FIREBASE_PROJECT_ID = Deno.env.get('FIREBASE_PROJECT_ID')
     const FIREBASE_CLIENT_EMAIL = Deno.env.get('FIREBASE_CLIENT_EMAIL')
-    // CRÍTICO: convertir \\n a saltos reales
     const FIREBASE_PRIVATE_KEY = Deno.env.get('FIREBASE_PRIVATE_KEY')?.replace(/\\n/g, '\n')
 
     if (!FIREBASE_PROJECT_ID || !FIREBASE_CLIENT_EMAIL || !FIREBASE_PRIVATE_KEY) {
@@ -68,28 +96,28 @@ serve(async (req) => {
       { auth: { persistSession: false } }
     )
 
-    // El cliente envía 'user_ids' para notificaciones masivas, o 'token' para la prueba unitaria.
     const { token, user_ids, title, body, data: payloadData, link } = await req.json()
 
     let tokensToSend: string[] = []
     if (token) {
       tokensToSend = [token]
     } else if (user_ids?.length) {
-      // Enviar a IDs de usuario específicos
       const { data: tokensData, error: tokensError } = await supabase
         .from('fcm_tokens')
-        .select('token')
-        .in('user_id', user_ids);
+        .select('token, user_id, last_used, created_at')
+        .in('user_id', user_ids)
       if (tokensError) throw tokensError
-      tokensToSend = tokensData.map((t: { token: string }) => t.token)
+      tokensToSend = latestTokenPerUser((tokensData || []) as TokenRow[])
     } else {
-      // Si no se especifica token ni user_ids (o user_ids es []), enviar a todos
       const { data: tokensData, error: tokensError } = await supabase
         .from('fcm_tokens')
-        .select('token')
+        .select('token, user_id, last_used, created_at')
       if (tokensError) throw tokensError
-      tokensToSend = tokensData.map((t: { token: string }) => t.token)
+      tokensToSend = latestTokenPerUser((tokensData || []) as TokenRow[])
     }
+
+    // Por si hubiera el mismo token repetido
+    tokensToSend = [...new Set(tokensToSend)]
 
     if (tokensToSend.length === 0) {
       return new Response(JSON.stringify({ message: 'No FCM tokens to send to.' }), {
@@ -105,18 +133,16 @@ serve(async (req) => {
       const message = {
         message: {
           token: fcmToken,
-          // Usar el bloque webpush para mejor compatibilidad con navegadores
           webpush: {
             notification: {
               title: title ?? 'Notificación de LabFlow',
               body: body ?? 'Mensaje de prueba desde el administrador.',
-              icon: '/LabFlow/favicon.png', // Asegurar que el icono sea accesible
+              icon: '/LabFlow/favicon.png',
             },
             fcmOptions: link ? { link } : undefined,
-            // Asegurar que los datos se serialicen a strings
             data: {
                 ...Object.fromEntries(Object.entries(payloadData || {}).map(([k, v]) => [k, String(v)])),
-                link: link || '/dashboard', // Asegurar que el link esté en data para el Service Worker
+                link: link || '/dashboard',
             },
           },
         },
@@ -134,21 +160,17 @@ serve(async (req) => {
       let bodyJson: any = null
       try { bodyJson = await res.json() } catch {}
       results.push({ token: fcmToken, success: res.ok, status: res.status, body: bodyJson })
-      
-      // Lógica de limpieza de tokens inválidos
+
       if (!res.ok && (res.status === 400 || res.status === 404)) {
-          console.warn(`FCM token ${fcmToken} failed with status ${res.status}. Deleting from DB.`);
-          
-          // Eliminar el token de la base de datos
+          console.warn(`FCM token ${fcmToken} failed with status ${res.status}. Deleting from DB.`)
           const { error: deleteError } = await supabase
             .from('fcm_tokens')
             .delete()
-            .eq('token', fcmToken);
-            
+            .eq('token', fcmToken)
           if (deleteError) {
-              console.error(`Failed to delete invalid token ${fcmToken}:`, deleteError);
+              console.error(`Failed to delete invalid token ${fcmToken}:`, deleteError)
           } else {
-              console.log(`Successfully deleted invalid token: ${fcmToken}`);
+              console.log(`Successfully deleted invalid token: ${fcmToken}`)
           }
       }
     }
