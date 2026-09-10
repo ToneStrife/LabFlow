@@ -2,11 +2,16 @@
 
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { Loader2 } from "lucide-react";
-import { RequestStatus, SupabaseRequest, Vendor, Profile, AccountManager, Project, ShippingAddress, BillingAddress } from "@/data/types";
-import { useRequests, useUpdateRequestStatus, useSendEmail } from "@/hooks/use-requests";
+import { RequestStatus, SupabaseRequest } from "@/data/types";
+import {
+  usePaginatedRequests,
+  useRequests,
+  useUpdateRequestStatus,
+  useSendEmail,
+  REQUESTS_PAGE_SIZE,
+} from "@/hooks/use-requests";
 import { useVendors } from "@/hooks/use-vendors";
-import { useAllProfiles, getFullName } from "@/hooks/use-profiles";
+import { useAllProfiles } from "@/hooks/use-profiles";
 import { useAccountManagers } from "@/hooks/use-account-managers";
 import EmailDialog, { EmailFormValues } from "@/components/EmailDialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -23,23 +28,12 @@ import MergeRequestsDialog from "@/components/MergeRequestsDialog";
 import { useShippingAddresses, useBillingAddresses } from "@/hooks/use-addresses";
 import ApproveRequestListDialog from "@/components/request-list/ApproveRequestListDialog";
 import { cn } from "@/lib/utils";
-import { mobileDialogClass, dialogFooterMobileClass } from "@/lib/layout";
+import { mobileDialogClass } from "@/lib/layout";
 import { useReceiveWizard } from "@/components/ReceiveWizardProvider";
 import { useSedeActiva } from "@/components/SedeContextProvider";
-import { requestMatchesSede } from "@/lib/sedes";
+import { resolveAddressSedeId } from "@/lib/sedes";
+import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 
-
-// Definir el orden de prioridad de los estados
-// Los números más bajos van ARRIBA (mayor prioridad de acción)
-const STATUS_ORDER: Record<RequestStatus, number> = {
-  "Pending": 1,
-  "Quote Requested": 2,
-  "PO Requested": 3,
-  "Ordered": 4,
-  "Received": 90, // Estados finales, muy baja prioridad
-  "Denied": 91,
-  "Cancelled": 92,
-};
 
 interface RequestListProps {
   /** Estado con el que arranca el filtro. Lo usa el panel para que al pulsar
@@ -49,9 +43,8 @@ interface RequestListProps {
 
 const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
   const navigate = useNavigate();
-  const { session, profile } = useSession();
+  const { profile } = useSession();
   const { sedeActiva } = useSedeActiva();
-  const { data: requests, isLoading: isLoadingRequests, error: requestsError } = useRequests();
   const { data: vendors, isLoading: isLoadingVendors } = useVendors();
   const { data: profiles, isLoading: isLoadingProfiles } = useAllProfiles();
   const { data: accountManagers, isLoading: isLoadingAccountManagers } = useAccountManagers();
@@ -59,19 +52,64 @@ const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
   const { data: emailTemplates, isLoading: isLoadingEmailTemplates } = useEmailTemplates();
   const { data: shippingAddresses, isLoading: isLoadingShippingAddresses } = useShippingAddresses();
   const { data: billingAddresses, isLoading: isLoadingBillingAddresses } = useBillingAddresses();
+  // Candidatas a fusionar pueden estar fuera de la página visible
+  const { data: allRequestsForMerge } = useRequests();
 
   const updateStatusMutation = useUpdateRequestStatus();
   const sendEmailMutation = useSendEmail();
   const { openReceive } = useReceiveWizard();
 
   const [searchTerm, setSearchTerm] = React.useState<string>("");
+  const [debouncedSearch, setDebouncedSearch] = React.useState("");
   const [filterStatus, setFilterStatus] = React.useState<RequestStatus | "All" | "Active">(estadoInicial);
+  const [page, setPage] = React.useState(1);
+
+  React.useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedSearch(searchTerm.trim()), 300);
+    return () => window.clearTimeout(timer);
+  }, [searchTerm]);
 
   // Si el panel pide otra fase, el filtro la recoge sin dejar de ser editable
   // desde la barra de herramientas.
   React.useEffect(() => {
     setFilterStatus(estadoInicial);
   }, [estadoInicial]);
+
+  React.useEffect(() => {
+    setPage(1);
+  }, [filterStatus, debouncedSearch, sedeActiva]);
+
+  const shippingAddressIds = React.useMemo(() => {
+    if (!sedeActiva) return null;
+    if (!shippingAddresses) return undefined;
+    return shippingAddresses
+      .filter((address) => resolveAddressSedeId(address) === sedeActiva)
+      .map((address) => address.id);
+  }, [sedeActiva, shippingAddresses]);
+
+  const {
+    data: pageResult,
+    isLoading: isLoadingRequests,
+    isFetching: isFetchingPage,
+    error: requestsError,
+  } = usePaginatedRequests(
+    {
+      page,
+      pageSize: REQUESTS_PAGE_SIZE,
+      status: filterStatus,
+      search: debouncedSearch || undefined,
+      shippingAddressIds: shippingAddressIds ?? null,
+    },
+    { enabled: shippingAddressIds !== undefined }
+  );
+
+  const requests = pageResult?.data ?? [];
+  const total = pageResult?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / REQUESTS_PAGE_SIZE));
+
+  React.useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
 
   const [isEmailDialogOpen, setIsEmailDialogOpen] = React.useState(false);
   const [emailInitialData, setEmailInitialData] = React.useState<Partial<EmailFormValues>>({});
@@ -90,17 +128,6 @@ const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
   const [isApproveListDialogOpen, setIsApproveListDialogOpen] = React.useState(false);
   const [requestToApproveFromList, setRequestToApproveFromList] = React.useState<SupabaseRequest | null>(null);
 
-
-  const getRequesterName = (requesterId: string) => {
-    const profile = profiles?.find(p => p.id === requesterId);
-    return getFullName(profile);
-  };
-
-  const getAccountManagerName = (managerId: string | null) => {
-    if (!managerId) return "N/A";
-    const manager = accountManagers?.find(am => am.id === managerId);
-    return manager ? `${manager.first_name} ${manager.last_name}` : "N/A";
-  };
 
   const getVendorEmail = (vendorId: string) => {
     return vendors?.find(v => v.id === vendorId)?.email || "";
@@ -290,14 +317,14 @@ const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
   };
   
   const mergeableRequests = React.useMemo(() => {
-    if (!sourceRequestToMerge || !requests) return [];
+    if (!sourceRequestToMerge || !allRequestsForMerge) return [];
     
-    return requests.filter(req => 
+    return allRequestsForMerge.filter(req => 
       req.id !== sourceRequestToMerge.id && 
       req.vendor_id === sourceRequestToMerge.vendor_id &&
       (req.status === "Pending" || req.status === "Quote Requested" || req.status === "PO Requested")
     );
-  }, [sourceRequestToMerge, requests]);
+  }, [sourceRequestToMerge, allRequestsForMerge]);
 
   const handleSendQuoteRequestFromList = async (request: SupabaseRequest) => {
     await updateStatusMutation.mutateAsync({ id: request.id, status: "Quote Requested" });
@@ -328,62 +355,12 @@ const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
   };
 
 
-  const filteredAndSortedRequests = React.useMemo(() => {
-    if (!requests) return [];
+  const filteredAndSortedRequests = requests;
 
-    const filtered = requests.filter(request => {
-      const vendorName = vendors?.find(v => v.id === request.vendor_id)?.name || "";
-      const requesterName = getRequesterName(request.requester_id);
-      const accountManagerName = getAccountManagerName(request.account_manager_id);
+  // Esperar direcciones si hay sede activa para no consultar sin el filtro correcto
+  const waitingSedeFilter = !!sedeActiva && shippingAddressIds === undefined;
 
-      const matchesSearchTerm = searchTerm.toLowerCase() === "" ||
-        request.items?.some(item =>
-          item.product_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          item.catalog_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (item.brand && item.brand.toLowerCase().includes(searchTerm.toLowerCase()))
-        ) ||
-        vendorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        requesterName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        accountManagerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (request.quote_url && request.quote_url.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (request.po_number && request.po_number.toLowerCase().includes(searchTerm.toLowerCase()));
-
-      let matchesStatus = true;
-      if (filterStatus === "All") {
-        matchesStatus = true;
-      } else if (filterStatus === "Active") {
-        // Excluir Received, Denied, Cancelled
-        matchesStatus = !["Received", "Denied", "Cancelled"].includes(request.status);
-      } else {
-        matchesStatus = request.status === filterStatus;
-      }
-
-      const matchesSede = requestMatchesSede(
-        request.shipping_address_id,
-        shippingAddresses,
-        sedeActiva
-      );
-
-      return matchesSearchTerm && matchesStatus && matchesSede;
-    });
-
-    // Aplicar ordenación por estado y luego por fecha de creación (más reciente primero)
-    return filtered.sort((a, b) => {
-      const statusA = STATUS_ORDER[a.status] || 99;
-      const statusB = STATUS_ORDER[b.status] || 99;
-
-      if (statusA !== statusB) {
-        return statusA - statusB; // Ordenar por prioridad de estado (1, 2, 3... arriba)
-      }
-
-      // Si los estados son iguales, ordenar por fecha de creación (más reciente primero)
-      // Esto asegura que dentro de un mismo estado, el más reciente aparezca primero.
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-    });
-  }, [requests, searchTerm, filterStatus, vendors, profiles, accountManagers, shippingAddresses, sedeActiva]);
-
-
-  if (isLoadingRequests || isLoadingVendors || isLoadingProfiles || isLoadingAccountManagers || isLoadingProjects || isLoadingEmailTemplates || isLoadingShippingAddresses || isLoadingBillingAddresses) {
+  if (waitingSedeFilter || isLoadingRequests || isLoadingVendors || isLoadingProfiles || isLoadingAccountManagers || isLoadingProjects || isLoadingEmailTemplates || isLoadingShippingAddresses || isLoadingBillingAddresses) {
     return (
       <div className="flex justify-center items-center h-40">
         <Loader2 className="h-6 w-6 animate-spin mr-2" /> Cargando Solicitudes...
@@ -395,6 +372,9 @@ const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
     return <div className="text-red-500 dark:text-red-400">Error al cargar solicitudes: {requestsError.message}</div>;
   }
 
+  const fromItem = total === 0 ? 0 : (page - 1) * REQUESTS_PAGE_SIZE + 1;
+  const toItem = Math.min(page * REQUESTS_PAGE_SIZE, total);
+
   return (
     <div className="space-y-4">
       <RequestListToolbar
@@ -403,22 +383,55 @@ const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
         filterStatus={filterStatus}
         onStatusChange={setFilterStatus}
       />
-      <RequestListTable
-        requests={filteredAndSortedRequests}
-        vendors={vendors}
-        profiles={profiles}
-        isUpdatingStatus={updateStatusMutation.isPending}
-        onViewDetails={(id) => navigate(`/requests/${id}`)}
-        onApprove={handleOpenApproveDialogFromList}
-        onEnterQuoteDetails={openQuoteAndPODetailsDialog}
-        onSendPORequest={handleSendPORequest}
-        onMarkAsOrdered={openOrderConfirmationDialog}
-        onMarkAsReceived={handleMarkAsReceived}
-        onDeny={handleDenyRequest}
-        onCancel={handleCancelRequest}
-        onMerge={handleMergeRequest}
-        onSendQuoteRequest={handleSendQuoteRequestFromList}
-      />
+      <div className={cn(isFetchingPage && "opacity-70 transition-opacity")}>
+        <RequestListTable
+          requests={filteredAndSortedRequests}
+          vendors={vendors}
+          profiles={profiles}
+          isUpdatingStatus={updateStatusMutation.isPending}
+          onViewDetails={(id) => navigate(`/requests/${id}`)}
+          onApprove={handleOpenApproveDialogFromList}
+          onEnterQuoteDetails={openQuoteAndPODetailsDialog}
+          onSendPORequest={handleSendPORequest}
+          onMarkAsOrdered={openOrderConfirmationDialog}
+          onMarkAsReceived={handleMarkAsReceived}
+          onDeny={handleDenyRequest}
+          onCancel={handleCancelRequest}
+          onMerge={handleMergeRequest}
+          onSendQuoteRequest={handleSendQuoteRequestFromList}
+        />
+      </div>
+
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between pt-1">
+        <p className="text-sm text-muted-foreground">
+          {total === 0
+            ? "Sin resultados"
+            : `Mostrando ${fromItem}–${toItem} de ${total}`}
+        </p>
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={page <= 1 || isFetchingPage}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+          >
+            <ChevronLeft className="h-4 w-4 mr-1" /> Anterior
+          </Button>
+          <span className="text-sm tabular-nums text-muted-foreground min-w-[5.5rem] text-center">
+            {page} / {totalPages}
+          </span>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={page >= totalPages || isFetchingPage}
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+          >
+            Siguiente <ChevronRight className="h-4 w-4 ml-1" />
+          </Button>
+        </div>
+      </div>
 
       <EmailDialog
         isOpen={isEmailDialogOpen}

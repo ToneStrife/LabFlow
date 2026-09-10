@@ -1,20 +1,66 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { SupabaseRequest as SupabaseRequestType, SupabaseRequestItem as SupabaseRequestItemType, RequestItem, RequestStatus } from "@/data/types";
 import { toast } from "sonner";
-import { apiGetRequests, apiAddRequest, apiUpdateRequestStatus, apiDeleteRequest, apiAddInventoryItem, apiSendEmail, apiUpdateRequestFile, apiUpdateRequestMetadata, apiUpdateFullRequest, apiRevertRequestReception } from "@/integrations/api";
+import {
+  apiGetRequests,
+  apiGetRequestsPage,
+  apiGetRequestById,
+  apiAddRequest,
+  apiUpdateRequestStatus,
+  apiDeleteRequest,
+  apiAddInventoryItem,
+  apiSendEmail,
+  apiUpdateRequestFile,
+  apiUpdateRequestMetadata,
+  apiUpdateFullRequest,
+  apiRevertRequestReception,
+  type RequestsPageParams,
+  type RequestsPageResult,
+} from "@/integrations/api";
 
 export interface SupabaseRequestItem extends SupabaseRequestItemType {}
 export interface SupabaseRequest extends SupabaseRequestType {}
 
-// --- Fetch Hook ---
+export const REQUESTS_PAGE_SIZE = 25;
+
+const invalidateRequestQueries = (queryClient: ReturnType<typeof useQueryClient>) => {
+  queryClient.invalidateQueries({ queryKey: ["requests"] });
+  queryClient.invalidateQueries({ queryKey: ["requestsPage"] });
+  queryClient.invalidateQueries({ queryKey: ["request"] });
+};
+
+// --- Fetch Hooks ---
 const fetchRequests = async (): Promise<SupabaseRequest[]> => {
   return apiGetRequests();
 };
 
+/** Todas las solicitudes (panel, pendientes, documentos…). */
 export const useRequests = () => {
   return useQuery<SupabaseRequest[], Error>({
     queryKey: ["requests"],
     queryFn: fetchRequests,
+  });
+};
+
+/** Una solicitud por id (detalle). */
+export const useRequest = (id?: string) => {
+  return useQuery<SupabaseRequest | null, Error>({
+    queryKey: ["request", id],
+    enabled: !!id,
+    queryFn: () => apiGetRequestById(id!),
+  });
+};
+
+/** Listado paginado del historial. */
+export const usePaginatedRequests = (
+  params: RequestsPageParams,
+  options?: { enabled?: boolean }
+) => {
+  return useQuery<RequestsPageResult, Error>({
+    queryKey: ["requestsPage", params],
+    queryFn: () => apiGetRequestsPage(params),
+    enabled: options?.enabled ?? true,
+    placeholderData: (prev) => prev,
   });
 };
 
@@ -50,7 +96,7 @@ export const useAddRequest = () => {
       });
     },
     onSuccess: (newRequest) => {
-      queryClient.invalidateQueries({ queryKey: ["requests"] });
+      invalidateRequestQueries(queryClient);
       toast.success("Solicitud enviada exitosamente!", {
         description: `ID de Solicitud: ${newRequest.id}`,
       });
@@ -85,7 +131,7 @@ export const useUpdateRequestStatus = () => {
       return updatedRequest;
     },
     onSuccess: (updatedRequest) => {
-      queryClient.invalidateQueries({ queryKey: ["requests"] });
+      invalidateRequestQueries(queryClient);
       queryClient.invalidateQueries({ queryKey: ["inventory"] });
       toast.success(`Estado de la Solicitud ${updatedRequest.id} actualizado a ${updatedRequest.status}!`);
     },
@@ -118,7 +164,7 @@ export const useUpdateFullRequest = () => {
       return apiUpdateFullRequest(id, { ...data, accountManagerId: managerId });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["requests"] });
+      invalidateRequestQueries(queryClient);
       toast.success(`Detalles de la solicitud actualizados exitosamente!`);
     },
     onError: (error) => {
@@ -147,7 +193,7 @@ export const useUpdateRequestMetadata = () => {
       return apiUpdateRequestMetadata(id, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["requests"] });
+      invalidateRequestQueries(queryClient);
       toast.success(`Metadatos de la solicitud actualizados exitosamente!`);
     },
     onError: (error) => {
@@ -175,7 +221,7 @@ export const useUpdateRequestFile = () => {
       return apiUpdateRequestFile(id, fileType, file, poNumber);
     },
     onSuccess: (data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["requests"] });
+      invalidateRequestQueries(queryClient);
       
       let message = `${variables.fileType.toUpperCase()} detalles guardados exitosamente!`;
       if (data.filePath) {
@@ -202,7 +248,7 @@ export const useDeleteRequest = () => {
       return apiDeleteRequest(id);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["requests"] });
+      invalidateRequestQueries(queryClient);
       toast.success("Solicitud eliminada exitosamente!");
     },
     onError: (error) => {
@@ -221,7 +267,7 @@ export const useRevertRequestReception = () => {
       await apiRevertRequestReception(requestId);
     },
     onSuccess: (data, requestId) => {
-      queryClient.invalidateQueries({ queryKey: ["requests"] });
+      invalidateRequestQueries(queryClient);
       queryClient.invalidateQueries({ queryKey: ["inventory"] });
       queryClient.invalidateQueries({ queryKey: ["packingSlips", requestId] });
       queryClient.invalidateQueries({ queryKey: ["aggregatedReceivedItems", requestId] });

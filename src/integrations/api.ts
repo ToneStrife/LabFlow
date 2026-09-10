@@ -258,37 +258,116 @@ export const apiDeleteProject = async (id: string): Promise<void> => {
 };
 
 // --- API de Solicitudes ---
+
+const REQUEST_SELECT = `
+  *,
+  items:request_items (*),
+  shipping_address:shipping_addresses (*),
+  billing_address:billing_addresses (*)
+`;
+
+const mapRequestRow = (req: Record<string, unknown>): SupabaseRequest => ({
+  ...req,
+  items: (req.items as SupabaseRequest["items"]) || null,
+  quote_url: (req.quote_url as string) || null,
+  po_number: (req.po_number as string) || null,
+  po_url: (req.po_url as string) || null,
+  slip_url: (req.slip_url as string) || null,
+  project_codes: (req.project_codes as string[]) || null,
+  notes: (req.notes as string) || null,
+  account_manager_id: (req.account_manager_id as string) || null,
+  shipping_address_id: (req.shipping_address_id as string) || null,
+  billing_address_id: (req.billing_address_id as string) || null,
+  request_number: (req.request_number as string) || null,
+}) as SupabaseRequest;
+
 export const apiGetRequests = async (): Promise<SupabaseRequest[]> => {
   const { data: requestsData, error: requestsError } = await supabase
     .from('requests')
-    .select(`
-      *,
-      items:request_items (*),
-      shipping_address:shipping_addresses (*),
-      billing_address:billing_addresses (*)
-    `)
+    .select(REQUEST_SELECT)
     .order('created_at', { ascending: false });
 
   if (requestsError) {
     throw new Error(requestsError.message);
   }
 
-  const requests: SupabaseRequest[] = requestsData.map(req => ({
-    ...req,
-    items: req.items || null,
-    quote_url: req.quote_url || null,
-    po_number: req.po_number || null,
-    po_url: req.po_url || null,
-    slip_url: req.slip_url || null,
-    project_codes: req.project_codes || null,
-    notes: req.notes || null,
-    account_manager_id: req.account_manager_id || null,
-    shipping_address_id: req.shipping_address_id || null,
-    billing_address_id: req.billing_address_id || null,
-    request_number: req.request_number || null,
-  })) as SupabaseRequest[];
+  return (requestsData || []).map((req) => mapRequestRow(req as Record<string, unknown>));
+};
 
-  return requests;
+export interface RequestsPageParams {
+  page: number;
+  pageSize: number;
+  status?: RequestStatus | "All" | "Active";
+  search?: string;
+  /** Si se pasa, solo solicitudes con envío en estas direcciones (filtro de sede). */
+  shippingAddressIds?: string[] | null;
+}
+
+export interface RequestsPageResult {
+  data: SupabaseRequest[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export const apiGetRequestsPage = async (
+  params: RequestsPageParams
+): Promise<RequestsPageResult> => {
+  const page = Math.max(1, params.page);
+  const pageSize = Math.min(100, Math.max(1, params.pageSize));
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
+  let query = supabase
+    .from("requests")
+    .select(REQUEST_SELECT, { count: "exact" })
+    .order("created_at", { ascending: false })
+    .range(from, to);
+
+  if (params.status && params.status !== "All") {
+    if (params.status === "Active") {
+      query = query.not("status", "in", '("Received","Denied","Cancelled")');
+    } else {
+      query = query.eq("status", params.status);
+    }
+  }
+
+  if (params.shippingAddressIds !== undefined && params.shippingAddressIds !== null) {
+    if (params.shippingAddressIds.length === 0) {
+      return { data: [], total: 0, page, pageSize };
+    }
+    query = query.in("shipping_address_id", params.shippingAddressIds);
+  }
+
+  const search = params.search?.trim().replace(/[%_,.()]/g, " ");
+  if (search) {
+    const pattern = `%${search}%`;
+    query = query.or(
+      `request_number.ilike.${pattern},po_number.ilike.${pattern},notes.ilike.${pattern},quote_url.ilike.${pattern}`
+    );
+  }
+
+  const { data, error, count } = await query;
+  if (error) throw new Error(error.message);
+
+  return {
+    data: (data || []).map((req) => mapRequestRow(req as Record<string, unknown>)),
+    total: count ?? 0,
+    page,
+    pageSize,
+  };
+};
+
+export const apiGetRequestById = async (id: string): Promise<SupabaseRequest | null> => {
+  const { data, error } = await supabase
+    .from("requests")
+    .select(REQUEST_SELECT)
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  if (!data) return null;
+  return mapRequestRow(data as Record<string, unknown>);
 };
 
 interface AddRequestData {
