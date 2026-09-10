@@ -98,14 +98,16 @@ const Vendors = () => {
             </Button>
           </DialogTrigger>
           <DialogContent className={cn(mobileDialogClass, "sm:max-w-[425px]")}>
-            <DialogHeader>
+            <DialogHeader className="shrink-0">
               <DialogTitle>Añadir Nuevo Proveedor</DialogTitle>
             </DialogHeader>
-            <VendorForm
-              onSubmit={handleAddVendor}
-              onCancel={() => setIsAddVendorDialogOpen(false)}
-              isSubmitting={addVendorMutation.isPending}
-            />
+            <div className="min-h-0 flex-1">
+              <VendorForm
+                onSubmit={handleAddVendor}
+                onCancel={() => setIsAddVendorDialogOpen(false)}
+                isSubmitting={addVendorMutation.isPending}
+              />
+            </div>
           </DialogContent>
         </Dialog>
       </div>
@@ -121,18 +123,20 @@ const Vendors = () => {
       {/* Edit Vendor Dialog */}
       <Dialog open={isEditVendorDialogOpen} onOpenChange={setIsEditVendorDialogOpen}>
         <DialogContent className={cn(mobileDialogClass, "sm:max-w-[425px]")}>
-          <DialogHeader>
+          <DialogHeader className="shrink-0">
             <DialogTitle>Editar Proveedor</DialogTitle>
           </DialogHeader>
           {editingVendorInitialData && (
-            <VendorForm
-              // Pasamos solo los datos del formulario (sin ID)
-              initialData={editingVendorInitialData}
-              // Usamos el ID almacenado en el estado para la mutación
-              onSubmit={(data) => handleEditVendor(editingVendorInitialData.id, data)}
-              onCancel={() => setIsEditVendorDialogOpen(false)}
-              isSubmitting={updateVendorMutation.isPending}
-            />
+            <div className="min-h-0 flex-1">
+              <VendorForm
+                // Pasamos solo los datos del formulario (sin ID)
+                initialData={editingVendorInitialData}
+                // Usamos el ID almacenado en el estado para la mutación
+                onSubmit={(data) => handleEditVendor(editingVendorInitialData.id, data)}
+                onCancel={() => setIsEditVendorDialogOpen(false)}
+                isSubmitting={updateVendorMutation.isPending}
+              />
+            </div>
           )}
         </DialogContent>
       </Dialog>

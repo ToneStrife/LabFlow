@@ -24,7 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Loader2, Paperclip } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { mobileDialogClass } from "@/lib/layout";
+import { mobileDialogClass, dialogBodyScrollClass, dialogFooterMobileClass } from "@/lib/layout";
 // Quill pesa 111 KB comprimidos y solo hace falta al escribir un correo.
 // Cargándolo aquí sale del paquete inicial de toda la aplicación.
 const RichTextEditor = React.lazy(() => import('./RichTextEditor'));
@@ -109,15 +109,18 @@ const EmailDialog: React.FC<EmailDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className={cn(mobileDialogClass, "sm:max-w-[600px] gap-4")}>
-        <DialogHeader>
-          <DialogTitle>Redactar Correo Electrónico</DialogTitle>
-          <DialogDescription>
-            Revisa el contenido y envía el correo cuando esté listo.
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className={cn(mobileDialogClass, "sm:max-w-[600px] gap-0 overflow-hidden p-0")}>
+        <div className="shrink-0 space-y-1.5 border-b px-6 py-4 pr-12">
+          <DialogHeader className="space-y-1.5 text-left">
+            <DialogTitle>Redactar Correo Electrónico</DialogTitle>
+            <DialogDescription>
+              Revisa el contenido y envía el correo cuando esté listo.
+            </DialogDescription>
+          </DialogHeader>
+        </div>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="flex min-h-0 flex-1 flex-col">
+            <div className={cn(dialogBodyScrollClass, "space-y-4 px-6 py-4")}>
             <FormField
               control={form.control}
               name="to"
@@ -196,7 +199,8 @@ const EmailDialog: React.FC<EmailDialogProps> = ({
                 </div>
               </div>
             )}
-            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4 shrink-0">
+            </div>
+            <div className={cn(dialogFooterMobileClass, "px-6 pb-4")}>
               <Button type="button" variant="outline" onClick={handleCancel} disabled={isSending}>
                 Cancelar
               </Button>

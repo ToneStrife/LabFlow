@@ -42,7 +42,7 @@ import { useReceiveItems, useAggregatedReceivedItems } from "@/hooks/use-packing
 import { toast } from "sonner";
 import FileUploadInput from "@/components/FileUploadInput";
 import { cn } from "@/lib/utils";
-import { dialogFooterMobileClass, dialogBodyScrollClass } from "@/lib/layout";
+import { mobileDialogClass, dialogFooterMobileClass, dialogBodyScrollClass } from "@/lib/layout";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
   compressImageFile,
@@ -947,7 +947,8 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
     >
       <DialogContent
         className={cn(
-          "!flex !flex-col max-h-[90dvh] overflow-hidden gap-0 p-6 sm:max-w-[720px]"
+          mobileDialogClass,
+          "!flex !flex-col gap-0 overflow-hidden p-6 sm:max-w-[720px]"
         )}
         onPointerDownOutside={(e) => e.preventDefault()}
         onInteractOutside={(e) => e.preventDefault()}
