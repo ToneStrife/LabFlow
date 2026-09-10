@@ -141,7 +141,6 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
                   {candidatos.map((perfil) => (
                     <SelectItem key={perfil.id} value={perfil.id}>
                       {getFullName(perfil)}
-                      {perfil.role === "Admin" ? " · Admin" : ""}
                     </SelectItem>
                   ))}
                 </SelectContent>
