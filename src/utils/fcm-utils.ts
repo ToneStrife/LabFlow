@@ -102,6 +102,19 @@ export async function registerPushToken(userId: string) {
       console.error("Error guardando token:", error);
       toast.error("Fallo al guardar el token de notificación.", { description: error.message });
     } else {
+      // Quitar tokens viejos del mismo origen (rotaciones / reinstalaciones)
+      // para no mandar la misma alerta a varios tokens del mismo navegador.
+      const { error: cleanupError } = await supabase
+        .from("fcm_tokens")
+        .delete()
+        .eq("user_id", userId)
+        .eq("origin", location.origin)
+        .neq("token", token);
+
+      if (cleanupError) {
+        console.warn("No se pudieron limpiar tokens FCM antiguos:", cleanupError);
+      }
+
       console.log("FCM Token guardado OK:", token);
       toast.success("Notificaciones activadas.", { description: "Este dispositivo recibirá alertas push." });
     }
