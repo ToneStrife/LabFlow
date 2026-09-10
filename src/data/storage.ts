@@ -54,7 +54,7 @@ export const productDatabase: ProductDetails[] = [
   },
 ];
 
-export let mockProjects: { id: string; name: string; code: string }[] = []; // Removed mock data, will fetch from Supabase
+export let mockProjects: { id: string; name: string; code: string; ip_profile_id: string | null }[] = []; // Removed mock data, will fetch from Supabase
 
 // --- Mock Data Storage ---
 export let mockProfiles: Profile[] = [

@@ -26,7 +26,7 @@ import { RequestItem } from "@/data/types";
 import { showError } from "@/utils/toast";
 import { useSession } from "@/components/SessionContextProvider";
 import { useVendors } from "@/hooks/use-vendors";
-import { useAddRequest, useUpdateRequestFile, useUpdateRequestStatus } from "@/hooks/use-requests";
+import { useAddRequest, useUpdateRequestFile } from "@/hooks/use-requests";
 import { useAccountManagers } from "@/hooks/use-account-managers";
 import { useProjects } from "@/hooks/use-projects";
 import { useShippingAddresses, useBillingAddresses } from "@/hooks/use-addresses";
@@ -232,7 +232,6 @@ const RequestForm: React.FC = () => {
   const { data: billingAddresses, isLoading: isLoadingBillingAddresses } = useBillingAddresses();
   const addRequestMutation = useAddRequest();
   const updateFileMutation = useUpdateRequestFile();
-  const updateStatusMutation = useUpdateRequestStatus();
   const parseQuotePdfMutation = useParseQuotePdf();
 
   const defaultItem = { 
@@ -392,7 +391,8 @@ const RequestForm: React.FC = () => {
       items: itemsToSubmit,
     });
     
-    // 2. Si hay un archivo de cotización, subirlo y actualizar el estado a 'Quote Requested'
+    // 2. Si hay cotización, adjuntarla pero dejar la solicitud en Pending:
+    //    debe aprobarla el IP del proyecto (o un admin), no el solicitante.
     if (quoteFile) {
       try {
         const { filePath } = await updateFileMutation.mutateAsync({
@@ -401,14 +401,8 @@ const RequestForm: React.FC = () => {
           file: quoteFile,
         });
         
-        // Actualizar el estado de la solicitud a 'Quote Requested'
         if (filePath) {
-            await updateStatusMutation.mutateAsync({ 
-                id: newRequest.id, 
-                status: "Quote Requested", 
-                quoteUrl: filePath 
-            });
-            toast.success("Cotización adjunta. Solicitud marcada como 'Cotización Solicitada'.");
+            toast.success("Cotización adjunta. La solicitud queda pendiente de aprobación.");
         }
       } catch (error) {
         showError("La solicitud fue creada, pero falló la subida del archivo de cotización.");
@@ -677,7 +671,7 @@ const RequestForm: React.FC = () => {
         <SeccionFormulario
           titulo="Cotización y notas"
           icono={FileScan}
-          descripcion="Si adjuntas la cotización, la solicitud se creará ya en estado «Cotización solicitada»."
+          descripcion="Si adjuntas la cotización, se guarda con la solicitud; el IP del proyecto debe aprobarla antes de seguir."
         >
         <FormField
           control={form.control}

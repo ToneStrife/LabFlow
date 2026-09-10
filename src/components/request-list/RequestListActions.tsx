@@ -25,7 +25,14 @@ import { SupabaseRequest } from "@/data/types";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { useSession } from "@/components/SessionContextProvider";
-import { canApprovePendingRequest, canMergeRequest, canPerformWorkflowAction, canReceivePackages } from "@/lib/permissions";
+import { useCan } from "@/hooks/use-permissions";
+import { useProjects } from "@/hooks/use-projects";
+import {
+  canApprovePendingRequest,
+  canMergeRequest,
+  canPerformWorkflowAction,
+  canReceivePackages,
+} from "@/lib/permissions";
 
 interface RequestListActionsProps {
   request: SupabaseRequest;
@@ -59,12 +66,20 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
   className,
 }) => {
   const isMobile = useIsMobile();
-  const { profile } = useSession();
-  const role = profile?.role;
-  const canApprove = canApprovePendingRequest(role);
-  const canMerge = canMergeRequest(role) && request.status === "Pending";
-  const canWorkflow = canPerformWorkflowAction(role, request.status);
-  const canReceive = canReceivePackages(role, request.status);
+  const { profile, session } = useSession();
+  const { can } = useCan();
+  const { data: projects } = useProjects();
+  const approvalCtx = {
+    role: profile?.role,
+    userId: session?.user?.id,
+    can,
+    projectCodes: request.project_codes,
+    projects,
+  };
+  const canApprove = canApprovePendingRequest(approvalCtx);
+  const canMerge = canMergeRequest(profile?.role) && request.status === "Pending";
+  const canWorkflow = canPerformWorkflowAction(approvalCtx, request.status);
+  const canReceive = canReceivePackages(profile?.role, request.status);
 
   const iconButtons = (
     <>
