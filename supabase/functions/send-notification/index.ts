@@ -130,19 +130,25 @@ serve(async (req) => {
     const results: Array<{ token: string; success: boolean; status: number; body?: any }> = []
 
     for (const fcmToken of tokensToSend) {
+      // Data-only: FCM no pinta sola; el service worker muestra UNA vez.
+      // (webpush.notification + SW = doble en Android/PWA)
+      const notifTitle = title ?? 'Notificación de LabFlow'
+      const notifBody = body ?? 'Mensaje de prueba desde el administrador.'
       const message = {
         message: {
           token: fcmToken,
+          data: {
+            ...Object.fromEntries(Object.entries(payloadData || {}).map(([k, v]) => [k, String(v)])),
+            title: notifTitle,
+            body: notifBody,
+            link: link || '/dashboard',
+            // Mismo tag = el SO colapsa duplicados del mismo aviso
+            tag: ('labflow:' + notifTitle + '|' + notifBody).slice(0, 120),
+          },
           webpush: {
-            notification: {
-              title: title ?? 'Notificación de LabFlow',
-              body: body ?? 'Mensaje de prueba desde el administrador.',
-              icon: '/LabFlow/favicon.png',
-            },
             fcmOptions: link ? { link } : undefined,
-            data: {
-                ...Object.fromEntries(Object.entries(payloadData || {}).map(([k, v]) => [k, String(v)])),
-                link: link || '/dashboard',
+            headers: {
+              Urgency: 'high',
             },
           },
         },

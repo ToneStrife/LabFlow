@@ -41,12 +41,16 @@ const FirebaseInitializer: React.FC = () => {
         unsubscribe = onMessage(messaging, (payload) => {
           console.log("Foreground message received:", payload);
 
-          const notification = payload.notification;
+          // Data-only FCM: title/body viven en data (evita push dobles en móvil).
           const data = payload.data;
+          const title =
+            data?.title || payload.notification?.title || "Notificación";
+          const body =
+            data?.body || payload.notification?.body || "Mensaje recibido.";
           const link = data?.link;
 
-          sonnerToast(notification?.title || "Notificación", {
-            description: notification?.body || data?.body || "Mensaje recibido.",
+          sonnerToast(title, {
+            description: body,
             action: link
               ? {
                   label: "Ver",
