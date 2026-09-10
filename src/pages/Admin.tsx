@@ -426,18 +426,36 @@ const AdminPage = () => {
                 <DialogTrigger asChild><Button size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Añadir Nuevo Proyecto</Button></DialogTrigger>
                 <DialogContent className={cn(mobileDialogClass, "sm:max-w-[425px]")}>
                   <DialogHeader><DialogTitle>Añadir Nuevo Proyecto</DialogTitle></DialogHeader>
-                  <ProjectForm onSubmit={handleAddProject} onCancel={() => setIsAddProjectDialogOpen(false)} isSubmitting={addProjectMutation.isPending} />
+                  <ProjectForm
+                    profiles={allProfiles || []}
+                    onSubmit={handleAddProject}
+                    onCancel={() => setIsAddProjectDialogOpen(false)}
+                    isSubmitting={addProjectMutation.isPending}
+                  />
                 </DialogContent>
               </Dialog>
             </CardHeader>
             <CardContent>
-              <ProjectTable projects={projects || []} onEdit={openEditProjectDialog} onDelete={handleDeleteProject} />
+              <ProjectTable
+                projects={projects || []}
+                profiles={allProfiles || []}
+                onEdit={openEditProjectDialog}
+                onDelete={handleDeleteProject}
+              />
             </CardContent>
           </Card>
           <Dialog open={isEditProjectDialogOpen} onOpenChange={setIsEditProjectDialogOpen}>
             <DialogContent className={cn(mobileDialogClass, "sm:max-w-[425px]")}>
               <DialogHeader><DialogTitle>Editar Proyecto</DialogTitle></DialogHeader>
-              {editingProject && <ProjectForm initialData={editingProject} onSubmit={(data) => handleEditProject(editingProject.id, data)} onCancel={() => setIsEditProjectDialogOpen(false)} isSubmitting={updateProjectMutation.isPending} />}
+              {editingProject && (
+                <ProjectForm
+                  initialData={editingProject}
+                  profiles={allProfiles || []}
+                  onSubmit={(data) => handleEditProject(editingProject.id, data)}
+                  onCancel={() => setIsEditProjectDialogOpen(false)}
+                  isSubmitting={updateProjectMutation.isPending}
+                />
+              )}
             </DialogContent>
           </Dialog>
         </TabsContent>

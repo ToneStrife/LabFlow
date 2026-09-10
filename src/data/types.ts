@@ -67,6 +67,8 @@ export interface Project {
   created_at: string;
   name: string;
   code: string;
+  /** Perfil del Investigador Principal (quien aprueba pedidos del proyecto) */
+  ip_profile_id: string | null;
 }
 
 export interface EmailTemplate {

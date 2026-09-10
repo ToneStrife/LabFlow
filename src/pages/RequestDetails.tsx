@@ -394,7 +394,15 @@ const RequestDetails: React.FC = () => {
     );
   }
   
-  const isEditableByRole = canEditRequestDetails(profile?.role, request.status);
+  const isEditableByRole = canEditRequestDetails(
+    {
+      role: profile?.role,
+      userId: session?.user?.id,
+      projectCodes: request.project_codes,
+      projects,
+    },
+    request.status
+  );
   const canDelete = canDeleteRequest(profile?.role, session?.user?.id, request.requester_id);
   const vendor = vendors?.find(v => v.id === request.vendor_id);
   const displayRequestNumber = request.request_number || `#${request.id.substring(0, 8)}`;

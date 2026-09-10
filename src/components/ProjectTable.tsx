@@ -11,29 +11,43 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Edit, Trash2 } from "lucide-react";
-import { Project } from "@/data/types"; // Corrected import
+import { Project, Profile } from "@/data/types";
+import { getFullName } from "@/hooks/use-profiles";
 
 interface ProjectTableProps {
   projects: Project[];
+  profiles?: Profile[];
   onEdit: (project: Project) => void;
   onDelete: (projectId: string) => void;
 }
 
-const ProjectTable: React.FC<ProjectTableProps> = ({ projects, onEdit, onDelete }) => {
+const ProjectTable: React.FC<ProjectTableProps> = ({
+  projects,
+  profiles = [],
+  onEdit,
+  onDelete,
+}) => {
+  const nombreIp = (ipProfileId: string | null) => {
+    if (!ipProfileId) return "—";
+    const perfil = profiles.find((p) => p.id === ipProfileId);
+    return perfil ? getFullName(perfil) : "Usuario desconocido";
+  };
+
   return (
     <div className="rounded-md border">
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead>Nombre del Proyecto</TableHead>
-            <TableHead>Código del Proyecto</TableHead>
+            <TableHead>Código</TableHead>
+            <TableHead>IP</TableHead>
             <TableHead className="text-right">Acciones</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {projects.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={3} className="h-24 text-center text-muted-foreground">
+              <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
                 No se encontraron proyectos.
               </TableCell>
             </TableRow>
@@ -42,6 +56,7 @@ const ProjectTable: React.FC<ProjectTableProps> = ({ projects, onEdit, onDelete 
               <TableRow key={project.id}>
                 <TableCell className="font-medium">{project.name}</TableCell>
                 <TableCell>{project.code}</TableCell>
+                <TableCell>{nombreIp(project.ip_profile_id)}</TableCell>
                 <TableCell className="text-right">
                   <Button
                     variant="ghost"
