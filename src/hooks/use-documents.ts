@@ -5,6 +5,9 @@ import { Invoice, PackingSlip } from "@/data/types";
 import { useRequests } from "@/hooks/use-requests";
 import { useVendors } from "@/hooks/use-vendors";
 import { useAllProfiles, getFullName } from "@/hooks/use-profiles";
+import { useShippingAddresses } from "@/hooks/use-addresses";
+import { useSedeActiva } from "@/components/SedeContextProvider";
+import { filterRequestsBySede } from "@/lib/sedes";
 import { getFileNameFromPath } from "@/utils/email-attachments";
 
 export type TipoDocumento = "cotizacion" | "orden" | "albaran" | "factura";
@@ -67,9 +70,12 @@ const useTodasLasFacturas = () =>
  * Reúne en una sola lista los documentos que hoy viven repartidos en tres
  * tablas: cotizaciones y órdenes de compra cuelgan de la solicitud, los
  * albaranes de packing_slips y las facturas de invoices.
+ * Respeta la sede activa del selector global.
  */
 export const useDocumentos = () => {
+  const { sedeActiva } = useSedeActiva();
   const { data: solicitudes, isLoading: cargandoSolicitudes, error } = useRequests();
+  const { data: shippingAddresses, isLoading: cargandoDirecciones } = useShippingAddresses();
   const { data: proveedores, isLoading: cargandoProveedores } = useVendors();
   const { data: perfiles } = useAllProfiles();
   const { data: albaranes, isLoading: cargandoAlbaranes } = useTodosLosAlbaranes();
@@ -77,6 +83,13 @@ export const useDocumentos = () => {
 
   const documentos = React.useMemo<Documento[]>(() => {
     if (!solicitudes) return [];
+
+    const solicitudesDeSede = filterRequestsBySede(
+      solicitudes,
+      shippingAddresses,
+      sedeActiva
+    );
+    const idsSede = new Set(solicitudesDeSede.map((s) => s.id));
 
     const porId = new Map(solicitudes.map((s) => [s.id, s]));
     const nombreProveedor = (vendorId: string) =>
@@ -90,7 +103,7 @@ export const useDocumentos = () => {
 
     const lista: Documento[] = [];
 
-    for (const s of solicitudes) {
+    for (const s of solicitudesDeSede) {
       const comunes = {
         requestId: s.id,
         requestNumber: s.request_number || s.id.substring(0, 8),
@@ -124,6 +137,7 @@ export const useDocumentos = () => {
 
     for (const a of albaranes || []) {
       if (!a.slip_url) continue;
+      if (!idsSede.has(a.request_id)) continue;
       lista.push({
         id: `alb-${a.id}`,
         tipo: "albaran",
@@ -142,6 +156,7 @@ export const useDocumentos = () => {
 
     for (const f of facturas || []) {
       if (!f.invoice_url) continue;
+      if (!idsSede.has(f.request_id)) continue;
       lista.push({
         id: `fac-${f.id}`,
         tipo: "factura",
@@ -164,12 +179,16 @@ export const useDocumentos = () => {
     return lista
       .filter((d) => (vistos.has(d.ruta) ? false : (vistos.add(d.ruta), true)))
       .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
-  }, [solicitudes, proveedores, perfiles, albaranes, facturas]);
+  }, [solicitudes, shippingAddresses, sedeActiva, proveedores, perfiles, albaranes, facturas]);
 
   return {
     documentos,
     isLoading:
-      cargandoSolicitudes || cargandoProveedores || cargandoAlbaranes || cargandoFacturas,
+      cargandoSolicitudes ||
+      cargandoDirecciones ||
+      cargandoProveedores ||
+      cargandoAlbaranes ||
+      cargandoFacturas,
     error,
   };
 };

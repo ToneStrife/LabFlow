@@ -28,6 +28,7 @@ export interface InventoryItemFormData {
   unit_price: number | null | undefined;
   format: string | null | undefined;
   location: string | null | undefined;
+  sede_id: string | null | undefined;
 }
 
 // Add Inventory Item
@@ -44,6 +45,7 @@ export const useAddInventoryItem = () => {
         unit_price: data.unit_price || null,
         format: data.format || null,
         location: data.location || null,
+        sede_id: data.sede_id || null,
       };
       return apiAddInventoryItem(dataToSubmit);
     },

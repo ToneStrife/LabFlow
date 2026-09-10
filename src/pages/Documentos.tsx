@@ -36,6 +36,8 @@ import {
   type Documento,
   type TipoDocumento,
 } from "@/hooks/use-documents";
+import { useSedeActiva } from "@/components/SedeContextProvider";
+import { getSedeLabel } from "@/lib/sedes";
 
 const ESTILO_TIPO: Record<TipoDocumento, { icono: LucideIcon; caja: string; texto: string }> = {
   cotizacion: {
@@ -63,6 +65,7 @@ const ESTILO_TIPO: Record<TipoDocumento, { icono: LucideIcon; caja: string; text
 const ORDEN_TIPOS: TipoDocumento[] = ["cotizacion", "orden", "albaran", "factura"];
 
 const Documentos = () => {
+  const { sedeActiva } = useSedeActiva();
   const { documentos, isLoading, error } = useDocumentos();
   const [busqueda, setBusqueda] = React.useState("");
   const [tipo, setTipo] = React.useState<TipoDocumento | "todos">("todos");
@@ -148,7 +151,10 @@ const Documentos = () => {
       <div>
         <h2 className="text-2xl font-bold tracking-tight">Documentos</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Cotizaciones, órdenes de compra, albaranes y facturas de todas las solicitudes.
+          Cotizaciones, órdenes de compra, albaranes y facturas
+          {sedeActiva
+            ? ` de ${getSedeLabel(sedeActiva)}.`
+            : " de todas las sedes."}
         </p>
       </div>
 

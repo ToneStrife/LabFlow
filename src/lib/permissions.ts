@@ -2,48 +2,62 @@ import { Profile, RequestStatus } from "@/data/types";
 
 export type UserRole = Profile["role"];
 
+/** Comprobador de permisos (p. ej. el que devuelve useCan().can). */
+export type CanFn = (key: string) => boolean;
+
 export function isAdmin(role?: UserRole): boolean {
   return role === "Admin";
 }
 
-export function canApprovePendingRequest(role?: UserRole): boolean {
-  return isAdmin(role);
+export function canApprovePendingRequest(can: CanFn): boolean {
+  return can("requests.approve");
 }
 
-export function canMergeRequest(_role?: UserRole): boolean {
-  return _role != null;
+export function canMergeRequest(can: CanFn): boolean {
+  return can("requests.create");
 }
 
-export function canPerformWorkflowAction(role?: UserRole, status?: RequestStatus): boolean {
-  if (!role || !status) return false;
-  if (status === "Pending") return isAdmin(role);
-  return true;
+/**
+ * Acciones del flujo (cotización, PO, pedido, cancelar…).
+ * En Pending solo quien puede aprobar; en el resto, quien puede
+ * actualizar según la política RLS (edit_any, recepción o dueño).
+ */
+export function canPerformWorkflowAction(
+  can: CanFn,
+  status?: RequestStatus,
+  opts?: { isOwner?: boolean }
+): boolean {
+  if (!status) return false;
+  if (status === "Pending") return can("requests.approve");
+  return can("requests.edit_any") || can("reception.receive") || !!opts?.isOwner;
 }
 
-/** Any authenticated role can receive packages for Ordered requests. */
-export function canReceivePackages(role?: UserRole, status?: RequestStatus): boolean {
-  if (!role || !status) return false;
-  return status === "Ordered";
+export function canReceivePackages(can: CanFn, status?: RequestStatus): boolean {
+  if (!status) return false;
+  return status === "Ordered" && can("reception.receive");
 }
 
-export function canEditRequestDetails(role?: UserRole, status?: RequestStatus): boolean {
-  return canPerformWorkflowAction(role, status);
+export function canEditRequestDetails(
+  can: CanFn,
+  status?: RequestStatus,
+  opts?: { isOwner?: boolean }
+): boolean {
+  return canPerformWorkflowAction(can, status, opts);
 }
 
 export function canDeleteRequest(
-  role?: UserRole,
+  can: CanFn,
   userId?: string,
   requesterId?: string
 ): boolean {
-  if (!role) return false;
-  if (isAdmin(role)) return true;
+  if (can("requests.delete_any")) return true;
   return !!userId && !!requesterId && userId === requesterId;
 }
 
-export function canOverrideStatus(role?: UserRole): boolean {
-  return isAdmin(role);
+export function canOverrideStatus(can: CanFn): boolean {
+  return can("requests.override_status");
 }
 
-export function canAccessInventory(_role?: UserRole): boolean {
-  return _role != null;
+export function canAccessInventory(can: CanFn): boolean {
+  return can("inventory.view");
 }

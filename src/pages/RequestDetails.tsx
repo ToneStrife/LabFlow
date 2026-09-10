@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
-import { useRequests, SupabaseRequest, useUpdateRequestStatus, useSendEmail, useUpdateRequestFile, useUpdateRequestMetadata, useUpdateFullRequest, useRevertRequestReception, useDeleteRequest, FileType } from "@/hooks/use-requests";
+import { useRequest, SupabaseRequest, useUpdateRequestStatus, useSendEmail, useUpdateRequestFile, useUpdateRequestMetadata, useUpdateFullRequest, useRevertRequestReception, useDeleteRequest, FileType } from "@/hooks/use-requests";
 import { useVendors } from "@/hooks/use-vendors";
 import { useAllProfiles, getFullName } from "@/hooks/use-profiles";
 import { useAccountManagers } from "@/hooks/use-account-managers";
@@ -36,6 +36,7 @@ import PackingSlipsList from "@/components/request-details/PackingSlipsList";
 import InvoicesList from "@/components/request-details/InvoicesList";
 import { toast } from "sonner";
 import { useSession } from "@/components/SessionContextProvider";
+import { useCan } from "@/hooks/use-permissions";
 import { isAdmin, canEditRequestDetails, canDeleteRequest, canOverrideStatus } from "@/lib/permissions";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAggregatedReceivedItems } from "@/hooks/use-packing-slips";
@@ -48,10 +49,11 @@ const RequestDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { profile, session } = useSession();
+  const { can } = useCan();
   const { openReceive } = useReceiveWizard();
   const userIsAdmin = isAdmin(profile?.role);
   
-  const { data: requests, isLoading: isLoadingRequests } = useRequests();
+  const { data: request, isLoading: isLoadingRequests } = useRequest(id);
   const { data: vendors, isLoading: isLoadingVendors } = useVendors();
   const { data: profiles, isLoading: isLoadingProfiles } = useAllProfiles();
   const { data: accountManagers, isLoading: isLoadingAccountManagers } = useAccountManagers();
@@ -66,8 +68,6 @@ const RequestDetails: React.FC = () => {
   const revertReceptionMutation = useRevertRequestReception();
   const deleteRequestMutation = useDeleteRequest();
   const sendEmailMutation = useSendEmail();
-
-  const request = requests?.find(req => req.id === id);
 
   const [isEmailDialogOpen, setIsEmailDialogOpen] = React.useState(false);
   const [emailInitialData, setEmailInitialData] = React.useState<Partial<EmailFormValues>>({});
@@ -394,8 +394,9 @@ const RequestDetails: React.FC = () => {
     );
   }
   
-  const isEditableByRole = canEditRequestDetails(profile?.role, request.status);
-  const canDelete = canDeleteRequest(profile?.role, session?.user?.id, request.requester_id);
+  const isOwner = !!session?.user?.id && session.user.id === request.requester_id;
+  const isEditableByRole = canEditRequestDetails(can, request.status, { isOwner });
+  const canDelete = canDeleteRequest(can, session?.user?.id, request.requester_id);
   const vendor = vendors?.find(v => v.id === request.vendor_id);
   const displayRequestNumber = request.request_number || `#${request.id.substring(0, 8)}`;
 
@@ -422,7 +423,7 @@ const RequestDetails: React.FC = () => {
               <Button variant="outline" size="icon" disabled={updateStatusMutation.isPending || deleteRequestMutation.isPending}><MoreVertical className="h-4 w-4" /></Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              {canOverrideStatus(profile?.role) && <DropdownMenuItem onClick={() => { setNewStatus(request.status); setIsStatusOverrideDialogOpen(true); }}><Edit className="mr-2 h-4 w-4" /> Cambiar Estado Manualmente</DropdownMenuItem>}
+              {canOverrideStatus(can) && <DropdownMenuItem onClick={() => { setNewStatus(request.status); setIsStatusOverrideDialogOpen(true); }}><Edit className="mr-2 h-4 w-4" /> Cambiar Estado Manualmente</DropdownMenuItem>}
               {canDelete && <><DropdownMenuSeparator /><DropdownMenuItem onClick={() => setIsDeleteDialogOpen(true)} className="text-red-600 dark:text-red-400"><Trash2 className="mr-2 h-4 w-4" /> Eliminar Solicitud</DropdownMenuItem></>}
             </DropdownMenuContent>
           </DropdownMenu>

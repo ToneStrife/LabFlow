@@ -14,7 +14,12 @@ import {
 } from "lucide-react";
 import { SupabaseRequest } from "@/data/types";
 import { useSession } from "@/components/SessionContextProvider";
-import { canApprovePendingRequest, canPerformWorkflowAction, canReceivePackages } from "@/lib/permissions";
+import { useCan } from "@/hooks/use-permissions";
+import {
+  canApprovePendingRequest,
+  canPerformWorkflowAction,
+  canReceivePackages,
+} from "@/lib/permissions";
 
 interface RequestActionsProps {
   request: SupabaseRequest;
@@ -43,16 +48,21 @@ const RequestActions: React.FC<RequestActionsProps> = ({
   openCancelRequestDialog,
   onSendQuoteRequest,
 }) => {
-  const { profile } = useSession();
-  const role = profile?.role;
-  const canApprove = canApprovePendingRequest(role);
-  const canWorkflow = canPerformWorkflowAction(role, request.status);
-  const canReceive = canReceivePackages(role, request.status);
+  const { session } = useSession();
+  const { can, cargandoPermisos } = useCan();
+  const isOwner = !!session?.user?.id && session.user.id === request.requester_id;
+  const canApprove = canApprovePendingRequest(can);
+  const canWorkflow = canPerformWorkflowAction(can, request.status, { isOwner });
+  const canReceive = canReceivePackages(can, request.status);
+
+  if (cargandoPermisos) {
+    return null;
+  }
 
   if (request.status === "Pending" && !canApprove) {
     return (
       <p className="text-sm text-muted-foreground italic">
-        Pendiente de aprobación por un administrador.
+        Pendiente de aprobación. No tienes permiso para aprobar solicitudes.
       </p>
     );
   }

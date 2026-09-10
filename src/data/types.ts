@@ -181,6 +181,8 @@ export interface InventoryItem {
   unit_price: number | null;
   format: string | null;
   location: string | null;
+  /** Sede del stock; null = sin asignar */
+  sede_id: string | null;
   added_at: string;
   last_updated: string;
 }

@@ -14,8 +14,17 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
 import { InventoryItem } from "@/hooks/use-inventory";
+import { useSedeActiva } from "@/components/SedeContextProvider";
+import { SEDES } from "@/lib/sedes";
 
 const inventoryFormSchema = z.object({
   product_name: z.string().min(1, { message: "El nombre del producto es obligatorio." }),
@@ -31,6 +40,7 @@ const inventoryFormSchema = z.object({
   ),
   format: z.string().optional().nullable(),
   location: z.string().optional().nullable(),
+  sede_id: z.string().optional().nullable(),
 });
 
 export type InventoryFormValues = z.infer<typeof inventoryFormSchema>;
@@ -43,6 +53,7 @@ interface InventoryFormProps {
 }
 
 const InventoryForm: React.FC<InventoryFormProps> = ({ initialData, onSubmit, onCancel, isSubmitting }) => {
+  const { sedeActiva } = useSedeActiva();
   const form = useForm<InventoryFormValues>({
     resolver: zodResolver(inventoryFormSchema),
     defaultValues: initialData ? {
@@ -53,6 +64,7 @@ const InventoryForm: React.FC<InventoryFormProps> = ({ initialData, onSubmit, on
       unit_price: initialData.unit_price,
       format: initialData.format,
       location: initialData.location,
+      sede_id: initialData.sede_id,
     } : {
       product_name: "",
       catalog_number: "",
@@ -61,11 +73,15 @@ const InventoryForm: React.FC<InventoryFormProps> = ({ initialData, onSubmit, on
       unit_price: null,
       format: null,
       location: null,
+      sede_id: sedeActiva,
     },
   });
 
   const handleSubmit = (data: InventoryFormValues) => {
-    onSubmit(data);
+    onSubmit({
+      ...data,
+      sede_id: data.sede_id === "none" ? null : data.sede_id || null,
+    });
   };
 
   return (
@@ -145,6 +161,35 @@ const InventoryForm: React.FC<InventoryFormProps> = ({ initialData, onSubmit, on
               <FormControl>
                 <Input placeholder="ej. 200pack 8cs of 25" {...field} disabled={isSubmitting} value={field.value || ""} onChange={(e) => field.onChange(e.target.value || null)} />
               </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="sede_id"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Sede</FormLabel>
+              <Select
+                disabled={isSubmitting}
+                value={field.value || "none"}
+                onValueChange={(value) => field.onChange(value === "none" ? null : value)}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sin asignar" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="none">Sin asignar</SelectItem>
+                  {SEDES.map((sede) => (
+                    <SelectItem key={sede.id} value={sede.id}>
+                      {sede.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}

@@ -25,7 +25,13 @@ import { SupabaseRequest } from "@/data/types";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { useSession } from "@/components/SessionContextProvider";
-import { canApprovePendingRequest, canMergeRequest, canPerformWorkflowAction, canReceivePackages } from "@/lib/permissions";
+import { useCan } from "@/hooks/use-permissions";
+import {
+  canApprovePendingRequest,
+  canMergeRequest,
+  canPerformWorkflowAction,
+  canReceivePackages,
+} from "@/lib/permissions";
 
 interface RequestListActionsProps {
   request: SupabaseRequest;
@@ -59,12 +65,13 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
   className,
 }) => {
   const isMobile = useIsMobile();
-  const { profile } = useSession();
-  const role = profile?.role;
-  const canApprove = canApprovePendingRequest(role);
-  const canMerge = canMergeRequest(role) && request.status === "Pending";
-  const canWorkflow = canPerformWorkflowAction(role, request.status);
-  const canReceive = canReceivePackages(role, request.status);
+  const { session } = useSession();
+  const { can } = useCan();
+  const isOwner = !!session?.user?.id && session.user.id === request.requester_id;
+  const canApprove = canApprovePendingRequest(can);
+  const canMerge = canMergeRequest(can) && request.status === "Pending";
+  const canWorkflow = canPerformWorkflowAction(can, request.status, { isOwner });
+  const canReceive = canReceivePackages(can, request.status);
 
   const iconButtons = (
     <>

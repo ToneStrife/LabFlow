@@ -339,6 +339,17 @@ export const useReceiveItems = () => {
       if (receivedItemsError) throw new Error(`Fallo al insertar artículos recibidos: ${receivedItemsError.message}`);
 
       // 3. Actualizar el Inventario (usando RPC para manejar la lógica de upsert)
+      // La sede sale de la dirección de envío de la solicitud.
+      const { data: requestForSede } = await supabase
+        .from('requests')
+        .select('shipping_address_id, shipping_address:shipping_addresses (sede_id)')
+        .eq('id', requestId)
+        .maybeSingle();
+
+      const sedeIdFromRequest =
+        (requestForSede as { shipping_address?: { sede_id?: string | null } | null } | null)
+          ?.shipping_address?.sede_id ?? null;
+
       for (const item of items) {
         if (item.quantityReceived !== 0) { // Permitir cantidades negativas para corrección
           const { error: inventoryError } = await supabase.rpc('add_or_update_inventory_item', {
@@ -348,15 +359,22 @@ export const useReceiveItems = () => {
             quantity_in: item.quantityReceived,
             unit_price_in: item.itemDetails.unit_price,
             format_in: item.itemDetails.format,
+            sede_id_in: sedeIdFromRequest,
           });
           if (inventoryError) throw new Error(`Fallo al actualizar el inventario para ${item.itemDetails.product_name}: ${inventoryError.message}`);
 
           if (item.storageLocation) {
-            const { error: locationError } = await supabase
+            let locationQuery = supabase
               .from('inventory')
               .update({ location: item.storageLocation })
               .eq('catalog_number', item.itemDetails.catalog_number)
               .eq('product_name', item.itemDetails.product_name);
+
+            locationQuery = sedeIdFromRequest
+              ? locationQuery.eq('sede_id', sedeIdFromRequest)
+              : locationQuery.is('sede_id', null);
+
+            const { error: locationError } = await locationQuery;
             if (locationError) {
               console.error("Error updating inventory location:", locationError);
             }
