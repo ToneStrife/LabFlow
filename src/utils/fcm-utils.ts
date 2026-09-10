@@ -16,11 +16,6 @@ const getFirebaseMessaging = () => {
   }
 };
 
-function isMobileUA() {
-  const ua = navigator.userAgent || "";
-  return /Android|iPhone|iPad|iPod/i.test(ua);
-}
-
 // Helper para obtener la ruta base dinámica
 const getBasePath = () => window.location.pathname.includes('/LabFlow/') ? '/LabFlow/' : '/';
 
@@ -85,13 +80,9 @@ export async function registerPushToken(userId: string) {
 
     // 3) Subir/actualizar en la tabla fcm_tokens
     const payload = {
-      user_id: userId, // Añadir user_id
+      user_id: userId,
       token,
-      user_agent: navigator.userAgent,
-      platform: navigator.platform,
-      is_mobile: isMobileUA(),
-      origin: location.origin,
-      last_seen_at: new Date().toISOString(),
+      last_used: new Date().toISOString(),
     };
 
     const { error } = await supabase
@@ -102,13 +93,12 @@ export async function registerPushToken(userId: string) {
       console.error("Error guardando token:", error);
       toast.error("Fallo al guardar el token de notificación.", { description: error.message });
     } else {
-      // Quitar tokens viejos del mismo origen (rotaciones / reinstalaciones)
-      // para no mandar la misma alerta a varios tokens del mismo navegador.
+      // Un solo token activo por usuario: los viejos provocan la misma alerta dos veces
+      // en el mismo dispositivo (rotación FCM / reactivar notificaciones).
       const { error: cleanupError } = await supabase
         .from("fcm_tokens")
         .delete()
         .eq("user_id", userId)
-        .eq("origin", location.origin)
         .neq("token", token);
 
       if (cleanupError) {
