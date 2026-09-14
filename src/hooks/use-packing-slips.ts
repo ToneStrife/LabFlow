@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { PackingSlip, ReceivedItem, SupabaseRequestItem, RequestStatus } from "@/data/types";
 import { useSession } from "@/components/SessionContextProvider";
+import { uploadRequestFile } from "@/utils/upload-request-file";
 
 // --- Fetch Hooks ---
 
@@ -124,27 +125,17 @@ export const useCorrectReceivedItemQuantity = () => {
 
 // --- Utilidad: subir archivo de albarán ---
 async function uploadSlipFile(requestId: string, file: File): Promise<string> {
-  const formData = new FormData();
-  formData.append('file', file);
-  formData.append('fileType', 'slip');
-  formData.append('requestId', requestId);
-
-  const { data: uploadData, error: uploadError } = await supabase.functions.invoke('upload-file', {
-    body: formData,
-    method: 'POST',
+  const { filePath } = await uploadRequestFile({
+    requestId,
+    fileType: "slip",
+    file,
   });
 
-  if (uploadError) {
-    console.error("Error uploading slip file:", uploadError);
-    throw new Error(`Fallo al subir el archivo: ${uploadError.message}`);
-  }
-
-  const slipFilePath = (uploadData as { filePath: string | null }).filePath;
-  if (!slipFilePath) {
+  if (!filePath) {
     throw new Error("Fallo al obtener la ruta del archivo subido.");
   }
 
-  return slipFilePath;
+  return filePath;
 }
 
 async function updateRequestSlipUrl(requestId: string, slipFilePath: string) {

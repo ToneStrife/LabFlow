@@ -256,14 +256,34 @@ const RequestDetails: React.FC = () => {
 
   const handleFileUpload = async (file: File | null, poNumber?: string) => {
     if (!request) return;
-    const { poNumber: returnedPoNumber } = await updateFileMutation.mutateAsync({
-      id: request.id,
-      fileType: fileTypeToUpload,
-      file: file,
-      poNumber: poNumber,
-    });
-    if (fileTypeToUpload === "po" && returnedPoNumber && request.status === "PO Requested") {
-        await updateStatusMutation.mutateAsync({ id: request.id, status: "Ordered", poNumber: returnedPoNumber, quoteUrl: request.quote_url });
+    const hasNewPoData = Boolean(file || poNumber?.trim());
+    let returnedPoNumber = poNumber?.trim() || null;
+    let filePath: string | null = null;
+
+    if (hasNewPoData) {
+      const result = await updateFileMutation.mutateAsync({
+        id: request.id,
+        fileType: fileTypeToUpload,
+        file: file,
+        poNumber: poNumber,
+      });
+      returnedPoNumber = result.poNumber?.trim() || poNumber?.trim() || request.po_number || null;
+      filePath = result.filePath;
+    }
+
+    const resolvedPoNumber = returnedPoNumber || request.po_number || null;
+    const savedPoFile = Boolean(file || filePath || request.po_url);
+    if (
+      fileTypeToUpload === "po" &&
+      request.status === "PO Requested" &&
+      (resolvedPoNumber || savedPoFile)
+    ) {
+      await updateStatusMutation.mutateAsync({
+        id: request.id,
+        status: "Ordered",
+        poNumber: resolvedPoNumber,
+        quoteUrl: request.quote_url,
+      });
     }
     setIsUploadDialogOpen(false);
   };
@@ -529,7 +549,7 @@ const RequestDetails: React.FC = () => {
       </Dialog>
 
       <EmailDialog isOpen={isEmailDialogOpen} onOpenChange={handleEmailDialogOpenChange} initialData={emailInitialData} onSend={handleSendEmail} isSending={sendEmailMutation.isPending} />
-      <FileUploadDialog isOpen={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen} onUpload={handleFileUpload} isUploading={updateFileMutation.isPending} fileType={fileTypeToUpload} />
+      <FileUploadDialog isOpen={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen} onUpload={handleFileUpload} isUploading={updateFileMutation.isPending} fileType={fileTypeToUpload} markAsOrdered={fileTypeToUpload === "po" && request?.status === "PO Requested"} hasExistingPoFile={Boolean(request?.po_url)} />
       {request && request.items && <InvoiceItemsDialog isOpen={isInvoiceItemsDialogOpen} onOpenChange={setIsInvoiceItemsDialogOpen} requestId={request.id} requestItems={request.items} />}
     </div>
   );

@@ -6,6 +6,8 @@ import { Camera, FileText, ImageIcon, UploadCloud, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { compressImageFile } from "@/utils/image-file";
+import { assertRequestFileSize } from "@/utils/storage-file";
+import { toast } from "sonner";
 
 interface FileUploadInputProps {
   label: string;
@@ -94,8 +96,13 @@ const FileUploadInput: React.FC<FileUploadInputProps> = ({
     setIsProcessing(true);
     try {
       const processed = compressImages ? await compressImageFile(file) : file;
+      assertRequestFileSize(processed);
       setFileName(processed.name);
       onChange(fileListFromFile(processed));
+    } catch (error) {
+      setFileName(null);
+      onChange(null);
+      toast.error(error instanceof Error ? error.message : "No se pudo leer el archivo.");
     } finally {
       setIsProcessing(false);
       schedulePickerInactive(3000);
@@ -238,7 +245,7 @@ const FileUploadInput: React.FC<FileUploadInputProps> = ({
             <div className="flex flex-col items-center justify-center py-6 px-4 pointer-events-none">
               <UploadCloud className="w-8 h-8 mb-3 text-muted-foreground" />
               <p className="text-sm text-muted-foreground text-center font-semibold">Haz clic para subir</p>
-              <p className="text-xs text-muted-foreground text-center mt-1">PDF, JPG, PNG (Máx. 5&nbsp;MB)</p>
+              <p className="text-xs text-muted-foreground text-center mt-1">PDF, JPG, PNG (Máx. 20&nbsp;MB)</p>
             </div>
           </label>
         </>
@@ -268,7 +275,7 @@ const FileUploadInput: React.FC<FileUploadInputProps> = ({
                 <span className="font-semibold">Haz clic para subir</span>
                 <span className="hidden sm:inline"> o arrastra y suelta</span>
               </p>
-              <p className="text-xs text-muted-foreground text-center">PDF, JPG, PNG (Máx. 5&nbsp;MB)</p>
+              <p className="text-xs text-muted-foreground text-center">PDF, JPG, PNG (Máx. 20&nbsp;MB)</p>
             </div>
           </label>
         </>
