@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { Invoice, InvoicedItem, SupabaseRequestItem } from "@/data/types";
 import { useSession } from "@/components/SessionContextProvider";
+import { uploadRequestFile } from "@/utils/upload-request-file";
 
 // --- Fetch Hooks ---
 
@@ -88,18 +89,12 @@ export const useInvoiceItems = () => {
 
       // 1. Subir archivo si existe
       if (file) {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('fileType', 'invoice'); 
-        formData.append('requestId', requestId);
-
-        const { data: uploadData, error: uploadError } = await supabase.functions.invoke('upload-file', {
-          body: formData,
-          method: 'POST',
+        const { filePath } = await uploadRequestFile({
+          requestId,
+          fileType: "invoice",
+          file,
         });
-
-        if (uploadError) throw new Error(`Fallo al subir factura: ${uploadError.message}`);
-        invoiceUrl = (uploadData as any).filePath;
+        invoiceUrl = filePath;
       }
 
       // 2. Insertar Factura

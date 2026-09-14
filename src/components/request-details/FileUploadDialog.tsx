@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Info } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { FileType } from "@/hooks/use-requests";
 import { toast } from "sonner";
 import FileUploadInput from "../FileUploadInput";
@@ -111,19 +111,22 @@ const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
         return;
     }
     
-    if (isPoUpload) {
-      if (!poNumber.trim() && !selectedFile) {
-        toast.error("Faltan datos", { description: "Indica un número de PO y/o selecciona un archivo." });
-        return;
+    try {
+      if (isPoUpload) {
+        if (!poNumber.trim() && !selectedFile) {
+          toast.error("Faltan datos", { description: "Indica un número de PO y/o selecciona un archivo." });
+          return;
+        }
+        await onUpload(selectedFile, poNumber.trim() || undefined);
+      } else if (isQuoteUpload || isSlipUpload) {
+        await onUpload(selectedFile, poNumber.trim() || undefined);
       }
-      await onUpload(selectedFile, poNumber.trim() || undefined);
-    } else if (isQuoteUpload || isSlipUpload) {
-      // Si llegamos aquí, selectedFile no es null (por la comprobación anterior)
-      await onUpload(selectedFile, poNumber.trim() || undefined);
-    }
 
-    clearDraft();
-    onOpenChange(false);
+      clearDraft();
+      onOpenChange(false);
+    } catch (error) {
+      console.error("Upload failed:", error);
+    }
   };
 
   const isSubmitDisabled =
