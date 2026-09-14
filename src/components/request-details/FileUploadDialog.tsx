@@ -26,6 +26,8 @@ interface FileUploadDialogProps {
   isUploading: boolean;
   fileType: FileType; // 'quote' | 'po' | 'slip'
   draftKey?: string;   // pásame algo estable (p.ej. requestId)
+  markAsOrdered?: boolean;
+  hasExistingPoFile?: boolean;
 }
 
 const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
@@ -35,6 +37,8 @@ const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
   isUploading,
   fileType,
   draftKey = "global",
+  markAsOrdered = false,
+  hasExistingPoFile = false,
 }) => {
   const PERSIST_KEY = React.useMemo(
     () => `uploadDialog:${fileType}:${draftKey}`,
@@ -113,7 +117,7 @@ const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
     
     try {
       if (isPoUpload) {
-        if (!poNumber.trim() && !selectedFile) {
+        if (!poNumber.trim() && !selectedFile && !(markAsOrdered && hasExistingPoFile)) {
           toast.error("Faltan datos", { description: "Indica un número de PO y/o selecciona un archivo." });
           return;
         }
@@ -133,7 +137,7 @@ const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
     isUploading ||
     (fileType === "quote" && !selectedFile) ||
     (fileType === "slip" && !selectedFile) ||
-    (fileType === "po" && !poNumber.trim() && !selectedFile);
+    (fileType === "po" && !poNumber.trim() && !selectedFile && !(markAsOrdered && hasExistingPoFile));
 
   const getTitle = () =>
     fileType === "quote" ? "Subir Archivo de Cotización"
@@ -164,7 +168,9 @@ const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
           <DialogTitle>{getTitle()}</DialogTitle>
           <DialogDescription>
             {fileType === "po"
-              ? "Introduce el número de PO y/o sube el archivo."
+              ? markAsOrdered
+                ? "Sube el PDF de la PO y/o indica el número. La solicitud pasará a Pedido."
+                : "Introduce el número de PO y/o sube el archivo."
               : "Selecciona un archivo para subir."}
           </DialogDescription>
         </DialogHeader>
@@ -204,6 +210,8 @@ const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Subiendo...
               </>
+            ) : fileType === "po" && markAsOrdered ? (
+              "Marcar como Pedido"
             ) : fileType === "po" ? (
               "Guardar Detalles de PO"
             ) : (
