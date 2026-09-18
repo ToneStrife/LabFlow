@@ -1,127 +1,237 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
-import { encode } from "https://deno.land/std@0.208.0/encoding/base64.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.76.1";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-// Función para limpiar el nombre del archivo
+const BUCKET_NAME = "LabFlow";
+const MAX_SIGNED_UPLOAD_BYTES = 20 * 1024 * 1024;
+const MAX_FORMDATA_UPLOAD_BYTES = 4.5 * 1024 * 1024;
+
 const sanitizeFilename = (filename: string) => {
-  // Reemplaza espacios con guiones bajos y elimina caracteres que no sean alfanuméricos, puntos, guiones bajos o guiones.
-  return filename.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
+  const base = filename.split(/[/\\]/).pop()?.trim() || filename;
+  const cleaned = base.replace(/\s+/g, "_").replace(/[^a-zA-Z0-9._-]/g, "");
+  if (cleaned && !cleaned.startsWith(".") && cleaned !== "_" && cleaned !== "-") {
+    return cleaned;
+  }
+  const ext = base.includes(".")
+    ? base.split(".").pop()?.replace(/[^a-zA-Z0-9]/g, "") ?? ""
+    : "";
+  return ext ? `documento.${ext}` : "documento";
+};
+
+const inferContentType = (filename: string, mimeType?: string | null) => {
+  const provided = mimeType?.trim().toLowerCase();
+  if (
+    provided &&
+    provided !== "application/octet-stream" &&
+    provided !== "binary/octet-stream"
+  ) {
+    return provided;
+  }
+  const lower = filename.toLowerCase();
+  if (lower.endsWith(".pdf")) return "application/pdf";
+  if (lower.endsWith(".png")) return "image/png";
+  if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
+  if (lower.endsWith(".webp")) return "image/webp";
+  if (lower.endsWith(".gif")) return "image/gif";
+  if (lower.endsWith(".tif") || lower.endsWith(".tiff")) return "image/tiff";
+  return provided || "application/octet-stream";
+};
+
+const jsonResponse = (body: Record<string, unknown>, status = 200) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+
+interface UploadMetadata {
+  fileType: string;
+  requestId: string;
+  poNumber: string | null;
+  fileName: string | null;
+  mimeType: string | null;
+  fileSize: number;
+}
+
+const parseMetadataFromJson = (body: Record<string, unknown>): UploadMetadata => ({
+  fileType: typeof body.fileType === "string" ? body.fileType : "",
+  requestId: typeof body.requestId === "string" ? body.requestId : "",
+  poNumber: typeof body.poNumber === "string" ? body.poNumber : null,
+  fileName: typeof body.fileName === "string" ? body.fileName : null,
+  mimeType: typeof body.mimeType === "string" ? body.mimeType : null,
+  fileSize: typeof body.fileSize === "number" ? body.fileSize : 0,
+});
+
+const validateMetadata = (meta: UploadMetadata, hasFileBytes: boolean) => {
+  if (!meta.fileType || !meta.requestId) {
+    return "Faltan campos obligatorios: fileType o requestId.";
+  }
+
+  const hasNamedFile = Boolean(meta.fileName) || hasFileBytes;
+  const hasPoNumber = Boolean(meta.poNumber?.trim());
+
+  if (meta.fileType === "po" && !hasNamedFile && !hasPoNumber) {
+    return "Indica un número de PO y/o selecciona un archivo.";
+  }
+
+  if (meta.fileType !== "po" && !hasNamedFile) {
+    return `El archivo de ${meta.fileType} es obligatorio.`;
+  }
+
+  return null;
 };
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
+  if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Crear un cliente de Supabase con el contexto de autenticación del usuario para verificarlo
     const authClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
       {
         global: {
-          headers: { Authorization: req.headers.get('Authorization')! },
+          headers: { Authorization: req.headers.get("Authorization")! },
         },
-      }
+      },
     );
 
-    // 1. Verificar la sesión del usuario
-    const { data: { user }, error: authError } = await authClient.auth.getUser();
+    const {
+      data: { user },
+      error: authError,
+    } = await authClient.auth.getUser();
     if (authError || !user) {
-      console.error('Edge Function: Authentication error', authError);
-      return new Response(JSON.stringify({ error: 'Unauthorized: Invalid session' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      console.error("Edge Function: Authentication error", authError);
+      return jsonResponse({ error: "Unauthorized: Invalid session" }, 401);
     }
 
-    // Crear un cliente con rol de servicio para interactuar con Storage y DB de forma segura
     const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
     );
 
-    // Parsear el FormData para obtener el archivo y los metadatos
-    const formData = await req.formData();
-    const file = formData.get('file') as File | null;
-    const fileType = formData.get('fileType') as string; // 'quote', 'po', 'slip'
-    const requestId = formData.get('requestId') as string;
-    const poNumber = formData.get('poNumber') as string | null;
+    const contentTypeHeader = req.headers.get("content-type") || "";
+    const isMultipart = contentTypeHeader.includes("multipart/form-data");
 
-    // Verificación de campos obligatorios
-    if (!fileType || !requestId) {
-      console.error('Edge Function: Missing required fields: fileType or requestId');
-      return new Response(JSON.stringify({ error: 'Missing required fields: fileType or requestId' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-    }
-    
-    // Si es 'po', el número de PO es obligatorio
-    if (fileType === 'po' && (!poNumber || poNumber.trim() === '')) {
-        console.error('Edge Function: Missing required field: poNumber for PO upload');
-        return new Response(JSON.stringify({ error: 'PO Number is required for PO updates.' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-    }
+    let meta: UploadMetadata;
+    let fileBytes: Uint8Array | null = null;
+    let incomingFileName = "";
 
-    let filePath: string | null = null;
+    if (isMultipart) {
+      const formData = await req.formData();
+      const fileEntry = formData.get("file");
+      const file = fileEntry instanceof Blob ? fileEntry : null;
+      incomingFileName =
+        file && "name" in file && typeof (file as File).name === "string"
+          ? (file as File).name
+          : "";
 
-    if (file && file.size > 0) {
-        // 2. Obtener el request_number de la base de datos (opcional, solo para logs)
-        const { data: requestData } = await supabaseAdmin
-            .from('requests')
-            .select('request_number')
-            .eq('id', requestId)
-            .single();
+      meta = {
+        fileType: String(formData.get("fileType") || ""),
+        requestId: String(formData.get("requestId") || ""),
+        poNumber: (formData.get("poNumber") as string | null) || null,
+        fileName: incomingFileName || null,
+        mimeType: file?.type || null,
+        fileSize: file?.size || 0,
+      };
 
-        const requestNumber = requestData?.request_number || requestId.substring(0, 8);
-        
-        // 3. Generar el nombre de archivo usando el nombre original (sanitizado)
-        const originalFileName = file.name;
-        const sanitizedFileName = sanitizeFilename(originalFileName);
-        
-        // Usamos un prefijo de timestamp para asegurar la unicidad si el usuario sube el mismo nombre de archivo varias veces
-        // y para evitar problemas de caché.
-        const timestampPrefix = Date.now();
-        const finalFileName = `${timestampPrefix}_${sanitizedFileName}`;
-        
-        // Organizar por user_id/request_id/file_type/final_file_name
-        // Usamos el tipo de archivo como subcarpeta para mejor organización
-        filePath = `${user.id}/${requestId}/${fileType}/${finalFileName}`; 
+      const validationError = validateMetadata(meta, Boolean(file && file.size > 0));
+      if (validationError) {
+        return jsonResponse({ error: validationError }, 400);
+      }
 
-        // 4. Subir el archivo a Supabase Storage
-        const { error: uploadError } = await supabaseAdmin.storage
-            .from('LabFlow') // Usar el nombre del bucket 'LabFlow'
-            .upload(filePath, file, {
-                cacheControl: '3600',
-                upsert: true, // Permite sobrescribir si el archivo ya existe
-                contentType: file.type,
-            });
-
-        if (uploadError) {
-            console.error('Edge Function: Supabase Storage upload error:', uploadError);
-            return new Response(JSON.stringify({ error: uploadError.message }), {
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-                status: 500,
-            });
+      if (file && file.size > 0) {
+        if (file.size > MAX_FORMDATA_UPLOAD_BYTES) {
+          return jsonResponse(
+            {
+              error:
+                "El archivo es demasiado grande para esta vía de subida. Prueba de nuevo; los PDF de PO deben ir por URL firmada (hasta 20 MB).",
+            },
+            413,
+          );
         }
-
-        console.log('Edge Function: File uploaded successfully. Path:', filePath);
-    } else if (fileType !== 'po' && fileType !== 'slip') {
-        // Si no hay archivo y no es PO/Slip, es un error (Quote es obligatorio)
-        return new Response(JSON.stringify({ error: `${fileType} file is required.` }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        fileBytes = new Uint8Array(await file.arrayBuffer());
+        if (fileBytes.byteLength === 0) {
+          return jsonResponse({ error: "El archivo está vacío o no se pudo leer." }, 400);
+        }
+      }
+    } else {
+      const body = (await req.json()) as Record<string, unknown>;
+      meta = parseMetadataFromJson(body);
+      const validationError = validateMetadata(meta, false);
+      if (validationError) {
+        return jsonResponse({ error: validationError }, 400);
+      }
+      if (meta.fileName && meta.fileSize > MAX_SIGNED_UPLOAD_BYTES) {
+        return jsonResponse({ error: "El archivo no puede superar 20 MB." }, 400);
+      }
     }
-    
-    // Devolver la RUTA del archivo (filePath) y el número de PO
-    return new Response(JSON.stringify({ filePath: filePath, poNumber: poNumber }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200,
-    });
 
-  } catch (error: any) {
-    console.error('Unhandled error in upload-file:', error);
-    return new Response(JSON.stringify({ error: error.message || 'An unexpected error occurred in the Edge Function.' }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 500,
+    const trimmedPoNumber = meta.poNumber?.trim() || null;
+    const originalName = meta.fileName || incomingFileName || `${meta.fileType}.bin`;
+    const sanitizedFileName = sanitizeFilename(originalName);
+    const timestampPrefix = Date.now();
+    const finalFileName = `${timestampPrefix}_${sanitizedFileName}`;
+    const filePath = `${user.id}/${meta.requestId}/${meta.fileType}/${finalFileName}`;
+    const resolvedContentType = inferContentType(originalName, meta.mimeType);
+
+    if (fileBytes) {
+      const { error: uploadError } = await supabaseAdmin.storage
+        .from(BUCKET_NAME)
+        .upload(filePath, fileBytes, {
+          cacheControl: "3600",
+          upsert: true,
+          contentType: resolvedContentType,
+        });
+
+      if (uploadError) {
+        console.error("Edge Function: Supabase Storage upload error:", uploadError);
+        return jsonResponse({ error: uploadError.message }, 500);
+      }
+
+      console.log("Edge Function: File uploaded successfully. Path:", filePath);
+      return jsonResponse({
+        filePath,
+        poNumber: trimmedPoNumber,
+        needsUpload: false,
+      });
+    }
+
+    if (meta.fileName) {
+      const { data: signed, error: signError } = await supabaseAdmin.storage
+        .from(BUCKET_NAME)
+        .createSignedUploadUrl(filePath, { upsert: true });
+
+      if (signError || !signed?.token) {
+        console.error("Edge Function: signed upload URL error:", signError);
+        return jsonResponse(
+          { error: signError?.message || "No se pudo crear la URL de subida." },
+          500,
+        );
+      }
+
+      return jsonResponse({
+        filePath: signed.path || filePath,
+        poNumber: trimmedPoNumber,
+        token: signed.token,
+        needsUpload: true,
+      });
+    }
+
+    return jsonResponse({
+      filePath: null,
+      poNumber: trimmedPoNumber,
+      needsUpload: false,
     });
+  } catch (error: unknown) {
+    const message =
+      error instanceof Error ? error.message : "An unexpected error occurred in the Edge Function.";
+    console.error("Unhandled error in upload-file:", error);
+    return jsonResponse({ error: message }, 500);
   }
 });

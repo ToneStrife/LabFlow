@@ -16,6 +16,7 @@ import {
   SupabaseRequestItem, 
 } from "@/data/types";
 import { buildAuthReturnUrl } from "@/lib/auth-redirect";
+import { uploadRequestFile } from "@/utils/upload-request-file";
 
 // Mantener las importaciones de mock data para otras tablas hasta que se conviertan
 import {
@@ -581,37 +582,12 @@ export const apiUpdateRequestFile = async (
   file: File | null, 
   poNumber: string | null = null
 ): Promise<{ filePath: string | null; poNumber: string | null }> => {
-  const { data: { session }, error: refreshError } = await supabase.auth.refreshSession();
-  if (refreshError || !session) {
-    throw new Error("Failed to refresh session. Please log in again.");
-  }
-
-  const formData = new FormData();
-  if (file) {
-    formData.append('file', file);
-  }
-  formData.append('fileType', fileType);
-  formData.append('requestId', id);
-  if (poNumber) {
-    formData.append('poNumber', poNumber);
-  }
-
-  const { data: edgeFunctionData, error } = await supabase.functions.invoke('upload-file', {
-    body: formData,
-    method: 'POST',
+  const { filePath, poNumber: returnedPoNumber } = await uploadRequestFile({
+    requestId: id,
+    fileType,
+    file,
+    poNumber,
   });
-
-  if (error) {
-    let errorMessage = 'Fallo al subir archivo via Edge Function.';
-    if (edgeFunctionData && typeof edgeFunctionData === 'object' && 'error' in edgeFunctionData) {
-        errorMessage = (edgeFunctionData as any).error;
-    } else if (error.message) {
-        errorMessage = error.message;
-    }
-    throw new Error(errorMessage);
-  }
-  
-  const { filePath, poNumber: returnedPoNumber } = edgeFunctionData as { filePath: string | null; poNumber: string | null };
 
   const updateData: Partial<SupabaseRequest> = {};
   if (filePath) {

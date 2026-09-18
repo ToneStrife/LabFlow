@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Info } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { FileType } from "@/hooks/use-requests";
 import { toast } from "sonner";
 import FileUploadInput from "../FileUploadInput";
@@ -26,6 +26,8 @@ interface FileUploadDialogProps {
   isUploading: boolean;
   fileType: FileType; // 'quote' | 'po' | 'slip'
   draftKey?: string;   // pásame algo estable (p.ej. requestId)
+  markAsOrdered?: boolean;
+  hasExistingPoFile?: boolean;
 }
 
 const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
@@ -35,6 +37,8 @@ const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
   isUploading,
   fileType,
   draftKey = "global",
+  markAsOrdered = false,
+  hasExistingPoFile = false,
 }) => {
   const PERSIST_KEY = React.useMemo(
     () => `uploadDialog:${fileType}:${draftKey}`,
@@ -111,26 +115,29 @@ const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
         return;
     }
     
-    if (isPoUpload) {
-      if (!poNumber.trim() && !selectedFile) {
-        toast.error("Faltan datos", { description: "Indica un número de PO y/o selecciona un archivo." });
-        return;
+    try {
+      if (isPoUpload) {
+        if (!poNumber.trim() && !selectedFile && !(markAsOrdered && hasExistingPoFile)) {
+          toast.error("Faltan datos", { description: "Indica un número de PO y/o selecciona un archivo." });
+          return;
+        }
+        await onUpload(selectedFile, poNumber.trim() || undefined);
+      } else if (isQuoteUpload || isSlipUpload) {
+        await onUpload(selectedFile, poNumber.trim() || undefined);
       }
-      await onUpload(selectedFile, poNumber.trim() || undefined);
-    } else if (isQuoteUpload || isSlipUpload) {
-      // Si llegamos aquí, selectedFile no es null (por la comprobación anterior)
-      await onUpload(selectedFile, poNumber.trim() || undefined);
-    }
 
-    clearDraft();
-    onOpenChange(false);
+      clearDraft();
+      onOpenChange(false);
+    } catch (error) {
+      console.error("Upload failed:", error);
+    }
   };
 
   const isSubmitDisabled =
     isUploading ||
     (fileType === "quote" && !selectedFile) ||
     (fileType === "slip" && !selectedFile) ||
-    (fileType === "po" && !poNumber.trim() && !selectedFile);
+    (fileType === "po" && !poNumber.trim() && !selectedFile && !(markAsOrdered && hasExistingPoFile));
 
   const getTitle = () =>
     fileType === "quote" ? "Subir Archivo de Cotización"
@@ -161,7 +168,9 @@ const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
           <DialogTitle>{getTitle()}</DialogTitle>
           <DialogDescription>
             {fileType === "po"
-              ? "Introduce el número de PO y/o sube el archivo."
+              ? markAsOrdered
+                ? "Sube el PDF de la PO y/o indica el número. La solicitud pasará a Pedido."
+                : "Introduce el número de PO y/o sube el archivo."
               : "Selecciona un archivo para subir."}
           </DialogDescription>
         </DialogHeader>
@@ -201,6 +210,8 @@ const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Subiendo...
               </>
+            ) : fileType === "po" && markAsOrdered ? (
+              "Marcar como Pedido"
             ) : fileType === "po" ? (
               "Guardar Detalles de PO"
             ) : (
