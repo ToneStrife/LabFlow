@@ -27,9 +27,15 @@ const fullEditSchema = z.object({
   vendorId: z.string().min(1, { message: "El proveedor es obligatorio." }),
   shippingAddressId: z.string().min(1, { message: "La dirección de envío es obligatoria." }),
   billingAddressId: z.string().min(1, { message: "La dirección de facturación es obligatoria." }),
-  accountManagerId: z.union([z.string().uuid({ message: "ID de gerente no válido." }), z.literal("unassigned")]).optional(),
-  notes: z.string().optional(),
-  projectCodes: z.array(z.string()).optional(),
+  accountManagerId: z.preprocess(
+    (val) => (val === null || val === "" ? "unassigned" : val),
+    z.union([z.string().uuid({ message: "ID de gerente no válido." }), z.literal("unassigned")]).optional()
+  ),
+  notes: z.string().optional().nullable(),
+  projectCodes: z.preprocess(
+    (val) => (Array.isArray(val) ? val : []),
+    z.array(z.string()).optional()
+  ),
 });
 export type FullEditFormValues = z.infer<typeof fullEditSchema>;
 
@@ -46,25 +52,22 @@ const RequestFullEditForm: React.FC<RequestFullEditFormProps> = ({ request, prof
   const { data: projects, isLoading: isLoadingProjects } = useProjects();
   const { data: shippingAddresses, isLoading: isLoadingShippingAddresses } = useShippingAddresses();
   const { data: billingAddresses, isLoading: isLoadingBillingAddresses } = useBillingAddresses();
-
-  const defaultProjectCodes = request.project_codes || [];
   const requesterProfile = profiles.find((p) => p.id === request.requester_id);
 
-  // ---- defaultValues memoizados (solo en montaje / cuando cambie la request)
   const defaultValues = React.useMemo<FullEditFormValues>(() => ({
     vendorId: request.vendor_id,
     shippingAddressId: request.shipping_address_id || "",
     billingAddressId: request.billing_address_id || "",
     accountManagerId: request.account_manager_id || "unassigned",
     notes: request.notes || "",
-    projectCodes: defaultProjectCodes,
+    projectCodes: request.project_codes ?? [],
   }), [
     request.vendor_id,
     request.shipping_address_id,
     request.billing_address_id,
     request.account_manager_id,
     request.notes,
-    defaultProjectCodes,
+    request.project_codes,
   ]);
 
   const form = useForm<FullEditFormValues>({

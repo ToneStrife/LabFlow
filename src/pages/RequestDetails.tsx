@@ -37,6 +37,7 @@ import InvoicesList from "@/components/request-details/InvoicesList";
 import { toast } from "sonner";
 import { useSession } from "@/components/SessionContextProvider";
 import { isAdmin, canEditRequestDetails, canDeleteRequest, canOverrideStatus } from "@/lib/permissions";
+import { useCan } from "@/hooks/use-permissions";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAggregatedReceivedItems } from "@/hooks/use-packing-slips";
 import { buildStorageAttachment, openEmailDialogAfterClose, normalizeAttachments } from "@/utils/email-attachments";
@@ -48,6 +49,7 @@ const RequestDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { profile, session } = useSession();
+  const { can } = useCan();
   const { openReceive } = useReceiveWizard();
   const userIsAdmin = isAdmin(profile?.role);
   
@@ -310,15 +312,19 @@ const RequestDetails: React.FC = () => {
 
   const handleUpdateFullRequest = async (data: FullEditFormValues) => {
     if (!request) return;
+    const accountManagerId =
+      !data.accountManagerId || data.accountManagerId === "unassigned"
+        ? null
+        : data.accountManagerId;
     await updateFullRequestMutation.mutateAsync({
       id: request.id,
       data: {
         vendorId: data.vendorId,
         shippingAddressId: data.shippingAddressId,
         billingAddressId: data.billingAddressId,
-        accountManagerId: data.accountManagerId === 'unassigned' ? null : data.accountManagerId,
-        notes: data.notes,
-        projectCodes: data.projectCodes,
+        accountManagerId,
+        notes: data.notes ?? null,
+        projectCodes: data.projectCodes?.length ? data.projectCodes : null,
       }
     });
     setIsEditMetadataDialogOpen(false);
@@ -398,8 +404,10 @@ const RequestDetails: React.FC = () => {
     {
       role: profile?.role,
       userId: session?.user?.id,
+      can,
       projectCodes: request.project_codes,
       projects,
+      requesterId: request.requester_id,
     },
     request.status
   );
