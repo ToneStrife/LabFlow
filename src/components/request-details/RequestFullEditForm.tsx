@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useForm, useWatch } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
@@ -16,25 +16,27 @@ import { Badge } from "@/components/ui/badge";
 import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { dialogBodyScrollClass, dialogFooterMobileClass } from "@/lib/layout";
 import { SupabaseRequest, Profile } from "@/data/types";
 import { useAccountManagers } from "@/hooks/use-account-managers";
 import { useProjects } from "@/hooks/use-projects";
 import { useVendors } from "@/hooks/use-vendors";
 import { useShippingAddresses, useBillingAddresses } from "@/hooks/use-addresses";
 import { getFullName } from "@/hooks/use-profiles";
+import { formatShippingAddressLabel } from "@/lib/sedes";
 
 const fullEditSchema = z.object({
   vendorId: z.string().min(1, { message: "El proveedor es obligatorio." }),
   shippingAddressId: z.string().min(1, { message: "La dirección de envío es obligatoria." }),
   billingAddressId: z.string().min(1, { message: "La dirección de facturación es obligatoria." }),
   accountManagerId: z.preprocess(
-    (val) => (val === null || val === "" ? "unassigned" : val),
-    z.union([z.string().uuid({ message: "ID de gerente no válido." }), z.literal("unassigned")]).optional()
+    (val) => (val === null || val === undefined || val === "" ? "unassigned" : val),
+    z.union([z.string().uuid({ message: "ID de gerente no válido." }), z.literal("unassigned")])
   ),
   notes: z.string().optional().nullable(),
   projectCodes: z.preprocess(
     (val) => (Array.isArray(val) ? val : []),
-    z.array(z.string()).optional()
+    z.array(z.string())
   ),
 });
 export type FullEditFormValues = z.infer<typeof fullEditSchema>;
@@ -44,9 +46,16 @@ interface RequestFullEditFormProps {
   profiles: Profile[];
   onSubmit: (data: FullEditFormValues) => Promise<void>;
   isSubmitting: boolean;
+  onCancel?: () => void;
 }
 
-const RequestFullEditForm: React.FC<RequestFullEditFormProps> = ({ request, profiles, onSubmit, isSubmitting }) => {
+const RequestFullEditForm: React.FC<RequestFullEditFormProps> = ({
+  request,
+  profiles,
+  onSubmit,
+  isSubmitting,
+  onCancel,
+}) => {
   const { data: vendors, isLoading: isLoadingVendors } = useVendors();
   const { data: accountManagers, isLoading: isLoadingManagers } = useAccountManagers();
   const { data: projects, isLoading: isLoadingProjects } = useProjects();
@@ -54,74 +63,20 @@ const RequestFullEditForm: React.FC<RequestFullEditFormProps> = ({ request, prof
   const { data: billingAddresses, isLoading: isLoadingBillingAddresses } = useBillingAddresses();
   const requesterProfile = profiles.find((p) => p.id === request.requester_id);
 
-  const defaultValues = React.useMemo<FullEditFormValues>(() => ({
-    vendorId: request.vendor_id,
-    shippingAddressId: request.shipping_address_id || "",
-    billingAddressId: request.billing_address_id || "",
-    accountManagerId: request.account_manager_id || "unassigned",
-    notes: request.notes || "",
-    projectCodes: request.project_codes ?? [],
-  }), [
-    request.vendor_id,
-    request.shipping_address_id,
-    request.billing_address_id,
-    request.account_manager_id,
-    request.notes,
-    request.project_codes,
-  ]);
-
   const form = useForm<FullEditFormValues>({
     resolver: zodResolver(fullEditSchema),
-    defaultValues,
+    defaultValues: {
+      vendorId: request.vendor_id || "",
+      shippingAddressId: request.shipping_address_id || "",
+      billingAddressId: request.billing_address_id || "",
+      accountManagerId: request.account_manager_id || "unassigned",
+      notes: request.notes || "",
+      projectCodes: request.project_codes ?? [],
+    },
   });
-
-  // ---- PERSISTENCIA por request.id
-  const PERSIST_KEY = React.useMemo(() => `requestFullEdit:${request.id}`, [request.id]);
-
-  // Restore al montar o cuando cambie la request
-  React.useEffect(() => {
-    try {
-      const raw = localStorage.getItem(PERSIST_KEY);
-      if (raw) {
-        const saved = JSON.parse(raw);
-        // mezcla con defaultValues para no perder campos nuevos
-        form.reset({ ...defaultValues, ...saved });
-        return;
-      }
-    } catch {}
-    // si no hay guardado, usa defaultValues
-    form.reset(defaultValues);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [PERSIST_KEY, defaultValues]);
-
-  // Autosave (debounce)
-  const watched = useWatch({ control: form.control });
-  React.useEffect(() => {
-    const id = setTimeout(() => {
-      try {
-        localStorage.setItem(PERSIST_KEY, JSON.stringify(watched));
-      } catch {}
-    }, 300);
-    return () => clearTimeout(id);
-  }, [watched, PERSIST_KEY]);
-
-  // Guardar también si la pestaña se va al fondo (Memory Saver / lid close)
-  React.useEffect(() => {
-    const onHide = () => {
-      if (document.visibilityState !== "hidden") return;
-      try {
-        const snap = form.getValues();
-        localStorage.setItem(PERSIST_KEY, JSON.stringify(snap));
-      } catch {}
-    };
-    document.addEventListener("visibilitychange", onHide);
-    return () => document.removeEventListener("visibilitychange", onHide);
-  }, [PERSIST_KEY, form]);
 
   const handleSubmit = async (data: FullEditFormValues) => {
     await onSubmit(data);
-    // limpia borrador tras guardar OK
-    try { localStorage.removeItem(PERSIST_KEY); } catch {}
   };
 
   const isLoading =
@@ -131,191 +86,217 @@ const RequestFullEditForm: React.FC<RequestFullEditFormProps> = ({ request, prof
     isLoadingShippingAddresses ||
     isLoadingBillingAddresses;
 
+  const submitError = form.formState.errors.root?.message
+    || (Object.keys(form.formState.errors).length > 0
+      ? "Revisa los campos marcados. Gerente y proyectos pueden quedar vacíos."
+      : null);
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormItem>
-            <FormLabel>Solicitante</FormLabel>
-            <FormControl>
-              <Input value={getFullName(requesterProfile) || "—"} readOnly disabled />
-            </FormControl>
-          </FormItem>
-
-          <FormField
-            control={form.control}
-            name="vendorId"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Proveedor</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingVendors || isSubmitting}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder={isLoadingVendors ? "Cargando proveedores..." : "Selecciona un proveedor"} />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {vendors?.map((vendor) => (
-                      <SelectItem key={vendor.id} value={vendor.id}>{vendor.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="shippingAddressId"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Dirección de Envío</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingShippingAddresses || isSubmitting}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder={isLoadingShippingAddresses ? "Cargando direcciones..." : "Selecciona dirección de envío"} />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {shippingAddresses?.map((address) => (
-                      <SelectItem key={address.id} value={address.id}>{address.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="billingAddressId"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Dirección de Facturación</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingBillingAddresses || isSubmitting}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder={isLoadingBillingAddresses ? "Cargando direcciones..." : "Selecciona dirección de facturación"} />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {billingAddresses?.map((address) => (
-                      <SelectItem key={address.id} value={address.id}>{address.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="accountManagerId"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Gerente de Cuenta Asignado</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value || "unassigned"} disabled={isLoadingManagers || isSubmitting}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder={isLoadingManagers ? "Cargando gerentes..." : "Selecciona un gerente de cuenta"} />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="unassigned">Sin Gerente</SelectItem>
-                    {accountManagers?.map((manager) => (
-                      <SelectItem key={manager.id} value={manager.id}>
-                        {`${manager.first_name} ${manager.last_name}`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="projectCodes"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Códigos de Proyecto</FormLabel>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <FormControl>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        className={cn("w-full justify-between", (!field.value || field.value.length === 0) && "text-muted-foreground")}
-                        disabled={isLoadingProjects || isSubmitting}
-                      >
-                        {field.value && field.value.length > 0 ? (
-                          <div className="flex flex-wrap gap-1">
-                            {field.value.map((projectId) => {
-                              const project = projects?.find((p) => p.id === projectId);
-                              return project ? <Badge key={projectId} variant="secondary">{project.code}</Badge> : null;
-                            })}
-                          </div>
-                        ) : "Seleccionar proyectos..."}
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                    </FormControl>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                    <Command>
-                      <CommandInput placeholder="Buscar proyectos..." />
-                      <CommandEmpty>No se encontró ningún proyecto.</CommandEmpty>
-                      <CommandGroup>
-                        {projects?.map((project) => (
-                          <CommandItem
-                            value={project.name}
-                            key={project.id}
-                            onSelect={() => {
-                              const currentValues = field.value || [];
-                              if (currentValues.includes(project.id)) {
-                                field.onChange(currentValues.filter((id) => id !== project.id));
-                              } else {
-                                field.onChange([...currentValues, project.id]);
-                              }
-                            }}
-                          >
-                            <Check className={cn("mr-2 h-4 w-4", field.value?.includes(project.id) ? "opacity-100" : "opacity-0")} />
-                            {project.name} ({project.code})
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        <FormField
-          control={form.control}
-          name="notes"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Notas</FormLabel>
-              <FormControl>
-                <Textarea placeholder="Cualquier detalle específico sobre esta solicitud..." {...field} disabled={isSubmitting} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="flex min-h-0 flex-1 flex-col">
+        <div className={cn(dialogBodyScrollClass, "space-y-4 px-6 py-4")}>
+          {submitError && (
+            <p className="text-sm text-destructive">{submitError}</p>
           )}
-        />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormItem>
+              <FormLabel>Solicitante</FormLabel>
+              <FormControl>
+                <Input value={getFullName(requesterProfile) || "—"} readOnly disabled />
+              </FormControl>
+            </FormItem>
 
-        <div className="flex justify-end pt-4">
+            <FormField
+              control={form.control}
+              name="vendorId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Proveedor</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingVendors || isSubmitting}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder={isLoadingVendors ? "Cargando proveedores..." : "Selecciona un proveedor"} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {vendors?.map((vendor) => (
+                        <SelectItem key={vendor.id} value={vendor.id}>{vendor.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="shippingAddressId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Dirección de Envío</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingShippingAddresses || isSubmitting}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder={isLoadingShippingAddresses ? "Cargando direcciones..." : "Selecciona dirección de envío"} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {shippingAddresses?.map((address) => (
+                        <SelectItem key={address.id} value={address.id}>
+                          {formatShippingAddressLabel(address)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="billingAddressId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Dirección de Facturación</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingBillingAddresses || isSubmitting}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder={isLoadingBillingAddresses ? "Cargando direcciones..." : "Selecciona dirección de facturación"} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {billingAddresses?.map((address) => (
+                        <SelectItem key={address.id} value={address.id}>{address.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="accountManagerId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Gerente de Cuenta (opcional)</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value || "unassigned"} disabled={isLoadingManagers || isSubmitting}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder={isLoadingManagers ? "Cargando gerentes..." : "Selecciona un gerente de cuenta"} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="unassigned">Sin Gerente</SelectItem>
+                      {accountManagers?.map((manager) => (
+                        <SelectItem key={manager.id} value={manager.id}>
+                          {`${manager.first_name} ${manager.last_name}`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="projectCodes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Códigos de Proyecto (opcional)</FormLabel>
+                  <Popover modal>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          role="combobox"
+                          className={cn("w-full justify-between", (!field.value || field.value.length === 0) && "text-muted-foreground")}
+                          disabled={isLoadingProjects || isSubmitting}
+                        >
+                          {field.value && field.value.length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {field.value.map((projectId) => {
+                                const project = projects?.find((p) => p.id === projectId);
+                                return project ? <Badge key={projectId} variant="secondary">{project.code}</Badge> : null;
+                              })}
+                            </div>
+                          ) : "Sin proyecto"}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[--radix-popover-trigger-width] z-[80] p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Buscar proyectos..." />
+                        <CommandEmpty>No se encontró ningún proyecto.</CommandEmpty>
+                        <CommandGroup>
+                          {projects?.map((project) => (
+                            <CommandItem
+                              value={`${project.name} ${project.code}`}
+                              key={project.id}
+                              onSelect={() => {
+                                const currentValues = field.value || [];
+                                if (currentValues.includes(project.id)) {
+                                  field.onChange(currentValues.filter((id) => id !== project.id));
+                                } else {
+                                  field.onChange([...currentValues, project.id]);
+                                }
+                              }}
+                            >
+                              <Check className={cn("mr-2 h-4 w-4", field.value?.includes(project.id) ? "opacity-100" : "opacity-0")} />
+                              {project.name} ({project.code})
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <FormField
+            control={form.control}
+            name="notes"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Notas</FormLabel>
+                <FormControl>
+                  <Textarea
+                    placeholder="Cualquier detalle específico sobre esta solicitud..."
+                    disabled={isSubmitting}
+                    value={field.value ?? ""}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    name={field.name}
+                    ref={field.ref}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <div className={cn(dialogFooterMobileClass, "px-6 pb-4")}>
+          {onCancel && (
+            <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
+              Cancelar
+            </Button>
+          )}
           <Button type="submit" disabled={isSubmitting || isLoading}>
-            {isSubmitting ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando...</>) : "Guardar Todos los Cambios"}
+            {isSubmitting ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando...</>) : "Guardar Cambios"}
           </Button>
         </div>
       </form>

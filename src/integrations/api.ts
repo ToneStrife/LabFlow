@@ -527,7 +527,7 @@ export const apiUpdateFullRequest = async (id: string, data: UpdateFullRequestDa
     billing_address_id: data.billingAddressId,
     account_manager_id: data.accountManagerId,
     notes: data.notes,
-    project_codes: data.projectCodes,
+    project_codes: data.projectCodes ?? [],
   };
 
   const { data: updatedRequest, error } = await supabase
@@ -538,9 +538,12 @@ export const apiUpdateFullRequest = async (id: string, data: UpdateFullRequestDa
       *,
       items:request_items (*)
     `)
-    .single();
+    .maybeSingle();
 
   if (error) throw new Error(error.message);
+  if (!updatedRequest) {
+    throw new Error("No se pudo guardar. Comprueba que puedes editar esta solicitud.");
+  }
   return updatedRequest as SupabaseRequest;
 };
 

@@ -316,18 +316,22 @@ const RequestDetails: React.FC = () => {
       !data.accountManagerId || data.accountManagerId === "unassigned"
         ? null
         : data.accountManagerId;
-    await updateFullRequestMutation.mutateAsync({
-      id: request.id,
-      data: {
-        vendorId: data.vendorId,
-        shippingAddressId: data.shippingAddressId,
-        billingAddressId: data.billingAddressId,
-        accountManagerId,
-        notes: data.notes ?? null,
-        projectCodes: data.projectCodes?.length ? data.projectCodes : null,
-      }
-    });
-    setIsEditMetadataDialogOpen(false);
+    try {
+      await updateFullRequestMutation.mutateAsync({
+        id: request.id,
+        data: {
+          vendorId: data.vendorId,
+          shippingAddressId: data.shippingAddressId,
+          billingAddressId: data.billingAddressId,
+          accountManagerId,
+          notes: data.notes ?? null,
+          projectCodes: data.projectCodes ?? [],
+        }
+      });
+      setIsEditMetadataDialogOpen(false);
+    } catch {
+      // El toast lo emite la mutación; el diálogo permanece abierto.
+    }
   };
 
   const handleStatusOverride = async () => {
@@ -488,9 +492,25 @@ const RequestDetails: React.FC = () => {
       
       {/* ... (resto de diálogos sin cambios) */}
       <Dialog open={isEditMetadataDialogOpen} onOpenChange={setIsEditMetadataDialogOpen}>
-        <DialogContent className={cn(mobileDialogClass, "sm:max-w-[600px]")}>
-          <DialogHeader><DialogTitle>Editar Detalles</DialogTitle></DialogHeader>
-          {request && isEditableByRole && <RequestFullEditForm request={request} profiles={profiles || []} onSubmit={handleUpdateFullRequest} isSubmitting={updateFullRequestMutation.isPending} />}
+        <DialogContent className={cn(mobileDialogClass, "sm:max-w-[600px] gap-0 overflow-hidden p-0")}>
+          <div className="shrink-0 space-y-1.5 border-b px-6 py-4 pr-12">
+            <DialogHeader className="space-y-1.5 text-left">
+              <DialogTitle>Editar Detalles</DialogTitle>
+              <DialogDescription>
+                Gerente de cuenta y proyectos son opcionales. Puedes guardar el reorden tal cual.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+          {isEditMetadataDialogOpen && request && isEditableByRole && (
+            <RequestFullEditForm
+              key={request.id}
+              request={request}
+              profiles={profiles || []}
+              onSubmit={handleUpdateFullRequest}
+              isSubmitting={updateFullRequestMutation.isPending}
+              onCancel={() => setIsEditMetadataDialogOpen(false)}
+            />
+          )}
         </DialogContent>
       </Dialog>
 
