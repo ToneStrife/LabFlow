@@ -13,6 +13,10 @@ import { useSedeActiva } from "@/components/SedeContextProvider";
 import { useRequests } from "@/hooks/use-requests";
 import { useShippingAddresses } from "@/hooks/use-addresses";
 import { filterRequestsBySede, getSedeLabel } from "@/lib/sedes";
+import { useClientPagination } from "@/hooks/use-client-pagination";
+import ListPagination from "@/components/ListPagination";
+
+const compactTable = "[&_th]:h-9 [&_th]:px-3 [&_td]:px-3 [&_td]:py-2";
 
 const PendingItemsList: React.FC = () => {
   const { data: pendingItems, isLoading, error } = usePendingItems();
@@ -33,9 +37,14 @@ const PendingItemsList: React.FC = () => {
 
   const totalSinFiltrar = pendingItems?.length ?? 0;
 
-  const groupedByRequest = React.useMemo(() => {
-    const groups = new Map<string, typeof itemsForSede>();
-    itemsForSede.forEach((item) => {
+  const pagination = useClientPagination(itemsForSede, {
+    initialPageSize: 15,
+    resetKey: sedeActiva ?? "all",
+  });
+
+  const groupedPageItems = React.useMemo(() => {
+    const groups = new Map<string, typeof pagination.pageItems>();
+    pagination.pageItems.forEach((item) => {
       const list = groups.get(item.requestId) || [];
       list.push(item);
       groups.set(item.requestId, list);
@@ -46,7 +55,7 @@ const PendingItemsList: React.FC = () => {
       vendorName: items[0].vendorName,
       items,
     }));
-  }, [itemsForSede]);
+  }, [pagination.pageItems]);
 
   if (isLoading || isLoadingRequests || isLoadingShipping) {
     return (
@@ -66,19 +75,24 @@ const PendingItemsList: React.FC = () => {
       : "¡Todo al día! No hay artículos pendientes de recibir.";
 
   return (
-    <Card className="shadow-sm border-amber-200 dark:border-amber-900/70">
-      <CardHeader className="bg-amber-50/70 dark:bg-amber-950/30 border-b border-amber-200/60 dark:border-amber-900/50">
+    <Card className="overflow-hidden shadow-sm border-amber-200 dark:border-amber-900/70">
+      <CardHeader className="bg-amber-50/70 dark:bg-amber-950/30 border-b border-amber-200/60 dark:border-amber-900/50 py-3">
         <CardTitle className="text-lg flex items-center text-amber-800 dark:text-amber-300">
           <PackageSearch className="mr-2 h-5 w-5" /> Artículos Pendientes de Recibir
+          {itemsForSede.length > 0 && (
+            <span className="ml-2 text-sm font-normal text-amber-700/80 dark:text-amber-400/80">
+              ({itemsForSede.length})
+            </span>
+          )}
         </CardTitle>
       </CardHeader>
       <CardContent className="p-0">
         <div className="md:hidden divide-y">
-          {groupedByRequest.length === 0 ? (
+          {groupedPageItems.length === 0 ? (
             <p className="p-6 text-center text-muted-foreground text-sm">{emptyMessage}</p>
           ) : (
-            groupedByRequest.map((group) => (
-              <div key={group.requestId} className="p-4 space-y-3">
+            groupedPageItems.map((group) => (
+              <div key={group.requestId} className="p-3 space-y-2">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <Link
@@ -93,16 +107,14 @@ const PendingItemsList: React.FC = () => {
                     <Receipt className="mr-1.5 h-4 w-4" /> Recibir
                   </Button>
                 </div>
-                <ul className="space-y-2">
+                <ul className="space-y-1.5">
                   {group.items.map((item) => (
-                    <li key={item.requestItemId} className="rounded-md border bg-card p-3">
+                    <li key={item.requestItemId} className="rounded-md border bg-card px-3 py-2">
                       <p className="font-medium text-sm leading-snug">{item.productName}</p>
-                      <p className="text-xs text-muted-foreground font-mono mt-0.5">
-                        {item.catalogNumber}
-                      </p>
-                      <div className="mt-2 flex items-center justify-between text-sm">
+                      <div className="mt-1 flex items-center justify-between gap-2 text-xs">
+                        <span className="text-muted-foreground font-mono">{item.catalogNumber}</span>
                         <span className="text-muted-foreground">
-                          {item.quantityReceived}/{item.quantityOrdered} recibidos
+                          {item.quantityReceived}/{item.quantityOrdered}
                         </span>
                         <Badge variant="destructive" className="font-bold">
                           Faltan {item.quantityPending}
@@ -117,7 +129,7 @@ const PendingItemsList: React.FC = () => {
         </div>
 
         <div className="hidden md:block overflow-x-auto">
-          <Table>
+          <Table className={compactTable}>
             <TableHeader>
               <TableRow>
                 <TableHead>Artículo</TableHead>
@@ -130,14 +142,14 @@ const PendingItemsList: React.FC = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {itemsForSede.length === 0 ? (
+              {pagination.pageItems.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="h-24 text-center text-muted-foreground text-sm">
                     {emptyMessage}
                   </TableCell>
                 </TableRow>
               ) : (
-                itemsForSede.map((item) => (
+                pagination.pageItems.map((item) => (
                   <TableRow key={item.requestItemId} className="hover:bg-muted/30">
                     <TableCell className="font-medium">
                       <div className="flex flex-col">
@@ -169,6 +181,17 @@ const PendingItemsList: React.FC = () => {
             </TableBody>
           </Table>
         </div>
+        <ListPagination
+          page={pagination.page}
+          pageCount={pagination.pageCount}
+          pageSize={pagination.pageSize}
+          onPageChange={pagination.setPage}
+          onPageSizeChange={pagination.setPageSize}
+          from={pagination.from}
+          to={pagination.to}
+          total={pagination.total}
+          noun={pagination.total === 1 ? "artículo" : "artículos"}
+        />
       </CardContent>
     </Card>
   );

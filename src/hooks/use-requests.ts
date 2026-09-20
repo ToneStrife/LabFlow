@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { SupabaseRequest as SupabaseRequestType, SupabaseRequestItem as SupabaseRequestItemType, RequestItem, RequestStatus } from "@/data/types";
 import { toast } from "sonner";
 import { apiGetRequests, apiAddRequest, apiUpdateRequestStatus, apiDeleteRequest, apiAddInventoryItem, apiSendEmail, apiUpdateRequestFile, apiUpdateRequestMetadata, apiUpdateFullRequest, apiRevertRequestReception } from "@/integrations/api";
+import { invalidateRequestEvents } from "@/lib/activity";
 
 export interface SupabaseRequestItem extends SupabaseRequestItemType {}
 export interface SupabaseRequest extends SupabaseRequestType {}
@@ -51,6 +52,7 @@ export const useAddRequest = () => {
     },
     onSuccess: (newRequest) => {
       queryClient.invalidateQueries({ queryKey: ["requests"] });
+      invalidateRequestEvents(queryClient);
       toast.success("Solicitud enviada exitosamente!", {
         description: `ID de Solicitud: ${newRequest.id}`,
       });
@@ -87,6 +89,7 @@ export const useUpdateRequestStatus = () => {
     onSuccess: (updatedRequest) => {
       queryClient.invalidateQueries({ queryKey: ["requests"] });
       queryClient.invalidateQueries({ queryKey: ["inventory"] });
+      invalidateRequestEvents(queryClient);
       toast.success(`Estado de la Solicitud ${updatedRequest.id} actualizado a ${updatedRequest.status}!`);
     },
     onError: (error) => {
@@ -119,6 +122,7 @@ export const useUpdateFullRequest = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["requests"] });
+      invalidateRequestEvents(queryClient);
       toast.success(`Detalles de la solicitud actualizados exitosamente!`);
     },
     onError: (error) => {
@@ -176,6 +180,7 @@ export const useUpdateRequestFile = () => {
     },
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["requests"] });
+      invalidateRequestEvents(queryClient);
       
       let message = `${variables.fileType.toUpperCase()} detalles guardados exitosamente!`;
       if (data.filePath) {
@@ -203,6 +208,7 @@ export const useDeleteRequest = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["requests"] });
+      invalidateRequestEvents(queryClient);
       toast.success("Solicitud eliminada exitosamente!");
     },
     onError: (error) => {
@@ -225,6 +231,7 @@ export const useRevertRequestReception = () => {
       queryClient.invalidateQueries({ queryKey: ["inventory"] });
       queryClient.invalidateQueries({ queryKey: ["packingSlips", requestId] });
       queryClient.invalidateQueries({ queryKey: ["aggregatedReceivedItems", requestId] });
+      invalidateRequestEvents(queryClient);
       toast.success("Reversión de recepción exitosa!", {
         description: "Artículos eliminados del inventario y estado establecido a Pedido.",
       });

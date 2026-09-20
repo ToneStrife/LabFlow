@@ -11,6 +11,10 @@ import { useSedeActiva } from "@/components/SedeContextProvider";
 import { useRequests } from "@/hooks/use-requests";
 import { useShippingAddresses } from "@/hooks/use-addresses";
 import { filterRequestsBySede, getSedeLabel } from "@/lib/sedes";
+import { useClientPagination } from "@/hooks/use-client-pagination";
+import ListPagination from "@/components/ListPagination";
+
+const compactTable = "[&_th]:h-9 [&_th]:px-3 [&_td]:px-3 [&_td]:py-2";
 
 const PendingInvoicesList: React.FC = () => {
   const { data: pendingInvoices, isLoading, error } = usePendingInvoices();
@@ -26,6 +30,11 @@ const PendingInvoicesList: React.FC = () => {
   }, [pendingInvoices, requests, shippingAddresses, sedeActiva]);
 
   const totalSinFiltrar = pendingInvoices?.length ?? 0;
+
+  const pagination = useClientPagination(invoicesForSede, {
+    initialPageSize: 15,
+    resetKey: sedeActiva ?? "all",
+  });
 
   if (isLoading || isLoadingRequests || isLoadingShipping) {
     return (
@@ -45,15 +54,20 @@ const PendingInvoicesList: React.FC = () => {
       : "¡Excelente! Todos los artículos pedidos están correctamente facturados.";
 
   return (
-    <Card className="shadow-sm border-sky-200 dark:border-sky-900/70">
-      <CardHeader className="bg-sky-50/70 dark:bg-sky-950/30 border-b border-sky-200/60 dark:border-sky-900/50">
+    <Card className="overflow-hidden shadow-sm border-sky-200 dark:border-sky-900/70">
+      <CardHeader className="bg-sky-50/70 dark:bg-sky-950/30 border-b border-sky-200/60 dark:border-sky-900/50 py-3">
         <CardTitle className="text-lg flex items-center text-sky-800 dark:text-sky-300">
           <CreditCard className="mr-2 h-5 w-5" /> Artículos Pendientes de Facturar
+          {invoicesForSede.length > 0 && (
+            <span className="ml-2 text-sm font-normal text-sky-700/80 dark:text-sky-400/80">
+              ({invoicesForSede.length})
+            </span>
+          )}
         </CardTitle>
       </CardHeader>
       <CardContent className="p-0">
         <div className="overflow-x-auto">
-          <Table>
+          <Table className={compactTable}>
             <TableHeader>
               <TableRow>
                 <TableHead>Artículo</TableHead>
@@ -66,14 +80,14 @@ const PendingInvoicesList: React.FC = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {invoicesForSede.length === 0 ? (
+              {pagination.pageItems.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="h-24 text-center text-muted-foreground text-sm">
                     {emptyMessage}
                   </TableCell>
                 </TableRow>
               ) : (
-                invoicesForSede.map((item) => (
+                pagination.pageItems.map((item) => (
                   <TableRow key={item.requestItemId} className="hover:bg-muted/30">
                     <TableCell className="font-medium">
                       <div className="flex flex-col">
@@ -105,6 +119,17 @@ const PendingInvoicesList: React.FC = () => {
             </TableBody>
           </Table>
         </div>
+        <ListPagination
+          page={pagination.page}
+          pageCount={pagination.pageCount}
+          pageSize={pagination.pageSize}
+          onPageChange={pagination.setPage}
+          onPageSizeChange={pagination.setPageSize}
+          from={pagination.from}
+          to={pagination.to}
+          total={pagination.total}
+          noun={pagination.total === 1 ? "artículo" : "artículos"}
+        />
       </CardContent>
     </Card>
   );

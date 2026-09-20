@@ -34,6 +34,7 @@ import FileUploadDialog from "@/components/request-details/FileUploadDialog";
 import RequestFullEditForm, { FullEditFormValues } from "@/components/request-details/RequestFullEditForm";
 import PackingSlipsList from "@/components/request-details/PackingSlipsList";
 import InvoicesList from "@/components/request-details/InvoicesList";
+import RequestActivityCard from "@/components/request-details/RequestActivityCard";
 import { toast } from "sonner";
 import { useSession } from "@/components/SessionContextProvider";
 import { isAdmin, canEditRequestDetails, canDeleteRequest, canOverrideStatus } from "@/lib/permissions";
@@ -503,6 +504,7 @@ const RequestDetails: React.FC = () => {
           </div>
           
           <RequestFilesCard request={request} onUploadClick={handleUploadClick} onSimpleFileUpload={() => Promise.resolve()} />
+          <RequestActivityCard requestId={request.id} />
           <PackingSlipsList requestId={request.id} onOpenReceiveItemsDialog={handleOpenReceiveItemsDialog} requestNumber={displayRequestNumber} />
           
           {/* CRÍTICO: Envolver InvoicesList en check de isAdmin */}

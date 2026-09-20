@@ -36,6 +36,8 @@ import {
   type Documento,
   type TipoDocumento,
 } from "@/hooks/use-documents";
+import { useClientPagination } from "@/hooks/use-client-pagination";
+import ListPagination from "@/components/ListPagination";
 
 const ESTILO_TIPO: Record<TipoDocumento, { icono: LucideIcon; caja: string; texto: string }> = {
   cotizacion: {
@@ -142,6 +144,11 @@ const Documentos = () => {
         .includes(texto);
     });
   }, [documentos, busqueda, tipo, proveedorId, solicitanteId, desde, hasta]);
+
+  const pagination = useClientPagination(filtrados, {
+    initialPageSize: 25,
+    resetKey: `${busqueda}|${tipo}|${proveedorId}|${solicitanteId}|${desde}|${hasta}`,
+  });
 
   return (
     <div className={pageContainerClass}>
@@ -294,11 +301,9 @@ const Documentos = () => {
         )}
       </div>
 
-      {!isLoading && !error && (
+      {!isLoading && !error && filtrados.length !== documentos.length && (
         <p className="text-xs text-muted-foreground">
-          {filtrados.length === documentos.length
-            ? `${documentos.length} documentos`
-            : `${filtrados.length} de ${documentos.length} documentos`}
+          {filtrados.length} de {documentos.length} documentos coinciden con los filtros
         </p>
       )}
 
@@ -320,18 +325,19 @@ const Documentos = () => {
           </p>
         </div>
       ) : (
-        <ul className="divide-y overflow-hidden rounded-xl border bg-card">
-          {filtrados.map((doc) => {
+        <div className="overflow-hidden rounded-md border bg-card scroll-mt-36">
+          <ul className="divide-y">
+          {pagination.pageItems.map((doc) => {
             const estilo = ESTILO_TIPO[doc.tipo];
             const Icono = estilo.icono;
             return (
               <li
                 key={doc.id}
-                className="flex flex-col gap-3 p-3 transition-colors hover:bg-muted/40 sm:flex-row sm:items-center sm:gap-4 sm:p-4"
+                className="flex flex-col gap-2 p-2.5 transition-colors hover:bg-muted/40 sm:flex-row sm:items-center sm:gap-3 sm:p-3"
               >
                 <span
                   className={cn(
-                    "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
+                    "flex h-8 w-8 shrink-0 items-center justify-center rounded-md",
                     estilo.caja
                   )}
                 >
@@ -386,6 +392,18 @@ const Documentos = () => {
             );
           })}
         </ul>
+          <ListPagination
+            page={pagination.page}
+            pageCount={pagination.pageCount}
+            pageSize={pagination.pageSize}
+            onPageChange={pagination.setPage}
+            onPageSizeChange={pagination.setPageSize}
+            from={pagination.from}
+            to={pagination.to}
+            total={pagination.total}
+            noun={pagination.total === 1 ? "documento" : "documentos"}
+          />
+        </div>
       )}
     </div>
   );

@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { PackingSlip, ReceivedItem, SupabaseRequestItem, RequestStatus } from "@/data/types";
 import { useSession } from "@/components/SessionContextProvider";
 import { uploadRequestFile } from "@/utils/upload-request-file";
+import { invalidateRequestEvents } from "@/lib/activity";
 
 // --- Fetch Hooks ---
 
@@ -114,6 +115,7 @@ export const useCorrectReceivedItemQuantity = () => {
             queryClient.invalidateQueries({ queryKey: ['receivedItemsBySlip', receivedItem.slip_id] }); // Invalida el detalle del albarán
             queryClient.invalidateQueries({ queryKey: ['inventory'] });
             queryClient.invalidateQueries({ queryKey: ['requests'] }); // Por si el estado de la solicitud cambia
+            invalidateRequestEvents(queryClient);
             toast.success("Cantidad recibida corregida y inventario ajustado.");
         },
         onError: (error) => {
@@ -191,6 +193,7 @@ export const useUploadAndCreateSlip = () => {
     onSuccess: (newSlip) => {
       queryClient.invalidateQueries({ queryKey: ['packingSlips', newSlip.request_id] });
       queryClient.invalidateQueries({ queryKey: ['requests'] });
+      invalidateRequestEvents(queryClient);
       toast.success(`Albarán ${newSlip.slip_number} subido exitosamente!`);
     },
     onError: (error) => {
@@ -257,6 +260,7 @@ export const useDeleteSlip = () => {
             queryClient.invalidateQueries({ queryKey: ['receivedItemsBySlip', slipId] }); // CRÍTICO: Invalidar el detalle del albarán
             queryClient.invalidateQueries({ queryKey: ['requests'] }); 
             queryClient.invalidateQueries({ queryKey: ['inventory'] }); 
+            invalidateRequestEvents(queryClient);
             toast.success("Albarán eliminado exitosamente.");
         },
         onError: (error) => {
@@ -415,6 +419,7 @@ export const useReceiveItems = () => {
       queryClient.invalidateQueries({ queryKey: ['aggregatedReceivedItems', requestId] });
       queryClient.invalidateQueries({ queryKey: ['packingSlips', requestId] });
       queryClient.invalidateQueries({ queryKey: ['inventory'] });
+      invalidateRequestEvents(queryClient);
 
       return newSlip;
     },

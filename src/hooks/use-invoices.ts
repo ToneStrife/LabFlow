@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { Invoice, InvoicedItem, SupabaseRequestItem } from "@/data/types";
 import { useSession } from "@/components/SessionContextProvider";
 import { uploadRequestFile } from "@/utils/upload-request-file";
+import { invalidateRequestEvents } from "@/lib/activity";
 
 // --- Fetch Hooks ---
 
@@ -129,6 +130,7 @@ export const useInvoiceItems = () => {
     onSuccess: (newInvoice) => {
       queryClient.invalidateQueries({ queryKey: ['invoices', newInvoice.request_id] });
       queryClient.invalidateQueries({ queryKey: ['aggregatedInvoicedItems', newInvoice.request_id] });
+      invalidateRequestEvents(queryClient);
       toast.success(`Factura ${newInvoice.invoice_number} registrada exitosamente.`);
     },
     onError: (error) => {
@@ -155,6 +157,7 @@ export const useDeleteInvoice = () => {
         onSuccess: ({ requestId }) => {
             queryClient.invalidateQueries({ queryKey: ['invoices', requestId] });
             queryClient.invalidateQueries({ queryKey: ['aggregatedInvoicedItems', requestId] });
+            invalidateRequestEvents(queryClient);
             toast.success("Factura eliminada.");
         },
         onError: (error) => {

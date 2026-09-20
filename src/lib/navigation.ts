@@ -6,6 +6,7 @@ import {
   Warehouse,
   Shield,
   DollarSign,
+  History,
   type LucideIcon,
 } from "lucide-react";
 import { Profile } from "@/data/types";
@@ -27,6 +28,7 @@ export const navItems: NavItem[] = [
   { title: "Panel de Control", href: "/dashboard", icon: ShoppingCart },
   { title: "Proveedores", href: "/vendors", icon: Users, permission: "vendors.view" },
   { title: "Inventario", href: "/inventory", icon: Warehouse, permission: "inventory.view" },
+  { title: "Registro", href: "/historial", icon: History },
   { title: "Documentos", href: "/documents", icon: FolderOpen, permission: "documents.view" },
   { title: "Gastos", href: "/expenditures", icon: DollarSign, permission: "expenditures.view" },
   { title: "Admin", href: "/admin", icon: Shield, permission: "users.manage" },

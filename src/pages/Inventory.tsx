@@ -7,10 +7,12 @@ import { PlusCircle, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useInventory, useAddInventoryItem, useUpdateInventoryItem, useDeleteInventoryItem, InventoryItem, InventoryItemFormData } from "@/hooks/use-inventory";
 import InventoryForm, { InventoryFormValues } from "@/components/InventoryForm";
-import InventoryToolbar from "@/components/InventoryToolbar"; // Importar Toolbar
+import InventoryToolbar from "@/components/InventoryToolbar";
 import ReorderDialog from "@/components/ReorderDialog";
 import { pageContainerClass, pageHeaderClass, mobileDialogClass } from "@/lib/layout";
 import { cn } from "@/lib/utils";
+import { useClientPagination } from "@/hooks/use-client-pagination";
+import ListPagination from "@/components/ListPagination";
 
 const Inventory = () => {
   const { data: inventoryItems, isLoading, error } = useInventory();
@@ -66,6 +68,11 @@ const Inventory = () => {
       (item.location && item.location.toLowerCase().includes(lowerCaseSearch))
     );
   }, [inventoryItems, searchTerm]);
+
+  const pagination = useClientPagination(filteredItems, {
+    initialPageSize: 25,
+    resetKey: searchTerm,
+  });
   
   // Ítems seleccionados para reorder
   const itemsToReorder = React.useMemo(() => {
@@ -91,12 +98,17 @@ const Inventory = () => {
 
   return (
     <div className={pageContainerClass}>
-      <div className={cn(pageHeaderClass, "items-center mb-2 sm:mb-6")}>
-        <h1 className="text-2xl sm:text-3xl font-bold">Inventario</h1>
+      <div className={cn(pageHeaderClass, "items-center")}>
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold">Inventario</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Gestiona el inventario de productos de tu laboratorio.
+          </p>
+        </div>
         <Dialog open={isAddInventoryDialogOpen} onOpenChange={setIsAddInventoryDialogOpen}>
           <DialogTrigger asChild>
             <Button>
-              <PlusCircle className="mr-2 h-4 w-4" /> Añadir Nuevo Artículo
+              <PlusCircle className="mr-2 h-4 w-4" /> Añadir artículo
             </Button>
           </DialogTrigger>
           <DialogContent className={cn(mobileDialogClass, "sm:max-w-[425px]")}>
@@ -111,9 +123,6 @@ const Inventory = () => {
           </DialogContent>
         </Dialog>
       </div>
-      <p className="text-lg text-muted-foreground mb-8">
-        Gestiona el inventario de productos de tu laboratorio.
-      </p>
       
       <InventoryToolbar
         searchTerm={searchTerm}
@@ -122,13 +131,24 @@ const Inventory = () => {
         onReorder={handleReorder}
       />
       
-      <div className="mt-6">
+      <div className="overflow-hidden rounded-md border bg-card">
         <InventoryTable
-          items={filteredItems}
+          items={pagination.pageItems}
           onEdit={openEditDialog}
           onDelete={handleDeleteInventoryItem}
           selectedItems={selectedItems}
           onSelectChange={setSelectedItems}
+        />
+        <ListPagination
+          page={pagination.page}
+          pageCount={pagination.pageCount}
+          pageSize={pagination.pageSize}
+          onPageChange={pagination.setPage}
+          onPageSizeChange={pagination.setPageSize}
+          from={pagination.from}
+          to={pagination.to}
+          total={pagination.total}
+          noun={pagination.total === 1 ? "artículo" : "artículos"}
         />
       </div>
 
