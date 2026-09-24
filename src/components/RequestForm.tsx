@@ -26,7 +26,7 @@ import { RequestItem } from "@/data/types";
 import { showError } from "@/utils/toast";
 import { useSession } from "@/components/SessionContextProvider";
 import { useVendors } from "@/hooks/use-vendors";
-import { useAddRequest, useUpdateRequestFile } from "@/hooks/use-requests";
+import { useAddRequest, useUpdateRequestFile, useUpdateRequestStatus } from "@/hooks/use-requests";
 import { useAccountManagers } from "@/hooks/use-account-managers";
 import { useProjects } from "@/hooks/use-projects";
 import { useShippingAddresses, useBillingAddresses } from "@/hooks/use-addresses";
@@ -232,6 +232,7 @@ const RequestForm: React.FC = () => {
   const { data: billingAddresses, isLoading: isLoadingBillingAddresses } = useBillingAddresses();
   const addRequestMutation = useAddRequest();
   const updateFileMutation = useUpdateRequestFile();
+  const updateStatusMutation = useUpdateRequestStatus();
   const parseQuotePdfMutation = useParseQuotePdf();
 
   const defaultItem = { 
@@ -368,7 +369,8 @@ const RequestForm: React.FC = () => {
     const managerId = data.accountManagerId === 'unassigned' || !data.accountManagerId ? null : data.accountManagerId;
     const quoteFile = selectedQuoteFile; // Usar el objeto File real
     
-    // 1. Crear la solicitud (inicialmente en estado Pending)
+    // 1. Crear la solicitud. Sin aprobación previa: pendiente de cotización,
+    //    o pendiente de PO si ya viene el presupuesto.
     const itemsToSubmit: RequestItem[] = data.items.map(item => ({
       productName: item.productName,
       catalogNumber: item.catalogNumber,
@@ -391,8 +393,7 @@ const RequestForm: React.FC = () => {
       items: itemsToSubmit,
     });
     
-    // 2. Si hay cotización, adjuntarla pero dejar la solicitud en Pending:
-    //    debe aprobarla el IP del proyecto (o un admin), no el solicitante.
+    // 2. Sin presupuesto: pendiente de cotización. Con presupuesto: pendiente de PO.
     if (quoteFile) {
       try {
         const { filePath } = await updateFileMutation.mutateAsync({
@@ -400,14 +401,24 @@ const RequestForm: React.FC = () => {
           fileType: "quote",
           file: quoteFile,
         });
-        
+
         if (filePath) {
-            toast.success("Cotización adjunta. La solicitud queda pendiente de aprobación.");
+          await updateStatusMutation.mutateAsync({
+            id: newRequest.id,
+            status: "PO Requested",
+            quoteUrl: filePath,
+          });
+          toast.success("Cotización adjunta. La solicitud queda pendiente de PO.");
         }
       } catch (error) {
         showError("La solicitud fue creada, pero falló la subida del archivo de cotización.");
         console.error("Error uploading quote file on request creation:", error);
       }
+    } else if (newRequest.status !== "Quote Requested") {
+      await updateStatusMutation.mutateAsync({
+        id: newRequest.id,
+        status: "Quote Requested",
+      });
     }
 
     // 3. Limpiar la persistencia del formulario después del envío exitoso
@@ -499,6 +510,7 @@ const RequestForm: React.FC = () => {
   const isSubmitting =
     addRequestMutation.isPending ||
     updateFileMutation.isPending ||
+    updateStatusMutation.isPending ||
     parseQuotePdfMutation.isPending;
   const isParsingQuote = parseQuotePdfMutation.isPending;
   const canExtractFromPdf =
@@ -671,7 +683,7 @@ const RequestForm: React.FC = () => {
         <SeccionFormulario
           titulo="Cotización y notas"
           icono={FileScan}
-          descripcion="Si adjuntas la cotización, se guarda con la solicitud; el IP del proyecto debe aprobarla antes de seguir."
+          descripcion="Sin cotización, la solicitud queda pendiente de presupuesto. Si la adjuntas, pasa directo a pendiente de PO."
         >
         <FormField
           control={form.control}

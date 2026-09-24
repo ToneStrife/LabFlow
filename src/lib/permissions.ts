@@ -83,7 +83,7 @@ export function canEditRequestDetails(
   const isOwner = Boolean(ctx.userId && ctx.requesterId && ctx.userId === ctx.requesterId);
   const canEditAny = isAdmin(ctx.role) || Boolean(ctx.can?.("requests.edit_any"));
 
-  // Un reorden se crea en Pending sin proyecto ni IP. Sin esto, el autor
+  // Un reorden antiguo puede seguir en Pending sin proyecto ni IP. Sin esto, el autor
   // no puede abrir el formulario después de crearlo.
   if (status === "Pending" && (isOwner || canEditAny)) return true;
 

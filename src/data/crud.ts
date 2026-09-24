@@ -66,7 +66,7 @@ export const addMockRequest = async (data: Omit<SupabaseRequest, "id" | "created
     id: newRequestId,
     request_number: null, // Mock requests don't generate numbers
     created_at: new Date().toISOString(),
-    status: "Pending",
+    status: "Quote Requested",
     quote_url: null,
     po_number: null,
     po_url: null,
