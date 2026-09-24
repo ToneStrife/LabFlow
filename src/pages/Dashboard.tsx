@@ -72,21 +72,25 @@ const Dashboard = () => {
     setPestana("all-requests");
   };
 
+  const pendientesDeAprobar = cuentaPorEstado("Pending");
+
   const etapas: Etapa[] = [
-    {
-      id: "pending",
-      etiqueta: "Por aprobar",
-      valor: cuentaPorEstado("Pending"),
-      pie: "esperando decisión",
-      icono: FileSearch,
-      tono: "amber",
-      onSelect: () => verHistorialFiltrado("Pending"),
-    },
+    ...(pendientesDeAprobar > 0
+      ? [{
+          id: "pending",
+          etiqueta: "Por aprobar",
+          valor: pendientesDeAprobar,
+          pie: "solicitudes antiguas",
+          icono: FileSearch,
+          tono: "amber" as const,
+          onSelect: () => verHistorialFiltrado("Pending"),
+        }]
+      : []),
     {
       id: "quote",
       etiqueta: "Presupuestos",
       valor: cuentaPorEstado("Quote Requested"),
-      pie: "cotización pedida",
+      pie: "pendiente de cotización",
       icono: FileText,
       tono: "sky",
       onSelect: () => verHistorialFiltrado("Quote Requested"),

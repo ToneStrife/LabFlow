@@ -373,7 +373,7 @@ export const apiAddRequest = async (data: AddRequestData): Promise<SupabaseReque
             body: JSON.stringify({
                 user_ids: recipientIds,
                 title: `🔔 Nueva Solicitud #${requestNumber}`,
-                body: `El usuario ${requesterName} ha enviado una nueva solicitud pendiente.`,
+                body: `El usuario ${requesterName} ha enviado una nueva solicitud.`,
                 link: `/requests/${(newRequest as SupabaseRequest).id}`,
             }),
         });
@@ -463,8 +463,8 @@ export const apiUpdateRequestStatus = async (
       
       switch (status) {
         case 'Quote Requested':
-            title = `✅ Solicitud #${requestNumber} Aprobada`;
-            body = `Tu solicitud ha sido aprobada y se ha solicitado una cotización.`;
+            title = `Solicitud #${requestNumber} pendiente de cotización`;
+            body = `La solicitud está pendiente de presupuesto.`;
             break;
         case 'PO Requested':
             title = `📝 Cotización Recibida para #${requestNumber}`;

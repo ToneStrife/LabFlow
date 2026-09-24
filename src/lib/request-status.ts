@@ -20,7 +20,7 @@ export const REQUEST_STATUS_LABEL: Record<RequestStatus, string> = {
 /** Etiqueta larga, para desplegables y filtros donde hay sitio de sobra. */
 export const REQUEST_STATUS_LABEL_LONG: Record<RequestStatus, string> = {
   "Pending": "Pendiente de aprobacion",
-  "Quote Requested": "Cotizacion solicitada",
+  "Quote Requested": "Pendiente de cotizacion",
   "PO Requested": "Orden de compra solicitada",
   "Ordered": "Pedido realizado",
   "Received": "Recibido",

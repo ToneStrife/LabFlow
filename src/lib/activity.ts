@@ -87,7 +87,7 @@ export function tituloEvento(event: Pick<RequestEvent, "event_type" | "payload">
   if (tipo === "status_changed") {
     switch (payload.to as RequestStatus) {
       case "Quote Requested":
-        return "Se aprobó / se pidió cotización";
+        return "Quedó pendiente de cotización";
       case "PO Requested":
         return "Se pidió la orden de compra";
       case "Ordered":

@@ -77,7 +77,9 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
     projects,
   };
   const canApprove = canApprovePendingRequest(approvalCtx);
-  const canMerge = canMergeRequest(profile?.role) && request.status === "Pending";
+  const canMerge =
+    canMergeRequest(profile?.role) &&
+    (request.status === "Pending" || request.status === "Quote Requested");
   const canWorkflow = canPerformWorkflowAction(approvalCtx, request.status);
   const canReceive = canReceivePackages(profile?.role, request.status);
 
