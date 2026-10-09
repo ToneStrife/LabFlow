@@ -18,12 +18,42 @@ export interface SofiaDevice {
   sede_id: string | null;
   last_seen_at: string | null;
   firmware: string | null;
+  // escucha y horarios (null = lo que traiga la placa)
+  wake_umbral: number | null;
+  voz_minima: number | null;
+  fin_frase_ms: number | null;
+  seguir_ms: number | null;
+  cierre_hora: number | null;
+  silencio_min: number | null;
+  // versión de las opciones y lo que ha contado la placa al aplicarlas
+  config_rev: number;
+  applied_rev: number | null;
+  estado: {
+    avisos?: string[];
+    aplicado_at?: string;
+    clave_gemini?: string;
+    red?: string;
+    /** valores propios de la placa (secrets.h), lo que vale cuando aquí se deja «de la placa» */
+    placa?: { umbral?: number; voz_minima?: number; fin_frase_ms?: number; seguir_ms?: number; cierre_hora?: number; silencio_min?: number };
+  } | null;
 }
 
 /** Lo que cada persona puede cambiar de su Sofía */
 export type SofiaDeviceOpciones = Pick<
   SofiaDevice,
-  "nombre" | "propietario" | "avatar" | "voz" | "volumen" | "protocolos_carpeta" | "sede_id"
+  | "nombre"
+  | "propietario"
+  | "avatar"
+  | "voz"
+  | "volumen"
+  | "protocolos_carpeta"
+  | "sede_id"
+  | "wake_umbral"
+  | "voz_minima"
+  | "fin_frase_ms"
+  | "seguir_ms"
+  | "cierre_hora"
+  | "silencio_min"
 >;
 
 const KEY = ["sofia-devices"];
@@ -34,6 +64,7 @@ export const useMySofiaDevices = () => {
   return useQuery<SofiaDevice[], Error>({
     queryKey: [...KEY, uid],
     enabled: !!uid,
+    refetchInterval: 20000,   // para ver cuándo la placa aplica los cambios
     queryFn: async () => {
       const { data, error } = await supabase
         .from("sofia_devices")
@@ -116,5 +147,46 @@ export const useRemoveSofia = () => {
       toast.success("Sofía desvinculada");
     },
     onError: (e) => toast.error("No se pudo desvincular", { description: e.message }),
+  });
+};
+
+/** Claves de una Sofía: la página solo sabe si hay clave de Gemini y los nombres de las redes, nunca las contraseñas */
+export interface SofiaSecretInfo {
+  gemini: boolean;
+  gemini_fin: string | null;
+  wifi: string[];
+}
+
+export const useSofiaSecretInfo = (deviceId: string) =>
+  useQuery<SofiaSecretInfo, Error>({
+    queryKey: [...KEY, "claves", deviceId],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("sofia_secret_info", { p_device: deviceId });
+      if (error) throw new Error(error.message);
+      return data as SofiaSecretInfo;
+    },
+  });
+
+export const useSetSofiaSecrets = () => {
+  const qc = useQueryClient();
+  return useMutation<
+    SofiaSecretInfo,
+    Error,
+    { deviceId: string; gemini?: string | null; wifi?: { ssid: string; pass?: string }[] | null }
+  >({
+    mutationFn: async ({ deviceId, gemini, wifi }) => {
+      const { data, error } = await supabase.rpc("sofia_set_secrets", {
+        p_device: deviceId,
+        p_gemini: gemini ?? null,
+        p_wifi: wifi ?? null,
+      });
+      if (error) throw new Error(error.message);
+      return data as SofiaSecretInfo;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: KEY });
+      toast.success("Guardado", { description: "La placa lo coge en unos minutos o al decirle «actualiza la configuración»." });
+    },
+    onError: (e) => toast.error("No se pudo guardar", { description: e.message }),
   });
 };
