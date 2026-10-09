@@ -86,7 +86,7 @@ const Dashboard = () => {
       id: "quote",
       etiqueta: "Presupuestos",
       valor: cuentaPorEstado("Quote Requested"),
-      pie: "cotización pedida",
+      pie: "aprobadas, falta presupuesto",
       icono: FileText,
       tono: "sky",
       onSelect: () => verHistorialFiltrado("Quote Requested"),
