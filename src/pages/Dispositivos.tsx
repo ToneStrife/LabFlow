@@ -883,7 +883,7 @@ const Dispositivos: React.FC = () => {
   const { data: devices, isLoading, error } = useMySofiaDevices();
   const { profile } = useSession();
   const veOtras = profile?.role === "Admin" || !!(profile as { is_owner?: boolean } | null)?.is_owner;
-  const { can } = useCan();
+  const { can, cargandoPermisos } = useCan();
   const { data: firmwares } = useSofiaFirmware();
 
   return (
@@ -911,7 +911,22 @@ const Dispositivos: React.FC = () => {
         <>
           {devices?.map((d) => <TarjetaSofia key={d.id} device={d} firmwares={firmwares ?? []} />)}
           <Emparejar primera={!devices?.length} />
-          {can("sofia.firmware") ? <FirmwareSofia firmwares={firmwares ?? []} misPlacas={devices ?? []} /> : null}
+          {can("sofia.firmware") ? (
+            <FirmwareSofia firmwares={firmwares ?? []} misPlacas={devices ?? []} />
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Upload className="h-5 w-5" /> Programa de las Sofías
+                </CardTitle>
+                <CardDescription>
+                  {cargandoPermisos
+                    ? "Comprobando permisos..."
+                    : "Subir versiones del programa necesita el permiso «Publicar firmware de Sofía». Si ya te lo has dado, cierra sesión y vuelve a entrar para que se actualice; si no, dáselo en Admin > Permisos (excepción por persona)."}
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          )}
           {veOtras ? <OtrasSofias /> : null}
         </>
       )}
