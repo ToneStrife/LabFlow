@@ -3,13 +3,16 @@
 import React from "react";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
-import { AlertTriangle, Bot, CheckCircle2, Clock, KeyRound, Link2, Loader2, Plus, Trash2, Volume2, Wifi, X } from "lucide-react";
+import { AlertTriangle, Bot, CheckCircle2, Clock, KeyRound, Link2, Loader2, Plus, Trash2, Upload, Volume2, Wifi, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useCan } from "@/hooks/use-permissions";
 import { InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot } from "@/components/ui/input-otp";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
@@ -31,6 +34,12 @@ import { useSession } from "@/components/SessionContextProvider";
 import {
   SofiaDevice,
   SofiaDeviceOpciones,
+  SofiaFirmware,
+  useDeleteSofiaFirmware,
+  usePublishSofiaFirmware,
+  useSetSofiaOta,
+  useSofiaFirmware,
+  useUploadSofiaFirmware,
   useMySofiaDevices,
   useOtherSofiaDevices,
   usePairSofia,
@@ -325,7 +334,7 @@ const ClavesYRedes: React.FC<{ device: SofiaDevice }> = ({ device }) => {
   );
 };
 
-const TarjetaSofia: React.FC<{ device: SofiaDevice }> = ({ device }) => {
+const TarjetaSofia: React.FC<{ device: SofiaDevice; firmwares: SofiaFirmware[] }> = ({ device, firmwares }) => {
   const [form, setForm] = React.useState<SofiaDeviceOpciones>(() => opcionesDe(device));
   const update = useUpdateSofia();
   const remove = useRemoveSofia();
@@ -395,8 +404,7 @@ const TarjetaSofia: React.FC<{ device: SofiaDevice }> = ({ device }) => {
                 {device.estado?.red ? ` · red ${device.estado.red}` : ""}
               </span>
               <span className="block font-mono">
-                {device.hw_id}
-                {device.firmware ? ` · ${device.firmware}` : ""}
+                {device.hw_id} · {nombreVersion(device.firmware_md5, firmwares)}
               </span>
             </CardDescription>
           </div>
@@ -405,11 +413,12 @@ const TarjetaSofia: React.FC<{ device: SofiaDevice }> = ({ device }) => {
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="general">
-          <TabsList className="mb-4 grid w-full grid-cols-4">
+          <TabsList className="mb-4 flex h-auto w-full justify-start overflow-x-auto sm:grid sm:grid-cols-5 [&>button]:shrink-0">
             <TabsTrigger value="general">General</TabsTrigger>
             <TabsTrigger value="escucha">Escucha</TabsTrigger>
             <TabsTrigger value="horarios">Horarios</TabsTrigger>
             <TabsTrigger value="claves">Claves</TabsTrigger>
+            <TabsTrigger value="programa">Programa</TabsTrigger>
           </TabsList>
 
           <form onSubmit={guardar}>
@@ -622,7 +631,215 @@ const TarjetaSofia: React.FC<{ device: SofiaDevice }> = ({ device }) => {
           <TabsContent value="claves">
             <ClavesYRedes device={device} />
           </TabsContent>
+          <TabsContent value="programa">
+            <ProgramaPlaca device={device} firmwares={firmwares} />
+          </TabsContent>
         </Tabs>
+      </CardContent>
+    </Card>
+  );
+};
+
+// ------------------------------------------------------------------ programa (actualizaciones)
+const nombreVersion = (md5: string | null | undefined, firmwares: SofiaFirmware[]) => {
+  if (!md5) return "versión desconocida";
+  const f = firmwares.find((x) => x.md5 === md5);
+  return f ? `versión ${f.version}` : "versión sin subir a LabFlow";
+};
+
+const kb = (n: number) => `${(n / 1024 / 1024).toFixed(2).replace(".", ",")} MB`;
+
+const ProgramaPlaca: React.FC<{ device: SofiaDevice; firmwares: SofiaFirmware[] }> = ({ device, firmwares }) => {
+  const setOta = useSetSofiaOta();
+  const [modo, setModo] = React.useState(device.ota_modo ?? "auto");
+  const [fija, setFija] = React.useState<string | null>(device.ota_firmware);
+  React.useEffect(() => {
+    setModo(device.ota_modo ?? "auto");
+    setFija(device.ota_firmware);
+  }, [device.ota_modo, device.ota_firmware]);
+
+  const actual = firmwares.find((f) => f.md5 === device.firmware_md5);
+  const ultima = firmwares.filter((f) => f.publicado).sort((a, b) => (b.publicado_at ?? "").localeCompare(a.publicado_at ?? ""))[0];
+  const destino = modo === "auto" ? ultima : modo === "fija" ? firmwares.find((f) => f.id === fija) : undefined;
+  const pendiente = destino && destino.md5 !== device.firmware_md5;
+  const cambiado = modo !== (device.ota_modo ?? "auto") || (modo === "fija" && fija !== device.ota_firmware);
+
+  return (
+    <div className="space-y-5">
+      <div className="rounded-md border px-3 py-2 text-sm">
+        <p>
+          Lleva ahora: <span className="font-medium">{actual ? actual.version : nombreVersion(device.firmware_md5, firmwares).replace(/^versión /, "")}</span>
+        </p>
+        {pendiente ? (
+          <p className="mt-1 flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-400">
+            <Clock className="h-3.5 w-3.5" /> Se actualizará a {destino!.version} cuando esté libre (sin conversación ni temporizadores, y con batería o enchufada).
+          </p>
+        ) : destino ? (
+          <p className="mt-1 flex items-center gap-1.5 text-xs text-emerald-700 dark:text-emerald-400">
+            <CheckCircle2 className="h-3.5 w-3.5" /> Al día.
+          </p>
+        ) : null}
+      </div>
+
+      <div className="space-y-2">
+        <Label>Actualizaciones</Label>
+        <Select value={modo} onValueChange={(v) => setModo(v as typeof modo)}>
+          <SelectTrigger className="sm:w-96">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="auto">Automáticas: la última publicada{ultima ? ` (${ultima.version})` : ""}</SelectItem>
+            <SelectItem value="fija" disabled={!firmwares.length}>
+              Una versión concreta (para probar antes de publicar)
+            </SelectItem>
+            <SelectItem value="no">No actualizar sola</SelectItem>
+          </SelectContent>
+        </Select>
+        {modo === "fija" ? (
+          <Select value={fija ?? ""} onValueChange={(v) => setFija(v)}>
+            <SelectTrigger className="sm:w-96">
+              <SelectValue placeholder="Elige la versión" />
+            </SelectTrigger>
+            <SelectContent>
+              {firmwares.map((f) => (
+                <SelectItem key={f.id} value={f.id}>
+                  {f.version} {f.publicado ? "· publicada" : "· sin publicar"}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : null}
+        <p className="text-xs text-muted-foreground">
+          Si una versión nueva no arranca bien, la placa vuelve sola a la anterior y te avisa aquí arriba.
+        </p>
+      </div>
+      <div className="flex justify-end border-t pt-4">
+        <Button
+          type="button"
+          disabled={!cambiado || setOta.isPending || (modo === "fija" && !fija)}
+          onClick={() => setOta.mutate({ id: device.id, ota_modo: modo, ota_firmware: modo === "fija" ? fija : null })}
+        >
+          Guardar
+        </Button>
+      </div>
+    </div>
+  );
+};
+
+// Subir y publicar versiones (permiso «Publicar firmware de Sofía»)
+const FirmwareSofia: React.FC<{ firmwares: SofiaFirmware[]; misPlacas: SofiaDevice[] }> = ({ firmwares }) => {
+  const subir = useUploadSofiaFirmware();
+  const publicar = usePublishSofiaFirmware();
+  const borrar = useDeleteSofiaFirmware();
+  const [file, setFile] = React.useState<File | null>(null);
+  const [version, setVersion] = React.useState("");
+  const [notas, setNotas] = React.useState("");
+  const [publicarYa, setPublicarYa] = React.useState(false);
+  const inputRef = React.useRef<HTMLInputElement>(null);
+
+  const enviar = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!file || !version.trim()) return;
+    subir.mutate(
+      { file, version, notas, publicar: publicarYa },
+      {
+        onSuccess: () => {
+          setFile(null);
+          setVersion("");
+          setNotas("");
+          setPublicarYa(false);
+          if (inputRef.current) inputRef.current.value = "";
+        },
+      }
+    );
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-lg">
+          <Upload className="h-5 w-5" /> Programa de las Sofías
+        </CardTitle>
+        <CardDescription>
+          Sube aquí el .bin (en el Arduino IDE: Programa &gt; Exportar binario compilado, el archivo que acaba en <span className="font-mono">.ino.bin</span>).
+          Se guarda en privado. Al publicarlo, las Sofías en automático se actualizan solas cuando están libres. El .bin lleva dentro tu secrets.h.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <form onSubmit={enviar} className="space-y-3">
+          <div className="grid gap-3 sm:grid-cols-[1fr_10rem]">
+            <Input ref={inputRef} type="file" accept=".bin" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+            <Input placeholder="Versión (p. ej. v5.3)" maxLength={40} value={version} onChange={(e) => setVersion(e.target.value)} />
+          </div>
+          <Input placeholder="Qué cambia (opcional)" value={notas} onChange={(e) => setNotas(e.target.value)} />
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox checked={publicarYa} onCheckedChange={(v) => setPublicarYa(v === true)} />
+              Publicarla ya para todas las Sofías en automático
+            </label>
+            <Button type="submit" disabled={!file || !version.trim() || subir.isPending}>
+              {subir.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+              Subir
+            </Button>
+          </div>
+        </form>
+
+        {firmwares.length ? (
+          <div className="divide-y rounded-md border">
+            {firmwares.map((f) => (
+              <div key={f.id} className="flex flex-col gap-2 px-3 py-2.5 sm:flex-row sm:items-center">
+                <div className="min-w-0 flex-1">
+                  <p className="flex items-center gap-2 text-sm font-medium">
+                    {f.version}
+                    {f.publicado ? (
+                      <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
+                        publicada
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline">sin publicar</Badge>
+                    )}
+                  </p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {new Date(f.created_at).toLocaleDateString("es-ES")} · {kb(f.size)} · <span className="font-mono">{f.md5.slice(0, 8)}</span>
+                    {f.notas ? ` · ${f.notas}` : ""}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={f.publicado ? "outline" : "default"}
+                    disabled={publicar.isPending}
+                    onClick={() => publicar.mutate({ id: f.id, publicado: !f.publicado })}
+                  >
+                    {f.publicado ? "Retirar" : "Publicar"}
+                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button type="button" size="icon" variant="ghost" aria-label={`Borrar ${f.version}`}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>¿Borrar la versión {f.version}?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Las placas que ya la tienen siguen funcionando con ella. Las que estuvieran fijadas a esta versión dejan de actualizarse.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => borrar.mutate(f)}>Borrar</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">Todavía no hay versiones subidas.</p>
+        )}
       </CardContent>
     </Card>
   );
@@ -666,6 +883,8 @@ const Dispositivos: React.FC = () => {
   const { data: devices, isLoading, error } = useMySofiaDevices();
   const { profile } = useSession();
   const veOtras = profile?.role === "Admin" || !!(profile as { is_owner?: boolean } | null)?.is_owner;
+  const { can } = useCan();
+  const { data: firmwares } = useSofiaFirmware();
 
   return (
     <div className={cn(pageContainerClass, "max-w-3xl")}>
@@ -690,8 +909,9 @@ const Dispositivos: React.FC = () => {
         </Card>
       ) : (
         <>
-          {devices?.map((d) => <TarjetaSofia key={d.id} device={d} />)}
+          {devices?.map((d) => <TarjetaSofia key={d.id} device={d} firmwares={firmwares ?? []} />)}
           <Emparejar primera={!devices?.length} />
+          {can("sofia.firmware") ? <FirmwareSofia firmwares={firmwares ?? []} misPlacas={devices ?? []} /> : null}
           {veOtras ? <OtrasSofias /> : null}
         </>
       )}
