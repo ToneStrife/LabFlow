@@ -430,6 +430,8 @@ BEGIN
 
   -- create_request_with_items no está en las migraciones del repo: se leen los tipos
   -- de sus parámetros del catálogo, para pasarle cada valor con el tipo que espera.
+  -- Si hay varias versiones de la función (sobrecargas), se usa la que coincide con estos
+  -- parámetros por nombre, sin parámetros de más; si hay varias, la más reciente.
   SELECT string_agg(format('%s => $%s::%s', x.nm, x.ord, format_type(x.typ, NULL)), ', ' ORDER BY x.ord)
     INTO v_call
     FROM (
@@ -439,7 +441,18 @@ BEGIN
                        WHEN 'notes_in' THEN 5 WHEN 'project_codes_in' THEN 6 WHEN 'items_in' THEN 7 END AS ord
         FROM pg_proc pp
         CROSS JOIN LATERAL unnest(coalesce(pp.proallargtypes, pp.proargtypes::oid[]), pp.proargnames) AS a(typ, nm)
-       WHERE pp.proname = 'create_request_with_items' AND pp.pronamespace = 'public'::regnamespace
+       WHERE pp.oid = (
+               SELECT c.oid
+                 FROM pg_proc c
+                 CROSS JOIN LATERAL (
+                   SELECT count(*) FILTER (WHERE n IN ('vendor_id_in', 'account_manager_id_in', 'shipping_address_id_in',
+                                                       'billing_address_id_in', 'notes_in', 'project_codes_in', 'items_in')) AS coinciden
+                     FROM unnest(c.proargnames) AS n
+                 ) k
+                WHERE c.proname = 'create_request_with_items' AND c.pronamespace = 'public'::regnamespace
+                  AND c.pronargs - c.pronargdefaults <= k.coinciden
+                ORDER BY k.coinciden DESC, c.oid DESC
+                LIMIT 1)
          AND a.nm IN ('vendor_id_in', 'account_manager_id_in', 'shipping_address_id_in', 'billing_address_id_in',
                       'notes_in', 'project_codes_in', 'items_in')
     ) x;
