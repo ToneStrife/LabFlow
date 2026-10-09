@@ -326,6 +326,27 @@ BEGIN
 END;
 $$;
 
+-- Rasgos que distinguen material parecido (filtro, estéril, color...), sacados del nombre y la descripción
+CREATE OR REPLACE FUNCTION public.sofia_rasgos(p text)
+RETURNS text
+LANGUAGE sql
+IMMUTABLE
+AS $$
+  SELECT nullif(concat_ws(', ',
+    CASE WHEN t ~ '(no|non|sin|without)[ -]?(filter|filtro|filtered)|unfiltered' THEN 'sin filtro'
+         WHEN t ~ 'filter|filtro|barrera|barrier|aerosol' THEN 'con filtro' END,
+    CASE WHEN t ~ '(no|non)[ -]?(esteril|sterile)|nonsterile' THEN 'no estéril'
+         WHEN t ~ 'esteril|sterile|steril' THEN 'estéril' END,
+    CASE WHEN t ~ 'low[ -]?(retention|binding)|baja retencion' THEN 'baja retención' END,
+    CASE WHEN t ~ 'amarill|yellow' THEN 'amarillas' WHEN t ~ 'azul|blue' THEN 'azules'
+         WHEN t ~ 'transparent|clear|natural|incolor' THEN 'transparentes' END,
+    CASE WHEN t ~ 'graduad|graduated' THEN 'graduadas' END,
+    CASE WHEN t ~ 'rack|gradilla|caja con|boxed' THEN 'en caja/rack'
+         WHEN t ~ 'bag|bolsa|bulk|granel' THEN 'en bolsa' END
+  ), '')
+  FROM (SELECT public.sofia_norm(p) AS t) x;
+$$;
+
 CREATE OR REPLACE FUNCTION public.sofia_buscar_producto(p_token text, p_texto text)
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -374,6 +395,8 @@ BEGIN
                'proveedor',  v.name,
                'fecha',      to_char(u.fecha_pedido, 'YYYY-MM-DD'),
                'parecido',   round(u.score::numeric, 2),
+               'notas',      left(nullif(trim(coalesce(u.notes, '')), ''), 140),
+               'rasgos',     public.sofia_rasgos(u.product_name || ' ' || coalesce(u.format, '') || ' ' || coalesce(u.notes, '') || ' ' || coalesce(u.brand, '')),
                'proyectos',  (SELECT coalesce(jsonb_agg(pj.code || ' ' || pj.name), '[]'::jsonb)
                                 FROM public.projects pj
                                WHERE u.project_codes IS NOT NULL AND pj.id::text = ANY (u.project_codes::text[]))
