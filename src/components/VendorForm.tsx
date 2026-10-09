@@ -17,6 +17,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2 } from "lucide-react"; // Import Loader2
 import { VendorFormValues } from "@/hooks/use-vendors"; // Import the correct type
+import { cn } from "@/lib/utils";
+import { dialogBodyScrollClass, dialogFooterMobileClass } from "@/lib/layout";
 
 const vendorFormSchema = z.object({
   name: z.string().min(1, { message: "El nombre del proveedor es obligatorio." }),
@@ -65,7 +67,8 @@ const VendorForm: React.FC<VendorFormProps> = ({ initialData, onSubmit, onCancel
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="flex min-h-0 flex-1 flex-col">
+        <div className={cn(dialogBodyScrollClass, "space-y-4 px-6 py-4")}>
         <FormField
           control={form.control}
           name="name"
@@ -175,7 +178,8 @@ const VendorForm: React.FC<VendorFormProps> = ({ initialData, onSubmit, onCancel
             </FormItem>
           )}
         />
-        <div className="flex justify-end space-x-2 pt-4">
+        </div>
+        <div className={cn(dialogFooterMobileClass, "px-6 pb-4")}>
           {onCancel && (
             <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
               Cancelar
