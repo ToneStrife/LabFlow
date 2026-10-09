@@ -35,7 +35,7 @@ const ApproveRequestListDialog: React.FC<ApproveRequestListDialogProps> = ({
   if (!request) return null;
 
   const approveButtonText = request.quote_url ? "Aprobar y Solicitar PO (Cómprame)" : "Aprobar y Solicitar Cotización (Correo)";
-  const approveOnlyText = request.quote_url ? "Aprobar Solamente (a PO Solicitado)" : "Aprobar solamente (queda pendiente de presupuesto)";
+  const approveOnlyText = request.quote_url ? "Aprobar Solamente (a PO Solicitado)" : "Aprobar Solamente (a Cotización Solicitada)";
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>

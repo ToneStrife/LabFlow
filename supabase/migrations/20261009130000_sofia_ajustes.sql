@@ -450,8 +450,8 @@ BEGIN
              'numero',    coalesce(c.request_number, left(c.id::text, 8)),
              'fecha',     to_char(c.created_at, 'YYYY-MM-DD'),
              'estado',    CASE c.status::text
-                            WHEN 'Pending' THEN 'pendiente de aprobar'
-                            WHEN 'Quote Requested' THEN 'aprobado, pendiente de presupuesto'
+                            WHEN 'Pending' THEN 'pendiente de presupuesto'
+                            WHEN 'Quote Requested' THEN 'cotización solicitada'
                             WHEN 'PO Requested' THEN 'orden de compra pedida'
                             WHEN 'Ordered' THEN 'pedido al proveedor'
                             WHEN 'Received' THEN 'recibido'

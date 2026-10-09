@@ -8,8 +8,8 @@ import { RequestStatus } from "@/data/types";
 
 /** Etiqueta corta, para insignias y celdas de tabla. */
 export const REQUEST_STATUS_LABEL: Record<RequestStatus, string> = {
-  "Pending": "Pdte. aprobación",
-  "Quote Requested": "Pdte. presupuesto",
+  "Pending": "Pdte. presupuesto",
+  "Quote Requested": "Cot. solicitada",
   "PO Requested": "PO solicitado",
   "Ordered": "Pedido",
   "Received": "Recibido",
@@ -19,8 +19,8 @@ export const REQUEST_STATUS_LABEL: Record<RequestStatus, string> = {
 
 /** Etiqueta larga, para desplegables y filtros donde hay sitio de sobra. */
 export const REQUEST_STATUS_LABEL_LONG: Record<RequestStatus, string> = {
-  "Pending": "Pendiente de aprobación",
-  "Quote Requested": "Aprobada, pendiente de presupuesto",
+  "Pending": "Pendiente de presupuesto",
+  "Quote Requested": "Cotización solicitada",
   "PO Requested": "Orden de compra solicitada",
   "Ordered": "Pedido realizado",
   "Received": "Recibido",
