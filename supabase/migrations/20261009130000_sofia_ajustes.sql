@@ -241,6 +241,14 @@ DECLARE
   out text[] := '{}';
 BEGIN
   t := replace(t, 'µ', 'u');
+  -- unidades dichas en palabras
+  t := regexp_replace(t, '\m(microlitros?|microlitres?|microliters?)\M', 'ul', 'g');
+  t := regexp_replace(t, '\m(mililitros?|millilitres?|milliliters?)\M', 'ml', 'g');
+  t := regexp_replace(t, '\m(microgramos?|micrograms?)\M', 'ug', 'g');
+  t := regexp_replace(t, '\m(miligramos?|milligrams?)\M', 'mg', 'g');
+  t := regexp_replace(t, '\m(nanogramos?|nanograms?)\M', 'ng', 'g');
+  t := regexp_replace(t, '\m(micras?|micrometros?|microns?|micrometers?)\M', 'um', 'g');
+  t := regexp_replace(t, '\m(litros?|litres?|liters?)\M', 'l', 'g');
   -- número + unidad juntos: "5 ml" -> "5ml", "0,22 um" -> "0.22um"
   t := regexp_replace(t, '(\d)[,](\d)', '\1.\2', 'g');
   t := regexp_replace(t, '(\d)\s*(ml|ul|l|mg|ug|ng|g|kg|mm|um|nm|cm|m|kda|x|mm2|cm2|%)(?![a-z])', '\1\2', 'g');
@@ -307,7 +315,7 @@ BEGIN
         SELECT 1 FROM unnest(public.sofia_sinonimos(t)) s, unnest(p_hay) h
          WHERE h = s
             OR (length(s) >= 4 AND length(h) >= 4 AND (h LIKE s || '%' OR s LIKE h || '%'))
-            OR (length(s) >= 5 AND h !~ '\d' AND extensions.similarity(s, h) >= 0.45)
+            OR (length(s) >= 5 AND h !~ '\d' AND similarity(s, h) >= 0.45)
       ) INTO hit;
       IF hit THEN okTxt := okTxt + 1; END IF;
     END IF;
