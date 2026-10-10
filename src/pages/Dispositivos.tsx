@@ -49,11 +49,14 @@ import {
   useUpdateSofia,
 } from "@/hooks/use-sofia-devices";
 
+// Mismo orden que en la placa. Por voz: "avatar Nami" o "avatar 5" (el número hablado es id + 1).
 const AVATARES = [
-  { id: 0, nombre: "Robot", img: "sofia/avatar-robot.png" },
-  { id: 1, nombre: "Manga", img: "sofia/avatar-manga.png" },
-  { id: 2, nombre: "Criatura", img: "sofia/avatar-criatura.png" },
-  { id: 3, nombre: "Ninja", img: "sofia/avatar-ninja.png" },
+  { id: 0, nombre: "Robot" },
+  { id: 1, nombre: "Manga" },
+  { id: 2, nombre: "Criatura" },
+  { id: 3, nombre: "Naruto" },
+  { id: 4, nombre: "Nami" },
+  { id: 5, nombre: "Pikachu" },
 ];
 
 // Voces de Gemini Live. Todas hablan español; el acento lo pone la instrucción de la placa.
@@ -79,7 +82,6 @@ const VOCES_MASCULINAS = [
 
 const SIN_SEDE = "ninguna";
 
-const assetUrl = (p: string) => `${import.meta.env.BASE_URL}${p}`;
 
 const opcionesDe = (d: SofiaDevice): SofiaDeviceOpciones => ({
   nombre: d.nombre,
@@ -393,8 +395,8 @@ const TarjetaSofia: React.FC<{ device: SofiaDevice; firmwares: SofiaFirmware[] }
     <Card>
       <CardHeader className="space-y-4">
         <div className="flex flex-row items-start gap-4">
-          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg border bg-[#dde0d2] p-1">
-            <img src={assetUrl(avatar.img)} alt={avatar.nombre} className="h-full w-full object-contain [image-rendering:pixelated]" />
+          <div className="flex h-16 min-w-16 shrink-0 items-center justify-center rounded-lg border bg-[#dde0d2] px-2">
+            <span className="text-sm font-semibold text-neutral-800">{avatar.nombre}</span>
           </div>
           <div className="min-w-0 flex-1">
             <CardTitle className="truncate text-lg">{device.nombre}</CardTitle>
@@ -444,7 +446,7 @@ const TarjetaSofia: React.FC<{ device: SofiaDevice; firmwares: SofiaFirmware[] }
 
               <div className="space-y-2">
                 <Label>Avatar</Label>
-                <div className="grid grid-cols-4 gap-2">
+                <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
                   {AVATARES.map((a) => (
                     <button
                       key={a.id}
@@ -455,9 +457,6 @@ const TarjetaSofia: React.FC<{ device: SofiaDevice; firmwares: SofiaFirmware[] }
                         form.avatar === a.id ? "border-primary ring-2 ring-primary/30" : "hover:bg-muted"
                       )}
                     >
-                      <span className="flex aspect-square w-full items-center justify-center rounded bg-[#dde0d2] p-1">
-                        <img src={assetUrl(a.img)} alt="" className="h-full w-full object-contain [image-rendering:pixelated]" />
-                      </span>
                       {a.nombre}
                     </button>
                   ))}
@@ -861,8 +860,8 @@ const OtrasSofias: React.FC = () => {
           const dueno = [d.owner?.first_name, d.owner?.last_name].filter(Boolean).join(" ") || "Sin nombre";
           return (
             <div key={d.id} className="flex items-center gap-3 px-6 py-3">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded border bg-[#dde0d2] p-0.5">
-                <img src={assetUrl(av.img)} alt="" className="h-full w-full object-contain [image-rendering:pixelated]" />
+              <span className="flex h-10 min-w-10 shrink-0 items-center justify-center rounded border bg-[#dde0d2] px-1.5">
+                <span className="text-xs font-semibold text-neutral-800">{av.nombre}</span>
               </span>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">
