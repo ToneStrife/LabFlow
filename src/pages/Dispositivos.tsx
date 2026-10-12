@@ -122,7 +122,7 @@ const Emparejar: React.FC<{ primera: boolean }> = ({ primera }) => {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-lg">
-          <Link2 className="h-5 w-5" /> {primera ? "Empareja tu Sofía" : "Emparejar otra Sofía"}
+          <Link2 className="h-5 w-5" /> {primera ? "Empareja tu SofIA" : "Emparejar otra SofIA"}
         </CardTitle>
         <CardDescription>
           Dile a la placa <span className="font-medium text-foreground">«Sophia, empareja con LabFlow»</span>.
@@ -154,7 +154,7 @@ const Emparejar: React.FC<{ primera: boolean }> = ({ primera }) => {
   );
 };
 
-// ------------------------------------------------------------------ una Sofía
+// ------------------------------------------------------------------ una SofIA
 type Valor = number | null;
 
 /** Un ajuste numérico que puede quedarse en «el de la placa» (null) */
@@ -354,7 +354,7 @@ const TarjetaSofia: React.FC<{ device: SofiaDevice; firmwares: SofiaFirmware[] }
       id: device.id,
       data: {
         ...form,
-        nombre: form.nombre.trim() || "Sofía",
+        nombre: form.nombre.trim() || "SofIA",
         propietario: form.propietario?.trim() || null,
         protocolos_carpeta: form.protocolos_carpeta.trim() || "Protocolos Jarvis",
       },
@@ -725,7 +725,7 @@ const ProgramaPlaca: React.FC<{ device: SofiaDevice; firmwares: SofiaFirmware[] 
   );
 };
 
-// Subir y publicar versiones (permiso «Publicar firmware de Sofía»)
+// Subir y publicar versiones (permiso «Publicar firmware de SofIA»)
 const FirmwareSofia: React.FC<{ firmwares: SofiaFirmware[]; misPlacas: SofiaDevice[] }> = ({ firmwares }) => {
   const subir = useUploadSofiaFirmware();
   const publicar = usePublishSofiaFirmware();
@@ -757,11 +757,11 @@ const FirmwareSofia: React.FC<{ firmwares: SofiaFirmware[]; misPlacas: SofiaDevi
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-lg">
-          <Upload className="h-5 w-5" /> Programa de las Sofías
+          <Upload className="h-5 w-5" /> Programa de las SofIAs
         </CardTitle>
         <CardDescription>
           Sube aquí el .bin (en el Arduino IDE: Programa &gt; Exportar binario compilado, el archivo que acaba en <span className="font-mono">.ino.bin</span>).
-          Se guarda en privado. Al publicarlo, las Sofías en automático se actualizan solas cuando están libres. El .bin lleva dentro tu secrets.h.
+          Se guarda en privado. Al publicarlo, las SofIAs en automático se actualizan solas cuando están libres. El .bin lleva dentro tu secrets.h.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -774,7 +774,7 @@ const FirmwareSofia: React.FC<{ firmwares: SofiaFirmware[]; misPlacas: SofiaDevi
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <label className="flex items-center gap-2 text-sm">
               <Checkbox checked={publicarYa} onCheckedChange={(v) => setPublicarYa(v === true)} />
-              Publicarla ya para todas las Sofías en automático
+              Publicarla ya para todas las SofIAs en automático
             </label>
             <Button type="submit" disabled={!file || !version.trim() || subir.isPending}>
               {subir.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
@@ -851,7 +851,7 @@ const OtrasSofias: React.FC = () => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg">Otras Sofías del laboratorio</CardTitle>
+        <CardTitle className="text-lg">Otras SofIAs del laboratorio</CardTitle>
         <CardDescription>Solo lo ve administración. Cada persona cambia las opciones de la suya.</CardDescription>
       </CardHeader>
       <CardContent className="divide-y p-0">
@@ -889,7 +889,7 @@ const Dispositivos: React.FC = () => {
     <div className={cn(pageContainerClass, "max-w-3xl")}>
       <div>
         <h2 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
-          <Bot className="h-6 w-6" /> Mis Sofías
+          <Bot className="h-6 w-6" /> Mis SofIAs
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Tu asistente de voz del laboratorio: su nombre, su voz y cómo hace los pedidos que le dictas.
@@ -916,12 +916,12 @@ const Dispositivos: React.FC = () => {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
-                  <Upload className="h-5 w-5" /> Programa de las Sofías
+                  <Upload className="h-5 w-5" /> Programa de las SofIAs
                 </CardTitle>
                 <CardDescription>
                   {cargandoPermisos
                     ? "Comprobando permisos..."
-                    : "Subir versiones del programa necesita el permiso «Publicar firmware de Sofía». Si ya te lo has dado, cierra sesión y vuelve a entrar para que se actualice; si no, dáselo en Admin > Permisos (excepción por persona)."}
+                    : "Subir versiones del programa necesita el permiso «Publicar firmware de SofIA». Si ya te lo has dado, cierra sesión y vuelve a entrar para que se actualice; si no, dáselo en Admin > Permisos (excepción por persona)."}
                 </CardDescription>
               </CardHeader>
             </Card>

@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "@/components/SessionContextProvider";
 
-/** Un asistente Sofía (la placa de voz del laboratorio) registrado a nombre de alguien */
+/** Un asistente SofIA (la placa de voz del laboratorio) registrado a nombre de alguien */
 export interface SofiaDevice {
   id: string;
   created_at: string;
@@ -42,7 +42,7 @@ export interface SofiaDevice {
   } | null;
 }
 
-/** Lo que cada persona puede cambiar de su Sofía */
+/** Lo que cada persona puede cambiar de su SofIA */
 export type SofiaDeviceOpciones = Pick<
   SofiaDevice,
   | "nombre"
@@ -81,7 +81,7 @@ export const useMySofiaDevices = () => {
   });
 };
 
-/** Las Sofías de los demás (solo para administración: la política solo se las deja leer a quien administra) */
+/** Las SofIAs de los demás (solo para administración: la política solo se las deja leer a quien administra) */
 export interface SofiaDeviceAjena extends SofiaDevice {
   owner: { first_name: string | null; last_name: string | null } | null;
 }
@@ -114,7 +114,7 @@ export const usePairSofia = () => {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: KEY });
-      toast.success("Sofía emparejada", {
+      toast.success("SofIA emparejada", {
         description: "En unos segundos la placa lo confirmará en su pantalla.",
       });
     },
@@ -148,13 +148,13 @@ export const useRemoveSofia = () => {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: KEY });
-      toast.success("Sofía desvinculada");
+      toast.success("SofIA desvinculada");
     },
     onError: (e) => toast.error("No se pudo desvincular", { description: e.message }),
   });
 };
 
-/** Claves de una Sofía: la página solo sabe si hay clave de Gemini y los nombres de las redes, nunca las contraseñas */
+/** Claves de una SofIA: la página solo sabe si hay clave de Gemini y los nombres de las redes, nunca las contraseñas */
 export interface SofiaSecretInfo {
   gemini: boolean;
   gemini_fin: string | null;
@@ -236,7 +236,7 @@ export const useUploadSofiaFirmware = () => {
   return useMutation<SofiaFirmware, Error, { file: File; version: string; notas: string; publicar: boolean }>({
     mutationFn: async ({ file, version, notas, publicar }) => {
       if (!file.name.toLowerCase().endsWith(".bin")) throw new Error("Tiene que ser el .bin exportado desde el Arduino IDE.");
-      if (file.size < 100000 || file.size > 4 * 1024 * 1024) throw new Error("Ese archivo no parece el programa de Sofía (tamaño raro).");
+      if (file.size < 100000 || file.size > 4 * 1024 * 1024) throw new Error("Ese archivo no parece el programa de SofIA (tamaño raro).");
       const cabecera = new Uint8Array(await file.slice(0, 1).arrayBuffer());
       if (cabecera[0] !== 0xe9) throw new Error("Ese .bin no es un programa de ESP32 (¿es el .bootloader o el .merged?). Usa el que acaba en .ino.bin.");
       const md5 = await md5DeArchivo(file);
@@ -260,7 +260,7 @@ export const useUploadSofiaFirmware = () => {
       qc.invalidateQueries({ queryKey: FW_KEY });
       qc.invalidateQueries({ queryKey: KEY });
       toast.success(`Versión ${f.version} subida`, {
-        description: f.publicado ? "Las Sofías en automático se actualizarán cuando estén libres." : "Sin publicar: puedes probarla primero en una sola placa.",
+        description: f.publicado ? "Las SofIAs en automático se actualizarán cuando estén libres." : "Sin publicar: puedes probarla primero en una sola placa.",
       });
     },
     onError: (e) => toast.error("No se pudo subir", { description: e.message }),
