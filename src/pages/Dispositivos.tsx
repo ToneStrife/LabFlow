@@ -198,9 +198,9 @@ const AjusteSlider: React.FC<{
   </div>
 );
 
-// Sensibilidad 1-9 en la página; en la placa es un umbral (más bajo = más sensible)
-const sensDeUmbral = (u: number) => Math.min(9, Math.max(1, Math.round((0.8 - u) / 0.05)));
-const umbralDeSens = (s: number) => Math.round((0.8 - s * 0.05) * 100) / 100;
+// Sensibilidad 0-100 en la página (cada punto = 0,005 de umbral); en la placa es un umbral (más bajo = más sensible)
+const sensDeUmbral = (u: number) => Math.min(100, Math.max(0, Math.round(((0.8 - u) / 0.5) * 100)));
+const umbralDeSens = (s: number) => Math.round((0.8 - (s / 100) * 0.5) * 1000) / 1000;
 
 const EstadoPlaca: React.FC<{ device: SofiaDevice }> = ({ device }) => {
   const alDia = (device.applied_rev ?? 0) >= device.config_rev;
@@ -540,10 +540,10 @@ const TarjetaSofia: React.FC<{ device: SofiaDevice; firmwares: SofiaFirmware[] }
                 ayuda="Más alta: te oye mejor de lejos o hablando bajo, pero salta más sin querer. Bájala si se activa sola."
                 value={form.wake_umbral === null ? null : sensDeUmbral(form.wake_umbral)}
                 porDefecto={sensDeUmbral(placa.umbral ?? 0.4)}
-                min={1}
-                max={9}
+                min={0}
+                max={100}
                 step={1}
-                formato={(v) => `${v} de 9`}
+                formato={(v) => `${v} de 100`}
                 onChange={(v) => set("wake_umbral", v === null ? null : umbralDeSens(v))}
               />
               <AjusteSlider
