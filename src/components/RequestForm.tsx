@@ -40,8 +40,6 @@ import QuoteParsePreviewDialog from "./QuoteParsePreviewDialog";
 import type { ParsedQuoteItem } from "@/data/quote-parse";
 import { useSedeActiva } from "@/components/SedeContextProvider";
 import { getDefaultShippingAddressId, formatShippingAddressLabel } from "@/lib/sedes";
-import { esPedidoFarmacia, gerenteFarmacia } from "@/lib/farmacia";
-
 // -------------------- Schemas --------------------
 const itemSchema = z.object({
   productName: z.string().min(1, { message: "El nombre del producto es obligatorio." }),
@@ -345,16 +343,6 @@ const RequestForm: React.FC = () => {
     previousDefaultShippingRef.current = defaultDeSede;
   }, [shippingAddresses, sedeActiva, form]);
 
-  const shippingAddressId = form.watch("shippingAddressId");
-  const pedidoFarmacia = esPedidoFarmacia(shippingAddressId, shippingAddresses);
-  const niceto = gerenteFarmacia(accountManagers);
-
-  React.useEffect(() => {
-    if (pedidoFarmacia && niceto && form.getValues("accountManagerId") !== niceto.id) {
-      form.setValue("accountManagerId", niceto.id);
-    }
-  }, [pedidoFarmacia, niceto, form]);
-
   React.useEffect(() => {
     if (!billingAddresses?.length) return;
     const currentBillingId = form.getValues("billingAddressId");
@@ -376,11 +364,7 @@ const RequestForm: React.FC = () => {
       return;
     }
 
-    const pedidoFarmacia = esPedidoFarmacia(data.shippingAddressId, shippingAddresses);
-    const niceto = gerenteFarmacia(accountManagers);
-    const managerId = pedidoFarmacia
-      ? niceto?.id ?? null
-      : data.accountManagerId === 'unassigned' || !data.accountManagerId ? null : data.accountManagerId;
+    const managerId = data.accountManagerId === 'unassigned' || !data.accountManagerId ? null : data.accountManagerId;
     const quoteFile = selectedQuoteFile; // Usar el objeto File real
     
     // 1. Crear la solicitud (inicialmente en estado Pending)
@@ -615,8 +599,8 @@ const RequestForm: React.FC = () => {
             name="accountManagerId"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Gerente de cuenta <span className="font-normal normal-case text-muted-foreground">{pedidoFarmacia ? "(Niceto, Farmacia)" : "(opcional)"}</span></FormLabel>
-                <Select onValueChange={field.onChange} value={field.value || "unassigned"} disabled={isLoadingAccountManagers || isSubmitting || pedidoFarmacia}>
+                <FormLabel>Gerente de cuenta <span className="font-normal normal-case text-muted-foreground">(opcional)</span></FormLabel>
+                <Select onValueChange={field.onChange} value={field.value || "unassigned"} disabled={isLoadingAccountManagers || isSubmitting}>
                   <FormControl>
                     <SelectTrigger><SelectValue placeholder={isLoadingAccountManagers ? "Cargando gerentes..." : "Selecciona un gerente de cuenta"} /></SelectTrigger>
                   </FormControl>

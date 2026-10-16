@@ -3,6 +3,7 @@ import { SupabaseRequest as SupabaseRequestType, SupabaseRequestItem as Supabase
 import { toast } from "sonner";
 import { apiGetRequests, apiAddRequest, apiUpdateRequestStatus, apiDeleteRequest, apiAddInventoryItem, apiSendEmail, apiUpdateRequestFile, apiUpdateRequestMetadata, apiUpdateFullRequest, apiRevertRequestReception } from "@/integrations/api";
 import { invalidateRequestEvents } from "@/lib/activity";
+import { getRequestStatusLabel } from "@/lib/request-status";
 
 export interface SupabaseRequestItem extends SupabaseRequestItemType {}
 export interface SupabaseRequest extends SupabaseRequestType {}
@@ -90,7 +91,7 @@ export const useUpdateRequestStatus = () => {
       queryClient.invalidateQueries({ queryKey: ["requests"] });
       queryClient.invalidateQueries({ queryKey: ["inventory"] });
       invalidateRequestEvents(queryClient);
-      toast.success(`Estado de la Solicitud ${updatedRequest.id} actualizado a ${updatedRequest.status}!`);
+      toast.success(`Estado actualizado a ${getRequestStatusLabel(updatedRequest.status)}.`);
     },
     onError: (error) => {
       toast.error("Fallo al actualizar el estado de la solicitud.", {

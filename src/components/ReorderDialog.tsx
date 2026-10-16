@@ -32,8 +32,6 @@ import { useAddRequest } from "@/hooks/use-requests";
 import { useSession } from "@/components/SessionContextProvider";
 import { useSedeActiva } from "@/components/SedeContextProvider";
 import { getDefaultShippingAddressId, formatShippingAddressLabel } from "@/lib/sedes";
-import { esPedidoFarmacia, gerenteFarmacia } from "@/lib/farmacia";
-import { useAccountManagers } from "@/hooks/use-account-managers";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { SupabaseRequest } from "@/data/types"; // Corrected import
@@ -57,7 +55,6 @@ const ReorderDialog: React.FC<ReorderDialogProps> = ({ isOpen, onOpenChange, ite
   const { sedeActiva } = useSedeActiva();
   const navigate = useNavigate();
   const { data: vendors, isLoading: isLoadingVendors } = useVendors();
-  const { data: accountManagers } = useAccountManagers();
   const { data: shippingAddresses, isLoading: isLoadingShippingAddresses } = useShippingAddresses();
   const { data: billingAddresses, isLoading: isLoadingBillingAddresses } = useBillingAddresses();
   const addRequestMutation = useAddRequest();
@@ -105,9 +102,7 @@ const ReorderDialog: React.FC<ReorderDialogProps> = ({ isOpen, onOpenChange, ite
       const newRequest: SupabaseRequest = await addRequestMutation.mutateAsync({ // Explicitly type newRequest
         vendorId: data.vendorId,
         requesterId: session.user.id,
-        accountManagerId: esPedidoFarmacia(data.shippingAddressId, shippingAddresses)
-          ? gerenteFarmacia(accountManagers)?.id ?? null
-          : null,
+        accountManagerId: null,
         shippingAddressId: data.shippingAddressId,
         billingAddressId: data.billingAddressId,
         notes: `Solicitud de Reordenamiento generada automáticamente para ${items.length} artículos.`,

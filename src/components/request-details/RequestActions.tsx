@@ -21,9 +21,6 @@ import {
   canPerformWorkflowAction,
   canReceivePackages,
 } from "@/lib/permissions";
-import { useShippingAddresses } from "@/hooks/use-addresses";
-import { esPedidoFarmacia } from "@/lib/farmacia";
-
 interface RequestActionsProps {
   request: SupabaseRequest;
   isUpdatingStatus: boolean;
@@ -54,8 +51,6 @@ const RequestActions: React.FC<RequestActionsProps> = ({
   const { profile, session } = useSession();
   const { can } = useCan();
   const { data: projects } = useProjects();
-  const { data: shippingAddresses } = useShippingAddresses();
-  const sinCorreoComprame = esPedidoFarmacia(request.shipping_address_id, shippingAddresses);
   const approvalCtx = {
     role: profile?.role,
     userId: session?.user?.id,
@@ -123,14 +118,6 @@ const RequestActions: React.FC<RequestActionsProps> = ({
               disabled={isUpdatingStatus}
             >
               <FileText className="mr-2 h-4 w-4" /> Subir presupuesto
-            </Button>
-          ) : sinCorreoComprame ? (
-            <Button
-              onClick={() => handleSendPORequest(request)}
-              className="w-full justify-start"
-              disabled={isUpdatingStatus}
-            >
-              <CheckCircle className="mr-2 h-4 w-4" /> Presupuesto recibido
             </Button>
           ) : (
             <Button 

@@ -360,12 +360,29 @@ export const apiAddRequest = async (data: AddRequestData): Promise<SupabaseReque
     throw new Error(error.message);
   }
 
+  let created = newRequest as SupabaseRequest;
+  // La función de la base a veces deja el pedido ya en "Quote Requested".
+  // Todo pedido nuevo empieza pendiente de presupuesto.
+  if (created?.id && created.status === "Quote Requested") {
+    const { data: corregida, error: errorEstado } = await supabase
+      .from("requests")
+      .update({ status: "Pending" })
+      .eq("id", created.id)
+      .select(`*, items:request_items (*)`)
+      .maybeSingle();
+    if (errorEstado) {
+      console.error("No se pudo dejar el pedido en pendiente de presupuesto:", errorEstado.message);
+    } else if (corregida) {
+      created = corregida as SupabaseRequest;
+    }
+  }
+
   try {
     const recipients = await getNotificationRecipients('notify_on_new_request', ['Admin']);
     const recipientIds = recipients.map(m => m.id);
     const requester = await getRequesterProfile(requesterId);
     const requesterName = requester ? `${requester.first_name || ''} ${requester.last_name || ''}`.trim() : 'Unkown Requester';
-    const requestNumber = (newRequest as SupabaseRequest).request_number || (newRequest as SupabaseRequest).id.substring(0, 8);
+    const requestNumber = created.request_number || created.id.substring(0, 8);
     
     if (recipientIds.length > 0) {
         await supabase.functions.invoke('send-notification', {
@@ -374,7 +391,7 @@ export const apiAddRequest = async (data: AddRequestData): Promise<SupabaseReque
                 user_ids: recipientIds,
                 title: `🔔 Nueva Solicitud #${requestNumber}`,
                 body: `El usuario ${requesterName} ha enviado una nueva solicitud pendiente.`,
-                link: `/requests/${(newRequest as SupabaseRequest).id}`,
+                link: `/requests/${created.id}`,
             }),
         });
     }
@@ -382,7 +399,7 @@ export const apiAddRequest = async (data: AddRequestData): Promise<SupabaseReque
     console.error("Failed to send notification for new request:", e);
   }
 
-  return newRequest as SupabaseRequest;
+  return created;
 };
 
 const getUserStatusPreferences = async (userId: string): Promise<RequestStatus[]> => {

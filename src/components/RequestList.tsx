@@ -27,7 +27,7 @@ import { mobileDialogClass, dialogFooterMobileClass } from "@/lib/layout";
 import { useReceiveWizard } from "@/components/ReceiveWizardProvider";
 import { useSedeActiva } from "@/components/SedeContextProvider";
 import { requestMatchesSede } from "@/lib/sedes";
-import { destinatarioPresupuesto, esPedidoFarmacia } from "@/lib/farmacia";
+import { correoSiLoHaceNiceto } from "@/lib/farmacia";
 
 
 // Definir el orden de prioridad de los estados
@@ -111,6 +111,15 @@ const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
     return accountManagers?.find(am => am.id === managerId)?.email || "";
   };
 
+  const correoNiceto = (request: SupabaseRequest) =>
+    correoSiLoHaceNiceto({
+      shippingAddressId: request.shipping_address_id,
+      addresses: shippingAddresses,
+      requesterId: request.requester_id,
+      actorId: profile?.id,
+      personas: profiles,
+    });
+
   const handleEmailDialogOpenChange = (open: boolean) => {
     setIsEmailDialogOpen(open);
     if (!open) setPendingStatusOnEmailSend(null);
@@ -136,14 +145,9 @@ const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
   };
 
   const buildPORequestEmailInitialData = async (request: SupabaseRequest) => {
-    if (esPedidoFarmacia(request.shipping_address_id, shippingAddresses)) return null;
     const poRequestTemplate = emailTemplates?.find(t => t.template_name === 'PO Request');
     if (!poRequestTemplate) {
       toast.error("Plantilla de correo electrónico 'PO Request' no encontrada. Por favor, crea una en el panel de Admin.");
-      return null;
-    }
-    if (!request.account_manager_id) {
-      toast.error("No se puede enviar la solicitud de PO.", { description: "No hay un gerente de cuenta asignado a esta solicitud." });
       return null;
     }
     if (!request.quote_url) {
@@ -167,8 +171,18 @@ const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
       toast.warning("No se pudo generar la URL firmada para el presupuesto. El enlace adjunto en el diálogo podría estar roto.");
     }
 
+    const especial = correoNiceto(request);
+    if (especial?.error) {
+      toast.error(especial.error);
+      return null;
+    }
+    if (!especial && !request.account_manager_id) {
+      toast.error("No se puede enviar la solicitud de PO.", { description: "No hay un gerente de cuenta asignado a esta solicitud." });
+      return null;
+    }
+
     return {
-      to: getAccountManagerEmail(request.account_manager_id),
+      to: especial?.to || getAccountManagerEmail(request.account_manager_id),
       subject: processTextTemplate(poRequestTemplate.subject_template, context),
       body: processEmailTemplate(poRequestTemplate.body_template, context),
       attachments: forDialog,
@@ -177,11 +191,6 @@ const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
   };
 
   const handleSendPORequest = async (request: SupabaseRequest) => {
-    if (esPedidoFarmacia(request.shipping_address_id, shippingAddresses)) {
-      await updateStatusMutation.mutateAsync({ id: request.id, status: "PO Requested" });
-      toast.success("Presupuesto recibido. En Farmacia el correo de cómprame no se envía.");
-      return;
-    }
     const emailData = await buildPORequestEmailInitialData(request);
     if (!emailData) return;
     setPendingStatusOnEmailSend({ requestId: request.id, status: "PO Requested" });
@@ -205,14 +214,9 @@ const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
     await updateStatusMutation.mutateAsync({ id: request.id, status: nextStatus });
 
     if (nextStatus === "Quote Requested") {
-      const destino = destinatarioPresupuesto({
-        shippingAddressId: request.shipping_address_id,
-        addresses: shippingAddresses,
-        managers: accountManagers,
-        correoProveedor: getVendorEmail(request.vendor_id),
-      });
-      if (destino.error) {
-        toast.error(destino.error);
+      const especial = correoNiceto(request);
+      if (especial?.error) {
+        toast.error(especial.error);
         return;
       }
       const quoteTemplate = emailTemplates?.find(t => t.template_name === 'Quote Request');
@@ -233,7 +237,7 @@ const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
       };
 
       const emailData = {
-        to: destino.to,
+        to: especial?.to || getVendorEmail(request.vendor_id),
         subject: processTextTemplate(quoteTemplate.subject_template, context),
         body: processEmailTemplate(quoteTemplate.body_template, context),
       };
@@ -245,8 +249,6 @@ const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
           setIsEmailDialogOpen(true);
         }
       );
-    } else if (esPedidoFarmacia(request.shipping_address_id, shippingAddresses)) {
-      setIsApproveListDialogOpen(false);
     } else {
       const emailData = await buildPORequestEmailInitialData({ ...request, status: "PO Requested" });
       if (!emailData) return;
@@ -319,14 +321,9 @@ const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
   }, [sourceRequestToMerge, requests]);
 
   const handleSendQuoteRequestFromList = async (request: SupabaseRequest) => {
-    const destino = destinatarioPresupuesto({
-      shippingAddressId: request.shipping_address_id,
-      addresses: shippingAddresses,
-      managers: accountManagers,
-      correoProveedor: getVendorEmail(request.vendor_id),
-    });
-    if (destino.error) {
-      toast.error(destino.error);
+    const especial = correoNiceto(request);
+    if (especial?.error) {
+      toast.error(especial.error);
       return;
     }
 
@@ -350,7 +347,7 @@ const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
     };
     
     setEmailInitialData({
-      to: destino.to,
+      to: especial?.to || getVendorEmail(request.vendor_id),
       subject: processTextTemplate(quoteTemplate.subject_template, context),
       body: processEmailTemplate(quoteTemplate.body_template, context),
     });
@@ -512,7 +509,6 @@ const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
         onApproveOnly={handleApproveOnlyFromList}
         onApproveAndSendEmail={handleApproveAndSendEmailFromList}
         isSubmitting={updateStatusMutation.isPending || sendEmailMutation.isPending}
-        sinCorreoComprame={esPedidoFarmacia(requestToApproveFromList?.shipping_address_id, shippingAddresses)}
       />
     </div>
   );

@@ -33,9 +33,6 @@ import {
   canPerformWorkflowAction,
   canReceivePackages,
 } from "@/lib/permissions";
-import { useShippingAddresses } from "@/hooks/use-addresses";
-import { esPedidoFarmacia } from "@/lib/farmacia";
-
 interface RequestListActionsProps {
   request: SupabaseRequest;
   isUpdatingStatus: boolean;
@@ -71,8 +68,6 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
   const { profile, session } = useSession();
   const { can } = useCan();
   const { data: projects } = useProjects();
-  const { data: shippingAddresses } = useShippingAddresses();
-  const sinCorreoComprame = esPedidoFarmacia(request.shipping_address_id, shippingAddresses);
   const approvalCtx = {
     role: profile?.role,
     userId: session?.user?.id,
@@ -170,20 +165,16 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
         </>
       )}
 
-      {request.status === "Quote Requested" && request.quote_url && canWorkflow && (sinCorreoComprame || request.account_manager_id) && (
+      {request.status === "Quote Requested" && request.quote_url && canWorkflow && request.account_manager_id && (
         <Button
           variant="ghost"
           size="icon"
           onClick={() => onSendPORequest(request)}
-          title={sinCorreoComprame ? "Presupuesto recibido" : "Enviar solicitud de compra (Cómprame)"}
+          title="Enviar solicitud de compra (Cómprame)"
           disabled={isUpdatingStatus}
           className="shrink-0"
         >
-          {sinCorreoComprame ? (
-            <CheckCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-          ) : (
-            <Mail className="h-4 w-4 text-orange-600 dark:text-orange-400" />
-          )}
+          <Mail className="h-4 w-4 text-orange-600 dark:text-orange-400" />
         </Button>
       )}
 
@@ -291,13 +282,9 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
                 </DropdownMenuItem>
               </>
             )}
-            {request.status === "Quote Requested" && request.quote_url && canWorkflow && (sinCorreoComprame || request.account_manager_id) && (
+            {request.status === "Quote Requested" && request.quote_url && canWorkflow && request.account_manager_id && (
               <DropdownMenuItem onClick={() => onSendPORequest(request)} disabled={isUpdatingStatus}>
-                {sinCorreoComprame ? (
-                  <><CheckCircle className="mr-2 h-4 w-4 text-emerald-600 dark:text-emerald-400" /> Presupuesto recibido</>
-                ) : (
-                  <><Mail className="mr-2 h-4 w-4 text-orange-600 dark:text-orange-400" /> Solicitar compra (Cómprame)</>
-                )}
+                <Mail className="mr-2 h-4 w-4 text-orange-600 dark:text-orange-400" /> Solicitar compra (Cómprame)
               </DropdownMenuItem>
             )}
             {request.status === "PO Requested" && canWorkflow && (

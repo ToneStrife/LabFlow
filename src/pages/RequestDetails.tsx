@@ -45,7 +45,7 @@ import { buildStorageAttachment, openEmailDialogAfterClose, normalizeAttachments
 import { RequestStatus as RequestStatusType, Vendor, Profile, AccountManager, Project, ShippingAddress, BillingAddress } from "@/data/types";
 import { cn } from "@/lib/utils";
 import { pageContainerClass, mobileDialogClass, dialogFooterMobileClass } from "@/lib/layout";
-import { destinatarioPresupuesto, esPedidoFarmacia } from "@/lib/farmacia";
+import { correoSiLoHaceNiceto } from "@/lib/farmacia";
 import { getRequestStatusLabelLong, REQUEST_STATUS_ORDER } from "@/lib/request-status";
 
 const RequestDetails: React.FC = () => {
@@ -106,6 +106,15 @@ const RequestDetails: React.FC = () => {
     return manager?.email || "";
   };
 
+  const correoNiceto = (request: SupabaseRequest) =>
+    correoSiLoHaceNiceto({
+      shippingAddressId: request.shipping_address_id,
+      addresses: shippingAddresses,
+      requesterId: request.requester_id,
+      actorId: profile?.id,
+      personas: profiles,
+    });
+
   const handleEmailDialogOpenChange = (open: boolean) => {
     setIsEmailDialogOpen(open);
     if (!open) setPendingStatusOnEmailSend(null);
@@ -131,12 +140,12 @@ const RequestDetails: React.FC = () => {
   };
 
   const handleSendPORequest = async (request: SupabaseRequest) => {
-    if (esPedidoFarmacia(request.shipping_address_id, shippingAddresses)) {
-      await updateStatusMutation.mutateAsync({ id: request.id, status: "PO Requested" });
-      toast.success("Presupuesto recibido. En Farmacia el correo de cómprame no se envía.");
+    const especial = correoNiceto(request);
+    if (especial?.error) {
+      toast.error(especial.error);
       return;
     }
-    if (!request.account_manager_id) {
+    if (!especial && !request.account_manager_id) {
       toast.error("No hay un gerente de cuenta asignado.");
       return;
     }
@@ -160,7 +169,7 @@ const RequestDetails: React.FC = () => {
 
     setPendingStatusOnEmailSend({ requestId: request.id, status: "PO Requested" });
     setEmailInitialData({
-      to: getAccountManagerEmail(request.account_manager_id),
+      to: especial?.to || getAccountManagerEmail(request.account_manager_id),
       subject: processTextTemplate(poRequestTemplate.subject_template, context as any),
       body: processEmailTemplate(poRequestTemplate.body_template, context as any),
       attachments: forDialog,
@@ -189,14 +198,9 @@ const RequestDetails: React.FC = () => {
       await updateStatusMutation.mutateAsync({ id: requestToApprove.id, status: nextStatus });
       
       if (nextStatus === "Quote Requested") {
-        const destino = destinatarioPresupuesto({
-          shippingAddressId: requestToApprove.shipping_address_id,
-          addresses: shippingAddresses,
-          managers: accountManagers,
-          correoProveedor: getVendorEmail(requestToApprove.vendor_id),
-        });
-        if (destino.error) {
-          toast.error(destino.error);
+        const especial = correoNiceto(requestToApprove);
+        if (especial?.error) {
+          toast.error(especial.error);
           setIsApproveRequestDialogOpen(false);
           return;
         }
@@ -215,7 +219,7 @@ const RequestDetails: React.FC = () => {
         };
         
         const emailData = {
-          to: destino.to,
+          to: especial?.to || getVendorEmail(requestToApprove.vendor_id),
           subject: processTextTemplate(quoteTemplate.subject_template, context as any),
           body: processEmailTemplate(quoteTemplate.body_template, context as any),
         };
@@ -227,9 +231,17 @@ const RequestDetails: React.FC = () => {
             setIsEmailDialogOpen(true);
           }
         );
-      } else if (esPedidoFarmacia(requestToApprove.shipping_address_id, shippingAddresses)) {
-        setIsApproveRequestDialogOpen(false);
-      } else if (requestToApprove.quote_url && requestToApprove.account_manager_id) {
+      } else if (requestToApprove.quote_url) {
+        const especialPo = correoNiceto(requestToApprove);
+        if (especialPo?.error) {
+          toast.error(especialPo.error);
+          setIsApproveRequestDialogOpen(false);
+          return;
+        }
+        if (!especialPo && !requestToApprove.account_manager_id) {
+          setIsApproveRequestDialogOpen(false);
+          return;
+        }
         const poRequestTemplate = emailTemplates?.find(t => t.template_name === 'PO Request');
         if (!poRequestTemplate) return;
 
@@ -250,7 +262,7 @@ const RequestDetails: React.FC = () => {
           () => setIsApproveRequestDialogOpen(false),
           () => {
             setEmailInitialData({
-              to: getAccountManagerEmail(requestToApprove.account_manager_id),
+              to: especialPo?.to || getAccountManagerEmail(requestToApprove.account_manager_id),
               subject: processTextTemplate(poRequestTemplate.subject_template, poContext as any),
               body: processEmailTemplate(poRequestTemplate.body_template, poContext as any),
               attachments: forDialog,
@@ -407,14 +419,9 @@ const RequestDetails: React.FC = () => {
   };
 
   const handleSendQuoteRequest = async (request: SupabaseRequest) => {
-    const destino = destinatarioPresupuesto({
-      shippingAddressId: request.shipping_address_id,
-      addresses: shippingAddresses,
-      managers: accountManagers,
-      correoProveedor: getVendorEmail(request.vendor_id),
-    });
-    if (destino.error) {
-      toast.error(destino.error);
+    const especial = correoNiceto(request);
+    if (especial?.error) {
+      toast.error(especial.error);
       return;
     }
     await updateStatusMutation.mutateAsync({ id: request.id, status: "Quote Requested" });
@@ -433,7 +440,7 @@ const RequestDetails: React.FC = () => {
     };
     
     setEmailInitialData({
-      to: destino.to,
+      to: especial?.to || getVendorEmail(request.vendor_id),
       subject: processTextTemplate(quoteTemplate.subject_template, context as any),
       body: processEmailTemplate(quoteTemplate.body_template, context as any),
     });
@@ -570,16 +577,10 @@ const RequestDetails: React.FC = () => {
         <DialogContent>
           <DialogHeader><DialogTitle>Aprobar Solicitud</DialogTitle></DialogHeader>
           <DialogFooter className={dialogFooterMobileClass}>
-            {request?.quote_url && esPedidoFarmacia(request.shipping_address_id, shippingAddresses) ? (
-              <Button onClick={handleApproveOnly} disabled={updateStatusMutation.isPending}>Aprobar</Button>
-            ) : (
-              <>
-                <Button variant="outline" onClick={handleApproveOnly} disabled={updateStatusMutation.isPending}>Aprobar, sin correo</Button>
-                <Button onClick={handleApproveAndRequestQuoteEmail} disabled={updateStatusMutation.isPending}>
-                  {request?.quote_url ? "Aprobar y enviar cómprame" : "Aprobar y pedir presupuesto"}
-                </Button>
-              </>
-            )}
+            <Button variant="outline" onClick={handleApproveOnly} disabled={updateStatusMutation.isPending}>Aprobar, sin correo</Button>
+            <Button onClick={handleApproveAndRequestQuoteEmail} disabled={updateStatusMutation.isPending}>
+              {request?.quote_url ? "Aprobar y enviar cómprame" : "Aprobar y pedir presupuesto"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

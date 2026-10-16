@@ -11,6 +11,13 @@ type DireccionSede = {
   city?: string | null;
 };
 
+type Persona = {
+  id: string;
+  first_name?: string | null;
+  last_name?: string | null;
+  email?: string | null;
+};
+
 function textoEsFarmacia(texto: string | null | undefined): boolean {
   const normalizado = texto?.toLowerCase() ?? "";
   if (!normalizado) return false;
@@ -34,34 +41,34 @@ export function esNiceto(persona: { first_name?: string | null; last_name?: stri
   return `${persona.first_name ?? ""} ${persona.last_name ?? ""}`.toLowerCase().includes("niceto");
 }
 
-/** Niceto centraliza los pedidos de Farmacia. */
-export function gerenteFarmacia<T extends { first_name?: string | null; last_name?: string | null }>(
-  managers: T[] | undefined
+/** Niceto es un usuario más. Se reconoce por el nombre en su ficha. */
+export function usuarioNiceto<T extends { first_name?: string | null; last_name?: string | null }>(
+  personas: T[] | undefined
 ): T | undefined {
-  return managers?.find(esNiceto);
+  return personas?.find(esNiceto);
 }
 
 /**
- * El correo de presupuesto va al proveedor, salvo en Farmacia: allí lo recibe
- * Niceto, que es quien pide el presupuesto y la compra.
+ * Solo los pedidos de Farmacia que crea o aprueba Niceto salen a su correo.
+ * En cualquier otro caso devuelve null y el correo sigue el camino de siempre.
  */
-export function destinatarioPresupuesto(opts: {
+export function correoSiLoHaceNiceto(opts: {
   shippingAddressId: string | null | undefined;
   addresses: DireccionSede[] | undefined;
-  managers: Array<{ first_name?: string | null; last_name?: string | null; email?: string | null }> | undefined;
-  correoProveedor: string;
-}): { to: string; error?: string } {
-  if (!esPedidoFarmacia(opts.shippingAddressId, opts.addresses)) {
-    return { to: opts.correoProveedor };
-  }
+  requesterId: string | null | undefined;
+  actorId: string | null | undefined;
+  personas: Persona[] | undefined;
+}): { to: string; error?: string } | null {
+  if (!esPedidoFarmacia(opts.shippingAddressId, opts.addresses)) return null;
 
-  const niceto = gerenteFarmacia(opts.managers);
-  const to = niceto?.email?.trim() ?? "";
+  const niceto = usuarioNiceto(opts.personas);
+  if (!niceto) return null;
+  const loHaceEl = opts.requesterId === niceto.id || opts.actorId === niceto.id;
+  if (!loHaceEl) return null;
+
+  const to = niceto.email?.trim() ?? "";
   if (!to) {
-    return {
-      to: "",
-      error: "En Farmacia el presupuesto se envía a Niceto y no tiene correo de gerente de cuenta.",
-    };
+    return { to: "", error: "Niceto no tiene correo en su usuario." };
   }
   return { to };
 }
