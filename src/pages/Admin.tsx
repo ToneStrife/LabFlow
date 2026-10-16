@@ -76,6 +76,7 @@ type EmailTemplateFormValues = z.infer<typeof emailTemplateFormSchema>;
 const availablePlaceholders = [
   "{{request.id}}", "{{request.status}}", "{{request.notes}}", "{{request.quote_url}}",
   "{{request.po_number}}", "{{request.po_url}}", "{{request.slip_url}}", "{{request.project_codes}}",
+  "{{project.investigador}}", "{{project.entidad}}", "{{project.entidad_cif}}",
   "{{requester.full_name}}",
   "{{requester.email}}", "{{vendor.name}}", "{{vendor.contact_person}}", "{{vendor.email}}",
   "{{account_manager.full_name}}", "{{account_manager.email}}", "{{items_list}}", "{{cta_button}}",
@@ -514,9 +515,19 @@ const AdminPage = () => {
                   <form onSubmit={emailTemplateForm.handleSubmit(onTemplateSubmit)} className="space-y-4">
                     <FormField control={emailTemplateForm.control} name="template_name" render={({ field }) => <FormItem><FormLabel>Nombre de la Plantilla</FormLabel><FormControl><Input {...field} disabled={updateTemplateMutation.isPending} /></FormControl><FormMessage /></FormItem>} />
                     <FormField control={emailTemplateForm.control} name="subject_template" render={({ field }) => <FormItem><FormLabel>Asunto</FormLabel><FormControl><Input {...field} disabled={updateTemplateMutation.isPending} /></FormControl><FormMessage /></FormItem>} />
-                    <FormField control={emailTemplateForm.control} name="body_template" render={({ field }) => <FormItem><FormLabel>Cuerpo del Correo</FormLabel><FormControl><Textarea rows={10} {...field} disabled={updateTemplateMutation.isPending} /></FormControl><FormMessage /></FormItem>} />
+                    <FormField control={emailTemplateForm.control} name="body_template" render={({ field }) => <FormItem><FormLabel>Cuerpo del Correo</FormLabel><FormControl><Textarea rows={18} {...field} disabled={updateTemplateMutation.isPending} /></FormControl><FormMessage /></FormItem>} />
                     <div className="space-y-2">
                       <FormLabel>Marcadores de Posición Disponibles</FormLabel>
+                      <p className="text-sm text-muted-foreground">
+                        Solicitud de presupuesto: usa <code className="text-xs">{"{{vendor.name}}"}</code>,{" "}
+                        <code className="text-xs">{"{{items_list}}"}</code> (PRODUCTO / REFERENCIA / CANT.),{" "}
+                        <code className="text-xs">{"{{project.investigador}}"}</code>,{" "}
+                        <code className="text-xs">{"{{request.project_codes}}"}</code>,{" "}
+                        <code className="text-xs">{"{{project.entidad}}"}</code>,{" "}
+                        <code className="text-xs">{"{{project.entidad_cif}}"}</code>,{" "}
+                        <code className="text-xs">{"{{shipping_address}}"}</code> y{" "}
+                        <code className="text-xs">{"{{actor.full_name}}"}</code>.
+                      </p>
                       <div className="flex flex-wrap gap-2">{availablePlaceholders.map((p) => <Badge key={p} variant="secondary" className="font-mono text-xs">{p}</Badge>)}</div>
                     </div>
                     <div className="flex justify-end pt-4">
