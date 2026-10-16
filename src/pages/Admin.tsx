@@ -79,7 +79,8 @@ const availablePlaceholders = [
   "{{project.investigador}}", "{{project.entidad}}", "{{project.entidad_cif}}",
   "{{requester.full_name}}",
   "{{requester.email}}", "{{vendor.name}}", "{{vendor.contact_person}}", "{{vendor.email}}",
-  "{{account_manager.full_name}}", "{{account_manager.email}}", "{{items_list}}", "{{cta_button}}",
+  "{{account_manager.full_name}}", "{{account_manager.first_name}}", "{{account_manager.email}}",
+  "{{items_list}}", "{{cta_button}}",
   "{{message}}", "{{actor.full_name}}", "{{order.itemName}}", "{{order.id}}",
   "{{shipping_address}}", "{{billing_address}}",
 ];
@@ -520,12 +521,21 @@ const AdminPage = () => {
                       <FormLabel>Marcadores de Posición Disponibles</FormLabel>
                       <p className="text-sm text-muted-foreground">
                         Solicitud de presupuesto: usa <code className="text-xs">{"{{vendor.name}}"}</code>,{" "}
-                        <code className="text-xs">{"{{items_list}}"}</code> (PRODUCTO / REFERENCIA / CANT.),{" "}
+                        <code className="text-xs">{"{{items_list}}"}</code> (PRODUCTO / REF / CANT),{" "}
                         <code className="text-xs">{"{{project.investigador}}"}</code>,{" "}
                         <code className="text-xs">{"{{request.project_codes}}"}</code>,{" "}
                         <code className="text-xs">{"{{project.entidad}}"}</code>,{" "}
                         <code className="text-xs">{"{{project.entidad_cif}}"}</code>,{" "}
                         <code className="text-xs">{"{{shipping_address}}"}</code> y{" "}
+                        <code className="text-xs">{"{{actor.full_name}}"}</code>.
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Cómprame (PO Request): saludo con{" "}
+                        <code className="text-xs">{"{{account_manager.first_name}}"}</code>, datos de{" "}
+                        <code className="text-xs">{"{{project.investigador}}"}</code>,{" "}
+                        <code className="text-xs">{"{{request.project_codes}}"}</code>,{" "}
+                        <code className="text-xs">{"{{project.entidad}}"}</code>, tabla{" "}
+                        <code className="text-xs">{"{{items_list}}"}</code> y firma con{" "}
                         <code className="text-xs">{"{{actor.full_name}}"}</code>.
                       </p>
                       <div className="flex flex-wrap gap-2">{availablePlaceholders.map((p) => <Badge key={p} variant="secondary" className="font-mono text-xs">{p}</Badge>)}</div>

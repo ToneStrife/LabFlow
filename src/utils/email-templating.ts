@@ -89,8 +89,8 @@ const formatItemsListHtml = (items: SupabaseRequestItem[] | null): string => {
     `<table style="border-collapse:collapse;width:100%;max-width:560px;">` +
     `<thead><tr>` +
     `<th style="text-align:left;padding:4px 12px 4px 0;border-bottom:2px solid #333;">PRODUCTO</th>` +
-    `<th style="text-align:left;padding:4px 12px;border-bottom:2px solid #333;">REFERENCIA</th>` +
-    `<th style="text-align:right;padding:4px 0;border-bottom:2px solid #333;">CANT.</th>` +
+    `<th style="text-align:left;padding:4px 12px;border-bottom:2px solid #333;">REF</th>` +
+    `<th style="text-align:right;padding:4px 0;border-bottom:2px solid #333;">CANT</th>` +
     `</tr></thead><tbody>${rows}</tbody></table>`
   );
 };
@@ -99,7 +99,7 @@ const formatItemsListPlainText = (items: SupabaseRequestItem[] | null): string =
   if (!items || items.length === 0) {
     return "No hay artículos.";
   }
-  const header = "PRODUCTO\tREFERENCIA\tCANT.";
+  const header = "PRODUCTO\tREF\tCANT";
   const rows = items.map(
     (item) => `${item.product_name}\t${item.catalog_number}\t${item.quantity}`
   );
@@ -178,6 +178,11 @@ const applySharedPlaceholders = (templateString: string, context: EmailTemplateC
     processedString,
     "account_manager.full_name",
     accountManager ? `${accountManager.first_name} ${accountManager.last_name}` : null
+  );
+  processedString = replacePlaceholder(
+    processedString,
+    "account_manager.first_name",
+    accountManager?.first_name
   );
   processedString = replacePlaceholder(processedString, "account_manager.email", accountManager?.email);
 
