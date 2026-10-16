@@ -27,7 +27,7 @@ import { mobileDialogClass, dialogFooterMobileClass } from "@/lib/layout";
 import { useReceiveWizard } from "@/components/ReceiveWizardProvider";
 import { useSedeActiva } from "@/components/SedeContextProvider";
 import { requestMatchesSede } from "@/lib/sedes";
-import { correoSiLoHaceNiceto } from "@/lib/farmacia";
+import { camposCorreoConNiceto, correoSiLoHaceNiceto } from "@/lib/farmacia";
 
 
 // Definir el orden de prioridad de los estados
@@ -130,6 +130,8 @@ const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
       to: emailData.to!,
       subject: emailData.subject,
       body: emailData.body,
+      fromName: emailData.fromName,
+      from: emailData.from || undefined,
       attachments: normalizeAttachments(emailData.attachments),
     });
 
@@ -182,7 +184,7 @@ const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
     }
 
     return {
-      to: especial?.to || getAccountManagerEmail(request.account_manager_id),
+      ...camposCorreoConNiceto(especial, getAccountManagerEmail(request.account_manager_id)),
       subject: processTextTemplate(poRequestTemplate.subject_template, context),
       body: processEmailTemplate(poRequestTemplate.body_template, context),
       attachments: forDialog,
@@ -237,7 +239,7 @@ const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
       };
 
       const emailData = {
-        to: especial?.to || getVendorEmail(request.vendor_id),
+        ...camposCorreoConNiceto(especial, getVendorEmail(request.vendor_id)),
         subject: processTextTemplate(quoteTemplate.subject_template, context),
         body: processEmailTemplate(quoteTemplate.body_template, context),
       };
@@ -347,7 +349,7 @@ const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
     };
     
     setEmailInitialData({
-      to: especial?.to || getVendorEmail(request.vendor_id),
+      ...camposCorreoConNiceto(especial, getVendorEmail(request.vendor_id)),
       subject: processTextTemplate(quoteTemplate.subject_template, context),
       body: processEmailTemplate(quoteTemplate.body_template, context),
     });

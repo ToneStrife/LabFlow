@@ -40,6 +40,7 @@ const emailFormSchema = z.object({
   subject: z.string().min(1, { message: "El asunto es obligatorio." }),
   body: z.string().min(1, { message: "El cuerpo del correo no puede estar vacío." }),
   fromName: z.string().optional(),
+  from: z.string().email().optional().or(z.literal("")),
   attachments: z.array(attachmentSchema).optional(),
   attachmentsForSend: z.array(attachmentSchema).optional(),
 });
@@ -76,6 +77,7 @@ const EmailDialog: React.FC<EmailDialogProps> = ({
       subject: initialData.subject || "",
       body: initialData.body || "",
       fromName: initialData.fromName || "",
+      from: initialData.from || "",
       attachments: initialData.attachments || [],
     },
     values: {
@@ -83,6 +85,7 @@ const EmailDialog: React.FC<EmailDialogProps> = ({
       subject: initialData.subject || "",
       body: initialData.body || "",
       fromName: initialData.fromName || "",
+      from: initialData.from || "",
       attachments: initialData.attachments || [],
     },
   });
@@ -134,6 +137,21 @@ const EmailDialog: React.FC<EmailDialogProps> = ({
                 </FormItem>
               )}
             />
+            {form.watch("from") ? (
+              <FormField
+                control={form.control}
+                name="from"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>De</FormLabel>
+                    <FormControl>
+                      <Input type="email" {...field} disabled={isSending} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            ) : null}
             <FormField
               control={form.control}
               name="subject"

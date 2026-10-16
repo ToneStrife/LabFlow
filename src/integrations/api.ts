@@ -723,6 +723,8 @@ interface EmailData {
   subject: string;
   body: string;
   fromName?: string;
+  /** Remitente (De). Misma cuenta SMTP; p. ej. niceto@go.ugr.es en Farmacia. */
+  from?: string;
   attachments?: { name: string; url: string }[]; 
 }
 

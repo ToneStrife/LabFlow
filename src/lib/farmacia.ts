@@ -2,6 +2,9 @@ import { inferSedeIdFromName, resolveAddressSedeId } from "@/lib/sedes";
 
 export const SEDE_FARMACIA = "farmacia";
 
+/** Remitente y buzón de Niceto en pedidos de Farmacia. */
+export const CORREO_NICETO = "niceto@go.ugr.es";
+
 type DireccionSede = {
   id: string;
   name?: string | null;
@@ -16,6 +19,13 @@ type Persona = {
   first_name?: string | null;
   last_name?: string | null;
   email?: string | null;
+};
+
+export type CorreoNiceto = {
+  to: string;
+  from: string;
+  fromName: string;
+  error?: string;
 };
 
 function textoEsFarmacia(texto: string | null | undefined): boolean {
@@ -49,8 +59,8 @@ export function usuarioNiceto<T extends { first_name?: string | null; last_name?
 }
 
 /**
- * Solo los pedidos de Farmacia que crea o aprueba Niceto salen a su correo.
- * En cualquier otro caso devuelve null y el correo sigue el camino de siempre.
+ * Solo los pedidos de Farmacia que crea o aprueba Niceto usan su correo.
+ * Para y De: niceto@go.ugr.es. El envío sigue con la cuenta SMTP de LabFlow.
  */
 export function correoSiLoHaceNiceto(opts: {
   shippingAddressId: string | null | undefined;
@@ -58,7 +68,7 @@ export function correoSiLoHaceNiceto(opts: {
   requesterId: string | null | undefined;
   actorId: string | null | undefined;
   personas: Persona[] | undefined;
-}): { to: string; error?: string } | null {
+}): CorreoNiceto | null {
   if (!esPedidoFarmacia(opts.shippingAddressId, opts.addresses)) return null;
 
   const niceto = usuarioNiceto(opts.personas);
@@ -66,9 +76,19 @@ export function correoSiLoHaceNiceto(opts: {
   const loHaceEl = opts.requesterId === niceto.id || opts.actorId === niceto.id;
   if (!loHaceEl) return null;
 
-  const to = niceto.email?.trim() ?? "";
-  if (!to) {
-    return { to: "", error: "Niceto no tiene correo en su usuario." };
-  }
-  return { to };
+  const fromName = `${niceto.first_name ?? ""} ${niceto.last_name ?? ""}`.trim() || "Niceto";
+  return {
+    to: CORREO_NICETO,
+    from: CORREO_NICETO,
+    fromName,
+  };
+}
+
+/** Rellena Para / De cuando el pedido de Farmacia lo hace Niceto. */
+export function camposCorreoConNiceto(
+  especial: CorreoNiceto | null | undefined,
+  toPorDefecto: string
+): { to: string; from?: string; fromName?: string } {
+  if (!especial || especial.error) return { to: toPorDefecto };
+  return { to: especial.to, from: especial.from, fromName: especial.fromName };
 }

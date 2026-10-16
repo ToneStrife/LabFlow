@@ -45,7 +45,7 @@ import { buildStorageAttachment, openEmailDialogAfterClose, normalizeAttachments
 import { RequestStatus as RequestStatusType, Vendor, Profile, AccountManager, Project, ShippingAddress, BillingAddress } from "@/data/types";
 import { cn } from "@/lib/utils";
 import { pageContainerClass, mobileDialogClass, dialogFooterMobileClass } from "@/lib/layout";
-import { correoSiLoHaceNiceto } from "@/lib/farmacia";
+import { camposCorreoConNiceto, correoSiLoHaceNiceto } from "@/lib/farmacia";
 import { getRequestStatusLabelLong, REQUEST_STATUS_ORDER } from "@/lib/request-status";
 
 const RequestDetails: React.FC = () => {
@@ -125,6 +125,8 @@ const RequestDetails: React.FC = () => {
       to: emailData.to!,
       subject: emailData.subject,
       body: emailData.body,
+      fromName: emailData.fromName,
+      from: emailData.from || undefined,
       attachments: normalizeAttachments(emailData.attachments),
     });
 
@@ -169,7 +171,7 @@ const RequestDetails: React.FC = () => {
 
     setPendingStatusOnEmailSend({ requestId: request.id, status: "PO Requested" });
     setEmailInitialData({
-      to: especial?.to || getAccountManagerEmail(request.account_manager_id),
+      ...camposCorreoConNiceto(especial, getAccountManagerEmail(request.account_manager_id)),
       subject: processTextTemplate(poRequestTemplate.subject_template, context as any),
       body: processEmailTemplate(poRequestTemplate.body_template, context as any),
       attachments: forDialog,
@@ -219,7 +221,7 @@ const RequestDetails: React.FC = () => {
         };
         
         const emailData = {
-          to: especial?.to || getVendorEmail(requestToApprove.vendor_id),
+          ...camposCorreoConNiceto(especial, getVendorEmail(requestToApprove.vendor_id)),
           subject: processTextTemplate(quoteTemplate.subject_template, context as any),
           body: processEmailTemplate(quoteTemplate.body_template, context as any),
         };
@@ -262,7 +264,7 @@ const RequestDetails: React.FC = () => {
           () => setIsApproveRequestDialogOpen(false),
           () => {
             setEmailInitialData({
-              to: especialPo?.to || getAccountManagerEmail(requestToApprove.account_manager_id),
+              ...camposCorreoConNiceto(especialPo, getAccountManagerEmail(requestToApprove.account_manager_id)),
               subject: processTextTemplate(poRequestTemplate.subject_template, poContext as any),
               body: processEmailTemplate(poRequestTemplate.body_template, poContext as any),
               attachments: forDialog,
@@ -440,7 +442,7 @@ const RequestDetails: React.FC = () => {
     };
     
     setEmailInitialData({
-      to: especial?.to || getVendorEmail(request.vendor_id),
+      ...camposCorreoConNiceto(especial, getVendorEmail(request.vendor_id)),
       subject: processTextTemplate(quoteTemplate.subject_template, context as any),
       body: processEmailTemplate(quoteTemplate.body_template, context as any),
     });
