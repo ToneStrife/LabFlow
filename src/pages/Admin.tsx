@@ -520,8 +520,15 @@ const AdminPage = () => {
                     <div className="space-y-2">
                       <FormLabel>Marcadores de Posición Disponibles</FormLabel>
                       <p className="text-sm text-muted-foreground">
+                        Si el cuerpo sigue siendo el texto antiguo («Nos gustaría solicitar un presupuesto…»),
+                        aplica la migración{" "}
+                        <code className="text-xs">20261016160000_quote_po_templates_niceto_reapply.sql</code>{" "}
+                        en Supabase o pega aquí el modelo Niceto y guarda. Al enviar, la app ya sustituye
+                        ese texto antiguo automáticamente.
+                      </p>
+                      <p className="text-sm text-muted-foreground">
                         Solicitud de presupuesto: usa <code className="text-xs">{"{{vendor.name}}"}</code>,{" "}
-                        <code className="text-xs">{"{{items_list}}"}</code> (PRODUCTO / REF / CANT),{" "}
+                        <code className="text-xs">{"{{items_list}}"}</code> (PRODUCTO | REF | CANT),{" "}
                         <code className="text-xs">{"{{project.investigador}}"}</code>,{" "}
                         <code className="text-xs">{"{{request.project_codes}}"}</code>,{" "}
                         <code className="text-xs">{"{{project.entidad}}"}</code>,{" "}
@@ -534,7 +541,7 @@ const AdminPage = () => {
                         <code className="text-xs">{"{{account_manager.first_name}}"}</code>, datos de{" "}
                         <code className="text-xs">{"{{project.investigador}}"}</code>,{" "}
                         <code className="text-xs">{"{{request.project_codes}}"}</code>,{" "}
-                        <code className="text-xs">{"{{project.entidad}}"}</code>, tabla{" "}
+                        <code className="text-xs">{"{{project.entidad}}"}</code>, listado{" "}
                         <code className="text-xs">{"{{items_list}}"}</code> y firma con{" "}
                         <code className="text-xs">{"{{actor.full_name}}"}</code>.
                       </p>
