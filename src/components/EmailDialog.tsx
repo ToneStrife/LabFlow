@@ -174,6 +174,15 @@ const EmailDialog: React.FC<EmailDialogProps> = ({
                       <SelectItem value={CORREO_NICETO}>{CORREO_NICETO}</SelectItem>
                     </SelectContent>
                   </Select>
+                  {field.value === CORREO_NICETO && (
+                    <p className="text-xs text-muted-foreground">
+                      Se intenta enviar como {CORREO_NICETO}. Si el SMTP de la UGR no
+                      tiene autorizado el «enviar como» (send-as) para ese buzón,
+                      el Remitente (From) seguirá siendo la cuenta LabFlow
+                      (p. ej. cjaranda@…); en ese caso las respuestas irán a Niceto
+                      vía Reply-To. El CC no es el remitente.
+                    </p>
+                  )}
                   <FormMessage />
                 </FormItem>
               )}
