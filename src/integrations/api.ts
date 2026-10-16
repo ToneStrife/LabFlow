@@ -199,10 +199,12 @@ export const apiUpdateVendor = async (id: string, data: Partial<Omit<Vendor, "id
           brands: data.brands,
         })
         .eq('id', id)
-        .select()
-        .single();
+        .select();
   if (error) throw new Error(error.message);
-  return updatedVendor as Vendor;
+  if (!updatedVendor || updatedVendor.length === 0) {
+    throw new Error('No tienes permiso para editar este proveedor.');
+  }
+  return updatedVendor[0] as Vendor;
 };
 
 export const apiDeleteVendor = async (id: string): Promise<void> => {

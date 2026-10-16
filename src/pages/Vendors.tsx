@@ -24,7 +24,8 @@ const Vendors = () => {
   const updateVendorMutation = useUpdateVendor();
   const deleteVendorMutation = useDeleteVendor();
 
-  const { can } = useCan();
+  const { can, cargandoPermisos } = useCan();
+  const puedeGestionar = can("vendors.manage");
 
   const [isAddVendorDialogOpen, setIsAddVendorDialogOpen] = React.useState(false);
   const [isEditVendorDialogOpen, setIsEditVendorDialogOpen] = React.useState(false);
@@ -88,20 +89,19 @@ const Vendors = () => {
     <div className={pageContainerClass}>
       <div className={cn(pageHeaderClass, "items-center mb-2 sm:mb-6")}>
         <h1 className="text-2xl sm:text-3xl font-bold">Directorio de Proveedores</h1>
-        {/* Sin permiso para gestionarlos, la pantalla es de solo lectura: el
-            servidor lo rechazaria igual, pero es feo ofrecer un boton que
-            luego da error. */}
+        {/* Sin vendors.manage la lista es de solo lectura. El mismo permiso
+            abre anadir, editar y borrar: es el que mira el servidor. */}
         <Dialog open={isAddVendorDialogOpen} onOpenChange={setIsAddVendorDialogOpen}>
           <DialogTrigger asChild>
-            <Button className={can("vendors.manage") ? undefined : "hidden"}>
+            <Button className={puedeGestionar ? undefined : "hidden"}>
               <PlusCircle className="mr-2 h-4 w-4" /> Añadir Nuevo Proveedor
             </Button>
           </DialogTrigger>
-          <DialogContent className={cn(mobileDialogClass, "sm:max-w-[425px]")}>
-            <DialogHeader className="shrink-0">
+          <DialogContent className={cn(mobileDialogClass, "sm:max-w-[425px] gap-0 overflow-hidden p-0")}>
+            <DialogHeader className="shrink-0 space-y-1.5 px-6 pt-6 pr-12 text-left">
               <DialogTitle>Añadir Nuevo Proveedor</DialogTitle>
             </DialogHeader>
-            <div className="min-h-0 flex-1">
+            <div className="flex min-h-0 flex-1 flex-col">
               <VendorForm
                 onSubmit={handleAddVendor}
                 onCancel={() => setIsAddVendorDialogOpen(false)}
@@ -116,19 +116,21 @@ const Vendors = () => {
       </p>
       <VendorTable
         vendors={vendors || []}
+        canManage={!cargandoPermisos && puedeGestionar}
         onEdit={openEditDialog}
         onDelete={handleDeleteVendor}
       />
 
       {/* Edit Vendor Dialog */}
       <Dialog open={isEditVendorDialogOpen} onOpenChange={setIsEditVendorDialogOpen}>
-        <DialogContent className={cn(mobileDialogClass, "sm:max-w-[425px]")}>
-          <DialogHeader className="shrink-0">
+        <DialogContent className={cn(mobileDialogClass, "sm:max-w-[425px] gap-0 overflow-hidden p-0")}>
+          <DialogHeader className="shrink-0 space-y-1.5 px-6 pt-6 pr-12 text-left">
             <DialogTitle>Editar Proveedor</DialogTitle>
           </DialogHeader>
           {editingVendorInitialData && (
-            <div className="min-h-0 flex-1">
+            <div className="flex min-h-0 flex-1 flex-col">
               <VendorForm
+                key={editingVendorInitialData.id}
                 // Pasamos solo los datos del formulario (sin ID)
                 initialData={editingVendorInitialData}
                 // Usamos el ID almacenado en el estado para la mutación

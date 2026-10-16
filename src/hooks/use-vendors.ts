@@ -78,10 +78,15 @@ export const useUpdateVendor = () => {
           brands: parseBrandsString(data.brands), // Conversion here
         })
         .eq('id', id)
-        .select()
-        .single();
+        .select();
       if (error) throw new Error(error.message);
-      return updatedData;
+      // Si la politica de UPDATE no deja tocar la fila, Postgres no
+      // devuelve error: simplemente no actualiza nada. Sin esto la
+      // pantalla creia que habia fallado el formato de la respuesta.
+      if (!updatedData || updatedData.length === 0) {
+        throw new Error('No tienes permiso para editar este proveedor.');
+      }
+      return updatedData[0];
     },
     onSuccess: () => {
       toast.success('Proveedor actualizado exitosamente!');
