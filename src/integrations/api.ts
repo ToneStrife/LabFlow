@@ -464,11 +464,11 @@ export const apiUpdateRequestStatus = async (
       switch (status) {
         case 'Quote Requested':
             title = `✅ Solicitud #${requestNumber} Aprobada`;
-            body = `Tu solicitud ha sido aprobada y se ha solicitado una cotización.`;
+            body = `Tu solicitud ha sido aprobada y se ha solicitado un presupuesto.`;
             break;
         case 'PO Requested':
-            title = `📝 Cotización Recibida para #${requestNumber}`;
-            body = `La cotización ha sido recibida. Se requiere la emisión de una Orden de Compra (PO).`;
+            title = `📝 Presupuesto recibido para #${requestNumber}`;
+            body = `El presupuesto ha sido recibido. Se requiere la orden de compra.`;
             break;
         case 'Ordered':
             title = `📦 Solicitud #${requestNumber} Pedida`;

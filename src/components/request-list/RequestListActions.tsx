@@ -33,6 +33,8 @@ import {
   canPerformWorkflowAction,
   canReceivePackages,
 } from "@/lib/permissions";
+import { useShippingAddresses } from "@/hooks/use-addresses";
+import { esPedidoFarmacia } from "@/lib/farmacia";
 
 interface RequestListActionsProps {
   request: SupabaseRequest;
@@ -69,6 +71,8 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
   const { profile, session } = useSession();
   const { can } = useCan();
   const { data: projects } = useProjects();
+  const { data: shippingAddresses } = useShippingAddresses();
+  const sinCorreoComprame = esPedidoFarmacia(request.shipping_address_id, shippingAddresses);
   const approvalCtx = {
     role: profile?.role,
     userId: session?.user?.id,
@@ -112,7 +116,7 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
             variant="ghost"
             size="icon"
             onClick={() => onSendQuoteRequest(request)}
-            title="Solicitar Cotización (Correo)"
+            title="Solicitar presupuesto"
             disabled={isUpdatingStatus}
             className="shrink-0"
           >
@@ -147,7 +151,7 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
             variant="ghost"
             size="icon"
             onClick={() => onEnterQuoteDetails(request)}
-            title="Subir Archivo de Cotización"
+            title="Subir presupuesto"
             disabled={isUpdatingStatus}
             className="shrink-0"
           >
@@ -166,16 +170,20 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
         </>
       )}
 
-      {request.status === "Quote Requested" && request.quote_url && request.account_manager_id && canWorkflow && (
+      {request.status === "Quote Requested" && request.quote_url && canWorkflow && (sinCorreoComprame || request.account_manager_id) && (
         <Button
           variant="ghost"
           size="icon"
           onClick={() => onSendPORequest(request)}
-          title="Enviar Solicitud de PO al Gerente de Cuenta"
+          title={sinCorreoComprame ? "Presupuesto recibido" : "Enviar solicitud de compra (Cómprame)"}
           disabled={isUpdatingStatus}
           className="shrink-0"
         >
-          <Mail className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+          {sinCorreoComprame ? (
+            <CheckCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+          ) : (
+            <Mail className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+          )}
         </Button>
       )}
 
@@ -263,7 +271,7 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
               <>
                 {canMerge && <DropdownMenuSeparator />}
                 <DropdownMenuItem onClick={() => onSendQuoteRequest(request)} disabled={isUpdatingStatus}>
-                  <Mail className="mr-2 h-4 w-4 text-blue-500 dark:text-blue-400" /> Solicitar cotización
+                  <Mail className="mr-2 h-4 w-4 text-blue-500 dark:text-blue-400" /> Solicitar presupuesto
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => onApprove(request)} disabled={isUpdatingStatus}>
                   <CheckCircle className="mr-2 h-4 w-4 text-green-600 dark:text-green-400" /> Aprobar
@@ -276,16 +284,20 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
             {request.status === "Quote Requested" && !request.quote_url && canWorkflow && (
               <>
                 <DropdownMenuItem onClick={() => onEnterQuoteDetails(request)} disabled={isUpdatingStatus}>
-                  <FileText className="mr-2 h-4 w-4 text-blue-600 dark:text-blue-400" /> Subir cotización
+                  <FileText className="mr-2 h-4 w-4 text-blue-600 dark:text-blue-400" /> Subir presupuesto
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => onDeny(request)} disabled={isUpdatingStatus} className="text-red-600 dark:text-red-400">
                   <Ban className="mr-2 h-4 w-4" /> Denegar
                 </DropdownMenuItem>
               </>
             )}
-            {request.status === "Quote Requested" && request.quote_url && request.account_manager_id && canWorkflow && (
+            {request.status === "Quote Requested" && request.quote_url && canWorkflow && (sinCorreoComprame || request.account_manager_id) && (
               <DropdownMenuItem onClick={() => onSendPORequest(request)} disabled={isUpdatingStatus}>
-                <Mail className="mr-2 h-4 w-4 text-orange-600 dark:text-orange-400" /> Solicitar PO
+                {sinCorreoComprame ? (
+                  <><CheckCircle className="mr-2 h-4 w-4 text-emerald-600 dark:text-emerald-400" /> Presupuesto recibido</>
+                ) : (
+                  <><Mail className="mr-2 h-4 w-4 text-orange-600 dark:text-orange-400" /> Solicitar compra (Cómprame)</>
+                )}
               </DropdownMenuItem>
             )}
             {request.status === "PO Requested" && canWorkflow && (

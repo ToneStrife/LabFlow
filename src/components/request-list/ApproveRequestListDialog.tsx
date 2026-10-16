@@ -22,6 +22,8 @@ interface ApproveRequestListDialogProps {
   onApproveOnly: (request: SupabaseRequest) => Promise<void>;
   onApproveAndSendEmail: (request: SupabaseRequest) => Promise<void>;
   isSubmitting: boolean;
+  /** Farmacia no usa el correo de cómprame. */
+  sinCorreoComprame?: boolean;
 }
 
 const ApproveRequestListDialog: React.FC<ApproveRequestListDialogProps> = ({
@@ -31,11 +33,17 @@ const ApproveRequestListDialog: React.FC<ApproveRequestListDialogProps> = ({
   onApproveOnly,
   onApproveAndSendEmail,
   isSubmitting,
+  sinCorreoComprame = false,
 }) => {
   if (!request) return null;
 
-  const approveButtonText = request.quote_url ? "Aprobar y Solicitar PO (Cómprame)" : "Aprobar y Solicitar Cotización (Correo)";
-  const approveOnlyText = request.quote_url ? "Aprobar Solamente (a PO Solicitado)" : "Aprobar Solamente (a Cotización Solicitada)";
+  const soloEstado = sinCorreoComprame && !!request.quote_url;
+  const approveButtonText = request.quote_url
+    ? "Aprobar y enviar cómprame"
+    : "Aprobar y pedir presupuesto";
+  const approveOnlyText = request.quote_url
+    ? "Aprobar, sin correo"
+    : "Aprobar, sin correo";
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -47,12 +55,20 @@ const ApproveRequestListDialog: React.FC<ApproveRequestListDialogProps> = ({
           </DialogDescription>
         </DialogHeader>
         <DialogFooter className={cn(dialogFooterMobileClass, "flex flex-col sm:flex-row sm:justify-end sm:space-x-2")}>
-          <Button variant="outline" onClick={() => onApproveOnly(request)} disabled={isSubmitting}>
-            {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : approveOnlyText}
-          </Button>
-          <Button onClick={() => onApproveAndSendEmail(request)} disabled={isSubmitting}>
-            {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : approveButtonText}
-          </Button>
+          {soloEstado ? (
+            <Button onClick={() => onApproveOnly(request)} disabled={isSubmitting}>
+              {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Aprobar"}
+            </Button>
+          ) : (
+            <>
+              <Button variant="outline" onClick={() => onApproveOnly(request)} disabled={isSubmitting}>
+                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : approveOnlyText}
+              </Button>
+              <Button onClick={() => onApproveAndSendEmail(request)} disabled={isSubmitting}>
+                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : approveButtonText}
+              </Button>
+            </>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

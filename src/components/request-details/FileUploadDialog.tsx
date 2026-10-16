@@ -140,13 +140,13 @@ const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
     (fileType === "po" && !poNumber.trim() && !selectedFile && !(markAsOrdered && hasExistingPoFile));
 
   const getTitle = () =>
-    fileType === "quote" ? "Subir Archivo de Cotización"
+    fileType === "quote" ? "Subir presupuesto"
     : fileType === "po"   ? "Subir Archivo de Orden de Compra"
     : fileType === "slip" ? "Subir Albarán"
     : "Subir Archivo";
 
   const getFileLabel = () =>
-    fileType === "quote" ? "Archivo de Cotización (Obligatorio)"
+    fileType === "quote" ? "Archivo de presupuesto (obligatorio)"
     : fileType === "po"   ? "Archivo de PO (Opcional)"
     : fileType === "slip" ? "Archivo de Albarán (Opcional)"
     : "Archivo";

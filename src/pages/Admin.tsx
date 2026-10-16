@@ -85,7 +85,7 @@ const availablePlaceholders = [
 
 // Mapeo de nombres de plantillas para la UI
 const templateNameMap: Record<string, string> = {
-  'Quote Request': 'Solicitud de Cotización',
+  'Quote Request': 'Solicitud de presupuesto',
   'PO Request': 'Solicitud de PO (Cómprame)',
   'Order Confirmation': 'Confirmación de Pedido',
 };

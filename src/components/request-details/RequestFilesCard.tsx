@@ -157,7 +157,7 @@ const RequestFilesCard: React.FC<RequestFilesCardProps> = ({ request, onUploadCl
       </CardHeader>
       <CardContent className="p-0">
         <FileRow 
-          label="Cotización" 
+          label="Presupuesto" 
           filePath={request.quote_url} 
           fileType="quote"
           onUploadClick={() => onUploadClick("quote")} 

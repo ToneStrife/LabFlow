@@ -155,7 +155,7 @@ const Documentos = () => {
       <div>
         <h2 className="text-2xl font-bold tracking-tight">Documentos</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Cotizaciones, órdenes de compra, albaranes y facturas de todas las solicitudes.
+          Presupuestos, órdenes de compra, albaranes y facturas de todas las solicitudes.
         </p>
       </div>
 

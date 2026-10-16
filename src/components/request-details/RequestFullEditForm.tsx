@@ -24,6 +24,7 @@ import { useVendors } from "@/hooks/use-vendors";
 import { useShippingAddresses, useBillingAddresses } from "@/hooks/use-addresses";
 import { getFullName } from "@/hooks/use-profiles";
 import { formatShippingAddressLabel } from "@/lib/sedes";
+import { esPedidoFarmacia, gerenteFarmacia } from "@/lib/farmacia";
 
 const fullEditSchema = z.object({
   vendorId: z.string().min(1, { message: "El proveedor es obligatorio." }),
@@ -75,8 +76,20 @@ const RequestFullEditForm: React.FC<RequestFullEditFormProps> = ({
     },
   });
 
+  const shippingAddressId = form.watch("shippingAddressId");
+  const pedidoFarmacia = esPedidoFarmacia(shippingAddressId, shippingAddresses);
+  const niceto = gerenteFarmacia(accountManagers);
+
+  React.useEffect(() => {
+    if (pedidoFarmacia && niceto && form.getValues("accountManagerId") !== niceto.id) {
+      form.setValue("accountManagerId", niceto.id);
+    }
+  }, [pedidoFarmacia, niceto, form]);
+
   const handleSubmit = async (data: FullEditFormValues) => {
-    await onSubmit(data);
+    await onSubmit(
+      pedidoFarmacia && niceto ? { ...data, accountManagerId: niceto.id } : data
+    );
   };
 
   const isLoading =
@@ -185,8 +198,8 @@ const RequestFullEditForm: React.FC<RequestFullEditFormProps> = ({
               name="accountManagerId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Gerente de Cuenta (opcional)</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value || "unassigned"} disabled={isLoadingManagers || isSubmitting}>
+                  <FormLabel>Gerente de Cuenta {pedidoFarmacia ? "(Niceto, Farmacia)" : "(opcional)"}</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value || "unassigned"} disabled={isLoadingManagers || isSubmitting || pedidoFarmacia}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder={isLoadingManagers ? "Cargando gerentes..." : "Selecciona un gerente de cuenta"} />

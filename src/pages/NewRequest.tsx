@@ -11,7 +11,7 @@ const NewRequest = () => {
       <div>
         <h2 className="text-2xl font-bold tracking-tight">Nueva solicitud</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Rellena los datos, adjunta la cotización si ya la tienes y añade los artículos.
+          Rellena los datos, adjunta el presupuesto si ya lo tienes y añade los artículos.
         </p>
       </div>
       <RequestForm />

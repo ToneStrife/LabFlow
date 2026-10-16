@@ -75,18 +75,18 @@ const Dashboard = () => {
   const etapas: Etapa[] = [
     {
       id: "pending",
-      etiqueta: "Por aprobar",
+      etiqueta: "Pendiente",
       valor: cuentaPorEstado("Pending"),
-      pie: "esperando decisión",
+      pie: "de presupuesto",
       icono: FileSearch,
       tono: "amber",
       onSelect: () => verHistorialFiltrado("Pending"),
     },
     {
       id: "quote",
-      etiqueta: "Presupuestos",
+      etiqueta: "Presupuesto",
       valor: cuentaPorEstado("Quote Requested"),
-      pie: "cotización pedida",
+      pie: "solicitado",
       icono: FileText,
       tono: "sky",
       onSelect: () => verHistorialFiltrado("Quote Requested"),
