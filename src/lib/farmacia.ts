@@ -1,10 +1,24 @@
-import { resolveAddressSedeId } from "@/lib/sedes";
+import { inferSedeIdFromName, resolveAddressSedeId } from "@/lib/sedes";
 
 export const SEDE_FARMACIA = "farmacia";
 
-type DireccionSede = { id: string; name?: string | null; sede_id?: string | null };
+type DireccionSede = {
+  id: string;
+  name?: string | null;
+  sede_id?: string | null;
+  address_line_1?: string | null;
+  address_line_2?: string | null;
+  city?: string | null;
+};
 
-/** Un pedido es de Farmacia si su dirección de envío pertenece a esa sede. */
+function textoEsFarmacia(texto: string | null | undefined): boolean {
+  const normalizado = texto?.toLowerCase() ?? "";
+  if (!normalizado) return false;
+  if (inferSedeIdFromName(normalizado) === SEDE_FARMACIA) return true;
+  return /\bfarma\b/.test(normalizado);
+}
+
+/** Un pedido es de Farmacia si el envío es de esa sede, o si la dirección lo dice. */
 export function esPedidoFarmacia(
   shippingAddressId: string | null | undefined,
   addresses: DireccionSede[] | undefined
@@ -12,7 +26,8 @@ export function esPedidoFarmacia(
   if (!shippingAddressId || !addresses?.length) return false;
   const address = addresses.find((item) => item.id === shippingAddressId);
   if (!address) return false;
-  return resolveAddressSedeId(address) === SEDE_FARMACIA;
+  if (resolveAddressSedeId(address) === SEDE_FARMACIA) return true;
+  return [address.name, address.address_line_1, address.address_line_2, address.city].some(textoEsFarmacia);
 }
 
 export function esNiceto(persona: { first_name?: string | null; last_name?: string | null }): boolean {
