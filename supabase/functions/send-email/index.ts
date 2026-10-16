@@ -7,9 +7,10 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Dirección de correo electrónico para añadir en CC (opcional, mantenida de la versión anterior)
-const CC_EMAIL = 'cjaranda@go.ugr.es';
 const BUCKET_NAME = 'LabFlow';
+const CORREO_NICETO = "niceto@go.ugr.es";
+
+const normalizeEmail = (addr: string): string => addr.trim().toLowerCase();
 
 const resolveStoragePath = (urlOrPath: string): string => {
   if (!urlOrPath.startsWith('http://') && !urlOrPath.startsWith('https://')) {
@@ -56,10 +57,12 @@ serve(async (req) => {
   try {
     // 1. Configuración desde Variables de Entorno
     const SMTP_HOST = Deno.env.get("SMTP_HOST") || "smtp.gmail.com";
-    const SMTP_PORT = "465"; 
+    const SMTP_PORT = "465";
     const SMTP_USER = Deno.env.get("SMTP_USER");
     const SMTP_PASSWORD = Deno.env.get("SMTP_PASSWORD");
     const SMTP_FROM = Deno.env.get("SMTP_FROM") || SMTP_USER;
+    // CC opcional: vacío/ausente = sin CC. No confundir CC con el remitente (From).
+    const SMTP_CC = (Deno.env.get("SMTP_CC") || "").trim();
 
     if (!SMTP_USER || !SMTP_PASSWORD) {
       throw new Error("Configuración SMTP incompleta (SMTP_USER o SMTP_PASSWORD faltantes).");
@@ -76,21 +79,30 @@ serve(async (req) => {
       );
     }
 
-    // Remitente opcional: misma cuenta SMTP, otra dirección "De" si el servidor lo permite.
-    // Solo se aceptan la cuenta por defecto y niceto@go.ugr.es (Farmacia).
+    // Remitente opcional: misma cuenta SMTP, otra dirección "De" si el servidor lo permite
+    // (p. ej. alias send-as en el buzón UGR). Solo SMTP_FROM / SMTP_USER / niceto@.
     const remitentesPermitidos = new Set(
-      [SMTP_FROM, SMTP_USER, "niceto@go.ugr.es"]
+      [SMTP_FROM, SMTP_USER, CORREO_NICETO]
         .filter(Boolean)
-        .map((addr) => String(addr).trim().toLowerCase())
+        .map((addr) => normalizeEmail(String(addr)))
     );
     const fromPedido = typeof from === "string" ? from.trim() : "";
-    if (fromPedido && !remitentesPermitidos.has(fromPedido.toLowerCase())) {
+    if (fromPedido && !remitentesPermitidos.has(normalizeEmail(fromPedido))) {
       return new Response(
         JSON.stringify({ error: `Remitente no permitido: ${fromPedido}` }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
     const fromAddress = fromPedido || SMTP_FROM!;
+    const fromHeader = fromName ? `${fromName} <${fromAddress}>` : fromAddress;
+
+    // Si De ≠ cuenta SMTP, muchos servidores UGR reescriben From a SMTP_USER.
+    // Reply-To conserva niceto@ (o el De elegido) para que las respuestas lleguen bien.
+    const smtpIdentities = new Set(
+      [SMTP_USER, SMTP_FROM].filter(Boolean).map((a) => normalizeEmail(String(a)))
+    );
+    const fromEsDistintoDelSmtp = !smtpIdentities.has(normalizeEmail(fromAddress));
+    const replyToAddress = fromEsDistintoDelSmtp ? fromAddress : undefined;
 
     // 3. Verificación de Seguridad (Supabase Auth)
     const authClient = createClient(
@@ -145,7 +157,7 @@ serve(async (req) => {
       connection: {
         hostname: SMTP_HOST,
         port: Number(SMTP_PORT),
-        tls: true, 
+        tls: true,
         auth: {
           username: SMTP_USER!,
           password: SMTP_PASSWORD!,
@@ -156,10 +168,29 @@ serve(async (req) => {
     // 6. Preparar texto plano y Enviar
     const plainText = body.replace(/<[^>]*>?/gm, "");
 
+    // CC solo si SMTP_CC está definido y no coincide con Para (evita CC = yo cuando ya soy el destinatario).
+    const toNorm = normalizeEmail(String(to));
+    const ccList =
+      SMTP_CC && normalizeEmail(SMTP_CC) !== toNorm ? SMTP_CC : undefined;
+
+    // Sender = cuenta autenticada cuando intentamos De distinto (RFC: quién envía de verdad).
+    const headers: Record<string, string> | undefined = fromEsDistintoDelSmtp
+      ? { Sender: SMTP_USER! }
+      : undefined;
+
+    console.log(
+      `[send-email] De=${fromHeader}` +
+        (replyToAddress ? ` Reply-To=${replyToAddress}` : "") +
+        (ccList ? ` CC=${ccList}` : " CC=(ninguno)") +
+        ` auth=${SMTP_USER}`
+    );
+
     await client.send({
-      from: fromName ? `${fromName} <${fromAddress}>` : fromAddress,
+      from: fromHeader,
       to,
-      cc: CC_EMAIL, // Añadimos el CC configurado
+      ...(ccList ? { cc: ccList } : {}),
+      ...(replyToAddress ? { replyTo: replyToAddress } : {}),
+      ...(headers ? { headers } : {}),
       subject,
       content: plainText,
       html: body,
@@ -170,7 +201,12 @@ serve(async (req) => {
     logStatus = 'success';
 
     return new Response(
-      JSON.stringify({ message: "Email enviado con éxito" }),
+      JSON.stringify({
+        message: "Email enviado con éxito",
+        from: fromAddress,
+        replyTo: replyToAddress ?? null,
+        fromMayBeRewrittenBySmtp: fromEsDistintoDelSmtp,
+      }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
@@ -187,7 +223,7 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
-    
+
     const bodyPreview = requestBody?.body?.substring(0, 247) + '...';
 
     await supabaseAdmin
