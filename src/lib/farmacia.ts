@@ -66,8 +66,8 @@ export function usuarioNiceto<T extends {
 }
 
 /**
- * Solo los pedidos de Farmacia que crea o aprueba Niceto usan su correo.
- * Para y De: niceto@go.ugr.es (Para se puede cambiar en el diálogo).
+ * Solo los pedidos de Farmacia que crea o aprueba Niceto prellenan su correo.
+ * Prefill Para/De: niceto@go.ugr.es (ambos editables en el diálogo).
  * El envío sigue con la cuenta SMTP de LabFlow; From debe redeployarse en send-email.
  */
 export function correoSiLoHaceNiceto(opts: {
