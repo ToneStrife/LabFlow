@@ -27,6 +27,7 @@ import { mobileDialogClass, dialogFooterMobileClass } from "@/lib/layout";
 import { useReceiveWizard } from "@/components/ReceiveWizardProvider";
 import { useSedeActiva } from "@/components/SedeContextProvider";
 import { requestMatchesSede } from "@/lib/sedes";
+import { camposCorreoConNiceto, correoSiLoHaceNiceto } from "@/lib/farmacia";
 
 
 // Definir el orden de prioridad de los estados
@@ -110,6 +111,15 @@ const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
     return accountManagers?.find(am => am.id === managerId)?.email || "";
   };
 
+  const correoNiceto = (request: SupabaseRequest) =>
+    correoSiLoHaceNiceto({
+      shippingAddressId: request.shipping_address_id,
+      addresses: shippingAddresses,
+      requesterId: request.requester_id,
+      actorId: profile?.id,
+      personas: profiles,
+    });
+
   const handleEmailDialogOpenChange = (open: boolean) => {
     setIsEmailDialogOpen(open);
     if (!open) setPendingStatusOnEmailSend(null);
@@ -120,6 +130,8 @@ const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
       to: emailData.to!,
       subject: emailData.subject,
       body: emailData.body,
+      fromName: emailData.fromName,
+      from: emailData.from || undefined,
       attachments: normalizeAttachments(emailData.attachments),
     });
 
@@ -140,12 +152,8 @@ const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
       toast.error("Plantilla de correo electrónico 'PO Request' no encontrada. Por favor, crea una en el panel de Admin.");
       return null;
     }
-    if (!request.account_manager_id) {
-      toast.error("No se puede enviar la solicitud de PO.", { description: "No hay un gerente de cuenta asignado a esta solicitud." });
-      return null;
-    }
     if (!request.quote_url) {
-      toast.error("No se puede enviar la solicitud de PO.", { description: "El archivo de cotización no está disponible." });
+      toast.error("No se puede enviar la solicitud de compra.", { description: "El archivo de presupuesto no está disponible." });
       return null;
     }
 
@@ -155,6 +163,7 @@ const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
       requesterProfile: profiles?.find(p => p.id === request.requester_id),
       accountManager: accountManagers?.find(am => am.id === request.account_manager_id),
       projects: projects,
+      profiles: profiles,
       actorProfile: profile,
       shippingAddress: shippingAddresses?.find(a => a.id === request.shipping_address_id),
       billingAddress: billingAddresses?.find(a => a.id === request.billing_address_id),
@@ -162,11 +171,21 @@ const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
 
     const { forDialog, forSend } = await buildStorageAttachment(request.quote_url);
     if (forDialog.length === 0) {
-      toast.warning("No se pudo generar la URL firmada para el archivo de cotización. El enlace adjunto en el diálogo podría estar roto.");
+      toast.warning("No se pudo generar la URL firmada para el presupuesto. El enlace adjunto en el diálogo podría estar roto.");
+    }
+
+    const especial = correoNiceto(request);
+    if (especial?.error) {
+      toast.error(especial.error);
+      return null;
+    }
+    if (!especial && !request.account_manager_id) {
+      toast.error("No se puede enviar la solicitud de PO.", { description: "No hay un gerente de cuenta asignado a esta solicitud." });
+      return null;
     }
 
     return {
-      to: getAccountManagerEmail(request.account_manager_id),
+      ...camposCorreoConNiceto(especial, getAccountManagerEmail(request.account_manager_id)),
       subject: processTextTemplate(poRequestTemplate.subject_template, context),
       body: processEmailTemplate(poRequestTemplate.body_template, context),
       attachments: forDialog,
@@ -198,6 +217,11 @@ const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
     await updateStatusMutation.mutateAsync({ id: request.id, status: nextStatus });
 
     if (nextStatus === "Quote Requested") {
+      const especial = correoNiceto(request);
+      if (especial?.error) {
+        toast.error(especial.error);
+        return;
+      }
       const quoteTemplate = emailTemplates?.find(t => t.template_name === 'Quote Request');
       if (!quoteTemplate) {
         toast.error("Plantilla de correo electrónico 'Quote Request' no encontrada. Por favor, crea una en el panel de Admin.");
@@ -210,13 +234,14 @@ const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
         requesterProfile: profiles?.find(p => p.id === request.requester_id),
         accountManager: accountManagers?.find(am => am.id === request.account_manager_id),
         projects: projects,
+        profiles: profiles,
         actorProfile: profile,
         shippingAddress: shippingAddresses?.find(a => a.id === request.shipping_address_id),
         billingAddress: billingAddresses?.find(a => a.id === request.billing_address_id),
       };
 
       const emailData = {
-        to: getVendorEmail(request.vendor_id),
+        ...camposCorreoConNiceto(especial, getVendorEmail(request.vendor_id)),
         subject: processTextTemplate(quoteTemplate.subject_template, context),
         body: processEmailTemplate(quoteTemplate.body_template, context),
       };
@@ -300,6 +325,12 @@ const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
   }, [sourceRequestToMerge, requests]);
 
   const handleSendQuoteRequestFromList = async (request: SupabaseRequest) => {
+    const especial = correoNiceto(request);
+    if (especial?.error) {
+      toast.error(especial.error);
+      return;
+    }
+
     await updateStatusMutation.mutateAsync({ id: request.id, status: "Quote Requested" });
 
     const quoteTemplate = emailTemplates?.find(t => t.template_name === 'Quote Request');
@@ -314,13 +345,14 @@ const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
       requesterProfile: profiles?.find(p => p.id === request.requester_id),
       accountManager: accountManagers?.find(am => am.id === request.account_manager_id),
       projects: projects,
+      profiles: profiles,
       actorProfile: profile,
       shippingAddress: shippingAddresses?.find(a => a.id === request.shipping_address_id),
       billingAddress: billingAddresses?.find(a => a.id === request.billing_address_id),
     };
     
     setEmailInitialData({
-      to: getVendorEmail(request.vendor_id),
+      ...camposCorreoConNiceto(especial, getVendorEmail(request.vendor_id)),
       subject: processTextTemplate(quoteTemplate.subject_template, context),
       body: processEmailTemplate(quoteTemplate.body_template, context),
     });

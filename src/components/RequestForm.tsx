@@ -40,7 +40,6 @@ import QuoteParsePreviewDialog from "./QuoteParsePreviewDialog";
 import type { ParsedQuoteItem } from "@/data/quote-parse";
 import { useSedeActiva } from "@/components/SedeContextProvider";
 import { getDefaultShippingAddressId, formatShippingAddressLabel } from "@/lib/sedes";
-
 // -------------------- Schemas --------------------
 const itemSchema = z.object({
   productName: z.string().min(1, { message: "El nombre del producto es obligatorio." }),
@@ -391,7 +390,7 @@ const RequestForm: React.FC = () => {
       items: itemsToSubmit,
     });
     
-    // 2. Si hay cotización, adjuntarla pero dejar la solicitud en Pending:
+    // 2. Si hay presupuesto, adjuntarlo pero dejar la solicitud en Pending:
     //    debe aprobarla el IP del proyecto (o un admin), no el solicitante.
     if (quoteFile) {
       try {
@@ -402,10 +401,10 @@ const RequestForm: React.FC = () => {
         });
         
         if (filePath) {
-            toast.success("Cotización adjunta. La solicitud queda pendiente de aprobación.");
+            toast.success("Presupuesto adjunto. La solicitud queda pendiente de presupuesto.");
         }
       } catch (error) {
-        showError("La solicitud fue creada, pero falló la subida del archivo de cotización.");
+        showError("La solicitud fue creada, pero falló la subida del archivo de presupuesto.");
         console.error("Error uploading quote file on request creation:", error);
       }
     }
@@ -442,7 +441,7 @@ const RequestForm: React.FC = () => {
 
   const handleExtractProductsFromPdf = async () => {
     if (!selectedQuoteFile) {
-      toast.error("Sube un PDF de cotización antes de extraer productos.");
+      toast.error("Sube un PDF de presupuesto antes de extraer productos.");
       return;
     }
     if (selectedQuoteFile.type !== "application/pdf") {
@@ -669,9 +668,9 @@ const RequestForm: React.FC = () => {
         </SeccionFormulario>
 
         <SeccionFormulario
-          titulo="Cotización y notas"
+          titulo="Presupuesto y notas"
           icono={FileScan}
-          descripcion="Si adjuntas la cotización, se guarda con la solicitud; el IP del proyecto debe aprobarla antes de seguir."
+          descripcion="Si adjuntas el presupuesto, se guarda con la solicitud; el IP del proyecto debe aprobarla antes de seguir."
         >
         <FormField
           control={form.control}
@@ -680,7 +679,7 @@ const RequestForm: React.FC = () => {
             <FormItem>
               <FormControl>
                 <FileUploadInput 
-                    label="Adjuntar cotización, si ya la tienes"
+                    label="Adjuntar presupuesto, si ya lo tienes"
                     onChange={handleQuoteFileChange} 
                     disabled={isSubmitting} 
                     accept="image/*,application/pdf"

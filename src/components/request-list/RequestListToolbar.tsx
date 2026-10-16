@@ -5,6 +5,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RequestStatus } from "@/data/types";
+import { getRequestStatusLabelLong, REQUEST_STATUS_ORDER } from "@/lib/request-status";
 
 interface RequestListToolbarProps {
   searchTerm: string;
@@ -26,26 +27,22 @@ const RequestListToolbar: React.FC<RequestListToolbarProps> = ({
         placeholder={
           isMobile
             ? "Buscar solicitudes..."
-            : "Buscar solicitudes (producto, catálogo, marca, proveedor, solicitante, gerente, cotización, PO)..."
+            : "Buscar solicitudes (producto, catálogo, marca, proveedor, solicitante, gerente, presupuesto, PO)..."
         }
         value={searchTerm}
         onChange={(e) => onSearchChange(e.target.value)}
         className="flex-1"
       />
       <Select value={filterStatus} onValueChange={onStatusChange}>
-        <SelectTrigger className="w-full sm:w-[180px]">
+        <SelectTrigger className="w-full sm:w-[260px]">
           <SelectValue placeholder="Filtrar por Estado" />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="All">Todos los Estados</SelectItem>
           <SelectItem value="Active">Activas (Excl. Recibidas)</SelectItem> {/* Nuevo filtro */}
-          <SelectItem value="Pending">Pendiente</SelectItem>
-          <SelectItem value="Quote Requested">Cotización Solicitada</SelectItem>
-          <SelectItem value="PO Requested">PO Solicitado (Cómprame)</SelectItem>
-          <SelectItem value="Ordered">Pedido</SelectItem>
-          <SelectItem value="Received">Recibido</SelectItem>
-          <SelectItem value="Denied">Denegada</SelectItem>
-          <SelectItem value="Cancelled">Cancelada</SelectItem>
+          {REQUEST_STATUS_ORDER.map((status) => (
+            <SelectItem key={status} value={status}>{getRequestStatusLabelLong(status)}</SelectItem>
+          ))}
         </SelectContent>
       </Select>
     </div>

@@ -28,7 +28,7 @@ export interface Documento {
 }
 
 export const ETIQUETA_TIPO: Record<TipoDocumento, string> = {
-  cotizacion: "Cotización",
+  cotizacion: "Presupuesto",
   orden: "Orden de compra",
   albaran: "Albarán",
   factura: "Factura",
@@ -65,7 +65,7 @@ const useTodasLasFacturas = () =>
 
 /**
  * Reúne en una sola lista los documentos que hoy viven repartidos en tres
- * tablas: cotizaciones y órdenes de compra cuelgan de la solicitud, los
+ * tablas: presupuestos y órdenes de compra cuelgan de la solicitud, los
  * albaranes de packing_slips y las facturas de invoices.
  */
 export const useDocumentos = () => {

@@ -10,6 +10,7 @@ import { Loader2 } from "lucide-react";
 import { useUserNotificationPreferences, useUpdateNotificationPreferences, availableStatusNotifications } from "@/hooks/use-notification-preferences";
 import { useUpdateProfile } from "@/hooks/use-profiles";
 import { Profile, RequestStatus } from "@/data/types";
+import { getRequestStatusLabelLong } from "@/lib/request-status";
 import PushManagerButton from "./PushManagerButton";
 
 interface NotificationPreferencesProps {
@@ -126,7 +127,7 @@ const NotificationPreferences: React.FC<NotificationPreferencesProps> = ({ profi
                             disabled={isSubmitting || !notifyStatusChangeMaster}
                         />
                         <Label htmlFor={status} className="text-sm">
-                            {status}
+                            {getRequestStatusLabelLong(status)}
                         </Label>
                     </div>
                 ))}

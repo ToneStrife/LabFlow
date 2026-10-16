@@ -45,6 +45,8 @@ import { buildStorageAttachment, openEmailDialogAfterClose, normalizeAttachments
 import { RequestStatus as RequestStatusType, Vendor, Profile, AccountManager, Project, ShippingAddress, BillingAddress } from "@/data/types";
 import { cn } from "@/lib/utils";
 import { pageContainerClass, mobileDialogClass, dialogFooterMobileClass } from "@/lib/layout";
+import { camposCorreoConNiceto, correoSiLoHaceNiceto } from "@/lib/farmacia";
+import { getRequestStatusLabelLong, REQUEST_STATUS_ORDER } from "@/lib/request-status";
 
 const RequestDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -104,6 +106,15 @@ const RequestDetails: React.FC = () => {
     return manager?.email || "";
   };
 
+  const correoNiceto = (request: SupabaseRequest) =>
+    correoSiLoHaceNiceto({
+      shippingAddressId: request.shipping_address_id,
+      addresses: shippingAddresses,
+      requesterId: request.requester_id,
+      actorId: profile?.id,
+      personas: profiles,
+    });
+
   const handleEmailDialogOpenChange = (open: boolean) => {
     setIsEmailDialogOpen(open);
     if (!open) setPendingStatusOnEmailSend(null);
@@ -114,6 +125,8 @@ const RequestDetails: React.FC = () => {
       to: emailData.to!,
       subject: emailData.subject,
       body: emailData.body,
+      fromName: emailData.fromName,
+      from: emailData.from || undefined,
       attachments: normalizeAttachments(emailData.attachments),
     });
 
@@ -129,7 +142,12 @@ const RequestDetails: React.FC = () => {
   };
 
   const handleSendPORequest = async (request: SupabaseRequest) => {
-    if (!request.account_manager_id) {
+    const especial = correoNiceto(request);
+    if (especial?.error) {
+      toast.error(especial.error);
+      return;
+    }
+    if (!especial && !request.account_manager_id) {
       toast.error("No hay un gerente de cuenta asignado.");
       return;
     }
@@ -142,6 +160,7 @@ const RequestDetails: React.FC = () => {
       requesterProfile: profiles?.find(p => p.id === request.requester_id),
       accountManager: accountManagers?.find(am => am.id === request.account_manager_id),
       projects: projects,
+      profiles: profiles,
       actorProfile: profile,
       shippingAddress: shippingAddresses?.find(a => a.id === request.shipping_address_id),
       billingAddress: billingAddresses?.find(a => a.id === request.billing_address_id),
@@ -153,7 +172,7 @@ const RequestDetails: React.FC = () => {
 
     setPendingStatusOnEmailSend({ requestId: request.id, status: "PO Requested" });
     setEmailInitialData({
-      to: getAccountManagerEmail(request.account_manager_id),
+      ...camposCorreoConNiceto(especial, getAccountManagerEmail(request.account_manager_id)),
       subject: processTextTemplate(poRequestTemplate.subject_template, context as any),
       body: processEmailTemplate(poRequestTemplate.body_template, context as any),
       attachments: forDialog,
@@ -182,6 +201,12 @@ const RequestDetails: React.FC = () => {
       await updateStatusMutation.mutateAsync({ id: requestToApprove.id, status: nextStatus });
       
       if (nextStatus === "Quote Requested") {
+        const especial = correoNiceto(requestToApprove);
+        if (especial?.error) {
+          toast.error(especial.error);
+          setIsApproveRequestDialogOpen(false);
+          return;
+        }
         const quoteTemplate = emailTemplates?.find(t => t.template_name === 'Quote Request');
         if (!quoteTemplate) return;
 
@@ -191,13 +216,14 @@ const RequestDetails: React.FC = () => {
           requesterProfile: profiles?.find(p => p.id === requestToApprove.requester_id),
           accountManager: accountManagers?.find(am => am.id === requestToApprove.account_manager_id),
           projects: projects,
+          profiles: profiles,
           actorProfile: profile,
           shippingAddress: shippingAddresses?.find(a => a.id === requestToApprove.shipping_address_id),
           billingAddress: billingAddresses?.find(a => a.id === requestToApprove.billing_address_id),
         };
         
         const emailData = {
-          to: getVendorEmail(requestToApprove.vendor_id),
+          ...camposCorreoConNiceto(especial, getVendorEmail(requestToApprove.vendor_id)),
           subject: processTextTemplate(quoteTemplate.subject_template, context as any),
           body: processEmailTemplate(quoteTemplate.body_template, context as any),
         };
@@ -209,7 +235,17 @@ const RequestDetails: React.FC = () => {
             setIsEmailDialogOpen(true);
           }
         );
-      } else if (requestToApprove.quote_url && requestToApprove.account_manager_id) {
+      } else if (requestToApprove.quote_url) {
+        const especialPo = correoNiceto(requestToApprove);
+        if (especialPo?.error) {
+          toast.error(especialPo.error);
+          setIsApproveRequestDialogOpen(false);
+          return;
+        }
+        if (!especialPo && !requestToApprove.account_manager_id) {
+          setIsApproveRequestDialogOpen(false);
+          return;
+        }
         const poRequestTemplate = emailTemplates?.find(t => t.template_name === 'PO Request');
         if (!poRequestTemplate) return;
 
@@ -219,6 +255,7 @@ const RequestDetails: React.FC = () => {
           requesterProfile: profiles?.find(p => p.id === requestToApprove.requester_id),
           accountManager: accountManagers?.find(am => am.id === requestToApprove.account_manager_id),
           projects: projects,
+          profiles: profiles,
           actorProfile: profile,
           shippingAddress: shippingAddresses?.find(a => a.id === requestToApprove.shipping_address_id),
           billingAddress: billingAddresses?.find(a => a.id === requestToApprove.billing_address_id),
@@ -230,7 +267,7 @@ const RequestDetails: React.FC = () => {
           () => setIsApproveRequestDialogOpen(false),
           () => {
             setEmailInitialData({
-              to: getAccountManagerEmail(requestToApprove.account_manager_id),
+              ...camposCorreoConNiceto(especialPo, getAccountManagerEmail(requestToApprove.account_manager_id)),
               subject: processTextTemplate(poRequestTemplate.subject_template, poContext as any),
               body: processEmailTemplate(poRequestTemplate.body_template, poContext as any),
               attachments: forDialog,
@@ -301,6 +338,7 @@ const RequestDetails: React.FC = () => {
       requesterProfile: profiles?.find(p => p.id === request.requester_id),
       accountManager: accountManagers?.find(am => am.id === request.account_manager_id),
       projects: projects,
+      profiles: profiles,
       actorProfile: profile,
       shippingAddress: shippingAddresses?.find(a => a.id === request.shipping_address_id),
       billingAddress: billingAddresses?.find(a => a.id === request.billing_address_id),
@@ -387,6 +425,11 @@ const RequestDetails: React.FC = () => {
   };
 
   const handleSendQuoteRequest = async (request: SupabaseRequest) => {
+    const especial = correoNiceto(request);
+    if (especial?.error) {
+      toast.error(especial.error);
+      return;
+    }
     await updateStatusMutation.mutateAsync({ id: request.id, status: "Quote Requested" });
     const quoteTemplate = emailTemplates?.find(t => t.template_name === 'Quote Request');
     if (!quoteTemplate) return;
@@ -397,13 +440,14 @@ const RequestDetails: React.FC = () => {
       requesterProfile: profiles?.find(p => p.id === request.requester_id),
       accountManager: accountManagers?.find(am => am.id === request.account_manager_id),
       projects: projects,
+      profiles: profiles,
       actorProfile: profile,
       shippingAddress: shippingAddresses?.find(a => a.id === request.shipping_address_id),
       billingAddress: billingAddresses?.find(a => a.id === request.billing_address_id),
     };
     
     setEmailInitialData({
-      to: getVendorEmail(request.vendor_id),
+      ...camposCorreoConNiceto(especial, getVendorEmail(request.vendor_id)),
       subject: processTextTemplate(quoteTemplate.subject_template, context as any),
       body: processEmailTemplate(quoteTemplate.body_template, context as any),
     });
@@ -540,8 +584,10 @@ const RequestDetails: React.FC = () => {
         <DialogContent>
           <DialogHeader><DialogTitle>Aprobar Solicitud</DialogTitle></DialogHeader>
           <DialogFooter className={dialogFooterMobileClass}>
-            <Button variant="outline" onClick={handleApproveOnly} disabled={updateStatusMutation.isPending}>Aprobar Solamente</Button>
-            <Button onClick={handleApproveAndRequestQuoteEmail} disabled={updateStatusMutation.isPending}>Aprobar y Solicitar Cotización</Button>
+            <Button variant="outline" onClick={handleApproveOnly} disabled={updateStatusMutation.isPending}>Aprobar, sin correo</Button>
+            <Button onClick={handleApproveAndRequestQuoteEmail} disabled={updateStatusMutation.isPending}>
+              {request?.quote_url ? "Aprobar y enviar cómprame" : "Aprobar y pedir presupuesto"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -552,7 +598,7 @@ const RequestDetails: React.FC = () => {
           <div className="py-4">
             <Select value={newStatus} onValueChange={(value) => setNewStatus(value as RequestStatusType)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>{["Pending", "Quote Requested", "PO Requested", "Ordered", "Received", "Denied", "Cancelled"].map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+              <SelectContent>{REQUEST_STATUS_ORDER.map((s) => <SelectItem key={s} value={s}>{getRequestStatusLabelLong(s)}</SelectItem>)}</SelectContent>
             </Select>
           </div>
           <DialogFooter>

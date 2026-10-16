@@ -102,7 +102,7 @@ const ReorderDialog: React.FC<ReorderDialogProps> = ({ isOpen, onOpenChange, ite
       const newRequest: SupabaseRequest = await addRequestMutation.mutateAsync({ // Explicitly type newRequest
         vendorId: data.vendorId,
         requesterId: session.user.id,
-        accountManagerId: null, // Dejar sin asignar por defecto
+        accountManagerId: null,
         shippingAddressId: data.shippingAddressId,
         billingAddressId: data.billingAddressId,
         notes: `Solicitud de Reordenamiento generada automáticamente para ${items.length} artículos.`,

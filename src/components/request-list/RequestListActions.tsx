@@ -33,7 +33,6 @@ import {
   canPerformWorkflowAction,
   canReceivePackages,
 } from "@/lib/permissions";
-
 interface RequestListActionsProps {
   request: SupabaseRequest;
   isUpdatingStatus: boolean;
@@ -112,7 +111,7 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
             variant="ghost"
             size="icon"
             onClick={() => onSendQuoteRequest(request)}
-            title="Solicitar Cotización (Correo)"
+            title="Solicitar presupuesto"
             disabled={isUpdatingStatus}
             className="shrink-0"
           >
@@ -147,7 +146,7 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
             variant="ghost"
             size="icon"
             onClick={() => onEnterQuoteDetails(request)}
-            title="Subir Archivo de Cotización"
+            title="Subir presupuesto"
             disabled={isUpdatingStatus}
             className="shrink-0"
           >
@@ -166,12 +165,12 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
         </>
       )}
 
-      {request.status === "Quote Requested" && request.quote_url && request.account_manager_id && canWorkflow && (
+      {request.status === "Quote Requested" && request.quote_url && canWorkflow && request.account_manager_id && (
         <Button
           variant="ghost"
           size="icon"
           onClick={() => onSendPORequest(request)}
-          title="Enviar Solicitud de PO al Gerente de Cuenta"
+          title="Enviar solicitud de compra (Cómprame)"
           disabled={isUpdatingStatus}
           className="shrink-0"
         >
@@ -263,7 +262,7 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
               <>
                 {canMerge && <DropdownMenuSeparator />}
                 <DropdownMenuItem onClick={() => onSendQuoteRequest(request)} disabled={isUpdatingStatus}>
-                  <Mail className="mr-2 h-4 w-4 text-blue-500 dark:text-blue-400" /> Solicitar cotización
+                  <Mail className="mr-2 h-4 w-4 text-blue-500 dark:text-blue-400" /> Solicitar presupuesto
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => onApprove(request)} disabled={isUpdatingStatus}>
                   <CheckCircle className="mr-2 h-4 w-4 text-green-600 dark:text-green-400" /> Aprobar
@@ -276,16 +275,16 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
             {request.status === "Quote Requested" && !request.quote_url && canWorkflow && (
               <>
                 <DropdownMenuItem onClick={() => onEnterQuoteDetails(request)} disabled={isUpdatingStatus}>
-                  <FileText className="mr-2 h-4 w-4 text-blue-600 dark:text-blue-400" /> Subir cotización
+                  <FileText className="mr-2 h-4 w-4 text-blue-600 dark:text-blue-400" /> Subir presupuesto
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => onDeny(request)} disabled={isUpdatingStatus} className="text-red-600 dark:text-red-400">
                   <Ban className="mr-2 h-4 w-4" /> Denegar
                 </DropdownMenuItem>
               </>
             )}
-            {request.status === "Quote Requested" && request.quote_url && request.account_manager_id && canWorkflow && (
+            {request.status === "Quote Requested" && request.quote_url && canWorkflow && request.account_manager_id && (
               <DropdownMenuItem onClick={() => onSendPORequest(request)} disabled={isUpdatingStatus}>
-                <Mail className="mr-2 h-4 w-4 text-orange-600 dark:text-orange-400" /> Solicitar PO
+                <Mail className="mr-2 h-4 w-4 text-orange-600 dark:text-orange-400" /> Solicitar compra (Cómprame)
               </DropdownMenuItem>
             )}
             {request.status === "PO Requested" && canWorkflow && (

@@ -136,7 +136,7 @@ async function uploadWithFormData(
 }
 
 /**
- * Sube un adjunto de solicitud (cotización, PO, albarán o factura).
+ * Sube un adjunto de solicitud (presupuesto, PO, albarán o factura).
  * Primero pide una URL firmada para no meter el PDF por la Edge Function
  * (ahí se corrompían o fallaban). Si eso no está disponible, usa FormData.
  */

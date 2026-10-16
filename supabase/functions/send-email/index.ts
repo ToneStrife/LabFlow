@@ -67,7 +67,7 @@ serve(async (req) => {
 
     // 2. Obtener datos del Body
     requestBody = await req.json();
-    const { to, subject, body, attachments, fromName } = requestBody;
+    const { to, subject, body, attachments, fromName, from } = requestBody;
 
     if (!to || !subject || !body) {
       return new Response(
@@ -75,6 +75,22 @@ serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // Remitente opcional: misma cuenta SMTP, otra dirección "De" si el servidor lo permite.
+    // Solo se aceptan la cuenta por defecto y niceto@go.ugr.es (Farmacia).
+    const remitentesPermitidos = new Set(
+      [SMTP_FROM, SMTP_USER, "niceto@go.ugr.es"]
+        .filter(Boolean)
+        .map((addr) => String(addr).trim().toLowerCase())
+    );
+    const fromPedido = typeof from === "string" ? from.trim() : "";
+    if (fromPedido && !remitentesPermitidos.has(fromPedido.toLowerCase())) {
+      return new Response(
+        JSON.stringify({ error: `Remitente no permitido: ${fromPedido}` }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    const fromAddress = fromPedido || SMTP_FROM!;
 
     // 3. Verificación de Seguridad (Supabase Auth)
     const authClient = createClient(
@@ -141,7 +157,7 @@ serve(async (req) => {
     const plainText = body.replace(/<[^>]*>?/gm, "");
 
     await client.send({
-      from: fromName ? `${fromName} <${SMTP_FROM}>` : SMTP_FROM!,
+      from: fromName ? `${fromName} <${fromAddress}>` : fromAddress,
       to,
       cc: CC_EMAIL, // Añadimos el CC configurado
       subject,

@@ -49,7 +49,7 @@ export interface RequestEvent {
 export const ETIQUETA_EVENTO: Record<RequestEventType, string> = {
   created: "Solicitud",
   status_changed: "Estado",
-  quote_attached: "Cotización",
+  quote_attached: "Presupuesto",
   po_updated: "Orden de compra",
   packing_slip: "Llegada",
   invoice: "Factura",
@@ -72,7 +72,7 @@ export function textoProductos(items: ReceivedProduct[]): string {
 export function tituloEvento(event: Pick<RequestEvent, "event_type" | "payload">): string {
   const { event_type: tipo, payload } = event;
   if (tipo === "created") return "Se pidió";
-  if (tipo === "quote_attached") return "Se adjuntó la cotización";
+  if (tipo === "quote_attached") return "Se adjuntó el presupuesto";
   if (tipo === "po_updated") {
     return payload.po_number
       ? `Orden de compra ${payload.po_number}`
@@ -87,7 +87,7 @@ export function tituloEvento(event: Pick<RequestEvent, "event_type" | "payload">
   if (tipo === "status_changed") {
     switch (payload.to as RequestStatus) {
       case "Quote Requested":
-        return "Se aprobó / se pidió cotización";
+        return "Se pidió el presupuesto";
       case "PO Requested":
         return "Se pidió la orden de compra";
       case "Ordered":
@@ -99,7 +99,7 @@ export function tituloEvento(event: Pick<RequestEvent, "event_type" | "payload">
       case "Cancelled":
         return "Se canceló";
       case "Pending":
-        return "Volvió a pendiente";
+        return "Volvió a pendiente de presupuesto";
       default:
         return payload.to
           ? `Pasó a ${getRequestStatusLabel(payload.to as RequestStatus)}`

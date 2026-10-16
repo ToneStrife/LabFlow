@@ -65,7 +65,7 @@ const RequestSummaryCard: React.FC<RequestSummaryCardProps> = ({ request, vendor
       window.open(signedUrl, '_blank');
     } else {
       // Fallback toast in case generateSignedUrl failed but didn't show a toast (or if the user missed it)
-      toast.error("No se pudo generar la URL firmada para la cotización.");
+      toast.error("No se pudo generar la URL firmada para el presupuesto.");
     }
   };
 
@@ -139,7 +139,7 @@ const RequestSummaryCard: React.FC<RequestSummaryCardProps> = ({ request, vendor
             <p className="font-medium">{dateSubmitted}</p>
           </div>
           <div>
-            <p className="text-sm text-muted-foreground">Detalles de Cotización</p>
+            <p className="text-sm text-muted-foreground">Presupuesto</p>
             <p className="font-medium">
               {request.quote_url ? (
                 <Button 
@@ -152,7 +152,7 @@ const RequestSummaryCard: React.FC<RequestSummaryCardProps> = ({ request, vendor
                   {isGeneratingQuoteUrl ? (
                     <Loader2 className="h-4 w-4 animate-spin mr-1" />
                   ) : (
-                    "Ver Cotización"
+                    "Ver presupuesto"
                   )}
                 </Button>
               ) : "N/A"}

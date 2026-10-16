@@ -21,7 +21,6 @@ import {
   canPerformWorkflowAction,
   canReceivePackages,
 } from "@/lib/permissions";
-
 interface RequestActionsProps {
   request: SupabaseRequest;
   isUpdatingStatus: boolean;
@@ -66,7 +65,7 @@ const RequestActions: React.FC<RequestActionsProps> = ({
   if (request.status === "Pending" && !canApprove) {
     return (
       <p className="text-sm text-muted-foreground italic">
-        Pendiente de aprobación por el IP del proyecto o un administrador.
+        Pendiente de presupuesto. Lo revisa el IP del proyecto o un administrador.
       </p>
     );
   }
@@ -89,7 +88,7 @@ const RequestActions: React.FC<RequestActionsProps> = ({
             className="w-full justify-start" 
             disabled={isUpdatingStatus}
           >
-            <Mail className="mr-2 h-4 w-4" /> Solicitar Cotización (Correo)
+            <Mail className="mr-2 h-4 w-4" /> Solicitar presupuesto
           </Button>
           <Button 
             onClick={() => openApproveRequestDialog(request)} 
@@ -118,7 +117,7 @@ const RequestActions: React.FC<RequestActionsProps> = ({
               className="w-full justify-start" 
               disabled={isUpdatingStatus}
             >
-              <FileText className="mr-2 h-4 w-4" /> Subir Cotización
+              <FileText className="mr-2 h-4 w-4" /> Subir presupuesto
             </Button>
           ) : (
             <Button 

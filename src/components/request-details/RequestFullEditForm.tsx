@@ -24,7 +24,6 @@ import { useVendors } from "@/hooks/use-vendors";
 import { useShippingAddresses, useBillingAddresses } from "@/hooks/use-addresses";
 import { getFullName } from "@/hooks/use-profiles";
 import { formatShippingAddressLabel } from "@/lib/sedes";
-
 const fullEditSchema = z.object({
   vendorId: z.string().min(1, { message: "El proveedor es obligatorio." }),
   shippingAddressId: z.string().min(1, { message: "La dirección de envío es obligatoria." }),
