@@ -117,7 +117,7 @@ const EmailDialog: React.FC<EmailDialogProps> = ({
           <DialogHeader className="space-y-1.5 text-left">
             <DialogTitle>Redactar Correo Electrónico</DialogTitle>
             <DialogDescription>
-              Revisa el contenido y envía el correo cuando esté listo.
+              Para y De se rellenan solos. Revisa el resto y envía cuando esté listo.
             </DialogDescription>
           </DialogHeader>
         </div>
@@ -131,27 +131,44 @@ const EmailDialog: React.FC<EmailDialogProps> = ({
                 <FormItem>
                   <FormLabel>Para</FormLabel>
                   <FormControl>
-                    <Input type="email" {...field} disabled={isSending} />
+                    <Input
+                      type="email"
+                      {...field}
+                      readOnly
+                      tabIndex={-1}
+                      className="cursor-default bg-muted"
+                      aria-readonly="true"
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            {form.watch("from") ? (
-              <FormField
-                control={form.control}
-                name="from"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>De</FormLabel>
-                    <FormControl>
-                      <Input type="email" {...field} disabled={isSending} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            ) : null}
+            <FormField
+              control={form.control}
+              name="from"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>De</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="email"
+                      {...field}
+                      readOnly
+                      tabIndex={-1}
+                      className="cursor-default bg-muted"
+                      aria-readonly="true"
+                      placeholder={
+                        field.value
+                          ? undefined
+                          : "Cuenta SMTP de LabFlow (por defecto)"
+                      }
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="subject"
