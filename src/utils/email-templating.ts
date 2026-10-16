@@ -1,5 +1,6 @@
 import { SupabaseRequest, Vendor, Profile, AccountManager, Project, SupabaseRequestItem, Address } from "@/data/types";
 import { getFullName } from "@/hooks/use-profiles";
+import { resolveTemplateForSend } from "@/utils/email-template-defaults";
 
 interface EmailTemplateContext {
   request: SupabaseRequest;
@@ -73,35 +74,54 @@ const formatProjectField = (
   return [...new Set(values)].join(", ");
 };
 
+/** Escapa texto para insertarlo en HTML del cuerpo del correo. */
+const escapeHtml = (value: string | number | null | undefined): string =>
+  String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+
+/**
+ * Lista de artículos compatible con ReactQuill (el editor del diálogo de correo).
+ * Quill no registra blots de &lt;table&gt;, así que las tablas se aplastan a
+ * «PRODUCTOREFCANT…». Usamos párrafos + separadores que Quill sí conserva.
+ */
 const formatItemsListHtml = (items: SupabaseRequestItem[] | null): string => {
   if (!items || items.length === 0) {
     return "<p>No hay artículos.</p>";
   }
+  const header =
+    "<p><strong>PRODUCTO</strong> &nbsp;|&nbsp; <strong>REF</strong> &nbsp;|&nbsp; <strong>CANT</strong></p>";
   const rows = items
-    .map(
-      (item) =>
-        `<tr><td style="padding:4px 12px 4px 0;border-bottom:1px solid #ddd;">${item.product_name}</td>` +
-        `<td style="padding:4px 12px;border-bottom:1px solid #ddd;">${item.catalog_number}</td>` +
-        `<td style="padding:4px 0;border-bottom:1px solid #ddd;text-align:right;">${item.quantity}</td></tr>`
-    )
+    .map((item) => {
+      const name = escapeHtml(item.product_name);
+      const ref = escapeHtml(item.catalog_number);
+      const qty = escapeHtml(item.quantity);
+      return `<p>${name} &nbsp;|&nbsp; ${ref} &nbsp;|&nbsp; ${qty}</p>`;
+    })
     .join("");
-  return (
-    `<table style="border-collapse:collapse;width:100%;max-width:560px;">` +
-    `<thead><tr>` +
-    `<th style="text-align:left;padding:4px 12px 4px 0;border-bottom:2px solid #333;">PRODUCTO</th>` +
-    `<th style="text-align:left;padding:4px 12px;border-bottom:2px solid #333;">REF</th>` +
-    `<th style="text-align:right;padding:4px 0;border-bottom:2px solid #333;">CANT</th>` +
-    `</tr></thead><tbody>${rows}</tbody></table>`
-  );
+  return `${header}${rows}`;
 };
 
 const formatItemsListPlainText = (items: SupabaseRequestItem[] | null): string => {
   if (!items || items.length === 0) {
     return "No hay artículos.";
   }
-  const header = "PRODUCTO\tREF\tCANT";
+  const pad = (text: string, width: number) =>
+    text.length >= width ? `${text} ` : text.padEnd(width, " ");
+  const nameWidth = Math.min(
+    48,
+    Math.max(8, ...items.map((i) => i.product_name.length), "PRODUCTO".length)
+  );
+  const refWidth = Math.min(
+    16,
+    Math.max(3, ...items.map((i) => String(i.catalog_number).length), "REF".length)
+  );
+  const header = `${pad("PRODUCTO", nameWidth)}${pad("REF", refWidth)}CANT`;
   const rows = items.map(
-    (item) => `${item.product_name}\t${item.catalog_number}\t${item.quantity}`
+    (item) =>
+      `${pad(item.product_name, nameWidth)}${pad(String(item.catalog_number), refWidth)}${item.quantity}`
   );
   return [header, ...rows].join("\n");
 };
@@ -258,4 +278,21 @@ export const processEmailTemplate = (templateString: string, context: EmailTempl
       <p style="font-size: 0.8em; color: #888;">This is an automated message from the LabFlow system.</p>
     </div>
   `;
+};
+
+/**
+ * Asunto + cuerpo HTML listos para el diálogo. Si la plantilla en BD es la
+ * antigua (pre-Niceto), usa el texto canónico del frontend.
+ */
+export const processNamedEmailTemplate = (
+  templateName: string,
+  subjectTemplate: string,
+  bodyTemplate: string,
+  context: EmailTemplateContext
+): { subject: string; body: string } => {
+  const resolved = resolveTemplateForSend(templateName, subjectTemplate, bodyTemplate);
+  return {
+    subject: processTextTemplate(resolved.subject, context),
+    body: processEmailTemplate(resolved.body, context),
+  };
 };

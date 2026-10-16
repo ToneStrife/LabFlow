@@ -21,7 +21,7 @@ import { useAccountManagers } from "@/hooks/use-account-managers";
 import { useProjects } from "@/hooks/use-projects";
 import { useEmailTemplates } from "@/hooks/use-email-templates";
 import { useShippingAddresses, useBillingAddresses } from "@/hooks/use-addresses";
-import { processEmailTemplate, processTextTemplate } from "@/utils/email-templating";
+import { processEmailTemplate, processTextTemplate, processNamedEmailTemplate } from "@/utils/email-templating";
 import EmailDialog, { EmailFormValues } from "@/components/EmailDialog";
 import InvoiceItemsDialog from "@/components/request-details/InvoiceItemsDialog";
 import { useReceiveWizard } from "@/components/ReceiveWizardProvider";
@@ -170,11 +170,18 @@ const RequestDetails: React.FC = () => {
       ? await buildStorageAttachment(request.quote_url)
       : { forDialog: [], forSend: [] };
 
+    const { subject, body } = processNamedEmailTemplate(
+      "PO Request",
+      poRequestTemplate.subject_template,
+      poRequestTemplate.body_template,
+      context
+    );
+
     setPendingStatusOnEmailSend({ requestId: request.id, status: "PO Requested" });
     setEmailInitialData({
       ...camposCorreoConNiceto(especial, getAccountManagerEmail(request.account_manager_id)),
-      subject: processTextTemplate(poRequestTemplate.subject_template, context as any),
-      body: processEmailTemplate(poRequestTemplate.body_template, context as any),
+      subject,
+      body,
       attachments: forDialog,
       attachmentsForSend: forSend,
     });
@@ -222,10 +229,17 @@ const RequestDetails: React.FC = () => {
           billingAddress: billingAddresses?.find(a => a.id === requestToApprove.billing_address_id),
         };
         
+        const { subject, body } = processNamedEmailTemplate(
+          "Quote Request",
+          quoteTemplate.subject_template,
+          quoteTemplate.body_template,
+          context
+        );
+
         const emailData = {
           ...camposCorreoConNiceto(especial, getVendorEmail(requestToApprove.vendor_id)),
-          subject: processTextTemplate(quoteTemplate.subject_template, context as any),
-          body: processEmailTemplate(quoteTemplate.body_template, context as any),
+          subject,
+          body,
         };
 
         openEmailDialogAfterClose(
@@ -262,14 +276,20 @@ const RequestDetails: React.FC = () => {
         };
 
         const { forDialog, forSend } = await buildStorageAttachment(requestToApprove.quote_url);
+        const { subject, body } = processNamedEmailTemplate(
+          "PO Request",
+          poRequestTemplate.subject_template,
+          poRequestTemplate.body_template,
+          poContext
+        );
 
         openEmailDialogAfterClose(
           () => setIsApproveRequestDialogOpen(false),
           () => {
             setEmailInitialData({
               ...camposCorreoConNiceto(especialPo, getAccountManagerEmail(requestToApprove.account_manager_id)),
-              subject: processTextTemplate(poRequestTemplate.subject_template, poContext as any),
-              body: processEmailTemplate(poRequestTemplate.body_template, poContext as any),
+              subject,
+              body,
               attachments: forDialog,
               attachmentsForSend: forSend,
             });
@@ -446,10 +466,17 @@ const RequestDetails: React.FC = () => {
       billingAddress: billingAddresses?.find(a => a.id === request.billing_address_id),
     };
     
+    const { subject, body } = processNamedEmailTemplate(
+      "Quote Request",
+      quoteTemplate.subject_template,
+      quoteTemplate.body_template,
+      context
+    );
+
     setEmailInitialData({
       ...camposCorreoConNiceto(especial, getVendorEmail(request.vendor_id)),
-      subject: processTextTemplate(quoteTemplate.subject_template, context as any),
-      body: processEmailTemplate(quoteTemplate.body_template, context as any),
+      subject,
+      body,
     });
     setIsEmailDialogOpen(true);
   };

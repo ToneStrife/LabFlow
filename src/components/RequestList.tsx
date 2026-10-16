@@ -18,7 +18,7 @@ import { buildStorageAttachment, openEmailDialogAfterClose, normalizeAttachments
 import { useSession } from "@/components/SessionContextProvider";
 import { useProjects } from "@/hooks/use-projects";
 import { useEmailTemplates } from "@/hooks/use-email-templates";
-import { processTextTemplate, processEmailTemplate } from "@/utils/email-templating";
+import { processNamedEmailTemplate } from "@/utils/email-templating";
 import MergeRequestsDialog from "@/components/MergeRequestsDialog";
 import { useShippingAddresses, useBillingAddresses } from "@/hooks/use-addresses";
 import ApproveRequestListDialog from "@/components/request-list/ApproveRequestListDialog";
@@ -184,10 +184,17 @@ const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
       return null;
     }
 
+    const { subject, body } = processNamedEmailTemplate(
+      "PO Request",
+      poRequestTemplate.subject_template,
+      poRequestTemplate.body_template,
+      context
+    );
+
     return {
       ...camposCorreoConNiceto(especial, getAccountManagerEmail(request.account_manager_id)),
-      subject: processTextTemplate(poRequestTemplate.subject_template, context),
-      body: processEmailTemplate(poRequestTemplate.body_template, context),
+      subject,
+      body,
       attachments: forDialog,
       attachmentsForSend: forSend,
     };
@@ -240,10 +247,17 @@ const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
         billingAddress: billingAddresses?.find(a => a.id === request.billing_address_id),
       };
 
+      const { subject, body } = processNamedEmailTemplate(
+        "Quote Request",
+        quoteTemplate.subject_template,
+        quoteTemplate.body_template,
+        context
+      );
+
       const emailData = {
         ...camposCorreoConNiceto(especial, getVendorEmail(request.vendor_id)),
-        subject: processTextTemplate(quoteTemplate.subject_template, context),
-        body: processEmailTemplate(quoteTemplate.body_template, context),
+        subject,
+        body,
       };
 
       openEmailDialogAfterClose(
@@ -351,10 +365,17 @@ const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
       billingAddress: billingAddresses?.find(a => a.id === request.billing_address_id),
     };
     
+    const { subject, body } = processNamedEmailTemplate(
+      "Quote Request",
+      quoteTemplate.subject_template,
+      quoteTemplate.body_template,
+      context
+    );
+
     setEmailInitialData({
       ...camposCorreoConNiceto(especial, getVendorEmail(request.vendor_id)),
-      subject: processTextTemplate(quoteTemplate.subject_template, context),
-      body: processEmailTemplate(quoteTemplate.body_template, context),
+      subject,
+      body,
     });
     setIsEmailDialogOpen(true);
   };
