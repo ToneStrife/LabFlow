@@ -47,20 +47,28 @@ export function esPedidoFarmacia(
   return [address.name, address.address_line_1, address.address_line_2, address.city].some(textoEsFarmacia);
 }
 
-export function esNiceto(persona: { first_name?: string | null; last_name?: string | null }): boolean {
+export function esNiceto(persona: {
+  first_name?: string | null;
+  last_name?: string | null;
+  email?: string | null;
+}): boolean {
+  if ((persona.email ?? "").trim().toLowerCase() === CORREO_NICETO) return true;
   return `${persona.first_name ?? ""} ${persona.last_name ?? ""}`.toLowerCase().includes("niceto");
 }
 
-/** Niceto es un usuario más. Se reconoce por el nombre en su ficha. */
-export function usuarioNiceto<T extends { first_name?: string | null; last_name?: string | null }>(
-  personas: T[] | undefined
-): T | undefined {
+/** Niceto es un usuario más. Se reconoce por el nombre o por niceto@go.ugr.es. */
+export function usuarioNiceto<T extends {
+  first_name?: string | null;
+  last_name?: string | null;
+  email?: string | null;
+}>(personas: T[] | undefined): T | undefined {
   return personas?.find(esNiceto);
 }
 
 /**
  * Solo los pedidos de Farmacia que crea o aprueba Niceto usan su correo.
- * Para y De: niceto@go.ugr.es. El envío sigue con la cuenta SMTP de LabFlow.
+ * Para y De: niceto@go.ugr.es (Para se puede cambiar en el diálogo).
+ * El envío sigue con la cuenta SMTP de LabFlow; From debe redeployarse en send-email.
  */
 export function correoSiLoHaceNiceto(opts: {
   shippingAddressId: string | null | undefined;
