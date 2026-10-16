@@ -3,8 +3,9 @@
 import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Loader2, MapPin, DollarSign, Users, Briefcase, Shield, Mail, ScrollText, Bell, KeyRound } from "lucide-react"; // Añadir iconos para pestañas
+import { PlusCircle, Loader2, MapPin, DollarSign, Users, Briefcase, Shield, Mail, ScrollText, Bell, KeyRound, Server } from "lucide-react"; // Añadir iconos para pestañas
 import PermissionsMatrix from "@/components/PermissionsMatrix";
+import SmtpAccountsSection from "@/components/SmtpAccountsSection";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -327,6 +328,9 @@ const AdminPage = () => {
           <TabsTrigger value="email-templates" className="flex items-center gap-2 px-4 py-2">
             <Mail className="h-4 w-4" /> Plantillas de Email
           </TabsTrigger>
+          <TabsTrigger value="smtp-accounts" className="flex items-center gap-2 px-4 py-2">
+            <Server className="h-4 w-4" /> Cuentas SMTP
+          </TabsTrigger>
           <TabsTrigger value="email-logs" className="flex items-center gap-2 px-4 py-2">
             <ScrollText className="h-4 w-4" /> Registros de Email
           </TabsTrigger>
@@ -557,6 +561,11 @@ const AdminPage = () => {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Cuentas SMTP Tab */}
+        <TabsContent value="smtp-accounts" className="mt-6">
+          <SmtpAccountsSection adminMode />
         </TabsContent>
 
         {/* Email Logs Tab */}

@@ -743,8 +743,81 @@ export const apiSendEmail = async (email: EmailData): Promise<void> => {
     }
     throw new Error(errorMessage);
   }
+
+  // La Edge Function puede devolver { error } con HTTP 200 en algunos casos.
+  if (data && typeof data === 'object' && 'error' in data && (data as any).error) {
+    throw new Error(String((data as any).error));
+  }
   
   return data;
+};
+
+// --- API de cuentas SMTP alternativas (contraseña nunca en claro) ---
+export interface SmtpAccountPublic {
+  id: string;
+  email: string;
+  smtp_host: string | null;
+  smtp_user: string;
+  label: string | null;
+  updated_at: string;
+  updated_by: string | null;
+  has_password: boolean;
+}
+
+export interface UpsertSmtpAccountInput {
+  email: string;
+  smtp_user: string;
+  smtp_host?: string | null;
+  /** Vacío/omitido = conservar la contraseña existente. */
+  smtp_password?: string;
+  label?: string | null;
+}
+
+const invokeErrorMessage = (data: unknown, error: { message?: string } | null, fallback: string): string => {
+  if (data && typeof data === "object" && "error" in data && (data as any).error) {
+    return String((data as any).error);
+  }
+  if (error?.message) return error.message;
+  return fallback;
+};
+
+export const apiGetSmtpAccounts = async (): Promise<SmtpAccountPublic[]> => {
+  const { data, error } = await supabase.functions.invoke("get-smtp-accounts", {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+
+  if (error) {
+    throw new Error(invokeErrorMessage(data, error, "No se pudieron cargar las cuentas SMTP."));
+  }
+  if (data && typeof data === "object" && "error" in data && (data as any).error) {
+    throw new Error(String((data as any).error));
+  }
+  return ((data as any)?.accounts || []) as SmtpAccountPublic[];
+};
+
+export const apiUpsertSmtpAccount = async (
+  input: UpsertSmtpAccountInput
+): Promise<SmtpAccountPublic> => {
+  // No loguear input: puede contener smtp_password.
+  const { data, error } = await supabase.functions.invoke("upsert-smtp-account", {
+    method: "POST",
+    body: JSON.stringify({
+      email: input.email,
+      smtp_user: input.smtp_user,
+      smtp_host: input.smtp_host ?? null,
+      smtp_password: input.smtp_password ?? "",
+      label: input.label ?? null,
+    }),
+  });
+
+  if (error) {
+    throw new Error(invokeErrorMessage(data, error, "No se pudo guardar la cuenta SMTP."));
+  }
+  if (data && typeof data === "object" && "error" in data && (data as any).error) {
+    throw new Error(String((data as any).error));
+  }
+  return (data as any).account as SmtpAccountPublic;
 };
 
 // --- API de Plantillas de Correo Electrónico ---
