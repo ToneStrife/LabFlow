@@ -12,19 +12,29 @@ import { useUpdateProfile } from "@/hooks/use-profiles";
 import { useNavigate } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
 import NotificationPreferences from "@/components/NotificationPreferences";
+import SmtpAccountsSection from "@/components/SmtpAccountsSection";
 import { supabase } from "@/integrations/supabase/client";
 import SedeDot from "@/components/SedeDot";
 import { getSedeById, getSedeLabel } from "@/lib/sedes";
+import { CORREO_NICETO } from "@/lib/farmacia";
+import { useSmtpAccounts } from "@/hooks/use-smtp-accounts";
 
 const Profile: React.FC = () => {
   const { session, profile, loading, logout } = useSession();
   const updateProfileMutation = useUpdateProfile();
   const navigate = useNavigate();
+  const { data: smtpAccounts = [] } = useSmtpAccounts();
   
   const [firstName, setFirstName] = React.useState(profile?.first_name || "");
   const [lastName, setLastName] = React.useState(profile?.last_name || "");
   const [newPassword, setNewPassword] = React.useState("");
   const [isUpdatingPassword, setIsUpdatingPassword] = React.useState(false);
+
+  const profileEmailNorm = (profile?.email || "").trim().toLowerCase();
+  const showSmtpSection =
+    Boolean(profileEmailNorm) &&
+    (profileEmailNorm === CORREO_NICETO ||
+      smtpAccounts.some((a) => a.email === profileEmailNorm));
 
   React.useEffect(() => {
     if (profile) {
@@ -108,6 +118,15 @@ const Profile: React.FC = () => {
           </form>
         </CardContent>
       </Card>
+
+      {showSmtpSection && (
+        <SmtpAccountsSection
+          adminMode={false}
+          profileEmail={profile.email}
+          title="Mi correo de envío"
+          description="Usuario y contraseña SMTP de tu buzón UGR. Así LabFlow autentica como tú cuando eliges tu dirección en De. Déjala en blanco para no cambiar la contraseña."
+        />
+      )}
 
       <Card>
         <CardHeader><CardTitle className="flex items-center"><Lock className="mr-2 h-5 w-5" /> Seguridad</CardTitle></CardHeader>

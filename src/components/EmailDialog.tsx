@@ -174,6 +174,13 @@ const EmailDialog: React.FC<EmailDialogProps> = ({
                       <SelectItem value={CORREO_NICETO}>{CORREO_NICETO}</SelectItem>
                     </SelectContent>
                   </Select>
+                  {field.value === CORREO_NICETO && (
+                    <p className="text-xs text-muted-foreground">
+                      Se envía autenticando con la cuenta SMTP de {CORREO_NICETO}
+                      (Admin → Cuentas SMTP o Perfil → Mi correo de envío). Si aún
+                      no hay contraseña configurada, el envío fallará con un aviso claro.
+                    </p>
+                  )}
                   <FormMessage />
                 </FormItem>
               )}

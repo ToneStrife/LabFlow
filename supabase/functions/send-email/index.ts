@@ -7,26 +7,27 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Dirección de correo electrónico para añadir en CC (opcional, mantenida de la versión anterior)
-const CC_EMAIL = 'cjaranda@go.ugr.es';
-const BUCKET_NAME = 'LabFlow';
+const BUCKET_NAME = "LabFlow";
+const CORREO_NICETO = "niceto@go.ugr.es";
+
+const normalizeEmail = (addr: string): string => addr.trim().toLowerCase();
 
 const resolveStoragePath = (urlOrPath: string): string => {
-  if (!urlOrPath.startsWith('http://') && !urlOrPath.startsWith('https://')) {
+  if (!urlOrPath.startsWith("http://") && !urlOrPath.startsWith("https://")) {
     return urlOrPath;
   }
 
   try {
     const parsed = new URL(urlOrPath);
-    const signMarker = '/object/sign/LabFlow/';
-    const publicMarker = '/object/public/LabFlow/';
+    const signMarker = "/object/sign/LabFlow/";
+    const publicMarker = "/object/public/LabFlow/";
     const signIndex = parsed.pathname.indexOf(signMarker);
     if (signIndex !== -1) {
-      return decodeURIComponent(parsed.pathname.slice(signIndex + signMarker.length).split('?')[0]);
+      return decodeURIComponent(parsed.pathname.slice(signIndex + signMarker.length).split("?")[0]);
     }
     const publicIndex = parsed.pathname.indexOf(publicMarker);
     if (publicIndex !== -1) {
-      return decodeURIComponent(parsed.pathname.slice(publicIndex + publicMarker.length).split('?')[0]);
+      return decodeURIComponent(parsed.pathname.slice(publicIndex + publicMarker.length).split("?")[0]);
     }
   } catch {
     // fall through
@@ -37,10 +38,10 @@ const resolveStoragePath = (urlOrPath: string): string => {
 
 const getContentType = (filename: string): string => {
   const lower = filename.toLowerCase();
-  if (lower.endsWith('.pdf')) return 'application/pdf';
-  if (lower.endsWith('.png')) return 'image/png';
-  if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
-  return 'application/octet-stream';
+  if (lower.endsWith(".pdf")) return "application/pdf";
+  if (lower.endsWith(".png")) return "image/png";
+  if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
+  return "application/octet-stream";
 };
 
 serve(async (req) => {
@@ -48,24 +49,24 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  let logStatus = 'failed';
+  let logStatus = "failed";
   let logErrorMessage: string | undefined;
   let sentByUserId: string | undefined;
   let requestBody: any;
 
   try {
-    // 1. Configuración desde Variables de Entorno
     const SMTP_HOST = Deno.env.get("SMTP_HOST") || "smtp.gmail.com";
-    const SMTP_PORT = "465"; 
+    const SMTP_PORT = "465";
     const SMTP_USER = Deno.env.get("SMTP_USER");
     const SMTP_PASSWORD = Deno.env.get("SMTP_PASSWORD");
     const SMTP_FROM = Deno.env.get("SMTP_FROM") || SMTP_USER;
+    // CC opcional: vacío/ausente = sin CC. No confundir CC con el remitente (From).
+    const SMTP_CC = (Deno.env.get("SMTP_CC") || "").trim();
 
     if (!SMTP_USER || !SMTP_PASSWORD) {
       throw new Error("Configuración SMTP incompleta (SMTP_USER o SMTP_PASSWORD faltantes).");
     }
 
-    // 2. Obtener datos del Body
     requestBody = await req.json();
     const { to, subject, body, attachments, fromName, from } = requestBody;
 
@@ -76,43 +77,113 @@ serve(async (req) => {
       );
     }
 
-    // Remitente opcional: misma cuenta SMTP, otra dirección "De" si el servidor lo permite.
-    // Solo se aceptan la cuenta por defecto y niceto@go.ugr.es (Farmacia).
-    const remitentesPermitidos = new Set(
-      [SMTP_FROM, SMTP_USER, "niceto@go.ugr.es"]
-        .filter(Boolean)
-        .map((addr) => String(addr).trim().toLowerCase())
+    const authClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+      { global: { headers: { Authorization: req.headers.get("Authorization")! } } }
     );
+    const { data: { user }, error: authError } = await authClient.auth.getUser();
+    if (authError || !user) {
+      logErrorMessage = "No autorizado";
+      return new Response(JSON.stringify({ error: logErrorMessage }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    sentByUserId = user.id;
+
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+    );
+
+    const defaultIdentities = new Set(
+      [SMTP_FROM, SMTP_USER].filter(Boolean).map((a) => normalizeEmail(String(a)))
+    );
+
     const fromPedido = typeof from === "string" ? from.trim() : "";
-    if (fromPedido && !remitentesPermitidos.has(fromPedido.toLowerCase())) {
+    const fromAddress = fromPedido || SMTP_FROM!;
+    const fromNorm = normalizeEmail(fromAddress);
+    const usesDefaultSmtp = defaultIdentities.has(fromNorm);
+
+    // Credenciales: cuenta por defecto (env) o fila en smtp_accounts (service role).
+    let smtpHost = SMTP_HOST;
+    let smtpUser = SMTP_USER!;
+    let smtpPassword = SMTP_PASSWORD!;
+
+    if (!usesDefaultSmtp) {
+      const { data: account, error: accountError } = await supabaseAdmin
+        .from("smtp_accounts")
+        .select("email, smtp_host, smtp_user, smtp_password")
+        .eq("email", fromNorm)
+        .maybeSingle();
+
+      if (accountError) {
+        throw new Error(`No se pudo consultar la cuenta SMTP: ${accountError.message}`);
+      }
+
+      if (!account) {
+        return new Response(
+          JSON.stringify({
+            error:
+              `No hay cuenta SMTP configurada para ${fromAddress}. ` +
+              `Un administrador (o el dueño del buzón) debe añadirla en LabFlow → Cuentas SMTP / Mi correo de envío.`,
+          }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      if (!account.smtp_password || !String(account.smtp_password).trim()) {
+        return new Response(
+          JSON.stringify({
+            error:
+              `La cuenta SMTP de ${fromAddress} aún no tiene contraseña. ` +
+              `Configúrala en Perfil → Mi correo de envío (o Admin → Cuentas SMTP).`,
+          }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      if (!account.smtp_user || !String(account.smtp_user).trim()) {
+        return new Response(
+          JSON.stringify({
+            error: `La cuenta SMTP de ${fromAddress} no tiene usuario SMTP configurado.`,
+          }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      smtpHost = (account.smtp_host && String(account.smtp_host).trim()) || SMTP_HOST;
+      smtpUser = String(account.smtp_user).trim();
+      smtpPassword = String(account.smtp_password);
+    }
+
+    // Remitentes permitidos: default + niceto@ + cualquier email en smtp_accounts.
+    const { data: accountEmails } = await supabaseAdmin
+      .from("smtp_accounts")
+      .select("email");
+
+    const remitentesPermitidos = new Set([
+      ...defaultIdentities,
+      normalizeEmail(CORREO_NICETO),
+      ...(accountEmails || []).map((row: { email: string }) => normalizeEmail(row.email)),
+    ]);
+
+    if (fromPedido && !remitentesPermitidos.has(normalizeEmail(fromPedido))) {
       return new Response(
         JSON.stringify({ error: `Remitente no permitido: ${fromPedido}` }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-    const fromAddress = fromPedido || SMTP_FROM!;
 
-    // 3. Verificación de Seguridad (Supabase Auth)
-    const authClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
-    );
-    const { data: { user }, error: authError } = await authClient.auth.getUser();
-    if (authError || !user) {
-      logErrorMessage = "No autorizado";
-      return new Response(JSON.stringify({ error: logErrorMessage }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
-    sentByUserId = user.id;
+    const fromHeader = fromName ? `${fromName} <${fromAddress}>` : fromAddress;
 
-    // 4. Procesar los archivos adjuntos si existen
+    // Reply-To si el From no coincide con el usuario SMTP autenticado (fallback UGR).
+    const fromEsDistintoDelSmtp = normalizeEmail(fromAddress) !== normalizeEmail(smtpUser);
+    const replyToAddress = fromEsDistintoDelSmtp ? fromAddress : undefined;
+
     const processedAttachments = [];
     if (attachments && attachments.length > 0) {
-      const supabaseAdmin = createClient(
-        Deno.env.get('SUPABASE_URL') ?? '',
-        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-      );
-
       for (const attachment of attachments) {
         const filePath = resolveStoragePath(attachment.url);
         console.log(`[send-email] Descargando adjunto: ${attachment.name} desde: ${filePath}`);
@@ -140,26 +211,42 @@ serve(async (req) => {
       }
     }
 
-    // 5. Cliente SMTP con SSL Directo (Puerto 465)
     const client = new SMTPClient({
       connection: {
-        hostname: SMTP_HOST,
+        hostname: smtpHost,
         port: Number(SMTP_PORT),
-        tls: true, 
+        tls: true,
         auth: {
-          username: SMTP_USER!,
-          password: SMTP_PASSWORD!,
+          username: smtpUser,
+          password: smtpPassword,
         },
       },
     });
 
-    // 6. Preparar texto plano y Enviar
     const plainText = body.replace(/<[^>]*>?/gm, "");
 
+    const toNorm = normalizeEmail(String(to));
+    const ccList =
+      SMTP_CC && normalizeEmail(SMTP_CC) !== toNorm ? SMTP_CC : undefined;
+
+    const headers: Record<string, string> | undefined = fromEsDistintoDelSmtp
+      ? { Sender: smtpUser }
+      : undefined;
+
+    // No loguear contraseñas; solo identidad de auth (usuario SMTP).
+    console.log(
+      `[send-email] De=${fromHeader}` +
+        (replyToAddress ? ` Reply-To=${replyToAddress}` : "") +
+        (ccList ? ` CC=${ccList}` : " CC=(ninguno)") +
+        ` auth=${smtpUser} host=${smtpHost}`
+    );
+
     await client.send({
-      from: fromName ? `${fromName} <${fromAddress}>` : fromAddress,
+      from: fromHeader,
       to,
-      cc: CC_EMAIL, // Añadimos el CC configurado
+      ...(ccList ? { cc: ccList } : {}),
+      ...(replyToAddress ? { replyTo: replyToAddress } : {}),
+      ...(headers ? { headers } : {}),
       subject,
       content: plainText,
       html: body,
@@ -167,13 +254,17 @@ serve(async (req) => {
     });
 
     await client.close();
-    logStatus = 'success';
+    logStatus = "success";
 
     return new Response(
-      JSON.stringify({ message: "Email enviado con éxito" }),
+      JSON.stringify({
+        message: "Email enviado con éxito",
+        from: fromAddress,
+        replyTo: replyToAddress ?? null,
+        smtpAccount: usesDefaultSmtp ? "default" : fromNorm,
+      }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-
   } catch (err: any) {
     console.error("[send-email] Error crítico:", err.message);
     logErrorMessage = err.message;
@@ -182,23 +273,20 @@ serve(async (req) => {
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } finally {
-    // 7. Registrar el intento en la base de datos
     const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
-    
-    const bodyPreview = requestBody?.body?.substring(0, 247) + '...';
 
-    await supabaseAdmin
-      .from('email_logs')
-      .insert({
-        to_email: requestBody?.to,
-        subject: requestBody?.subject,
-        body_preview: bodyPreview,
-        status: logStatus,
-        error_message: logErrorMessage,
-        sent_by: sentByUserId,
-      });
+    const bodyPreview = requestBody?.body?.substring(0, 247) + "...";
+
+    await supabaseAdmin.from("email_logs").insert({
+      to_email: requestBody?.to,
+      subject: requestBody?.subject,
+      body_preview: bodyPreview,
+      status: logStatus,
+      error_message: logErrorMessage,
+      sent_by: sentByUserId,
+    });
   }
 });
