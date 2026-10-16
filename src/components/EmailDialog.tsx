@@ -21,14 +21,25 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Loader2, Paperclip } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { mobileDialogClass, dialogBodyScrollClass, dialogFooterMobileClass } from "@/lib/layout";
+import { CORREO_NICETO } from "@/lib/farmacia";
 // Quill pesa 111 KB comprimidos y solo hace falta al escribir un correo.
 // Cargándolo aquí sale del paquete inicial de toda la aplicación.
 const RichTextEditor = React.lazy(() => import('./RichTextEditor'));
 import { normalizeAttachments, type EmailAttachment } from "@/utils/email-attachments";
+
+/** Valor interno del Select: Radix no admite value vacío. Se envía como from vacío → SMTP_FROM. */
+const FROM_SMTP_DEFAULT = "__smtp_default__";
 
 const attachmentSchema = z.object({
   name: z.string(),
@@ -64,12 +75,6 @@ const EmailDialog: React.FC<EmailDialogProps> = ({
 }) => {
   const attachmentsForSendRef = React.useRef<EmailAttachment[]>([]);
 
-  React.useEffect(() => {
-    if (isOpen) {
-      attachmentsForSendRef.current = normalizeAttachments(initialData.attachmentsForSend);
-    }
-  }, [initialData, isOpen]);
-
   const form = useForm<EmailFormValues>({
     resolver: zodResolver(emailFormSchema),
     defaultValues: {
@@ -80,15 +85,22 @@ const EmailDialog: React.FC<EmailDialogProps> = ({
       from: initialData.from || "",
       attachments: initialData.attachments || [],
     },
-    values: {
+  });
+
+  // Reset al abrir (o al cambiar el borrador). No usar `values` controlado:
+  // si no, editar Para se pisa en cada re-render del padre.
+  React.useEffect(() => {
+    if (!isOpen) return;
+    form.reset({
       to: initialData.to || "",
       subject: initialData.subject || "",
       body: initialData.body || "",
       fromName: initialData.fromName || "",
       from: initialData.from || "",
       attachments: initialData.attachments || [],
-    },
-  });
+    });
+    attachmentsForSendRef.current = normalizeAttachments(initialData.attachmentsForSend);
+  }, [form, initialData, isOpen]);
 
   const handleSubmit = async (data: EmailFormValues) => {
     const storageAttachments =
@@ -117,7 +129,7 @@ const EmailDialog: React.FC<EmailDialogProps> = ({
           <DialogHeader className="space-y-1.5 text-left">
             <DialogTitle>Redactar Correo Electrónico</DialogTitle>
             <DialogDescription>
-              Para y De se rellenan solos. Revisa el resto y envía cuando esté listo.
+              Elige Para y De (SMTP LabFlow o niceto@). Revisa el resto y envía.
             </DialogDescription>
           </DialogHeader>
         </div>
@@ -131,14 +143,7 @@ const EmailDialog: React.FC<EmailDialogProps> = ({
                 <FormItem>
                   <FormLabel>Para</FormLabel>
                   <FormControl>
-                    <Input
-                      type="email"
-                      {...field}
-                      readOnly
-                      tabIndex={-1}
-                      className="cursor-default bg-muted"
-                      aria-readonly="true"
-                    />
+                    <Input type="email" {...field} disabled={isSending} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -150,21 +155,25 @@ const EmailDialog: React.FC<EmailDialogProps> = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>De</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="email"
-                      {...field}
-                      readOnly
-                      tabIndex={-1}
-                      className="cursor-default bg-muted"
-                      aria-readonly="true"
-                      placeholder={
-                        field.value
-                          ? undefined
-                          : "Cuenta SMTP de LabFlow (por defecto)"
-                      }
-                    />
-                  </FormControl>
+                  <Select
+                    value={field.value ? field.value : FROM_SMTP_DEFAULT}
+                    onValueChange={(value) =>
+                      field.onChange(value === FROM_SMTP_DEFAULT ? "" : value)
+                    }
+                    disabled={isSending}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Cuenta SMTP de LabFlow (por defecto)" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value={FROM_SMTP_DEFAULT}>
+                        Cuenta SMTP de LabFlow (por defecto)
+                      </SelectItem>
+                      <SelectItem value={CORREO_NICETO}>{CORREO_NICETO}</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
