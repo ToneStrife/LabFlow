@@ -65,9 +65,15 @@ export interface AccountManager {
 export interface Project {
   id: string;
   created_at: string;
+  /** Nombre para mostrar en listados y selectores */
   name: string;
+  /** Código del proyecto */
   code: string;
-  /** Perfil del Investigador Principal (quien aprueba pedidos del proyecto) */
+  /** Entidad asociada al proyecto */
+  entidad: string | null;
+  /** CIF de la entidad asociada */
+  entidad_cif: string | null;
+  /** Perfil del investigador responsable (quien aprueba pedidos del proyecto) */
   ip_profile_id: string | null;
 }
 

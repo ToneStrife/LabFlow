@@ -424,7 +424,7 @@ const AdminPage = () => {
               <CardTitle className="text-xl">Proyectos</CardTitle>
               <Dialog open={isAddProjectDialogOpen} onOpenChange={setIsAddProjectDialogOpen}>
                 <DialogTrigger asChild><Button size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Añadir Nuevo Proyecto</Button></DialogTrigger>
-                <DialogContent className={cn(mobileDialogClass, "sm:max-w-[425px]")}>
+                <DialogContent className={cn(mobileDialogClass, "sm:max-w-[480px]")}>
                   <DialogHeader><DialogTitle>Añadir Nuevo Proyecto</DialogTitle></DialogHeader>
                   <ProjectForm
                     profiles={allProfiles || []}
@@ -445,7 +445,7 @@ const AdminPage = () => {
             </CardContent>
           </Card>
           <Dialog open={isEditProjectDialogOpen} onOpenChange={setIsEditProjectDialogOpen}>
-            <DialogContent className={cn(mobileDialogClass, "sm:max-w-[425px]")}>
+            <DialogContent className={cn(mobileDialogClass, "sm:max-w-[480px]")}>
               <DialogHeader><DialogTitle>Editar Proyecto</DialogTitle></DialogHeader>
               {editingProject && (
                 <ProjectForm

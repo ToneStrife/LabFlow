@@ -27,36 +27,40 @@ const ProjectTable: React.FC<ProjectTableProps> = ({
   onEdit,
   onDelete,
 }) => {
-  const nombreIp = (ipProfileId: string | null) => {
+  const nombreResponsable = (ipProfileId: string | null) => {
     if (!ipProfileId) return "—";
     const perfil = profiles.find((p) => p.id === ipProfileId);
     return perfil ? getFullName(perfil) : "Usuario desconocido";
   };
 
   return (
-    <div className="rounded-md border">
+    <div className="rounded-md border overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Nombre del Proyecto</TableHead>
-            <TableHead>Código</TableHead>
-            <TableHead>IP</TableHead>
+            <TableHead>Código Proyecto</TableHead>
+            <TableHead>Entidad</TableHead>
+            <TableHead>CIF</TableHead>
+            <TableHead>Investigador responsable</TableHead>
+            <TableHead>Nombre</TableHead>
             <TableHead className="text-right">Acciones</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {projects.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+              <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
                 No se encontraron proyectos.
               </TableCell>
             </TableRow>
           ) : (
             projects.map((project) => (
               <TableRow key={project.id}>
-                <TableCell className="font-medium">{project.name}</TableCell>
-                <TableCell>{project.code}</TableCell>
-                <TableCell>{nombreIp(project.ip_profile_id)}</TableCell>
+                <TableCell className="font-medium">{project.code}</TableCell>
+                <TableCell>{project.entidad || "—"}</TableCell>
+                <TableCell>{project.entidad_cif || "—"}</TableCell>
+                <TableCell>{nombreResponsable(project.ip_profile_id)}</TableCell>
+                <TableCell>{project.name}</TableCell>
                 <TableCell className="text-right">
                   <Button
                     variant="ghost"
