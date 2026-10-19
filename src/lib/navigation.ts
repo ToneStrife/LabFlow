@@ -8,9 +8,11 @@ import {
   DollarSign,
   History,
   Bot,
+  Mail,
   type LucideIcon,
 } from "lucide-react";
 import { Profile } from "@/data/types";
+import { PERMISOS_PANEL_ADMIN } from "@/lib/admin-access";
 
 export interface NavItem {
   title: string;
@@ -18,6 +20,8 @@ export interface NavItem {
   icon: LucideIcon;
   /** Permiso que hace falta para verlo. Sin permiso, lo ve todo el mundo. */
   permission?: string;
+  /** Basta con uno de estos. Si está, manda sobre `permission`. */
+  permissionAny?: readonly string[];
 }
 
 /**
@@ -33,7 +37,8 @@ export const navItems: NavItem[] = [
   { title: "Mis SofIAs", href: "/dispositivos", icon: Bot, permission: "sofia.use" },
   { title: "Documentos", href: "/documents", icon: FolderOpen, permission: "documents.view" },
   { title: "Gastos", href: "/expenditures", icon: DollarSign, permission: "expenditures.view" },
-  { title: "Admin", href: "/admin", icon: Shield, permission: "users.manage" },
+  { title: "Correo", href: "/correo", icon: Mail },
+  { title: "Admin", href: "/admin", icon: Shield, permissionAny: PERMISOS_PANEL_ADMIN },
 ];
 
 /** Paginas que no salen en el menu pero si necesitan titulo en la cabecera. */

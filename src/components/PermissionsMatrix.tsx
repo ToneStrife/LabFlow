@@ -138,6 +138,9 @@ const PorRol: React.FC = () => {
       <div className="flex gap-2 rounded-md border bg-muted/30 p-3 text-sm text-muted-foreground">
         <Info className="h-4 w-4 shrink-0 mt-0.5" />
         <span>
+          Cada permiso de Maestros abre su pestaña en el panel. No hace falta el rol de
+          administrador para proyectos, direcciones o plantillas. El correo de envío
+          está en el menú Correo, para cualquier usuario.
           Gestionar usuarios y gestionar permisos están fijos para el administrador, para que
           no sea posible dejar la aplicación sin nadie que pueda repartir permisos.
         </span>

@@ -50,7 +50,7 @@ const SmtpAccountsSection: React.FC<SmtpAccountsSectionProps> = ({
   adminMode = false,
   profileEmail,
   title = "Cuentas SMTP",
-  description = "Credenciales para enviar correo con From real (p. ej. niceto@). La contraseña no se muestra; déjala en blanco para conservarla.",
+  description = "Correo go.ugr.es (por ejemplo niceto@go.ugr.es) y la contraseña del buzón. LabFlow autentica con esa cuenta al enviar. La contraseña no se vuelve a mostrar; déjala en blanco para conservarla.",
 }) => {
   const { data: accounts = [], isLoading, error } = useSmtpAccounts();
   const upsertMutation = useUpsertSmtpAccount();

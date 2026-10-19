@@ -29,6 +29,8 @@ import InviteUserDialog, { InviteUserFormValues } from "@/components/InviteUserD
 import { useAllProfiles, useInviteUser, useUpdateProfile, useDeleteProfile, useResetUserPassword } from "@/hooks/use-profiles";
 import { useSession } from "@/components/SessionContextProvider";
 import { Profile } from "@/data/types"; // Corrected import
+import { useCan } from "@/hooks/use-permissions";
+import { PESTANAS_ADMIN, puedeAbrirPestana } from "@/lib/admin-access";
 
 // Email Templates imports
 import { useForm } from "react-hook-form";
@@ -149,6 +151,13 @@ const AdminPage = () => {
   
   // --- Hooks for Notifications ---
   const sendTestNotificationMutation = useSendTestNotification();
+  const { can, cargandoPermisos } = useCan();
+  const pestanasVisibles = PESTANAS_ADMIN.filter((pestana) => puedeAbrirPestana(can, pestana));
+  const [pestanaElegida, setPestanaElegida] = React.useState<string | null>(null);
+  const pestanaActiva = pestanasVisibles.some((pestana) => pestana.value === pestanaElegida)
+    ? pestanaElegida!
+    : pestanasVisibles[0]?.value ?? "users";
+  const puedeVer = (value: string) => pestanasVisibles.some((pestana) => pestana.value === value);
 
 
   // --- Handlers for Account Managers ---
@@ -288,7 +297,7 @@ const AdminPage = () => {
 
 
   // --- Loading and Error States ---
-  const isLoading = isLoadingManagers || isLoadingProjects || isLoadingUsers || isLoadingTemplates || sessionLoading || isLoadingShipping || isLoadingBilling;
+  const isLoading = isLoadingManagers || isLoadingProjects || isLoadingUsers || isLoadingTemplates || sessionLoading || isLoadingShipping || isLoadingBilling || cargandoPermisos;
   const error = managersError || projectsError || usersError || templatesError;
 
   if (isLoading) {
@@ -307,42 +316,65 @@ const AdminPage = () => {
     <div className="p-4 sm:p-6 max-w-full mx-auto">
       <h1 className="text-3xl font-bold mb-6">Panel de Administración</h1>
       <p className="text-lg text-muted-foreground mb-8">
-        Gestiona gerentes de cuenta, proyectos, usuarios, direcciones y plantillas de correo electrónico.
+        Solo ves las secciones que puedes modificar. No hace falta el rol de administrador.
+        El correo de cada persona se guarda en el menú Correo.
       </p>
 
-      <Tabs defaultValue="users" className="w-full">
+      {pestanasVisibles.length === 0 ? (
+        <p className="text-muted-foreground">No tienes secciones de administración asignadas.</p>
+      ) : (
+      <Tabs value={pestanaActiva} onValueChange={setPestanaElegida} className="w-full">
         {/* Tabs List: Use flex-wrap and overflow-x-auto for responsiveness */}
         <TabsList className="flex flex-wrap h-auto p-1 bg-muted/50 border rounded-lg overflow-x-auto w-full justify-start">
+          {puedeVer("users") && (
           <TabsTrigger value="users" className="flex items-center gap-2 px-4 py-2">
             <Shield className="h-4 w-4" /> Usuarios
           </TabsTrigger>
+          )}
+          {puedeVer("account-managers") && (
           <TabsTrigger value="account-managers" className="flex items-center gap-2 px-4 py-2">
             <Users className="h-4 w-4" /> Gerentes de Cuenta
           </TabsTrigger>
+          )}
+          {puedeVer("projects") && (
           <TabsTrigger value="projects" className="flex items-center gap-2 px-4 py-2">
             <Briefcase className="h-4 w-4" /> Proyectos
           </TabsTrigger>
+          )}
+          {puedeVer("addresses") && (
           <TabsTrigger value="addresses" className="flex items-center gap-2 px-4 py-2">
             <MapPin className="h-4 w-4" /> Direcciones
           </TabsTrigger>
+          )}
+          {puedeVer("email-templates") && (
           <TabsTrigger value="email-templates" className="flex items-center gap-2 px-4 py-2">
             <Mail className="h-4 w-4" /> Plantillas de Email
           </TabsTrigger>
+          )}
+          {puedeVer("smtp-accounts") && (
           <TabsTrigger value="smtp-accounts" className="flex items-center gap-2 px-4 py-2">
             <Server className="h-4 w-4" /> Cuentas SMTP
           </TabsTrigger>
+          )}
+          {puedeVer("email-logs") && (
           <TabsTrigger value="email-logs" className="flex items-center gap-2 px-4 py-2">
             <ScrollText className="h-4 w-4" /> Registros de Email
           </TabsTrigger>
+          )}
+          {puedeVer("notifications") && (
           <TabsTrigger value="notifications" className="flex items-center gap-2 px-4 py-2">
             <Bell className="h-4 w-4" /> Notificaciones
           </TabsTrigger>
+          )}
+          {puedeVer("permissions") && (
           <TabsTrigger value="permissions" className="flex items-center gap-2 px-4 py-2">
             <KeyRound className="h-4 w-4" /> Permisos
           </TabsTrigger>
+          )}
         </TabsList>
 
         {/* Permisos */}
+        {puedeVer("permissions") && (
         <TabsContent value="permissions" className="mt-6">
           <Card>
             <CardHeader>
@@ -353,8 +385,10 @@ const AdminPage = () => {
             </CardContent>
           </Card>
         </TabsContent>
+        )}
 
         {/* Users Tab */}
+        {puedeVer("users") && (
         <TabsContent value="users" className="mt-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-2 space-y-0 py-4">
@@ -397,8 +431,10 @@ const AdminPage = () => {
             </DialogContent>
           </Dialog>
         </TabsContent>
+        )}
 
         {/* Account Managers Tab */}
+        {puedeVer("account-managers") && (
         <TabsContent value="account-managers" className="mt-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-2">
@@ -422,8 +458,10 @@ const AdminPage = () => {
             </DialogContent>
           </Dialog>
         </TabsContent>
+        )}
 
         {/* Projects Tab */}
+        {puedeVer("projects") && (
         <TabsContent value="projects" className="mt-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-2">
@@ -465,8 +503,10 @@ const AdminPage = () => {
             </DialogContent>
           </Dialog>
         </TabsContent>
+        )}
 
         {/* Addresses Tab */}
+        {puedeVer("addresses") && (
         <TabsContent value="addresses" className="mt-6 space-y-8">
           {/* Shipping Addresses */}
           <Card>
@@ -499,8 +539,10 @@ const AdminPage = () => {
             </CardContent>
           </Card>
         </TabsContent>
+        )}
 
         {/* Email Templates Tab */}
+        {puedeVer("email-templates") && (
         <TabsContent value="email-templates" className="mt-6">
           <Card>
             <CardHeader><CardTitle className="text-xl">Plantillas de Correo Electrónico</CardTitle></CardHeader>
@@ -562,18 +604,24 @@ const AdminPage = () => {
             </CardContent>
           </Card>
         </TabsContent>
+        )}
 
         {/* Cuentas SMTP Tab */}
+        {puedeVer("smtp-accounts") && (
         <TabsContent value="smtp-accounts" className="mt-6">
           <SmtpAccountsSection adminMode />
         </TabsContent>
+        )}
 
         {/* Email Logs Tab */}
+        {puedeVer("email-logs") && (
         <TabsContent value="email-logs" className="mt-6">
           <EmailLogs />
         </TabsContent>
+        )}
         
         {/* Notifications Tab (NEW) */}
+        {puedeVer("notifications") && (
         <TabsContent value="notifications" className="mt-6">
           <Card>
             <CardHeader>
@@ -587,7 +635,9 @@ const AdminPage = () => {
             </CardContent>
           </Card>
         </TabsContent>
+        )}
       </Tabs>
+      )}
 
       {/* Edit/Add Address Dialog */}
       <Dialog open={isAddAddressDialogOpen || isEditAddressDialogOpen} onOpenChange={isEditAddressDialogOpen ? setIsEditAddressDialogOpen : setIsAddAddressDialogOpen}>

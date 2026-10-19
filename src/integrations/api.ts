@@ -773,51 +773,106 @@ export interface UpsertSmtpAccountInput {
   label?: string | null;
 }
 
-const invokeErrorMessage = (data: unknown, error: { message?: string } | null, fallback: string): string => {
-  if (data && typeof data === "object" && "error" in data && (data as any).error) {
-    return String((data as any).error);
+const COLUMNAS_SMTP = "id, email, smtp_host, smtp_user, label, updated_at, updated_by";
+
+const filaSmtp = (row: Record<string, unknown>, hasPassword = false): SmtpAccountPublic => ({
+  id: String(row.id),
+  email: String(row.email),
+  smtp_host: (row.smtp_host as string | null) ?? null,
+  smtp_user: String(row.smtp_user),
+  label: (row.label as string | null) ?? null,
+  updated_at: String(row.updated_at),
+  updated_by: (row.updated_by as string | null) ?? null,
+  has_password: typeof row.has_password === "boolean" ? row.has_password : hasPassword,
+});
+
+const faltaColumnaHasPassword = (message: string) => /has_password/i.test(message);
+
+const explicarErrorSmtp = (message: string) => {
+  if (/row-level security|42501|PGRST116/i.test(message)) {
+    return "No se ha podido guardar ese correo. Cada persona puede guardar el suyo; un administrador puede guardar cualquier buzón.";
   }
-  if (error?.message) return error.message;
-  return fallback;
+  return message;
 };
 
 export const apiGetSmtpAccounts = async (): Promise<SmtpAccountPublic[]> => {
-  const { data, error } = await supabase.functions.invoke("get-smtp-accounts", {
-    method: "POST",
-    body: JSON.stringify({}),
-  });
+  const conIndicador = await supabase
+    .from("smtp_accounts")
+    .select(`${COLUMNAS_SMTP}, has_password`)
+    .order("email", { ascending: true });
 
-  if (error) {
-    throw new Error(invokeErrorMessage(data, error, "No se pudieron cargar las cuentas SMTP."));
+  if (!conIndicador.error) {
+    return (conIndicador.data ?? []).map((row) => filaSmtp(row as Record<string, unknown>));
   }
-  if (data && typeof data === "object" && "error" in data && (data as any).error) {
-    throw new Error(String((data as any).error));
+
+  // La migración que añade has_password puede no estar aplicada todavía.
+  if (!faltaColumnaHasPassword(conIndicador.error.message)) {
+    throw new Error(explicarErrorSmtp(conIndicador.error.message));
   }
-  return ((data as any)?.accounts || []) as SmtpAccountPublic[];
+
+  const plano = await supabase
+    .from("smtp_accounts")
+    .select(COLUMNAS_SMTP)
+    .order("email", { ascending: true });
+  if (plano.error) throw new Error(explicarErrorSmtp(plano.error.message));
+  return (plano.data ?? []).map((row) => filaSmtp(row as Record<string, unknown>));
 };
 
 export const apiUpsertSmtpAccount = async (
   input: UpsertSmtpAccountInput
 ): Promise<SmtpAccountPublic> => {
   // No loguear input: puede contener smtp_password.
-  const { data, error } = await supabase.functions.invoke("upsert-smtp-account", {
-    method: "POST",
-    body: JSON.stringify({
-      email: input.email,
-      smtp_user: input.smtp_user,
-      smtp_host: input.smtp_host ?? null,
-      smtp_password: input.smtp_password ?? "",
-      label: input.label ?? null,
-    }),
-  });
+  const email = input.email.trim().toLowerCase();
+  const smtpUser = input.smtp_user.trim();
+  if (!email || !email.includes("@")) throw new Error("Email inválido");
+  if (!smtpUser) throw new Error("El usuario SMTP es obligatorio");
 
-  if (error) {
-    throw new Error(invokeErrorMessage(data, error, "No se pudo guardar la cuenta SMTP."));
+  const { data: sessionData } = await supabase.auth.getSession();
+  const userId = sessionData.session?.user?.id ?? null;
+
+  const { data: existing, error: existingError } = await supabase
+    .from("smtp_accounts")
+    .select("id")
+    .eq("email", email)
+    .maybeSingle();
+  if (existingError) throw new Error(explicarErrorSmtp(existingError.message));
+
+  const password = input.smtp_password?.trim() ?? "";
+  if (!existing && !password) {
+    throw new Error("Al crear la cuenta debes indicar la contraseña SMTP.");
   }
-  if (data && typeof data === "object" && "error" in data && (data as any).error) {
-    throw new Error(String((data as any).error));
+
+  const payload: Record<string, unknown> = {
+    email,
+    smtp_user: smtpUser,
+    smtp_host: input.smtp_host?.trim() || null,
+    label: input.label?.trim() || null,
+    updated_at: new Date().toISOString(),
+    updated_by: userId,
+  };
+  if (password) payload.smtp_password = password;
+
+  const escribir = (columnas: string) => {
+    const consulta = existing
+      ? supabase.from("smtp_accounts").update(payload).eq("id", existing.id)
+      : supabase.from("smtp_accounts").insert(payload);
+    return consulta.select(columnas).single();
+  };
+
+  const conIndicador = await escribir(`${COLUMNAS_SMTP}, has_password`);
+  if (!conIndicador.error) {
+    if (!conIndicador.data) throw new Error("No se pudo guardar la cuenta SMTP.");
+    return filaSmtp(conIndicador.data as unknown as Record<string, unknown>, Boolean(password));
   }
-  return (data as any).account as SmtpAccountPublic;
+
+  if (!faltaColumnaHasPassword(conIndicador.error.message)) {
+    throw new Error(explicarErrorSmtp(conIndicador.error.message));
+  }
+
+  const plano = await escribir(COLUMNAS_SMTP);
+  if (plano.error) throw new Error(explicarErrorSmtp(plano.error.message));
+  if (!plano.data) throw new Error("No se pudo guardar la cuenta SMTP.");
+  return filaSmtp(plano.data as unknown as Record<string, unknown>, Boolean(password) || Boolean(existing));
 };
 
 // --- API de Plantillas de Correo Electrónico ---
