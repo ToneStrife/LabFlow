@@ -307,21 +307,37 @@ export const processEmailTemplate = (
   processedString = processedString.replace(/{{items_list}}/g, formatItemsListHtml(request.items));
   // Bloques con diseño. Viven en email-blocks.ts porque el editor del panel de
   // Admin (ReactQuill) se come las tablas y los estilos del cuerpo al guardar.
-  processedString = processedString.replace(
-    /{{items_table}}/g,
-    buildItemsTableHtml(request.items, variante)
+  // Se insertan al final, con un marcador intermedio, para que la conversión de
+  // saltos de línea no los toque ni añada huecos a su alrededor.
+  const bloques: string[] = [];
+  const reservar = (html: string): string => {
+    bloques.push(html);
+    return `@@BLOQUE_${bloques.length - 1}@@`;
+  };
+  processedString = processedString.replace(/{{items_table}}/g, () =>
+    reservar(buildItemsTableHtml(request.items, variante))
   );
-  processedString = processedString.replace(/{{billing_box}}/g, buildBillingBoxHtml(proyecto));
-  processedString = processedString.replace(
-    /{{shipping_box}}/g,
-    buildShippingBoxHtml(formatAddressPlainText(shippingAddress))
+  processedString = processedString.replace(/{{billing_box}}/g, () =>
+    reservar(buildBillingBoxHtml(proyecto))
   );
-  processedString = processedString.replace(/{{project_box}}/g, buildProjectBoxHtml(proyecto));
-  processedString = processedString.replace(/{{warning_box}}/g, buildWarningBoxHtml());
+  processedString = processedString.replace(/{{shipping_box}}/g, () =>
+    reservar(buildShippingBoxHtml(formatAddressPlainText(shippingAddress)))
+  );
+  processedString = processedString.replace(/{{project_box}}/g, () =>
+    reservar(buildProjectBoxHtml(proyecto))
+  );
+  processedString = processedString.replace(/{{warning_box}}/g, () =>
+    reservar(buildWarningBoxHtml())
+  );
   processedString = processedString.replace(/{{cta_button}}/g, "[Call to Action Button]");
 
+  // Los saltos de línea pegados a un bloque sobran: el propio bloque ya lleva margen.
+  processedString = processedString.replace(/\n*(@@BLOQUE_\d+@@)\n*/g, "$1");
+
   // After all replacements, convert remaining newlines to <br> and wrap in a basic HTML structure
-  const processedHtml = processedString.replace(/\n/g, "<br />");
+  const processedHtml = processedString
+    .replace(/\n/g, "<br />")
+    .replace(/@@BLOQUE_(\d+)@@/g, (_coincidencia, indice) => bloques[Number(indice)]);
 
   return `
     <div style="font-family: sans-serif; line-height: 1.6;">
