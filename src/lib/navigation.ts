@@ -8,6 +8,7 @@ import {
   DollarSign,
   History,
   Bot,
+  Mail,
   type LucideIcon,
 } from "lucide-react";
 import { Profile } from "@/data/types";
@@ -36,6 +37,7 @@ export const navItems: NavItem[] = [
   { title: "Mis SofIAs", href: "/dispositivos", icon: Bot, permission: "sofia.use" },
   { title: "Documentos", href: "/documents", icon: FolderOpen, permission: "documents.view" },
   { title: "Gastos", href: "/expenditures", icon: DollarSign, permission: "expenditures.view" },
+  { title: "Correo", href: "/correo", icon: Mail },
   { title: "Admin", href: "/admin", icon: Shield, permissionAny: PERMISOS_PANEL_ADMIN },
 ];
 

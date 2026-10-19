@@ -137,8 +137,6 @@ const SmtpAccountsSection: React.FC<SmtpAccountsSectionProps> = ({
   }
 
   if (error) {
-    // En el perfil no tapamos el resto de la página si la tabla aún no existe.
-    if (!adminMode) return null;
     return (
       <div className="text-red-600 dark:text-red-400">
         Error al cargar cuentas SMTP: {error.message}

@@ -37,6 +37,7 @@ const Expenditures = React.lazy(() => import("./pages/Expenditures"));
 const Documentos = React.lazy(() => import("./pages/Documentos"));
 const Historial = React.lazy(() => import("./pages/Historial"));
 const Dispositivos = React.lazy(() => import("./pages/Dispositivos"));
+const Correo = React.lazy(() => import("./pages/Correo"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -129,6 +130,7 @@ const AppRoutes = () => {
         <Route path="/vendors" element={<PrivateRoute requiredPermission="vendors.view"><Vendors /></PrivateRoute>} />
         <Route path="/requests/:id" element={<PrivateRoute><RequestDetails /></PrivateRoute>} />
         <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
+        <Route path="/correo" element={<PrivateRoute><Correo /></PrivateRoute>} />
         <Route path="/admin" element={<PrivateRoute requiredAnyPermission={PERMISOS_PANEL_ADMIN}><AdminPage /></PrivateRoute>} />
         <Route path="/inventory" element={<PrivateRoute requiredPermission="inventory.view"><Inventory /></PrivateRoute>} />
         <Route path="/expenditures" element={<PrivateRoute requiredPermission="expenditures.view"><Expenditures /></PrivateRoute>} />

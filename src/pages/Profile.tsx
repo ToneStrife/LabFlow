@@ -115,7 +115,7 @@ const Profile: React.FC = () => {
           adminMode={false}
           profileEmail={profile.email}
           title="Mi correo de envío"
-          description="Tu cuenta go.ugr.es y la contraseña del buzón, si es el mismo correo con el que entras. LabFlow las usa cuando eliges tu dirección en De. Para otro remitente (por ejemplo niceto@go.ugr.es) usa Admin → Cuentas SMTP."
+          description="La contraseña del correo con el que entras. También está en el menú Correo. No se vuelve a mostrar."
         />
       )}
 

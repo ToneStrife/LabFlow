@@ -316,8 +316,8 @@ const AdminPage = () => {
     <div className="p-4 sm:p-6 max-w-full mx-auto">
       <h1 className="text-3xl font-bold mb-6">Panel de Administración</h1>
       <p className="text-lg text-muted-foreground mb-8">
-        Solo ves las secciones que puedes modificar. No hace falta el rol de administrador:
-        en Cuentas SMTP se guarda el correo go.ugr.es y la contraseña del buzón.
+        Solo ves las secciones que puedes modificar. No hace falta el rol de administrador.
+        El correo de cada persona se guarda en el menú Correo.
       </p>
 
       {pestanasVisibles.length === 0 ? (

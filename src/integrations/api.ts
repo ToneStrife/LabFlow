@@ -789,8 +789,8 @@ const filaSmtp = (row: Record<string, unknown>, hasPassword = false): SmtpAccoun
 const faltaColumnaHasPassword = (message: string) => /has_password/i.test(message);
 
 const explicarErrorSmtp = (message: string) => {
-  if (/smtp_accounts/i.test(message) && /does not exist|schema cache|could not find the table/i.test(message)) {
-    return "Falta la tabla de cuentas SMTP. En el SQL Editor de Supabase aplica 20261016170000_smtp_accounts.sql y 20261019120000_smtp_directo_y_panel_admin.sql.";
+  if (/row-level security|42501|PGRST116/i.test(message)) {
+    return "No se ha podido guardar ese correo. Cada persona puede guardar el suyo; un administrador puede guardar cualquier buzón.";
   }
   return message;
 };
