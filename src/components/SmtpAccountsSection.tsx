@@ -50,7 +50,7 @@ const SmtpAccountsSection: React.FC<SmtpAccountsSectionProps> = ({
   adminMode = false,
   profileEmail,
   title = "Cuentas SMTP",
-  description = "Credenciales para enviar correo con From real (p. ej. niceto@). La contraseña no se muestra; déjala en blanco para conservarla.",
+  description = "Correo go.ugr.es (por ejemplo niceto@go.ugr.es) y la contraseña del buzón. LabFlow autentica con esa cuenta al enviar. La contraseña no se vuelve a mostrar; déjala en blanco para conservarla.",
 }) => {
   const { data: accounts = [], isLoading, error } = useSmtpAccounts();
   const upsertMutation = useUpsertSmtpAccount();
@@ -137,6 +137,8 @@ const SmtpAccountsSection: React.FC<SmtpAccountsSectionProps> = ({
   }
 
   if (error) {
+    // En el perfil no tapamos el resto de la página si la tabla aún no existe.
+    if (!adminMode) return null;
     return (
       <div className="text-red-600 dark:text-red-400">
         Error al cargar cuentas SMTP: {error.message}

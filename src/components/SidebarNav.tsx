@@ -22,7 +22,11 @@ export function SidebarNav({ className, onLinkClick, ...props }: SidebarNavProps
     );
   }
 
-  const visibleNavItems = navItems.filter((item) => can(item.permission));
+  const visibleNavItems = navItems.filter((item) =>
+    item.permissionAny?.length
+      ? item.permissionAny.some((permiso) => can(permiso))
+      : can(item.permission)
+  );
 
   return (
     <nav className={cn("flex flex-col space-y-0.5", className)} {...props}>

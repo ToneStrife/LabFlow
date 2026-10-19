@@ -14,6 +14,7 @@ import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
 import { Loader2 } from "lucide-react";
 import { useCan } from "@/hooks/use-permissions";
+import { PERMISOS_PANEL_ADMIN } from "@/lib/admin-access";
 
 import { ReceiveWizardProvider } from "./components/ReceiveWizardProvider";
 import { SedeContextProvider } from "./components/SedeContextProvider";
@@ -49,7 +50,11 @@ const queryClient = new QueryClient({
   },
 });
 
-const PrivateRoute: React.FC<{ children: React.ReactNode; requiredPermission?: string }> = ({ children, requiredPermission }) => {
+const PrivateRoute: React.FC<{
+  children: React.ReactNode;
+  requiredPermission?: string;
+  requiredAnyPermission?: readonly string[];
+}> = ({ children, requiredPermission, requiredAnyPermission }) => {
   const { session, profile, loading } = useSession();
   const { can, cargandoPermisos } = useCan();
 
@@ -75,7 +80,8 @@ const PrivateRoute: React.FC<{ children: React.ReactNode; requiredPermission?: s
 
   // Sin esperar a los permisos echariamos de la pantalla a quien si puede
   // entrar, solo porque la respuesta todavia no ha llegado.
-  if (requiredPermission && cargandoPermisos) {
+  const esperaPermisos = Boolean(requiredPermission || requiredAnyPermission?.length);
+  if (esperaPermisos && cargandoPermisos) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin mr-2" /> Comprobando permisos...
@@ -84,6 +90,10 @@ const PrivateRoute: React.FC<{ children: React.ReactNode; requiredPermission?: s
   }
 
   if (requiredPermission && !can(requiredPermission)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  if (requiredAnyPermission?.length && !requiredAnyPermission.some((permiso) => can(permiso))) {
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -119,7 +129,7 @@ const AppRoutes = () => {
         <Route path="/vendors" element={<PrivateRoute requiredPermission="vendors.view"><Vendors /></PrivateRoute>} />
         <Route path="/requests/:id" element={<PrivateRoute><RequestDetails /></PrivateRoute>} />
         <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
-        <Route path="/admin" element={<PrivateRoute requiredPermission="users.manage"><AdminPage /></PrivateRoute>} />
+        <Route path="/admin" element={<PrivateRoute requiredAnyPermission={PERMISOS_PANEL_ADMIN}><AdminPage /></PrivateRoute>} />
         <Route path="/inventory" element={<PrivateRoute requiredPermission="inventory.view"><Inventory /></PrivateRoute>} />
         <Route path="/expenditures" element={<PrivateRoute requiredPermission="expenditures.view"><Expenditures /></PrivateRoute>} />
         <Route path="/documents" element={<PrivateRoute requiredPermission="documents.view"><Documentos /></PrivateRoute>} />
