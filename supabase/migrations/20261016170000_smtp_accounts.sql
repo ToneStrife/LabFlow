@@ -42,6 +42,9 @@ GRANT UPDATE (
 ) ON public.smtp_accounts TO authenticated;
 
 -- Admin ve metadatos de todas; el dueño (profile.email = account.email) ve la suya.
+-- DROP antes de CREATE: el script se puede volver a pegar en el SQL Editor
+-- cuando la política ya existe (ERROR 42710).
+DROP POLICY IF EXISTS smtp_accounts_select ON public.smtp_accounts;
 CREATE POLICY smtp_accounts_select ON public.smtp_accounts
   FOR SELECT TO authenticated
   USING (
@@ -53,6 +56,7 @@ CREATE POLICY smtp_accounts_select ON public.smtp_accounts
     )
   );
 
+DROP POLICY IF EXISTS smtp_accounts_insert ON public.smtp_accounts;
 CREATE POLICY smtp_accounts_insert ON public.smtp_accounts
   FOR INSERT TO authenticated
   WITH CHECK (
@@ -64,6 +68,7 @@ CREATE POLICY smtp_accounts_insert ON public.smtp_accounts
     )
   );
 
+DROP POLICY IF EXISTS smtp_accounts_update ON public.smtp_accounts;
 CREATE POLICY smtp_accounts_update ON public.smtp_accounts
   FOR UPDATE TO authenticated
   USING (
@@ -84,6 +89,7 @@ CREATE POLICY smtp_accounts_update ON public.smtp_accounts
   );
 
 -- Solo Admin puede borrar filas.
+DROP POLICY IF EXISTS smtp_accounts_delete ON public.smtp_accounts;
 CREATE POLICY smtp_accounts_delete ON public.smtp_accounts
   FOR DELETE TO authenticated
   USING (public.is_admin());
