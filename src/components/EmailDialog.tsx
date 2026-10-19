@@ -37,6 +37,12 @@ import { CORREO_NICETO } from "@/lib/farmacia";
 // Cargándolo aquí sale del paquete inicial de toda la aplicación.
 const RichTextEditor = React.lazy(() => import('./RichTextEditor'));
 import { normalizeAttachments, type EmailAttachment } from "@/utils/email-attachments";
+import {
+  extraerBloques,
+  restaurarBloques,
+  marcaDeBloque,
+  type BloquesCorreo,
+} from "@/utils/email-dialog-blocks";
 
 /** Valor interno del Select: Radix no admite value vacío. Se envía como from vacío → SMTP_FROM. */
 const FROM_SMTP_DEFAULT = "__smtp_default__";
@@ -74,13 +80,16 @@ const EmailDialog: React.FC<EmailDialogProps> = ({
   isSending,
 }) => {
   const attachmentsForSendRef = React.useRef<EmailAttachment[]>([]);
+  // Bloques con diseño (tablas) que no pasan por Quill; ver email-dialog-blocks.ts.
+  const bloquesRef = React.useRef<BloquesCorreo>({});
+  const [marcasBloques, setMarcasBloques] = React.useState<string[]>([]);
 
   const form = useForm<EmailFormValues>({
     resolver: zodResolver(emailFormSchema),
     defaultValues: {
       to: initialData.to || "",
       subject: initialData.subject || "",
-      body: initialData.body || "",
+      body: extraerBloques(initialData.body || "").html,
       fromName: initialData.fromName || "",
       from: initialData.from || "",
       attachments: initialData.attachments || [],
@@ -94,12 +103,17 @@ const EmailDialog: React.FC<EmailDialogProps> = ({
     form.reset({
       to: initialData.to || "",
       subject: initialData.subject || "",
-      body: initialData.body || "",
+      body: extraerBloques(initialData.body || "").html,
       fromName: initialData.fromName || "",
       from: initialData.from || "",
       attachments: initialData.attachments || [],
     });
     attachmentsForSendRef.current = normalizeAttachments(initialData.attachmentsForSend);
+    const { bloques } = extraerBloques(initialData.body || "");
+    bloquesRef.current = bloques;
+    setMarcasBloques(
+      (Object.keys(bloques) as Array<keyof BloquesCorreo>).map((tipo) => marcaDeBloque(tipo))
+    );
   }, [form, initialData, isOpen]);
 
   const handleSubmit = async (data: EmailFormValues) => {
@@ -110,10 +124,12 @@ const EmailDialog: React.FC<EmailDialogProps> = ({
 
     await onSend({
       ...data,
+      body: restaurarBloques(data.body, bloquesRef.current),
       attachments: storageAttachments,
     });
     form.reset();
     attachmentsForSendRef.current = [];
+    bloquesRef.current = {};
   };
 
   const handleCancel = () => {
@@ -218,6 +234,12 @@ const EmailDialog: React.FC<EmailDialogProps> = ({
                       />
                     </React.Suspense>
                   </FormControl>
+                  {marcasBloques.length > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      Las marcas entre corchetes dobles ({marcasBloques.join(", ")}) se envían como
+                      bloques con su diseño. No las edites; bórralas si no quieres ese bloque.
+                    </p>
+                  )}
                   <FormMessage />
                 </FormItem>
               )}

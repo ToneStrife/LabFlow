@@ -7,16 +7,24 @@ import { SupabaseRequestItem } from "@/data/types";
  * Admin es ReactQuill, que no registra blots de <table> y aplasta las tablas al
  * guardar. Si el diseño se escribe en el cuerpo, se pierde en cuanto alguien
  * abre la plantilla y pulsa guardar. Dejándolo aquí, el cuerpo editable se
- * queda en texto plano con marcadores, que Quill sí conserva, y el aspecto del
- * correo no depende de quién lo haya tocado por última vez.
+ * queda en texto plano con marcadores, que Quill sí conserva.
+ *
+ * Por la misma razón, el diálogo de envío no pasa estos bloques por Quill: los
+ * sustituye por marcas de texto y los restaura al enviar (email-dialog-blocks.ts).
+ * Para que eso funcione, cada bloque es exactamente UNA <table> y lleva el
+ * atributo data-bloque con su tipo.
  *
  * Estilos siempre en línea: Gmail y Outlook descartan <style> y las clases.
  */
 
 export type VarianteTabla = "claro" | "oscuro";
 
+export type TipoBloque = "items" | "billing" | "shipping" | "project" | "warning";
+
 const BORDE = "#d4d4d4";
 const TIPO = "Arial, Helvetica, sans-serif";
+/** Separación vertical entre un bloque y el texto que tiene alrededor. */
+const MARGEN = "margin:14px 0 18px 0;";
 
 const escapar = (valor: string | number | null | undefined): string =>
   String(valor ?? "")
@@ -24,6 +32,11 @@ const escapar = (valor: string | number | null | undefined): string =>
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+
+/** Abre la <table> de un bloque con su tipo y los atributos comunes. */
+const abrirBloque = (tipo: TipoBloque, estilo: string): string =>
+  `<table data-bloque="${tipo}" role="presentation" cellspacing="0" cellpadding="0" ` +
+  `style="${estilo}">`;
 
 /**
  * Tabla de artículos. La variante oscura (cabecera negra) es la del CÓMPRAME
@@ -33,37 +46,38 @@ export const buildItemsTableHtml = (
   items: SupabaseRequestItem[] | null | undefined,
   variante: VarianteTabla = "claro"
 ): string => {
-  if (!items || items.length === 0) {
-    return '<p style="margin:0 0 16px 0;">No hay artículos.</p>';
-  }
-
   const fondoCabecera = variante === "oscuro" ? "#2b2b2b" : "#f2f2f2";
   const textoCabecera = variante === "oscuro" ? "#ffffff" : "#1a1a1a";
 
-  const th = (texto: string, alineacion: "left" | "center") =>
+  const th = (texto: string, alineacion: "left" | "center", ancho?: string) =>
     `<th style="padding:10px 14px;border:1px solid ${BORDE};background:${fondoCabecera};` +
     `color:${textoCabecera};font-size:13px;font-weight:bold;letter-spacing:.04em;` +
-    `text-align:${alineacion};">${texto}</th>`;
+    `text-align:${alineacion};${ancho ? `width:${ancho};` : ""}">${texto}</th>`;
 
   const td = (texto: string, alineacion: "left" | "center") =>
     `<td style="padding:10px 14px;border:1px solid ${BORDE};font-size:14px;` +
     `color:#1a1a1a;text-align:${alineacion};">${texto}</td>`;
 
-  const filas = items
-    .map(
-      (item) =>
-        "<tr>" +
-        td(escapar(item.product_name), "left") +
-        td(escapar(item.catalog_number), "center") +
-        td(escapar(item.quantity), "center") +
-        "</tr>"
-    )
-    .join("");
+  const filas =
+    !items || items.length === 0
+      ? `<tr>${td("No hay artículos.", "left").replace("<td ", '<td colspan="3" ')}</tr>`
+      : items
+          .map(
+            (item) =>
+              "<tr>" +
+              td(escapar(item.product_name), "left") +
+              td(escapar(item.catalog_number), "center") +
+              td(escapar(item.quantity), "center") +
+              "</tr>"
+          )
+          .join("");
 
   return (
-    '<table role="presentation" cellspacing="0" cellpadding="0" ' +
-    `style="width:100%;border-collapse:collapse;margin:0 0 20px 0;font-family:${TIPO};">` +
-    `<thead><tr>${th("PRODUCTO", "left")}${th("REFERENCIA", "center")}${th("CANT.", "center")}</tr></thead>` +
+    abrirBloque(
+      "items",
+      `width:100%;border-collapse:collapse;${MARGEN}font-family:${TIPO};`
+    ) +
+    `<thead><tr>${th("PRODUCTO", "left")}${th("REFERENCIA", "center", "32%")}${th("CANT.", "center", "10%")}</tr></thead>` +
     `<tbody>${filas}</tbody>` +
     "</table>"
   );
@@ -80,7 +94,7 @@ export const buildBillingBoxHtml = (datos: {
   entidad?: string | null;
   cif?: string | null;
 }): string =>
-  '<table role="presentation" cellspacing="0" cellpadding="0" style="width:100%;margin:0 0 20px 0;">' +
+  abrirBloque("billing", `width:100%;${MARGEN}`) +
   `<tr><td style="border:1px solid ${BORDE};padding:16px 18px;font-family:${TIPO};">` +
   '<p style="margin:0 0 12px 0;font-size:13px;font-weight:bold;letter-spacing:.04em;' +
   'color:#c0392b;">DATOS DE FACTURACIÓN:</p>' +
@@ -91,7 +105,7 @@ export const buildBillingBoxHtml = (datos: {
   linea("CIF", datos.cif) +
   "</td></tr></table>";
 
-/** Dirección de envío, con el filete azul a la izquierda. */
+/** Dirección de envío, con el filete azul a la izquierda. El título va dentro de la tabla. */
 export const buildShippingBoxHtml = (direccion: string | null | undefined): string => {
   const lineas = String(direccion ?? "")
     .split("\n")
@@ -109,10 +123,10 @@ export const buildShippingBoxHtml = (direccion: string | null | undefined): stri
     : '<p style="margin:0;font-size:14px;color:#1a1a1a;">N/A</p>';
 
   return (
-    `<p style="margin:0 0 10px 0;font-size:13px;font-weight:bold;letter-spacing:.04em;` +
-    `color:#1a1a1a;font-family:${TIPO};">DIRECCIÓN DE ENVÍO:</p>` +
-    '<table role="presentation" cellspacing="0" cellpadding="0" style="margin:0 0 20px 0;">' +
-    `<tr><td style="border-left:3px solid #9bb4cc;padding:2px 0 2px 14px;font-family:${TIPO};">` +
+    abrirBloque("shipping", `${MARGEN}font-family:${TIPO};`) +
+    '<tr><td style="padding:0 0 10px 0;font-size:13px;font-weight:bold;letter-spacing:.04em;' +
+    'color:#1a1a1a;">DIRECCIÓN DE ENVÍO:</td></tr>' +
+    '<tr><td style="border-left:3px solid #9bb4cc;padding:2px 0 2px 14px;">' +
     cuerpo +
     "</td></tr></table>"
   );
@@ -124,7 +138,7 @@ export const buildProjectBoxHtml = (datos: {
   proyecto?: string | null;
   entidad?: string | null;
 }): string =>
-  '<table role="presentation" cellspacing="0" cellpadding="0" style="width:100%;margin:0 0 20px 0;">' +
+  abrirBloque("project", `width:100%;${MARGEN}`) +
   '<tr><td style="border-left:4px solid #2f5f98;background:#f1f5fa;padding:16px 18px;' +
   `font-family:${TIPO};">` +
   linea("Investigador", datos.investigador) +
@@ -134,7 +148,7 @@ export const buildProjectBoxHtml = (datos: {
 
 /** Aviso de no escribir al proveedor. */
 export const buildWarningBoxHtml = (): string =>
-  '<table role="presentation" cellspacing="0" cellpadding="0" style="width:100%;margin:0 0 20px 0;">' +
+  abrirBloque("warning", `width:100%;${MARGEN}`) +
   '<tr><td style="background:#fdf6e3;border:1px solid #f0e2b6;padding:14px 18px;' +
   `font-family:${TIPO};font-size:14px;color:#7a5c00;">` +
   "<strong>⚠️ NOTA IMPORTANTE:</strong> No se debe enviar correo a la empresa proveedora, " +
