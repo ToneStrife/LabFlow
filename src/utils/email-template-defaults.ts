@@ -9,14 +9,9 @@ export const NICETO_QUOTE_REQUEST_SUBJECT =
 export const NICETO_QUOTE_REQUEST_BODY =
   "Estimados señores de {{vendor.name}},\n\n" +
   "Rogamos nos envíen presupuesto de los siguientes artículos:\n\n" +
-  "{{items_list}}\n\n" +
-  "DATOS DE FACTURACIÓN:\n\n" +
-  "Investigador: {{project.investigador}}\n" +
-  "Proyecto/Ref: {{request.project_codes}}\n" +
-  "Entidad: {{project.entidad}}\n" +
-  "CIF: {{project.entidad_cif}}\n\n" +
-  "DIRECCIÓN DE ENVÍO:\n\n" +
-  "{{shipping_address}}\n\n" +
+  "{{items_table}}\n" +
+  "{{billing_box}}\n" +
+  "{{shipping_box}}\n" +
   "Atentamente,\n\n" +
   "{{actor.full_name}}";
 
@@ -26,12 +21,10 @@ export const NICETO_PO_REQUEST_SUBJECT =
 export const NICETO_PO_REQUEST_BODY =
   "Hola, {{account_manager.first_name}},\n\n" +
   "Te remito información para la tramitación del CÓMPRAME correspondiente:\n\n" +
-  "Investigador: {{project.investigador}}\n" +
-  "Proyecto: {{request.project_codes}}\n" +
-  "Entidad: {{project.entidad}}\n" +
-  "{{items_list}}\n" +
-  "⚠️ NOTA IMPORTANTE: No se debe enviar correo a la empresa proveedora, para evitar pedidos duplicados.\n" +
-  "Saludos,\n" +
+  "{{project_box}}\n" +
+  "{{items_table}}\n" +
+  "{{warning_box}}\n" +
+  "Saludos,\n\n" +
   "{{actor.full_name}}";
 
 /** Texto genérico previo al modelo Niceto (aún puede estar en BD remota). */
@@ -41,13 +34,18 @@ const OLD_QUOTE_BODY_MARKERS = [
   "mejores precios y plazos de entrega",
 ];
 
+/**
+ * Un cuerpo está al día si trae los bloques con diseño. Los textos anteriores
+ * (el genérico y el Niceto en texto corrido) se sustituyen por el canónico.
+ */
 const looksLikeOldQuoteBody = (body: string): boolean =>
   OLD_QUOTE_BODY_MARKERS.some((marker) => body.includes(marker)) ||
-  !body.includes("{{project.investigador}}") ||
-  !body.includes("DATOS DE FACTURACIÓN");
+  !body.includes("{{items_table}}") ||
+  !body.includes("{{billing_box}}");
 
 const looksLikeOldPoBody = (body: string): boolean =>
-  !body.includes("{{project.investigador}}") ||
+  !body.includes("{{items_table}}") ||
+  !body.includes("{{project_box}}") ||
   !body.includes("CÓMPRAME correspondiente");
 
 /**

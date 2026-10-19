@@ -1,6 +1,18 @@
 import { SupabaseRequest, Vendor, Profile, AccountManager, Project, SupabaseRequestItem, Address } from "@/data/types";
 import { getFullName } from "@/hooks/use-profiles";
 import { resolveTemplateForSend } from "@/utils/email-template-defaults";
+import {
+  buildItemsTableHtml,
+  buildBillingBoxHtml,
+  buildShippingBoxHtml,
+  buildProjectBoxHtml,
+  buildWarningBoxHtml,
+  buildBillingBoxPlainText,
+  buildShippingBoxPlainText,
+  buildProjectBoxPlainText,
+  buildWarningBoxPlainText,
+  type VarianteTabla,
+} from "@/utils/email-blocks";
 
 interface EmailTemplateContext {
   request: SupabaseRequest;
@@ -72,6 +84,17 @@ const formatProjectField = (
     .map((p) => p[field]?.trim())
     .filter((v): v is string => Boolean(v));
   return [...new Set(values)].join(", ");
+};
+
+/** Los mismos valores que alimentan los marcadores sueltos de proyecto. */
+const datosProyecto = (context: EmailTemplateContext) => {
+  const { request, projects, profiles, requesterProfile } = context;
+  return {
+    investigador: formatInvestigador(request, projects, profiles, requesterProfile),
+    proyecto: formatProjectCodes(request.project_codes, projects),
+    entidad: formatProjectField(request.project_codes, projects, "entidad"),
+    cif: formatProjectField(request.project_codes, projects, "entidad_cif"),
+  };
 };
 
 /** Escapa texto para insertarlo en HTML del cuerpo del correo. */
@@ -246,10 +269,21 @@ export const processTextTemplate = (templateString: string, context: EmailTempla
 export const processPlainTextTemplate = (templateString: string, context: EmailTemplateContext): string => {
   let processedString = applySharedPlaceholders(templateString, context);
   const { request, shippingAddress, billingAddress } = context;
+  const proyecto = datosProyecto(context);
 
   processedString = processedString.replace(/{{shipping_address}}/g, formatAddressPlainText(shippingAddress));
   processedString = processedString.replace(/{{billing_address}}/g, formatAddressPlainText(billingAddress));
   processedString = processedString.replace(/{{items_list}}/g, formatItemsListPlainText(request.items));
+  // Bloques con diseño: en texto plano caen a su equivalente sin HTML, para que
+  // ningún marcador se cuele literal en los clientes que solo leen texto.
+  processedString = processedString.replace(/{{items_table}}/g, formatItemsListPlainText(request.items));
+  processedString = processedString.replace(/{{billing_box}}/g, buildBillingBoxPlainText(proyecto));
+  processedString = processedString.replace(
+    /{{shipping_box}}/g,
+    buildShippingBoxPlainText(formatAddressPlainText(shippingAddress))
+  );
+  processedString = processedString.replace(/{{project_box}}/g, buildProjectBoxPlainText(proyecto));
+  processedString = processedString.replace(/{{warning_box}}/g, buildWarningBoxPlainText());
   processedString = processedString.replace(/{{cta_button}}/g, "[Call to Action Link]");
 
   return processedString
@@ -259,13 +293,31 @@ export const processPlainTextTemplate = (templateString: string, context: EmailT
 };
 
 // Función principal para procesar plantillas de correo electrónico (cuerpo HTML)
-export const processEmailTemplate = (templateString: string, context: EmailTemplateContext): string => {
+export const processEmailTemplate = (
+  templateString: string,
+  context: EmailTemplateContext,
+  variante: VarianteTabla = "claro"
+): string => {
   let processedString = applySharedPlaceholders(templateString, context);
   const { request, shippingAddress, billingAddress } = context;
+  const proyecto = datosProyecto(context);
 
   processedString = processedString.replace(/{{shipping_address}}/g, formatAddressHtml(shippingAddress));
   processedString = processedString.replace(/{{billing_address}}/g, formatAddressHtml(billingAddress));
   processedString = processedString.replace(/{{items_list}}/g, formatItemsListHtml(request.items));
+  // Bloques con diseño. Viven en email-blocks.ts porque el editor del panel de
+  // Admin (ReactQuill) se come las tablas y los estilos del cuerpo al guardar.
+  processedString = processedString.replace(
+    /{{items_table}}/g,
+    buildItemsTableHtml(request.items, variante)
+  );
+  processedString = processedString.replace(/{{billing_box}}/g, buildBillingBoxHtml(proyecto));
+  processedString = processedString.replace(
+    /{{shipping_box}}/g,
+    buildShippingBoxHtml(formatAddressPlainText(shippingAddress))
+  );
+  processedString = processedString.replace(/{{project_box}}/g, buildProjectBoxHtml(proyecto));
+  processedString = processedString.replace(/{{warning_box}}/g, buildWarningBoxHtml());
   processedString = processedString.replace(/{{cta_button}}/g, "[Call to Action Button]");
 
   // After all replacements, convert remaining newlines to <br> and wrap in a basic HTML structure
@@ -291,8 +343,11 @@ export const processNamedEmailTemplate = (
   context: EmailTemplateContext
 ): { subject: string; body: string } => {
   const resolved = resolveTemplateForSend(templateName, subjectTemplate, bodyTemplate);
+  // El CÓMPRAME es interno y lleva la tabla con cabecera oscura; el presupuesto
+  // sale hacia el proveedor y usa la clara.
+  const variante: VarianteTabla = templateName === "PO Request" ? "oscuro" : "claro";
   return {
     subject: processTextTemplate(resolved.subject, context),
-    body: processEmailTemplate(resolved.body, context),
+    body: processEmailTemplate(resolved.body, context, variante),
   };
 };
