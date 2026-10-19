@@ -87,5 +87,9 @@ export const usePendingInvoices = () => {
       return pendingInvoices;
     },
     enabled: !!requests && !!vendors,
+    // La clave lleva los datos de las solicitudes y cambia con cada actualización.
+    // Sin esto la consulta vuelve a "cargando", el Dashboard pinta el spinner y
+    // desmonta la lista de solicitudes, y con ella el diálogo de correo abierto.
+    placeholderData: (anterior) => anterior,
   });
 };

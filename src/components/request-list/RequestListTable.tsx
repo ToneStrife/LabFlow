@@ -28,7 +28,6 @@ interface RequestListTableProps {
   profiles?: Profile[];
   isUpdatingStatus: boolean;
   onViewDetails: (id: string) => void;
-  onApprove: (request: SupabaseRequest) => void;
   onEnterQuoteDetails: (request: SupabaseRequest) => void;
   onSendPORequest: (request: SupabaseRequest) => void;
   onMarkAsOrdered: (request: SupabaseRequest) => void;

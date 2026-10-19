@@ -24,7 +24,6 @@ import {
 interface RequestActionsProps {
   request: SupabaseRequest;
   isUpdatingStatus: boolean;
-  openApproveRequestDialog: (request: SupabaseRequest) => void;
   handleSendPORequest: (request: SupabaseRequest) => void;
   handleUploadQuote: () => void;
   handleUploadPOAndOrder: () => void;
@@ -38,7 +37,6 @@ interface RequestActionsProps {
 const RequestActions: React.FC<RequestActionsProps> = ({
   request,
   isUpdatingStatus,
-  openApproveRequestDialog,
   handleSendPORequest,
   handleUploadQuote,
   handleUploadPOAndOrder,
@@ -80,23 +78,26 @@ const RequestActions: React.FC<RequestActionsProps> = ({
 
   return (
     <div className="flex flex-col space-y-2">
-      {/* PENDING: Approve or Request Quote — Admin only */}
+      {/* PENDING: pedir presupuesto (o enviar el Cómprame si ya hay presupuesto) */}
       {request.status === "Pending" && canApprove && (
         <>
-          <Button 
-            onClick={() => onSendQuoteRequest(request)} 
-            className="w-full justify-start" 
-            disabled={isUpdatingStatus}
-          >
-            <Mail className="mr-2 h-4 w-4" /> Solicitar presupuesto
-          </Button>
-          <Button 
-            onClick={() => openApproveRequestDialog(request)} 
-            className="w-full justify-start bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-600" 
-            disabled={isUpdatingStatus}
-          >
-            <CheckCircle className="mr-2 h-4 w-4" /> Aprobar Solicitud
-          </Button>
+          {request.quote_url ? (
+            <Button 
+              onClick={() => handleSendPORequest(request)} 
+              className="w-full justify-start" 
+              disabled={isUpdatingStatus}
+            >
+              <Send className="mr-2 h-4 w-4" /> Solicitar PO (Cómprame)
+            </Button>
+          ) : (
+            <Button 
+              onClick={() => onSendQuoteRequest(request)} 
+              className="w-full justify-start" 
+              disabled={isUpdatingStatus}
+            >
+              <Mail className="mr-2 h-4 w-4" /> Solicitar presupuesto
+            </Button>
+          )}
           <Button 
             variant="outline" 
             onClick={openDenyRequestDialog} 

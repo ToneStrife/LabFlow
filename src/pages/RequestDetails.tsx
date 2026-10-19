@@ -41,10 +41,10 @@ import { isAdmin, canEditRequestDetails, canDeleteRequest, canOverrideStatus } f
 import { useCan } from "@/hooks/use-permissions";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAggregatedReceivedItems } from "@/hooks/use-packing-slips";
-import { buildStorageAttachment, openEmailDialogAfterClose, normalizeAttachments } from "@/utils/email-attachments";
+import { buildStorageAttachment, normalizeAttachments } from "@/utils/email-attachments";
 import { RequestStatus as RequestStatusType, Vendor, Profile, AccountManager, Project, ShippingAddress, BillingAddress } from "@/data/types";
 import { cn } from "@/lib/utils";
-import { pageContainerClass, mobileDialogClass, dialogFooterMobileClass } from "@/lib/layout";
+import { pageContainerClass, mobileDialogClass } from "@/lib/layout";
 import { camposCorreoConNiceto, correoSiLoHaceNiceto } from "@/lib/farmacia";
 import { getRequestStatusLabelLong, REQUEST_STATUS_ORDER } from "@/lib/request-status";
 
@@ -81,8 +81,6 @@ const RequestDetails: React.FC = () => {
     status: RequestStatusType;
   } | null>(null);
 
-  const [isApproveRequestDialogOpen, setIsApproveRequestDialogOpen] = React.useState(false);
-  const [requestToApprove, setRequestToApprove] = React.useState<SupabaseRequest | null>(null);
 
   const [isUploadDialogOpen, setIsUploadDialogOpen] = React.useState(false);
   const [fileTypeToUpload, setFileTypeToUpload] = React.useState<FileType>("quote");
@@ -152,7 +150,10 @@ const RequestDetails: React.FC = () => {
       return;
     }
     const poRequestTemplate = emailTemplates?.find(t => t.template_name === 'PO Request');
-    if (!poRequestTemplate) return;
+    if (!poRequestTemplate) {
+      toast.error("Plantilla de correo electrónico 'PO Request' no encontrada. Por favor, crea una en el panel de Admin.");
+      return;
+    }
 
     const context = {
       request,
@@ -187,119 +188,6 @@ const RequestDetails: React.FC = () => {
     });
 
     setIsEmailDialogOpen(true);
-  };
-
-  const openApproveRequestDialog = (request: SupabaseRequest) => {
-    setRequestToApprove(request);
-    setIsApproveRequestDialogOpen(true);
-  };
-
-  const handleApproveOnly = async () => {
-    if (requestToApprove) {
-      const nextStatus = requestToApprove.quote_url ? "PO Requested" : "Quote Requested";
-      await updateStatusMutation.mutateAsync({ id: requestToApprove.id, status: nextStatus });
-      setIsApproveRequestDialogOpen(false);
-    }
-  };
-
-  const handleApproveAndRequestQuoteEmail = async () => {
-    if (requestToApprove) {
-      const nextStatus = requestToApprove.quote_url ? "PO Requested" : "Quote Requested";
-      await updateStatusMutation.mutateAsync({ id: requestToApprove.id, status: nextStatus });
-      
-      if (nextStatus === "Quote Requested") {
-        const especial = correoNiceto(requestToApprove);
-        if (especial?.error) {
-          toast.error(especial.error);
-          setIsApproveRequestDialogOpen(false);
-          return;
-        }
-        const quoteTemplate = emailTemplates?.find(t => t.template_name === 'Quote Request');
-        if (!quoteTemplate) return;
-
-        const context = {
-          request: requestToApprove,
-          vendor: vendors?.find(v => v.id === requestToApprove.vendor_id),
-          requesterProfile: profiles?.find(p => p.id === requestToApprove.requester_id),
-          accountManager: accountManagers?.find(am => am.id === requestToApprove.account_manager_id),
-          projects: projects,
-          profiles: profiles,
-          actorProfile: profile,
-          shippingAddress: shippingAddresses?.find(a => a.id === requestToApprove.shipping_address_id),
-          billingAddress: billingAddresses?.find(a => a.id === requestToApprove.billing_address_id),
-        };
-        
-        const { subject, body } = processNamedEmailTemplate(
-          "Quote Request",
-          quoteTemplate.subject_template,
-          quoteTemplate.body_template,
-          context
-        );
-
-        const emailData = {
-          ...camposCorreoConNiceto(especial, getVendorEmail(requestToApprove.vendor_id)),
-          subject,
-          body,
-        };
-
-        openEmailDialogAfterClose(
-          () => setIsApproveRequestDialogOpen(false),
-          () => {
-            setEmailInitialData(emailData);
-            setIsEmailDialogOpen(true);
-          }
-        );
-      } else if (requestToApprove.quote_url) {
-        const especialPo = correoNiceto(requestToApprove);
-        if (especialPo?.error) {
-          toast.error(especialPo.error);
-          setIsApproveRequestDialogOpen(false);
-          return;
-        }
-        if (!especialPo && !requestToApprove.account_manager_id) {
-          setIsApproveRequestDialogOpen(false);
-          return;
-        }
-        const poRequestTemplate = emailTemplates?.find(t => t.template_name === 'PO Request');
-        if (!poRequestTemplate) return;
-
-        const poContext = {
-          request: { ...requestToApprove, status: "PO Requested" as const },
-          vendor: vendors?.find(v => v.id === requestToApprove.vendor_id),
-          requesterProfile: profiles?.find(p => p.id === requestToApprove.requester_id),
-          accountManager: accountManagers?.find(am => am.id === requestToApprove.account_manager_id),
-          projects: projects,
-          profiles: profiles,
-          actorProfile: profile,
-          shippingAddress: shippingAddresses?.find(a => a.id === requestToApprove.shipping_address_id),
-          billingAddress: billingAddresses?.find(a => a.id === requestToApprove.billing_address_id),
-        };
-
-        const { forDialog, forSend } = await buildStorageAttachment(requestToApprove.quote_url);
-        const { subject, body } = processNamedEmailTemplate(
-          "PO Request",
-          poRequestTemplate.subject_template,
-          poRequestTemplate.body_template,
-          poContext
-        );
-
-        openEmailDialogAfterClose(
-          () => setIsApproveRequestDialogOpen(false),
-          () => {
-            setEmailInitialData({
-              ...camposCorreoConNiceto(especialPo, getAccountManagerEmail(requestToApprove.account_manager_id)),
-              subject,
-              body,
-              attachments: forDialog,
-              attachmentsForSend: forSend,
-            });
-            setIsEmailDialogOpen(true);
-          }
-        );
-      } else {
-        setIsApproveRequestDialogOpen(false);
-      }
-    }
   };
 
   const handleOpenReceiveItemsDialog = () => {
@@ -350,7 +238,10 @@ const RequestDetails: React.FC = () => {
 
   const handleMarkAsOrderedAndSendEmail = async (request: SupabaseRequest) => {
     const orderConfirmationTemplate = emailTemplates?.find(t => t.template_name === 'Order Confirmation');
-    if (!orderConfirmationTemplate) return;
+    if (!orderConfirmationTemplate) {
+      toast.error("Plantilla de correo electrónico 'Order Confirmation' no encontrada. Por favor, crea una en el panel de Admin.");
+      return;
+    }
 
     const context = {
       request,
@@ -450,9 +341,11 @@ const RequestDetails: React.FC = () => {
       toast.error(especial.error);
       return;
     }
-    await updateStatusMutation.mutateAsync({ id: request.id, status: "Quote Requested" });
     const quoteTemplate = emailTemplates?.find(t => t.template_name === 'Quote Request');
-    if (!quoteTemplate) return;
+    if (!quoteTemplate) {
+      toast.error("Plantilla de correo electrónico 'Quote Request' no encontrada. Por favor, crea una en el panel de Admin.");
+      return;
+    }
 
     const context = {
       request: { ...request, status: "Quote Requested" as const },
@@ -465,20 +358,29 @@ const RequestDetails: React.FC = () => {
       shippingAddress: shippingAddresses?.find(a => a.id === request.shipping_address_id),
       billingAddress: billingAddresses?.find(a => a.id === request.billing_address_id),
     };
-    
-    const { subject, body } = processNamedEmailTemplate(
-      "Quote Request",
-      quoteTemplate.subject_template,
-      quoteTemplate.body_template,
-      context
-    );
 
-    setEmailInitialData({
-      ...camposCorreoConNiceto(especial, getVendorEmail(request.vendor_id)),
-      subject,
-      body,
-    });
-    setIsEmailDialogOpen(true);
+    try {
+      const { subject, body } = processNamedEmailTemplate(
+        "Quote Request",
+        quoteTemplate.subject_template,
+        quoteTemplate.body_template,
+        context
+      );
+
+      // El estado avanza solo cuando el correo se envía de verdad. Si se cierra el
+      // diálogo o algo falla antes, la solicitud sigue pendiente.
+      setPendingStatusOnEmailSend({ requestId: request.id, status: "Quote Requested" });
+      setEmailInitialData({
+        ...camposCorreoConNiceto(especial, getVendorEmail(request.vendor_id)),
+        subject,
+        body,
+      });
+      setIsEmailDialogOpen(true);
+    } catch (error) {
+      toast.error("No se pudo preparar el correo de presupuesto.", {
+        description: error instanceof Error ? error.message : undefined,
+      });
+    }
   };
 
   if (isLoadingRequests || isLoadingVendors || isLoadingProfiles || isLoadingAccountManagers || isLoadingProjects || isLoadingEmailTemplates || isLoadingShippingAddresses || isLoadingBillingAddresses) {
@@ -553,7 +455,6 @@ const RequestDetails: React.FC = () => {
             <RequestActions
               request={request}
               isUpdatingStatus={updateStatusMutation.isPending || updateFileMutation.isPending || revertReceptionMutation.isPending}
-              openApproveRequestDialog={openApproveRequestDialog}
               handleSendPORequest={handleSendPORequest}
               handleUploadQuote={handleUploadQuote}
               handleUploadPOAndOrder={handleUploadPOAndOrder}
@@ -604,18 +505,6 @@ const RequestDetails: React.FC = () => {
               onCancel={() => setIsEditMetadataDialogOpen(false)}
             />
           )}
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isApproveRequestDialogOpen} onOpenChange={setIsApproveRequestDialogOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Aprobar Solicitud</DialogTitle></DialogHeader>
-          <DialogFooter className={dialogFooterMobileClass}>
-            <Button variant="outline" onClick={handleApproveOnly} disabled={updateStatusMutation.isPending}>Aprobar, sin correo</Button>
-            <Button onClick={handleApproveAndRequestQuoteEmail} disabled={updateStatusMutation.isPending}>
-              {request?.quote_url ? "Aprobar y enviar cómprame" : "Aprobar y pedir presupuesto"}
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 

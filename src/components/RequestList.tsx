@@ -14,14 +14,13 @@ import { Button } from "@/components/ui/button";
 import RequestListToolbar from "@/components/request-list/RequestListToolbar";
 import RequestListTable from "@/components/request-list/RequestListTable";
 import { toast } from "sonner";
-import { buildStorageAttachment, openEmailDialogAfterClose, normalizeAttachments } from "@/utils/email-attachments";
+import { buildStorageAttachment, normalizeAttachments } from "@/utils/email-attachments";
 import { useSession } from "@/components/SessionContextProvider";
 import { useProjects } from "@/hooks/use-projects";
 import { useEmailTemplates } from "@/hooks/use-email-templates";
 import { processNamedEmailTemplate } from "@/utils/email-templating";
 import MergeRequestsDialog from "@/components/MergeRequestsDialog";
 import { useShippingAddresses, useBillingAddresses } from "@/hooks/use-addresses";
-import ApproveRequestListDialog from "@/components/request-list/ApproveRequestListDialog";
 import { cn } from "@/lib/utils";
 import { mobileDialogClass, dialogFooterMobileClass } from "@/lib/layout";
 import { useReceiveWizard } from "@/components/ReceiveWizardProvider";
@@ -87,9 +86,6 @@ const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
   
   const [isMergeDialogOpen, setIsMergeDialogOpen] = React.useState(false);
   const [sourceRequestToMerge, setSourceRequestToMerge] = React.useState<SupabaseRequest | null>(null);
-
-  const [isApproveListDialogOpen, setIsApproveListDialogOpen] = React.useState(false);
-  const [requestToApproveFromList, setRequestToApproveFromList] = React.useState<SupabaseRequest | null>(null);
 
 
   const getRequesterName = (requesterId: string) => {
@@ -208,79 +204,6 @@ const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
     setIsEmailDialogOpen(true);
   };
 
-  const handleOpenApproveDialogFromList = (request: SupabaseRequest) => {
-    setRequestToApproveFromList(request);
-    setIsApproveListDialogOpen(true);
-  };
-
-  const handleApproveOnlyFromList = async (request: SupabaseRequest) => {
-    const nextStatus = request.quote_url ? "PO Requested" : "Quote Requested";
-    await updateStatusMutation.mutateAsync({ id: request.id, status: nextStatus });
-    setIsApproveListDialogOpen(false);
-  };
-
-  const handleApproveAndSendEmailFromList = async (request: SupabaseRequest) => {
-    const nextStatus = request.quote_url ? "PO Requested" : "Quote Requested";
-    await updateStatusMutation.mutateAsync({ id: request.id, status: nextStatus });
-
-    if (nextStatus === "Quote Requested") {
-      const especial = correoNiceto(request);
-      if (especial?.error) {
-        toast.error(especial.error);
-        return;
-      }
-      const quoteTemplate = emailTemplates?.find(t => t.template_name === 'Quote Request');
-      if (!quoteTemplate) {
-        toast.error("Plantilla de correo electrónico 'Quote Request' no encontrada. Por favor, crea una en el panel de Admin.");
-        return;
-      }
-
-      const context = {
-        request: { ...request, status: "Quote Requested" as const },
-        vendor: vendors?.find(v => v.id === request.vendor_id),
-        requesterProfile: profiles?.find(p => p.id === request.requester_id),
-        accountManager: accountManagers?.find(am => am.id === request.account_manager_id),
-        projects: projects,
-        profiles: profiles,
-        actorProfile: profile,
-        shippingAddress: shippingAddresses?.find(a => a.id === request.shipping_address_id),
-        billingAddress: billingAddresses?.find(a => a.id === request.billing_address_id),
-      };
-
-      const { subject, body } = processNamedEmailTemplate(
-        "Quote Request",
-        quoteTemplate.subject_template,
-        quoteTemplate.body_template,
-        context
-      );
-
-      const emailData = {
-        ...camposCorreoConNiceto(especial, getVendorEmail(request.vendor_id)),
-        subject,
-        body,
-      };
-
-      openEmailDialogAfterClose(
-        () => setIsApproveListDialogOpen(false),
-        () => {
-          setEmailInitialData(emailData);
-          setIsEmailDialogOpen(true);
-        }
-      );
-    } else {
-      const emailData = await buildPORequestEmailInitialData({ ...request, status: "PO Requested" });
-      if (!emailData) return;
-
-      openEmailDialogAfterClose(
-        () => setIsApproveListDialogOpen(false),
-        () => {
-          setEmailInitialData(emailData);
-          setIsEmailDialogOpen(true);
-        }
-      );
-    }
-  };
-
   const openQuoteAndPODetailsDialog = (request: SupabaseRequest) => {
     navigate(`/requests/${request.id}`);
   };
@@ -345,8 +268,6 @@ const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
       return;
     }
 
-    await updateStatusMutation.mutateAsync({ id: request.id, status: "Quote Requested" });
-
     const quoteTemplate = emailTemplates?.find(t => t.template_name === 'Quote Request');
     if (!quoteTemplate) {
       toast.error("Plantilla de correo electrónico 'Quote Request' no encontrada. Por favor, crea una en el panel de Admin.");
@@ -364,20 +285,29 @@ const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
       shippingAddress: shippingAddresses?.find(a => a.id === request.shipping_address_id),
       billingAddress: billingAddresses?.find(a => a.id === request.billing_address_id),
     };
-    
-    const { subject, body } = processNamedEmailTemplate(
-      "Quote Request",
-      quoteTemplate.subject_template,
-      quoteTemplate.body_template,
-      context
-    );
 
-    setEmailInitialData({
-      ...camposCorreoConNiceto(especial, getVendorEmail(request.vendor_id)),
-      subject,
-      body,
-    });
-    setIsEmailDialogOpen(true);
+    try {
+      const { subject, body } = processNamedEmailTemplate(
+        "Quote Request",
+        quoteTemplate.subject_template,
+        quoteTemplate.body_template,
+        context
+      );
+
+      // El estado avanza solo cuando el correo se envía de verdad. Si se cierra el
+      // diálogo o algo falla antes, la solicitud sigue pendiente.
+      setPendingStatusOnEmailSend({ requestId: request.id, status: "Quote Requested" });
+      setEmailInitialData({
+        ...camposCorreoConNiceto(especial, getVendorEmail(request.vendor_id)),
+        subject,
+        body,
+      });
+      setIsEmailDialogOpen(true);
+    } catch (error) {
+      toast.error("No se pudo preparar el correo de presupuesto.", {
+        description: error instanceof Error ? error.message : undefined,
+      });
+    }
   };
 
 
@@ -462,7 +392,6 @@ const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
         profiles={profiles}
         isUpdatingStatus={updateStatusMutation.isPending}
         onViewDetails={(id) => navigate(`/requests/${id}`)}
-        onApprove={handleOpenApproveDialogFromList}
         onEnterQuoteDetails={openQuoteAndPODetailsDialog}
         onSendPORequest={handleSendPORequest}
         onMarkAsOrdered={openOrderConfirmationDialog}
@@ -527,15 +456,6 @@ const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      <ApproveRequestListDialog
-        isOpen={isApproveListDialogOpen}
-        onOpenChange={setIsApproveListDialogOpen}
-        request={requestToApproveFromList}
-        onApproveOnly={handleApproveOnlyFromList}
-        onApproveAndSendEmail={handleApproveAndSendEmailFromList}
-        isSubmitting={updateStatusMutation.isPending || sendEmailMutation.isPending}
-      />
     </div>
   );
 };
