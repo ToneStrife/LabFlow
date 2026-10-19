@@ -44,6 +44,31 @@ const getContentType = (filename: string): string => {
   return "application/octet-stream";
 };
 
+/**
+ * Versión en texto plano del correo (parte alternativa para clientes sin HTML).
+ * Quitar las etiquetas a ciegas pegaba el contenido de las tablas ("PRODUCTOREFERENCIACANT.").
+ * Aquí las celdas de una fila van separadas por " | " y cada fila, párrafo y bloque en su línea.
+ */
+const htmlToPlainText = (html: string): string =>
+  html
+    .replace(/<(script|style)[\s\S]*?<\/\1>/gi, "")
+    .replace(/<\/(td|th)>\s*<(td|th)\b[^>]*>/gi, " | ")
+    .replace(/<p style="margin:0 0 12px 0;">([\s\S]*?)<\/p>/gi, "$1\n\n")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<hr[^>]*>/gi, "\n")
+    .replace(/<li\b[^>]*>/gi, "- ")
+    .replace(/<\/(p|div|tr|table|ul|ol|li|h[1-6]|blockquote)>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, "&")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -223,7 +248,7 @@ serve(async (req) => {
       },
     });
 
-    const plainText = body.replace(/<[^>]*>?/gm, "");
+    const plainText = htmlToPlainText(String(body));
 
     const toNorm = normalizeEmail(String(to));
     const ccList =
