@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   Eye,
-  CheckCircle,
   Package,
   Receipt,
   Mail,
@@ -37,7 +36,6 @@ interface RequestListActionsProps {
   request: SupabaseRequest;
   isUpdatingStatus: boolean;
   onViewDetails: (id: string) => void;
-  onApprove: (request: SupabaseRequest) => void;
   onEnterQuoteDetails: (request: SupabaseRequest) => void;
   onSendPORequest: (request: SupabaseRequest) => void;
   onMarkAsOrdered: (request: SupabaseRequest) => void;
@@ -53,7 +51,6 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
   request,
   isUpdatingStatus,
   onViewDetails,
-  onApprove,
   onEnterQuoteDetails,
   onSendPORequest,
   onMarkAsOrdered,
@@ -107,26 +104,29 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
 
       {request.status === "Pending" && canApprove && (
         <>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onSendQuoteRequest(request)}
-            title="Solicitar presupuesto"
-            disabled={isUpdatingStatus}
-            className="shrink-0"
-          >
-            <Mail className="h-4 w-4 text-blue-500 dark:text-blue-400" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onApprove(request)}
-            title="Aprobar Solicitud"
-            disabled={isUpdatingStatus}
-            className="shrink-0"
-          >
-            <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
-          </Button>
+          {request.quote_url ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onSendPORequest(request)}
+              title="Enviar solicitud de compra (Cómprame)"
+              disabled={isUpdatingStatus}
+              className="shrink-0"
+            >
+              <Mail className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+            </Button>
+          ) : (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onSendQuoteRequest(request)}
+              title="Solicitar presupuesto"
+              disabled={isUpdatingStatus}
+              className="shrink-0"
+            >
+              <Mail className="h-4 w-4 text-blue-500 dark:text-blue-400" />
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="icon"
@@ -261,12 +261,15 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
             {request.status === "Pending" && canApprove && (
               <>
                 {canMerge && <DropdownMenuSeparator />}
-                <DropdownMenuItem onClick={() => onSendQuoteRequest(request)} disabled={isUpdatingStatus}>
-                  <Mail className="mr-2 h-4 w-4 text-blue-500 dark:text-blue-400" /> Solicitar presupuesto
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onApprove(request)} disabled={isUpdatingStatus}>
-                  <CheckCircle className="mr-2 h-4 w-4 text-green-600 dark:text-green-400" /> Aprobar
-                </DropdownMenuItem>
+                {request.quote_url ? (
+                  <DropdownMenuItem onClick={() => onSendPORequest(request)} disabled={isUpdatingStatus}>
+                    <Mail className="mr-2 h-4 w-4 text-orange-600 dark:text-orange-400" /> Enviar Cómprame
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem onClick={() => onSendQuoteRequest(request)} disabled={isUpdatingStatus}>
+                    <Mail className="mr-2 h-4 w-4 text-blue-500 dark:text-blue-400" /> Solicitar presupuesto
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem onClick={() => onDeny(request)} disabled={isUpdatingStatus} className="text-red-600 dark:text-red-400">
                   <Ban className="mr-2 h-4 w-4" /> Denegar
                 </DropdownMenuItem>
