@@ -58,7 +58,7 @@ export async function compressImageFile(file: File): Promise<File> {
       blob = await canvasToJpegBlob(canvas, quality);
     }
 
-    const baseName = file.name.replace(/\.[^.]+$/, "") || "albaran";
+    const baseName = file.name.replace(/\.[^.]+$/, "") || "captura";
     return new File([blob], `${baseName}.jpg`, { type: "image/jpeg", lastModified: Date.now() });
   } catch {
     return file;

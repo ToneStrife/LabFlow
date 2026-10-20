@@ -665,7 +665,7 @@ const RequestForm: React.FC = () => {
         <SeccionFormulario
           titulo="Presupuesto y notas"
           icono={FileScan}
-          descripcion="Si adjuntas el presupuesto, se guarda con la solicitud; el IP del proyecto debe aprobarla antes de seguir."
+          descripcion="Puedes adjuntar un PDF, una imagen o una captura de pantalla del presupuesto. El IP del proyecto debe aprobarla antes de seguir."
         >
         <FormField
           control={form.control}
@@ -673,12 +673,17 @@ const RequestForm: React.FC = () => {
           render={({ field }) => (
             <FormItem>
               <FormControl>
-                <FileUploadInput 
-                    label="Adjuntar presupuesto, si ya lo tienes"
-                    onChange={handleQuoteFileChange} 
-                    disabled={isSubmitting} 
+                <FileUploadInput
+                    label="Adjuntar presupuesto (PDF, imagen o captura)"
+                    onChange={handleQuoteFileChange}
+                    disabled={isSubmitting}
                     accept="image/*,application/pdf"
-                    currentFileMeta={fileMetaToDisplay} // Mostrar metadata si se perdió el archivo
+                    capture="environment"
+                    compressImages
+                    cameraLabel="Hacer foto del presupuesto"
+                    galleryLabel="Elegir imagen, captura o PDF"
+                    hintText="PDF, JPG, PNG o captura pegada. Máx. 20 MB"
+                    currentFileMeta={fileMetaToDisplay}
                 />
               </FormControl>
               <FormMessage />
