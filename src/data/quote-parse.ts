@@ -1,4 +1,4 @@
-/** Line item extracted from a quote/budget PDF via Gemini. */
+/** Línea de producto extraída de un presupuesto (PDF o imagen/captura) con Gemini. */
 export interface ParsedQuoteItem {
   productName: string;
   catalogNumber: string;
