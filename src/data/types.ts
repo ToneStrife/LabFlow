@@ -140,7 +140,6 @@ export interface ReceivedItem {
   received_at: string;
 }
 
-// --- NUEVAS INTERFACES PARA FACTURACIÓN ---
 export interface Invoice {
   id: string;
   request_id: string;

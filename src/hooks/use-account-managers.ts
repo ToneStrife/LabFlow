@@ -4,7 +4,6 @@ import { toast } from 'sonner';
 import { AccountManager } from '@/data/types';
 import { AccountManagerFormValues } from '@/components/AccountManagerForm';
 
-// Hook to fetch all account managers
 export const useAccountManagers = () => {
   return useQuery<AccountManager[], Error>({
     queryKey: ['account_managers'],
@@ -16,7 +15,6 @@ export const useAccountManagers = () => {
   });
 };
 
-// Hook to add a new account manager
 export const useAddAccountManager = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -35,7 +33,6 @@ export const useAddAccountManager = () => {
   });
 };
 
-// Hook to update an account manager
 export const useUpdateAccountManager = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -54,7 +51,6 @@ export const useUpdateAccountManager = () => {
   });
 };
 
-// Hook to delete an account manager
 export const useDeleteAccountManager = () => {
   const queryClient = useQueryClient();
   return useMutation({

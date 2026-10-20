@@ -19,7 +19,6 @@ const getFirebaseMessaging = () => {
 // Helper para obtener la ruta base dinámica
 const getBasePath = () => window.location.pathname.includes('/LabFlow/') ? '/LabFlow/' : '/';
 
-
 export async function registerPushToken(userId: string) {
   if (!isFirebaseConfigured()) {
     toast.info("Notificaciones push no disponibles", {

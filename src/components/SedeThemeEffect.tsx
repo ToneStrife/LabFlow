@@ -1,5 +1,3 @@
-"use client";
-
 import { useEffect } from "react";
 import { useSedeActiva } from "@/components/SedeContextProvider";
 import { getSedeById } from "@/lib/sedes";

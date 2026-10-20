@@ -1,5 +1,3 @@
-"use client";
-
 import React from "react";
 import { useSession } from "@/components/SessionContextProvider";
 import { Label } from "@/components/ui/label";
@@ -22,7 +20,6 @@ const NotificationPreferences: React.FC<NotificationPreferencesProps> = ({ profi
   const { session } = useSession();
   const updateProfileMutation = useUpdateProfile();
   
-  // Hooks para preferencias de notificación de estado
   const { data: prefs, isLoading: isLoadingPrefs } = useUserNotificationPreferences(session?.user?.id);
   const updatePrefsMutation = useUpdateNotificationPreferences();
 
@@ -33,7 +30,6 @@ const NotificationPreferences: React.FC<NotificationPreferencesProps> = ({ profi
   // Estado para la selección granular (tabla user_notification_preferences)
   const [selectedStatuses, setSelectedStatuses] = React.useState<RequestStatus[]>(prefs?.notified_statuses || []);
 
-  // Sincronizar estados locales con datos de hooks
   React.useEffect(() => {
     setNotifyStatusChangeMaster(profile.notify_on_status_change ?? true);
     setNotifyNewRequest(profile.notify_on_new_request ?? true);
@@ -69,7 +65,7 @@ const NotificationPreferences: React.FC<NotificationPreferencesProps> = ({ profi
     if (session?.user?.id) {
         updateProfileMutation.mutate({
             id: session.user.id,
-            data: { notify_on_status_change: checked }, // Corrected property name
+            data: { notify_on_status_change: checked },
         });
     }
   };
@@ -79,7 +75,7 @@ const NotificationPreferences: React.FC<NotificationPreferencesProps> = ({ profi
     if (session?.user?.id) {
         updateProfileMutation.mutate({
             id: session.user.id,
-            data: { notify_on_new_request: checked }, // Corrected property name
+            data: { notify_on_new_request: checked },
         });
     }
   };

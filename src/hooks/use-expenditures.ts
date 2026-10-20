@@ -2,18 +2,16 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Expenditure, SupabaseRequest } from '@/data/types';
 import { apiGetExpenditures, apiAddExpenditure, apiUpdateExpenditure, apiDeleteExpenditure } from '@/integrations/api';
-import { useRequests } from './use-requests'; // Importar useRequests
+import { useRequests } from './use-requests';
 
-// Definir el tipo de datos del formulario (sin ID ni created_at)
 export interface ExpenditureFormValues {
   project_id: string;
   amount: number;
   description: string;
-  date_incurred: string; // YYYY-MM-DD format
+  date_incurred: string;
   request_id: string | null;
 }
 
-// Hook para obtener todos los gastos
 export const useExpenditures = () => {
   return useQuery<Expenditure[], Error>({
     queryKey: ['expenditures'],
@@ -21,7 +19,6 @@ export const useExpenditures = () => {
   });
 };
 
-// NUEVO HOOK: Obtener solicitudes recibidas que aún no tienen un gasto asociado
 export const useUnaccountedReceivedRequests = () => {
   const { data: expenditures, isLoading: isLoadingExpenditures } = useExpenditures();
   const { data: requests, isLoading: isLoadingRequests } = useRequests();
@@ -48,7 +45,6 @@ export const useUnaccountedReceivedRequests = () => {
   });
 };
 
-// Hook para añadir un nuevo gasto
 export const useAddExpenditure = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -71,7 +67,6 @@ export const useAddExpenditure = () => {
   });
 };
 
-// Hook para actualizar un gasto
 export const useUpdateExpenditure = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -93,7 +88,6 @@ export const useUpdateExpenditure = () => {
   });
 };
 
-// Hook para eliminar un gasto
 export const useDeleteExpenditure = () => {
   const queryClient = useQueryClient();
   return useMutation({

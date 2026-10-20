@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useEffect } from "react";
 import { initializeApp, getApps } from "firebase/app";
 import { firebaseConfig, isFirebaseConfigured } from "@/config/firebase";

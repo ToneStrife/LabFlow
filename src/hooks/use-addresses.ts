@@ -4,9 +4,6 @@ import { ShippingAddress, BillingAddress, Address } from '@/data/types';
 import { AddressFormValues } from '@/components/AddressForm';
 import { toast } from 'sonner';
 
-// --- Fetch Hooks ---
-
-// Hook para obtener todas las direcciones de envío
 export const useShippingAddresses = () => {
   return useQuery<ShippingAddress[], Error>({
     queryKey: ['shippingAddresses'],
@@ -18,7 +15,6 @@ export const useShippingAddresses = () => {
   });
 };
 
-// Hook para obtener todas las direcciones de facturación
 export const useBillingAddresses = () => {
   return useQuery<BillingAddress[], Error>({
     queryKey: ['billingAddresses'],
@@ -29,8 +25,6 @@ export const useBillingAddresses = () => {
     },
   });
 };
-
-// --- Mutation Hooks (Genéricos para Shipping/Billing) ---
 
 const createAddressMutations = (tableName: 'shipping_addresses' | 'billing_addresses', queryKey: 'shippingAddresses' | 'billingAddresses') => {
   const useAddAddress = () => {
@@ -94,8 +88,6 @@ const createAddressMutations = (tableName: 'shipping_addresses' | 'billing_addre
   return { useAddAddress, useUpdateAddress, useDeleteAddress };
 };
 
-// Exportar hooks específicos para Shipping
 export const { useAddAddress: useAddShippingAddress, useUpdateAddress: useUpdateShippingAddress, useDeleteAddress: useDeleteShippingAddress } = createAddressMutations('shipping_addresses', 'shippingAddresses');
 
-// Exportar hooks específicos para Billing
 export const { useAddAddress: useAddBillingAddress, useUpdateAddress: useUpdateBillingAddress, useDeleteAddress: useDeleteBillingAddress } = createAddressMutations('billing_addresses', 'billingAddresses');

@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useEffect, useId, useRef, useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Camera, ClipboardPaste, FileText, ImageIcon, UploadCloud, X } from "lucide-react";

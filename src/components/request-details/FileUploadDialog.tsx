@@ -1,5 +1,3 @@
-"use client";
-
 import React from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -49,7 +47,6 @@ const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
   const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
   const [poNumber, setPoNumber] = React.useState<string>("");
   
-  // --- RESTORE PO NUMBER AL MONTAR
   React.useEffect(() => {
     try {
       const raw = localStorage.getItem(PERSIST_KEY);
@@ -57,13 +54,11 @@ const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
       const saved = JSON.parse(raw);
       if (saved) {
         setPoNumber(saved.poNumber ?? "");
-        // No restauramos savedFileMeta aquí, ya que no lo estamos usando.
       }
     } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [PERSIST_KEY]);
 
-  // --- AUTOSAVE PO NUMBER
   React.useEffect(() => {
     const id = setTimeout(() => {
       try {
@@ -73,7 +68,6 @@ const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
     return () => clearTimeout(id);
   }, [poNumber, PERSIST_KEY]);
 
-  // --- Guardar PO NUMBER en visibilitychange
   React.useEffect(() => {
     const onHide = () => {
       if (document.visibilityState !== "hidden") return;

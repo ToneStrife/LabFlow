@@ -3,7 +3,6 @@ import { Profile } from "@/data/types";
 import { toast } from "sonner";
 import { apiGetProfiles, apiUpdateProfile, apiDeleteProfile, apiInviteUser, apiResetUserPassword } from "@/integrations/api";
 
-// useAccountManagerProfiles se ha eliminado y se reemplaza por useAccountManagers en src/hooks/use-account-managers.ts
 // export const useAccountManagerProfiles = () => {
 //   return useQuery<Profile[], Error>({
 //     queryKey: ["accountManagers"],
@@ -14,7 +13,6 @@ import { apiGetProfiles, apiUpdateProfile, apiDeleteProfile, apiInviteUser, apiR
 //   });
 // };
 
-// Hook to fetch all profiles
 export const useAllProfiles = () => {
   return useQuery<Profile[], Error>({
     queryKey: ["allProfiles"],
@@ -23,8 +21,6 @@ export const useAllProfiles = () => {
     },
   });
 };
-
-// --- Mutation Hooks for Profiles ---
 
 interface ProfileUpdateFormData { 
   first_name?: string | null;
@@ -63,7 +59,6 @@ export const useInviteUser = () => {
     },
   });
 };
-
 
 export const useUpdateProfile = () => {
   const queryClient = useQueryClient();

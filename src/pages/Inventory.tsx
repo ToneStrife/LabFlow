@@ -1,5 +1,3 @@
-"use client";
-
 import React from "react";
 import InventoryTable from "@/components/InventoryTable";
 import { Button } from "@/components/ui/button";
@@ -78,7 +76,6 @@ const Inventory = () => {
   const itemsToReorder = React.useMemo(() => {
     return inventoryItems?.filter(item => selectedItems.includes(item.id)) || [];
   }, [inventoryItems, selectedItems]);
-
 
   if (isLoading) {
     return (

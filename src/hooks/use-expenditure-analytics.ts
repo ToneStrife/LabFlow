@@ -43,7 +43,6 @@ export const useExpenditureAnalytics = (
 
     const totalSpent = expenditures.reduce((sum, exp) => sum + exp.amount, 0);
 
-    // --- 1. Gasto por Año ---
     const yearMap = new Map<string, number>();
     expenditures.forEach(exp => {
       // Corregido: usar exp.date_incurred
@@ -58,7 +57,6 @@ export const useExpenditureAnalytics = (
       value,
     })).sort((a, b) => a.name.localeCompare(b.name)); // Ordenar cronológicamente
 
-    // --- 2. Gasto por Proyecto ---
     const projectMap = new Map<string, number>();
     expenditures.forEach(exp => {
       const projectId = exp.project_id || 'unassigned';
@@ -72,7 +70,6 @@ export const useExpenditureAnalytics = (
       return { id, name, value };
     }).sort((a, b) => b.value - a.value); // Ordenar de mayor a menor
 
-    // --- 3. Gasto por Proveedor ---
     const vendorMap = new Map<string, number>();
     
     // Crear un mapa de solicitud a proveedor para búsquedas rápidas

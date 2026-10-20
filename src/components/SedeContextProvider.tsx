@@ -1,5 +1,3 @@
-"use client";
-
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { useSession } from "@/components/SessionContextProvider";
 import { TODAS_LAS_SEDES, isValidSedeId } from "@/lib/sedes";

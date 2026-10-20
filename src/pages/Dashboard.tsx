@@ -1,5 +1,3 @@
-"use client";
-
 import React from "react";
 import RequestList from "@/components/RequestList";
 import PendingItemsList from "@/components/PendingItemsList";

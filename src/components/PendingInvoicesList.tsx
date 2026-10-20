@@ -1,5 +1,3 @@
-"use client";
-
 import React from "react";
 import { usePendingInvoices } from "@/hooks/use-pending-invoices";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";

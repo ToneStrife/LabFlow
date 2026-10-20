@@ -10,7 +10,6 @@ interface SendNotificationData {
   data?: Record<string, any>; // Datos adicionales para el Service Worker
 }
 
-// Hook para enviar una notificación dirigida o masiva
 export const useSendNotification = () => {
   return useMutation({
     mutationFn: async (notificationData: SendNotificationData) => {

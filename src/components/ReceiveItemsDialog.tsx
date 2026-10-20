@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useForm, useFieldArray, useWatch } from "react-hook-form";

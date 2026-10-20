@@ -1,5 +1,3 @@
-"use client";
-
 import React from "react";
 import { useSedeActiva } from "@/components/SedeContextProvider";
 import { GRUPO, getSedeById } from "@/lib/sedes";

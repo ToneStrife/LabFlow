@@ -149,7 +149,6 @@ export const buildWarningBoxHtml = (): string =>
   "para evitar pedidos duplicados." +
   "</td></tr></table>";
 
-// --- Equivalentes en texto plano -------------------------------------------
 // El envío genera una versión sin HTML; si no sustituimos aquí, los marcadores
 // saldrían literales en los clientes que leen solo texto.
 

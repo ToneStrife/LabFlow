@@ -6,8 +6,6 @@ import { useSession } from "@/components/SessionContextProvider";
 import { uploadRequestFile } from "@/utils/upload-request-file";
 import { invalidateRequestEvents } from "@/lib/activity";
 
-// --- Fetch Hooks ---
-
 // Obtener todos los albaranes para una solicitud
 export const usePackingSlips = (requestId: string) => {
   return useQuery<PackingSlip[], Error>({
@@ -64,7 +62,6 @@ export const useAggregatedReceivedItems = (requestId: string) => {
   });
 };
 
-// Hook para obtener los ítems recibidos de un albarán específico
 export const useReceivedItemsBySlip = (slipId: string) => {
     return useQuery<ReceivedItem[], Error>({
         queryKey: ['receivedItemsBySlip', slipId],
@@ -84,7 +81,6 @@ export const useReceivedItemsBySlip = (slipId: string) => {
     });
 };
 
-// --- NUEVO HOOK: Corregir cantidad recibida de un ítem ---
 export const useCorrectReceivedItemQuantity = () => {
     const queryClient = useQueryClient();
     return useMutation({
@@ -124,8 +120,6 @@ export const useCorrectReceivedItemQuantity = () => {
     });
 };
 
-
-// --- Utilidad: subir archivo de albarán ---
 async function uploadSlipFile(requestId: string, file: File): Promise<string> {
   const { filePath } = await uploadRequestFile({
     requestId,
@@ -151,7 +145,6 @@ async function updateRequestSlipUrl(requestId: string, slipFilePath: string) {
   }
 }
 
-// --- NUEVO HOOK: Subir archivo de albarán y crear registro ---
 interface UploadSlipData {
   requestId: string;
   file: File;
@@ -204,7 +197,6 @@ export const useUploadAndCreateSlip = () => {
   });
 };
 
-// --- NUEVO HOOK: Eliminar Albarán ---
 export const useDeleteSlip = () => {
     const queryClient = useQueryClient();
     
@@ -270,9 +262,6 @@ export const useDeleteSlip = () => {
     });
 };
 
-
-// --- Mutation Hook para Recepción (SIMPLIFICADO) ---
-
 interface ReceiveItemsData {
   requestId: string;
   slipNumber: string;
@@ -335,7 +324,7 @@ export const useReceiveItems = () => {
 
       // 3. Actualizar el Inventario (usando RPC para manejar la lógica de upsert)
       for (const item of items) {
-        if (item.quantityReceived !== 0) { // Permitir cantidades negativas para corrección
+        if (item.quantityReceived !== 0) {
           const { error: inventoryError } = await supabase.rpc('add_or_update_inventory_item', {
             product_name_in: item.itemDetails.product_name,
             catalog_number_in: item.itemDetails.catalog_number,
@@ -412,7 +401,6 @@ export const useReceiveItems = () => {
           toast.info(`Solicitud ${requestId} recibida completamente! Estado actualizado.`);
         }
       }
-
 
       // Invalidar consultas para forzar la verificación del estado completo
       queryClient.invalidateQueries({ queryKey: ['requests'] });

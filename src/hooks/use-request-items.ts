@@ -4,7 +4,6 @@ import { toast } from 'sonner';
 import { SupabaseRequestItem } from "@/data/types";
 import { ItemEditFormValues } from "@/components/request-details/RequestItemForm";
 
-// Hook para actualizar un ítem de solicitud
 export const useUpdateRequestItem = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -40,7 +39,6 @@ export const useUpdateRequestItem = () => {
   });
 };
 
-// Hook para eliminar un ítem de solicitud
 export const useDeleteRequestItem = () => {
   const queryClient = useQueryClient();
   return useMutation({

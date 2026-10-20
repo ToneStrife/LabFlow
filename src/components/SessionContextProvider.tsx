@@ -1,5 +1,3 @@
-"use client";
-
 import React, { createContext, useContext, useState, useEffect, useLayoutEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Profile } from "@/data/types";

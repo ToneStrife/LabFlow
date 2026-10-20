@@ -1,5 +1,3 @@
-"use client";
-
 import React from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -80,7 +78,6 @@ const RequestDetails: React.FC = () => {
     requestId: string;
     status: RequestStatusType;
   } | null>(null);
-
 
   const [isUploadDialogOpen, setIsUploadDialogOpen] = React.useState(false);
   const [fileTypeToUpload, setFileTypeToUpload] = React.useState<FileType>("quote");
