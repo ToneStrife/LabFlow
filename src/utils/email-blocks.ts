@@ -3,16 +3,10 @@ import { SupabaseRequestItem } from "@/data/types";
 /**
  * Bloques visuales de los correos.
  *
- * Por qué viven aquí y no en el cuerpo de la plantilla: el editor del panel de
- * Admin es ReactQuill, que no registra blots de <table> y aplasta las tablas al
- * guardar. Si el diseño se escribe en el cuerpo, se pierde en cuanto alguien
- * abre la plantilla y pulsa guardar. Dejándolo aquí, el cuerpo editable se
- * queda en texto plano con marcadores, que Quill sí conserva.
- *
- * Por la misma razón, el diálogo de envío no pasa estos bloques por Quill: los
- * sustituye por marcas de texto y los restaura al enviar (email-dialog-blocks.ts).
- * Para que eso funcione, cada bloque es exactamente UNA <table> y lleva el
- * atributo data-bloque con su tipo.
+ * Viven en código (no en el cuerpo de la plantilla) para que el Admin pueda
+ * editar el texto con marcadores simples ({{items_table}}, etc.) y el HTML
+ * con tablas/estilos se genere al montar el correo. Cada bloque es exactamente
+ * UNA <table> con atributo data-bloque (ver email-dialog-blocks.ts).
  *
  * Estilos siempre en línea: Gmail y Outlook descartan <style> y las clases.
  */

@@ -65,7 +65,7 @@ import EmailLogs from "@/components/EmailLogs";
 
 // Notifications import
 import { useSendTestNotification } from "@/hooks/use-notifications";
-import NotificationSenderForm from "@/components/NotificationSenderForm"; // Importar el nuevo componente
+import NotificationSenderForm from "@/components/NotificationSenderForm";
 
 
 // --- Email Template Form Schema and Placeholders ---

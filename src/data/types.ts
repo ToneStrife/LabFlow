@@ -177,17 +177,6 @@ export interface SupabaseRequest {
   slip_url: string | null;
 }
 
-export interface ProductDetails {
-  id: string;
-  productName: string;
-  catalogNumber: string;
-  unitPrice?: number;
-  format?: string;
-  link?: string;
-  brand: string;
-  source?: string;
-}
-
 export interface InventoryItem {
   id: string;
   product_name: string;
@@ -199,13 +188,6 @@ export interface InventoryItem {
   location: string | null;
   added_at: string;
   last_updated: string;
-}
-
-export interface MockEmail {
-  to: string;
-  subject: string;
-  body: string;
-  attachments?: { name: string; url: string }[];
 }
 
 export interface Expenditure {

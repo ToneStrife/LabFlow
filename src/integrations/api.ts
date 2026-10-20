@@ -2,34 +2,19 @@ import { supabase } from "./supabase/client"; // Importar cliente de Supabase
 import {
   Profile,
   Vendor,
-  AccountManager, 
-  Project, 
+  AccountManager,
+  Project,
   SupabaseRequest,
   RequestItem,
   RequestStatus,
   InventoryItem,
-  MockEmail,
-  ProductDetails, 
-  EmailTemplate, 
-  Expenditure, 
-  UserNotificationPreferences, 
-  SupabaseRequestItem, 
+  EmailTemplate,
+  Expenditure,
+  UserNotificationPreferences,
+  SupabaseRequestItem,
 } from "@/data/types";
 import { buildAuthReturnUrl } from "@/lib/auth-redirect";
 import { uploadRequestFile } from "@/utils/upload-request-file";
-
-// Mantener las importaciones de mock data para otras tablas hasta que se conviertan
-import {
-  addMockRequest,
-  updateMockRequestStatus as mockUpdateStatus, 
-  updateMockRequestMetadata,
-  deleteMockRequest,
-  getMockInventory,
-  addMockInventoryItem as mockAddInventoryItem, 
-  updateMockInventoryItem,
-  deleteMockInventoryItem,
-  sendMockEmail,
-} from "@/data/crud";
 import { InventoryItemFormData } from "@/hooks/use-inventory"; 
 
 // --- Tipos de datos para la búsqueda ---

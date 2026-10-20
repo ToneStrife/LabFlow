@@ -118,8 +118,6 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
 
     // 2. Configurar el listener de cambios de estado de autenticación
     const { data: authListener } = supabase.auth.onAuthStateChange((event, nextSession) => {
-      console.log("Auth State Change:", event);
-
       if (event === 'PASSWORD_RECOVERY') {
         setLoading(true);
         fetchSessionAndProfile(nextSession).then(() => {
@@ -165,9 +163,7 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
     };
   }, [queryClient, navigate]);
 
-  const login = async () => {
-    console.log("Simulating login. Redirecting to login page handled by App.tsx");
-  };
+  const login = async () => {};
 
   const logout = async () => {
     const { error } = await supabase.auth.signOut();

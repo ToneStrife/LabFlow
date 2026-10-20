@@ -39,8 +39,6 @@ const FirebaseInitializer: React.FC = () => {
         const messaging = getMessaging(app);
 
         unsubscribe = onMessage(messaging, (payload) => {
-          console.log("Foreground message received:", payload);
-
           const notification = payload.notification;
           const data = payload.data;
           const link = data?.link;
