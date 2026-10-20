@@ -1,5 +1,7 @@
 import type { TipoBloque } from "@/utils/email-blocks";
 
+export type { TipoBloque };
+
 /**
  * El diálogo de envío edita el cuerpo con ReactQuill, que no conoce <table> ni
  * estilos en línea: al cargar el HTML los aplasta (la tabla se convierte en

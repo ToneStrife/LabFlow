@@ -334,11 +334,10 @@ export const processEmailTemplate = (
     .replace(/\n/g, "<br />")
     .replace(/@@BLOQUE_(\d+)@@/g, (_coincidencia, indice) => bloques[Number(indice)]);
 
+  // Sin pie tipo "automated message": ese texto dispara filtros de spam.
   return `
-    <div style="font-family: sans-serif; line-height: 1.6;">
+    <div style="font-family: Arial, Helvetica, sans-serif; font-size: 14px; line-height: 1.55; color: #1a1a1a;">
       ${processedHtml}
-      <br /><br />
-      <p style="font-size: 0.8em; color: #888;">This is an automated message from the LabFlow system.</p>
     </div>
   `;
 };
