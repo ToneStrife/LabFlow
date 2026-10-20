@@ -3,19 +3,34 @@
 import React from "react";
 import VendorTable from "@/components/VendorTable";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useCan } from "@/hooks/use-permissions";
-import { PlusCircle, Loader2 } from "lucide-react";
+import { Loader2, PlusCircle, Search, X } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import VendorForm from "@/components/VendorForm";
 import { useVendors, useAddVendor, useUpdateVendor, useDeleteVendor, VendorFormValues } from "@/hooks/use-vendors";
-import { Vendor } from "@/data/types"; // Corrected import
-import { toast } from "sonner";
+import { Vendor } from "@/data/types";
 import { pageContainerClass, pageHeaderClass, mobileDialogClass } from "@/lib/layout";
 import { cn } from "@/lib/utils";
 
-// Definir un tipo que incluya el ID para el estado de edición
 interface EditingVendorData extends VendorFormValues {
   id: string;
+}
+
+function textoBuscable(vendor: Vendor): string {
+  return [
+    vendor.name,
+    vendor.contact_person,
+    vendor.email,
+    vendor.email_presupuesto,
+    vendor.email_pedido,
+    vendor.phone,
+    vendor.notes,
+    ...(vendor.brands ?? []),
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
 }
 
 const Vendors = () => {
@@ -23,16 +38,15 @@ const Vendors = () => {
   const addVendorMutation = useAddVendor();
   const updateVendorMutation = useUpdateVendor();
   const deleteVendorMutation = useDeleteVendor();
-
   const { can } = useCan();
+  const puedeGestionar = can("vendors.manage");
 
+  const [busqueda, setBusqueda] = React.useState("");
   const [isAddVendorDialogOpen, setIsAddVendorDialogOpen] = React.useState(false);
   const [isEditVendorDialogOpen, setIsEditVendorDialogOpen] = React.useState(false);
-  // Cambiado el tipo de estado para incluir el ID
-  const [editingVendorInitialData, setEditingVendorInitialData] = React.useState<EditingVendorData | undefined>(undefined);
-
-  // NOTE: parseBrandsString is now handled inside use-vendors.ts mutations.
-  // We only need to map the array back to a string for the form's initial data.
+  const [editingVendorInitialData, setEditingVendorInitialData] = React.useState<
+    EditingVendorData | undefined
+  >(undefined);
 
   const handleAddVendor = async (newVendorData: VendorFormValues) => {
     await addVendorMutation.mutateAsync(newVendorData);
@@ -53,53 +67,71 @@ const Vendors = () => {
   };
 
   const openEditDialog = (vendor: Vendor) => {
-    // Mapear el tipo Vendor (con brands: string[] | null) al tipo EditingVendorData
-    const initialData: EditingVendorData = { 
-      id: vendor.id, // Incluir el ID
+    const initialData: EditingVendorData = {
+      id: vendor.id,
       name: vendor.name,
       contact_person: vendor.contact_person || null,
       email: vendor.email || null,
+      email_presupuesto: vendor.email_presupuesto ?? vendor.email ?? null,
+      email_pedido: vendor.email_pedido ?? vendor.email ?? null,
       phone: vendor.phone || null,
       notes: vendor.notes || null,
-      // Conversión de array a string para el formulario
       brands: vendor.brands && Array.isArray(vendor.brands) ? vendor.brands.join(", ") : null,
     };
     setEditingVendorInitialData(initialData);
     setIsEditVendorDialogOpen(true);
   };
 
+  const proveedoresFiltrados = React.useMemo(() => {
+    const lista = [...(vendors || [])].sort((a, b) =>
+      a.name.localeCompare(b.name, "es", { sensitivity: "base" })
+    );
+    const q = busqueda.trim().toLowerCase();
+    if (!q) return lista;
+    const tokens = q.split(/\s+/).filter(Boolean);
+    return lista.filter((vendor) => {
+      const haystack = textoBuscable(vendor);
+      return tokens.every((token) => haystack.includes(token));
+    });
+  }, [vendors, busqueda]);
+
   if (isLoading) {
     return (
-      <div className="p-4 sm:p-6 flex justify-center items-center">
-        <Loader2 className="h-8 w-8 animate-spin mr-2" /> Cargando Proveedores...
+      <div className="flex items-center justify-center p-4 sm:p-6">
+        <Loader2 className="mr-2 h-8 w-8 animate-spin" /> Cargando proveedores…
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="p-4 sm:p-6 text-red-600 dark:text-red-400">
+      <div className="p-4 text-red-600 sm:p-6 dark:text-red-400">
         Error al cargar proveedores: {error.message}
       </div>
     );
   }
 
+  const total = vendors?.length ?? 0;
+  const mostrando = proveedoresFiltrados.length;
+
   return (
     <div className={pageContainerClass}>
-      <div className={cn(pageHeaderClass, "items-center mb-2 sm:mb-6")}>
-        <h1 className="text-2xl sm:text-3xl font-bold">Directorio de Proveedores</h1>
-        {/* Sin permiso para gestionarlos, la pantalla es de solo lectura: el
-            servidor lo rechazaria igual, pero es feo ofrecer un boton que
-            luego da error. */}
+      <div className={cn(pageHeaderClass, "items-start sm:items-end")}>
+        <div className="min-w-0 space-y-1">
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Proveedores</h1>
+          <p className="text-sm text-muted-foreground">
+            Contactos, correos de presupuesto/pedido y marcas del laboratorio.
+          </p>
+        </div>
         <Dialog open={isAddVendorDialogOpen} onOpenChange={setIsAddVendorDialogOpen}>
           <DialogTrigger asChild>
-            <Button className={can("vendors.manage") ? undefined : "hidden"}>
-              <PlusCircle className="mr-2 h-4 w-4" /> Añadir Nuevo Proveedor
+            <Button className={cn("shrink-0", !puedeGestionar && "hidden")}>
+              <PlusCircle className="mr-2 h-4 w-4" /> Añadir proveedor
             </Button>
           </DialogTrigger>
-          <DialogContent className={cn(mobileDialogClass, "sm:max-w-[425px]")}>
+          <DialogContent className={cn(mobileDialogClass, "sm:max-w-[480px]")}>
             <DialogHeader className="shrink-0">
-              <DialogTitle>Añadir Nuevo Proveedor</DialogTitle>
+              <DialogTitle>Añadir proveedor</DialogTitle>
             </DialogHeader>
             <div className="min-h-0 flex-1">
               <VendorForm
@@ -111,27 +143,58 @@ const Vendors = () => {
           </DialogContent>
         </Dialog>
       </div>
-      <p className="text-lg text-muted-foreground mb-8">
-        Directorio de proveedores del laboratorio, con sus contactos y marcas.
-      </p>
+
+      <div className="sticky top-14 z-30 space-y-2 rounded-xl border bg-card/95 p-3 shadow-sm backdrop-blur">
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            placeholder="Buscar por nombre, marca, correo, teléfono o contacto…"
+            className="h-11 pl-9 pr-10"
+            aria-label="Buscar proveedores"
+          />
+          {busqueda ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2"
+              onClick={() => setBusqueda("")}
+              aria-label="Limpiar búsqueda"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          ) : null}
+        </div>
+        <p className="px-1 text-xs text-muted-foreground">
+          {busqueda.trim()
+            ? `${mostrando} de ${total} proveedor${total === 1 ? "" : "es"}`
+            : `${total} proveedor${total === 1 ? "" : "es"}`}
+        </p>
+      </div>
+
       <VendorTable
-        vendors={vendors || []}
+        vendors={proveedoresFiltrados}
         onEdit={openEditDialog}
         onDelete={handleDeleteVendor}
+        canManage={puedeGestionar}
+        emptyMessage={
+          busqueda.trim()
+            ? "Ningún proveedor coincide con la búsqueda."
+            : "Todavía no hay proveedores. Añade el primero."
+        }
       />
 
-      {/* Edit Vendor Dialog */}
       <Dialog open={isEditVendorDialogOpen} onOpenChange={setIsEditVendorDialogOpen}>
-        <DialogContent className={cn(mobileDialogClass, "sm:max-w-[425px]")}>
+        <DialogContent className={cn(mobileDialogClass, "sm:max-w-[480px]")}>
           <DialogHeader className="shrink-0">
-            <DialogTitle>Editar Proveedor</DialogTitle>
+            <DialogTitle>Editar proveedor</DialogTitle>
           </DialogHeader>
           {editingVendorInitialData && (
             <div className="min-h-0 flex-1">
               <VendorForm
-                // Pasamos solo los datos del formulario (sin ID)
                 initialData={editingVendorInitialData}
-                // Usamos el ID almacenado en el estado para la mutación
                 onSubmit={(data) => handleEditVendor(editingVendorInitialData.id, data)}
                 onCancel={() => setIsEditVendorDialogOpen(false)}
                 isSubmitting={updateVendorMutation.isPending}
