@@ -52,8 +52,24 @@ const attachmentSchema = z.object({
   url: z.string(),
 });
 
+/** Uno o varios correos separados por coma o punto y coma. */
+const emailsListSchema = z
+  .string()
+  .min(1, { message: "Indica al menos un destinatario." })
+  .refine(
+    (value) => {
+      const parts = value
+        .split(/[,;]+/)
+        .map((p) => p.trim())
+        .filter(Boolean);
+      if (parts.length === 0) return false;
+      return parts.every((p) => z.string().email().safeParse(p).success);
+    },
+    { message: "Cada destinatario debe ser un correo válido (separa con comas)." }
+  );
+
 const emailFormSchema = z.object({
-  to: z.string().email({ message: "Debe ser una dirección de correo válida." }),
+  to: emailsListSchema,
   subject: z.string().min(1, { message: "El asunto es obligatorio." }),
   body: z.string().min(1, { message: "El cuerpo del correo no puede estar vacío." }),
   fromName: z.string().optional(),
@@ -159,8 +175,18 @@ const EmailDialog: React.FC<EmailDialogProps> = ({
                 <FormItem>
                   <FormLabel>Para</FormLabel>
                   <FormControl>
-                    <Input type="email" {...field} disabled={isSending} />
+                    <Input
+                      type="text"
+                      inputMode="email"
+                      placeholder="proveedor@ejemplo.es, otro@ejemplo.es"
+                      {...field}
+                      disabled={isSending}
+                    />
                   </FormControl>
+                  <p className="text-xs text-muted-foreground">
+                    Puedes poner varios correos separados por coma (p. ej. varios
+                    contactos del proveedor para pedir presupuesto).
+                  </p>
                   <FormMessage />
                 </FormItem>
               )}

@@ -7,14 +7,12 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-// ¡IMPORTANTE! Tu clave de API de Gemini se obtiene de los secretos de Supabase
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
 if (!GEMINI_API_KEY) {
   console.error("GEMINI_API_KEY is not set.");
 }
-const ai = new GoogleGenAI({
-  apiKey: GEMINI_API_KEY
-});
+
+const MODELOS = ["gemini-2.5-flash", "gemini-2.0-flash"];
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -22,22 +20,27 @@ serve(async (req) => {
   }
 
   try {
-    // 1. Verificar la sesión del usuario (opcional pero recomendado para funciones de pago)
-    // Aunque no se usa el cliente de auth, es buena práctica verificar la autorización si es necesario.
-    
-    // 2. Extraer 'brand' y 'catalogNumber' del cuerpo de la solicitud
+    if (!GEMINI_API_KEY) {
+      return new Response(JSON.stringify({
+        error: "Falta GEMINI_API_KEY en los secretos de Supabase. Un administrador debe configurarla."
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
+
+    const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
     const { brand, catalogNumber } = await req.json();
-    
+
     if (!brand || !catalogNumber) {
       return new Response(JSON.stringify({
-        error: "Brand and catalogNumber are required"
+        error: "Marca y número de catálogo son obligatorios."
       }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }
-    
-    // 3. Lógica de Gemini
+
     const prompt = `
       Please find the product details for a product from the brand "${brand}" with the catalog number "${catalogNumber}".
       Use the provided tools to search the web for the most accurate information.
@@ -55,27 +58,39 @@ serve(async (req) => {
       - brand: The brand of the product.
       Do not include any other text or explanation outside of the JSON object.
     `;
-    
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt,
-      config: {
-        tools: [
-          {
-            googleSearch: {}
-          }
-        ]
+
+    let lastError: unknown = null;
+    let responseText = "";
+
+    for (const model of MODELOS) {
+      try {
+        const response = await ai.models.generateContent({
+          model,
+          contents: prompt,
+          config: {
+            tools: [{ googleSearch: {} }],
+          },
+        });
+        responseText = response.text ?? "";
+        if (responseText.trim()) break;
+      } catch (err) {
+        lastError = err;
+        console.error(`[fetch-product-details] Modelo ${model} falló:`, err);
       }
-    });
-    
-    const responseText = response.text;
+    }
+
+    if (!responseText.trim()) {
+      const msg =
+        lastError instanceof Error
+          ? lastError.message
+          : "Gemini no devolvió respuesta.";
+      throw new Error(msg);
+    }
+
     const jsonMatch = responseText.match(/```json\s*([\s\S]*?)\s*```/);
     const jsonString = jsonMatch ? jsonMatch[1].trim() : responseText.trim();
-    
-    // Intentar parsear el JSON y normalizar los tipos
     const details = JSON.parse(jsonString);
-    
-    // Normalización de tipos para el cliente
+
     const normalizedDetails = {
         product_name: details.product_name || 'Producto No Encontrado',
         catalog_number: details.catalog_number || catalogNumber,
@@ -92,7 +107,7 @@ serve(async (req) => {
   } catch (error: any) {
     console.error("Edge Function Error:", error);
     return new Response(JSON.stringify({
-      error: error.message || 'An unexpected error occurred in the Edge Function.'
+      error: error.message || 'No se pudo enriquecer el producto con IA.'
     }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" }

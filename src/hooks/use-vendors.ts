@@ -8,6 +8,8 @@ export interface VendorFormValues {
   name: string;
   contact_person: string | null; // Corrected to snake_case
   email: string | null;
+  email_presupuesto: string | null;
+  email_pedido: string | null;
   phone: string | null;
   notes: string | null;
   brands: string | null; // CHANGED: Now accepts string | null from the form
@@ -42,7 +44,9 @@ export const useAddVendor = () => {
         .insert([{
           name: vendor.name,
           contact_person: vendor.contact_person, // Corrected casing
-          email: vendor.email,
+          email: vendor.email_presupuesto || vendor.email_pedido || vendor.email,
+          email_presupuesto: vendor.email_presupuesto,
+          email_pedido: vendor.email_pedido,
           phone: vendor.phone,
           notes: vendor.notes,
           brands: parseBrandsString(vendor.brands), // Conversion here
@@ -72,7 +76,9 @@ export const useUpdateVendor = () => {
         .update({
           name: data.name,
           contact_person: data.contact_person, // Corrected casing
-          email: data.email,
+          email: data.email_presupuesto || data.email_pedido || data.email,
+          email_presupuesto: data.email_presupuesto,
+          email_pedido: data.email_pedido,
           phone: data.phone,
           notes: data.notes,
           brands: parseBrandsString(data.brands), // Conversion here

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -21,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Loader2 } from "lucide-react";
 import { Project, Profile } from "@/data/types";
 import { getFullName } from "@/hooks/use-profiles";
@@ -31,6 +33,9 @@ const projectFormSchema = z.object({
   entidad: z.string().min(1, { message: "La entidad es obligatoria." }),
   entidad_cif: z.string().min(1, { message: "El CIF de la entidad es obligatorio." }),
   ip_profile_id: z.string().optional().nullable(),
+  fecha_inicio: z.string().optional().nullable(),
+  fecha_fin: z.string().optional().nullable(),
+  activo: z.boolean(),
 });
 
 export type ProjectFormValues = z.infer<typeof projectFormSchema> & {
@@ -61,6 +66,9 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
           entidad: initialData.entidad ?? "",
           entidad_cif: initialData.entidad_cif ?? "",
           ip_profile_id: initialData.ip_profile_id,
+          fecha_inicio: initialData.fecha_inicio ?? "",
+          fecha_fin: initialData.fecha_fin ?? "",
+          activo: initialData.activo !== false,
         }
       : {
           name: "",
@@ -68,6 +76,9 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
           entidad: "",
           entidad_cif: "",
           ip_profile_id: null,
+          fecha_inicio: "",
+          fecha_fin: "",
+          activo: true,
         },
   });
 
@@ -78,6 +89,9 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
       ...data,
       entidad,
       entidad_cif: data.entidad_cif.trim(),
+      fecha_inicio: data.fecha_inicio?.trim() || null,
+      fecha_fin: data.fecha_fin?.trim() || null,
+      activo: data.activo,
       // Mantener compatibilidad con selectores que muestran project.name
       name: nameTrimmed || entidad,
       ip_profile_id:
@@ -201,6 +215,65 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
                 Se muestra en selectores junto al código del proyecto.
               </p>
               <FormMessage />
+            </FormItem>
+          )}
+        />
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="fecha_inicio"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Fecha inicio (opcional)</FormLabel>
+                <FormControl>
+                  <Input
+                    type="date"
+                    {...field}
+                    value={field.value ?? ""}
+                    disabled={isSubmitting}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="fecha_fin"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Fecha fin (opcional)</FormLabel>
+                <FormControl>
+                  <Input
+                    type="date"
+                    {...field}
+                    value={field.value ?? ""}
+                    disabled={isSubmitting}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+        <FormField
+          control={form.control}
+          name="activo"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+              <div className="space-y-0.5">
+                <FormLabel>Proyecto activo</FormLabel>
+                <FormDescription>
+                  Si está desactivado, no aparece al crear pedidos nuevos.
+                </FormDescription>
+              </div>
+              <FormControl>
+                <Switch
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                  disabled={isSubmitting}
+                />
+              </FormControl>
             </FormItem>
           )}
         />

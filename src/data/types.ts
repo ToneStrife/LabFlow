@@ -48,7 +48,12 @@ export interface Vendor {
   created_at: string;
   name: string;
   contact_person: string | null;
+  /** @deprecated Preferir email_presupuesto / email_pedido */
   email: string | null;
+  /** Correo para solicitudes de presupuesto */
+  email_presupuesto: string | null;
+  /** Correo para pedidos / confirmación al proveedor */
+  email_pedido: string | null;
   phone: string | null;
   notes: string | null;
   brands: string[] | null;
@@ -75,6 +80,9 @@ export interface Project {
   entidad_cif: string | null;
   /** Perfil del investigador responsable (quien aprueba pedidos del proyecto) */
   ip_profile_id: string | null;
+  fecha_inicio: string | null;
+  fecha_fin: string | null;
+  activo: boolean;
 }
 
 export interface EmailTemplate {

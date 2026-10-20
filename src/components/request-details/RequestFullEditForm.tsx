@@ -20,6 +20,7 @@ import { dialogBodyScrollClass, dialogFooterMobileClass } from "@/lib/layout";
 import { SupabaseRequest, Profile } from "@/data/types";
 import { useAccountManagers } from "@/hooks/use-account-managers";
 import { useProjects } from "@/hooks/use-projects";
+import { proyectoVigente } from "@/lib/projects";
 import { useVendors } from "@/hooks/use-vendors";
 import { useShippingAddresses, useBillingAddresses } from "@/hooks/use-addresses";
 import { getFullName } from "@/hooks/use-profiles";
@@ -61,6 +62,12 @@ const RequestFullEditForm: React.FC<RequestFullEditFormProps> = ({
   const { data: shippingAddresses, isLoading: isLoadingShippingAddresses } = useShippingAddresses();
   const { data: billingAddresses, isLoading: isLoadingBillingAddresses } = useBillingAddresses();
   const requesterProfile = profiles.find((p) => p.id === request.requester_id);
+  const proyectosSeleccionables = React.useMemo(() => {
+    const asignados = new Set(request.project_codes ?? []);
+    return (projects ?? []).filter(
+      (p) => proyectoVigente(p) || asignados.has(p.id)
+    );
+  }, [projects, request.project_codes]);
 
   const form = useForm<FullEditFormValues>({
     resolver: zodResolver(fullEditSchema),
@@ -238,7 +245,7 @@ const RequestFullEditForm: React.FC<RequestFullEditFormProps> = ({
                         <CommandInput placeholder="Buscar proyectos..." />
                         <CommandEmpty>No se encontró ningún proyecto.</CommandEmpty>
                         <CommandGroup>
-                          {projects?.map((project) => (
+                          {proyectosSeleccionables.map((project) => (
                             <CommandItem
                               value={`${project.name} ${project.code}`}
                               key={project.id}

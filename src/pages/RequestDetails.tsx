@@ -96,7 +96,14 @@ const RequestDetails: React.FC = () => {
   
   const [newStatus, setNewStatus] = React.useState<RequestStatusType>(request?.status || "Pending");
 
-  const getVendorEmail = (vendorId: string) => vendors?.find(v => v.id === vendorId)?.email || "";
+  const getVendorQuoteEmail = (vendorId: string) => {
+    const vendor = vendors?.find((v) => v.id === vendorId);
+    return (vendor?.email_presupuesto || vendor?.email || "").trim();
+  };
+  const getVendorOrderEmail = (vendorId: string) => {
+    const vendor = vendors?.find((v) => v.id === vendorId);
+    return (vendor?.email_pedido || vendor?.email || "").trim();
+  };
   
   const getAccountManagerEmail = (managerId: string | null) => {
     if (!managerId) return "";
@@ -221,9 +228,11 @@ const RequestDetails: React.FC = () => {
 
     const resolvedPoNumber = returnedPoNumber || request.po_number || null;
     const savedPoFile = Boolean(file || filePath || request.po_url);
+    // Al subir la orden de compra (PO/CPM), pasar a Pedido desde PO solicitado
+    // o desde presupuesto solicitado si ya hay PO.
     if (
       fileTypeToUpload === "po" &&
-      request.status === "PO Requested" &&
+      (request.status === "PO Requested" || request.status === "Quote Requested") &&
       (resolvedPoNumber || savedPoFile)
     ) {
       await updateStatusMutation.mutateAsync({
@@ -271,7 +280,7 @@ const RequestDetails: React.FC = () => {
     }
 
     setEmailInitialData({
-      to: getVendorEmail(request.vendor_id),
+      to: getVendorOrderEmail(request.vendor_id),
       subject: processTextTemplate(orderConfirmationTemplate.subject_template, context as any),
       body: processEmailTemplate(orderConfirmationTemplate.body_template, context as any),
       attachments: attachmentsForDialog,
@@ -371,7 +380,7 @@ const RequestDetails: React.FC = () => {
       // diálogo o algo falla antes, la solicitud sigue pendiente.
       setPendingStatusOnEmailSend({ requestId: request.id, status: "Quote Requested" });
       setEmailInitialData({
-        ...camposCorreoConNiceto(especial, getVendorEmail(request.vendor_id)),
+        ...camposCorreoConNiceto(especial, getVendorQuoteEmail(request.vendor_id)),
         subject,
         body,
       });
@@ -541,7 +550,7 @@ const RequestDetails: React.FC = () => {
       </Dialog>
 
       <EmailDialog isOpen={isEmailDialogOpen} onOpenChange={handleEmailDialogOpenChange} initialData={emailInitialData} onSend={handleSendEmail} isSending={sendEmailMutation.isPending} />
-      <FileUploadDialog isOpen={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen} onUpload={handleFileUpload} isUploading={updateFileMutation.isPending} fileType={fileTypeToUpload} markAsOrdered={fileTypeToUpload === "po" && request?.status === "PO Requested"} hasExistingPoFile={Boolean(request?.po_url)} />
+      <FileUploadDialog isOpen={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen} onUpload={handleFileUpload} isUploading={updateFileMutation.isPending} fileType={fileTypeToUpload} markAsOrdered={fileTypeToUpload === "po" && (request?.status === "PO Requested" || request?.status === "Quote Requested")} hasExistingPoFile={Boolean(request?.po_url)} />
       {request && request.items && <InvoiceItemsDialog isOpen={isInvoiceItemsDialogOpen} onOpenChange={setIsInvoiceItemsDialogOpen} requestId={request.id} requestItems={request.items} />}
     </div>
   );

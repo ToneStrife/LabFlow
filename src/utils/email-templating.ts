@@ -151,27 +151,22 @@ const formatItemsListPlainText = (items: SupabaseRequestItem[] | null): string =
 
 const formatAddressHtml = (address: Address | undefined): string => {
   if (!address) return "N/A";
-  const locality = [address.zip_code, address.city].filter(Boolean).join(" ");
+  // Solo nombre, líneas y CP: sin ciudad ni provincia.
   return `
     <p style="margin: 0;"><strong>${address.name}</strong></p>
     <p style="margin: 0;">${address.address_line_1}</p>
     ${address.address_line_2 ? `<p style="margin: 0;">${address.address_line_2}</p>` : ""}
-    ${locality ? `<p style="margin: 0;">${locality}</p>` : ""}
-    ${address.state ? `<p style="margin: 0;">${address.state}</p>` : ""}
-    ${address.country ? `<p style="margin: 0;">${address.country}</p>` : ""}
+    ${address.zip_code ? `<p style="margin: 0;">${address.zip_code}</p>` : ""}
   `;
 };
 
 const formatAddressPlainText = (address: Address | undefined): string => {
   if (!address) return "N/A";
-  const locality = [address.zip_code, address.city].filter(Boolean).join(" ");
   const lines = [
     address.name,
     address.address_line_1,
     address.address_line_2,
-    locality,
-    address.state,
-    address.country,
+    address.zip_code,
   ].filter((line) => line && line.trim() !== "");
   return lines.join("\n");
 };

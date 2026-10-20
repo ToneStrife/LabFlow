@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -40,6 +41,7 @@ import QuoteParsePreviewDialog from "./QuoteParsePreviewDialog";
 import type { ParsedQuoteItem } from "@/data/quote-parse";
 import { useSedeActiva } from "@/components/SedeContextProvider";
 import { getDefaultShippingAddressId, formatShippingAddressLabel } from "@/lib/sedes";
+import { proyectoVigente } from "@/lib/projects";
 // -------------------- Schemas --------------------
 const itemSchema = z.object({
   productName: z.string().min(1, { message: "El nombre del producto es obligatorio." }),
@@ -222,11 +224,16 @@ const SeccionFormulario: React.FC<{
 );
 
 const RequestForm: React.FC = () => {
+  const navigate = useNavigate();
   const { session, profile } = useSession();
   const { sedeActiva } = useSedeActiva();
   const { data: vendors, isLoading: isLoadingVendors } = useVendors();
   const { data: accountManagers, isLoading: isLoadingAccountManagers } = useAccountManagers();
   const { data: projects, isLoading: isLoadingProjects } = useProjects();
+  const proyectosSeleccionables = React.useMemo(
+    () => (projects ?? []).filter(proyectoVigente),
+    [projects]
+  );
   const { data: shippingAddresses, isLoading: isLoadingShippingAddresses } = useShippingAddresses();
   const { data: billingAddresses, isLoading: isLoadingBillingAddresses } = useBillingAddresses();
   const addRequestMutation = useAddRequest();
@@ -409,22 +416,10 @@ const RequestForm: React.FC = () => {
       }
     }
 
-    // 3. Limpiar la persistencia del formulario después del envío exitoso
+    // 3. Limpiar y salir a la ficha de la solicitud creada.
     clearPersistence();
     clearQuoteFilePersistence();
-
-    // Restablecer el formulario, manteniendo los valores predeterminados de dirección si existen
-    form.reset({
-      vendorId: "",
-      requesterId: session.user.id,
-      accountManagerId: "unassigned",
-      shippingAddressId: getDefaultShippingAddressId(shippingAddresses, sedeActiva),
-      billingAddressId: billingAddresses?.[0]?.id || "",
-      items: [defaultItem],
-      quoteFile: undefined,
-      projectCodes: [],
-      notes: "",
-    });
+    navigate(`/requests/${newRequest.id}`);
   };
   
   const mapParsedToFormItems = (items: ParsedQuoteItem[]): RequestFormValues["items"] =>
@@ -642,7 +637,7 @@ const RequestForm: React.FC = () => {
                       <CommandInput placeholder="Buscar proyectos..." />
                       <CommandEmpty>No se encontró ningún proyecto.</CommandEmpty>
                       <CommandGroup>
-                        {projects?.map((project) => (
+                        {proyectosSeleccionables.map((project) => (
                           <CommandItem value={project.name} key={project.id} onSelect={() => {
                             const currentValues = field.value || [];
                             if (currentValues.includes(project.id)) {

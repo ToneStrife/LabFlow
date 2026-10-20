@@ -24,10 +24,11 @@ const addressFormSchema = z.object({
   name: z.string().min(1, { message: "El nombre de la dirección es obligatorio." }),
   address_line_1: z.string().min(1, { message: "La Línea de Dirección 1 es obligatoria." }),
   address_line_2: z.string().optional().nullable(),
-  city: z.string().min(1, { message: "La Ciudad es obligatoria." }),
-  state: z.string().min(1, { message: "El Estado/Provincia es obligatorio." }),
+  // Ciudad y provincia opcionales: en correos basta con la dirección y el CP.
+  city: z.string().optional().nullable(),
+  state: z.string().optional().nullable(),
   zip_code: z.string().min(1, { message: "El Código Postal es obligatorio." }),
-  country: z.string().min(1, { message: "El País es obligatorio." }),
+  country: z.string().optional().nullable(),
   cif: z.string().optional().nullable(),
   sede_id: z.string().optional().nullable(),
 });
@@ -69,7 +70,7 @@ const AddressForm: React.FC<AddressFormProps> = ({
       city: "",
       state: "",
       zip_code: "",
-      country: "",
+      country: "España",
       cif: null,
       sede_id: null,
     },
@@ -78,6 +79,9 @@ const AddressForm: React.FC<AddressFormProps> = ({
   const handleSubmit = (data: AddressFormValues) => {
     onSubmit({
       ...data,
+      city: data.city?.trim() || "",
+      state: data.state?.trim() || "",
+      country: data.country?.trim() || "España",
       sede_id: showSede
         ? data.sede_id === TODAS_LAS_SEDES || !data.sede_id
           ? null
@@ -167,54 +171,75 @@ const AddressForm: React.FC<AddressFormProps> = ({
             </FormItem>
           )}
         />
-        <div className="grid grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="city"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Ciudad</FormLabel>
-                <FormControl><Input {...field} disabled={isSubmitting} /></FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="state"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Estado/Provincia</FormLabel>
-                <FormControl><Input {...field} disabled={isSubmitting} /></FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="zip_code"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Código Postal</FormLabel>
-                <FormControl><Input {...field} disabled={isSubmitting} /></FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="country"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>País</FormLabel>
-                <FormControl><Input {...field} disabled={isSubmitting} /></FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
+        <FormField
+          control={form.control}
+          name="zip_code"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Código Postal</FormLabel>
+              <FormControl><Input {...field} disabled={isSubmitting} /></FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <details className="rounded-lg border px-3 py-2">
+          <summary className="cursor-pointer text-sm font-medium">
+            Ciudad, provincia y país (opcional)
+          </summary>
+          <div className="mt-3 grid grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="city"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Ciudad</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      value={field.value ?? ""}
+                      disabled={isSubmitting}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="state"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Provincia</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      value={field.value ?? ""}
+                      disabled={isSubmitting}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="country"
+              render={({ field }) => (
+                <FormItem className="col-span-2">
+                  <FormLabel>País</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      value={field.value ?? ""}
+                      disabled={isSubmitting}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        </details>
         <div className="flex justify-end space-x-2 pt-4">
           {onCancel && (
             <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>

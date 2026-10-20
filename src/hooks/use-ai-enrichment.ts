@@ -17,6 +17,24 @@ interface EnrichedProductDetails {
   brand: string;
 }
 
+async function mensajeErrorFuncion(error: unknown, data: unknown): Promise<string> {
+  if (data && typeof data === "object" && "error" in data) {
+    const msg = (data as { error?: unknown }).error;
+    if (typeof msg === "string" && msg.trim()) return msg;
+  }
+  const ctx = (error as { context?: Response })?.context;
+  if (ctx && typeof ctx.json === "function") {
+    try {
+      const body = await ctx.json();
+      if (body?.error && typeof body.error === "string") return body.error;
+    } catch {
+      /* ignore */
+    }
+  }
+  if (error instanceof Error && error.message) return error.message;
+  return "Error desconocido al enriquecer el producto.";
+}
+
 // Hook para enriquecer detalles de productos usando la función Edge de Gemini
 export const useEnrichProductDetails = () => {
   return useMutation<EnrichedProductDetails, Error, ProductQuery>({
@@ -27,17 +45,20 @@ export const useEnrichProductDetails = () => {
       });
 
       if (error) {
-        console.error("Error invoking fetch-product-details:", error);
-        throw new Error(error.message);
+        console.error("Error invoking fetch-product-details:", error, data);
+        throw new Error(await mensajeErrorFuncion(error, data));
       }
-      
-      // La función Edge devuelve un objeto JSON con los detalles
+
+      if (data && typeof data === "object" && "error" in data && (data as { error?: string }).error) {
+        throw new Error(String((data as { error: string }).error));
+      }
+
       const result = data as EnrichedProductDetails;
-      
-      if (result.product_name === 'Producto No Encontrado') {
+
+      if (!result || result.product_name === 'Producto No Encontrado') {
           throw new Error(`Producto no encontrado para la marca ${brand} y catálogo ${catalogNumber}.`);
       }
-      
+
       return result;
     },
     onSuccess: () => {
