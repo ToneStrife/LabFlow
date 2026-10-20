@@ -6,8 +6,6 @@ import { useSession } from "@/components/SessionContextProvider";
 import { uploadRequestFile } from "@/utils/upload-request-file";
 import { invalidateRequestEvents } from "@/lib/activity";
 
-// --- Fetch Hooks ---
-
 export const useInvoices = (requestId: string) => {
   return useQuery<Invoice[], Error>({
     queryKey: ['invoices', requestId],
@@ -62,8 +60,6 @@ export const useAggregatedInvoicedItems = (requestId: string) => {
     enabled: !!requestId,
   });
 };
-
-// --- Mutation Hooks ---
 
 interface InvoiceItemsData {
   requestId: string;

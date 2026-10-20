@@ -1,5 +1,3 @@
-"use client";
-
 import React from "react";
 import {
   Table,
@@ -11,7 +9,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Edit, Trash2 } from "lucide-react";
-import { AccountManager } from "@/data/types"; // Importar el tipo AccountManager
+import { AccountManager } from "@/data/types";
 
 interface AccountManagerTableProps {
   managers: AccountManager[]; // Cambiado de Profile[] a AccountManager[]

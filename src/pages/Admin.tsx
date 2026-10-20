@@ -1,9 +1,7 @@
-"use client";
-
 import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Loader2, MapPin, DollarSign, Users, Briefcase, Shield, Mail, ScrollText, Bell, KeyRound, Server } from "lucide-react"; // Añadir iconos para pestañas
+import { PlusCircle, Loader2, MapPin, DollarSign, Users, Briefcase, Shield, Mail, ScrollText, Bell, KeyRound, Server } from "lucide-react";
 import PermissionsMatrix from "@/components/PermissionsMatrix";
 import SmtpAccountsSection from "@/components/SmtpAccountsSection";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -11,28 +9,24 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { pageContainerClass, mobileDialogClass } from "@/lib/layout";
 
-// Account Managers imports
 import AccountManagerTable from "@/components/AccountManagerTable";
 import AccountManagerForm, { AccountManagerFormValues } from "@/components/AccountManagerForm";
 import { useAccountManagers, useAddAccountManager, useUpdateAccountManager, useDeleteAccountManager } from "@/hooks/use-account-managers";
 import { AccountManager } from "@/data/types";
 
-// Projects imports
 import ProjectTable from "@/components/ProjectTable";
 import ProjectForm, { ProjectFormValues } from "@/components/ProjectForm";
 import { useProjects, useAddProject, useUpdateProject, useDeleteProject } from "@/hooks/use-projects";
 import { Project } from "@/data/types";
 
-// Users imports
 import UserTable from "@/components/UserTable";
 import InviteUserDialog, { InviteUserFormValues } from "@/components/InviteUserDialog";
 import { useAllProfiles, useInviteUser, useUpdateProfile, useDeleteProfile, useResetUserPassword } from "@/hooks/use-profiles";
 import { useSession } from "@/components/SessionContextProvider";
-import { Profile } from "@/data/types"; // Corrected import
+import { Profile } from "@/data/types";
 import { useCan } from "@/hooks/use-permissions";
 import { PESTANAS_ADMIN, puedeAbrirPestana } from "@/lib/admin-access";
 
-// Email Templates imports
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -46,7 +40,6 @@ import { useEmailTemplates, useUpdateEmailTemplate } from "@/hooks/use-email-tem
 import { EmailTemplate, Address } from "@/data/types";
 import { Badge } from "@/components/ui/badge";
 
-// Address imports
 import AddressTable from "@/components/AddressTable";
 import AddressForm, { AddressFormValues } from "@/components/AddressForm";
 import { 
@@ -60,15 +53,11 @@ import {
   useDeleteBillingAddress,
 } from "@/hooks/use-addresses";
 
-// Email Logs import
 import EmailLogs from "@/components/EmailLogs";
 
-// Notifications import
 import { useSendTestNotification } from "@/hooks/use-notifications";
-import NotificationSenderForm from "@/components/NotificationSenderForm"; // Importar el nuevo componente
+import NotificationSenderForm from "@/components/NotificationSenderForm";
 
-
-// --- Email Template Form Schema and Placeholders ---
 const emailTemplateFormSchema = z.object({
   template_name: z.string().min(1, { message: "El nombre de la plantilla es obligatorio." }),
   subject_template: z.string().min(1, { message: "El asunto de la plantilla es obligatorio." }),
@@ -88,16 +77,13 @@ const availablePlaceholders = [
   "{{shipping_address}}", "{{billing_address}}",
 ];
 
-// Mapeo de nombres de plantillas para la UI
 const templateNameMap: Record<string, string> = {
   'Quote Request': 'Solicitud de presupuesto',
   'PO Request': 'Solicitud de PO (Cómprame)',
   'Order Confirmation': 'Confirmación de Pedido',
 };
 
-// --- Main Admin Page Component ---
 const AdminPage = () => {
-  // --- Hooks for Account Managers ---
   const { data: accountManagers, isLoading: isLoadingManagers, error: managersError } = useAccountManagers();
   const addAccountManagerMutation = useAddAccountManager();
   const updateAccountManagerMutation = useUpdateAccountManager();
@@ -106,7 +92,6 @@ const AdminPage = () => {
   const [isEditManagerDialogOpen, setIsEditManagerDialogOpen] = React.useState(false);
   const [editingManager, setEditingManager] = React.useState<AccountManager | undefined>(undefined);
 
-  // --- Hooks for Projects ---
   const { data: projects, isLoading: isLoadingProjects, error: projectsError } = useProjects();
   const addProjectMutation = useAddProject();
   const updateProjectMutation = useUpdateProject();
@@ -115,7 +100,6 @@ const AdminPage = () => {
   const [isEditProjectDialogOpen, setIsEditProjectDialogOpen] = React.useState(false);
   const [editingProject, setEditingProject] = React.useState<Project | undefined>(undefined);
 
-  // --- Hooks for Users ---
   const { profile: currentUserProfile, loading: sessionLoading } = useSession();
   const { data: allProfiles, isLoading: isLoadingUsers, error: usersError } = useAllProfiles();
   const inviteUserMutation = useInviteUser();
@@ -124,7 +108,6 @@ const AdminPage = () => {
   const resetUserPasswordMutation = useResetUserPassword();
   const [isInviteUserDialogOpen, setIsInviteUserDialogOpen] = React.useState(false);
 
-  // --- Hooks for Email Templates ---
   const { data: templates, isLoading: isLoadingTemplates, error: templatesError } = useEmailTemplates();
   const updateTemplateMutation = useUpdateEmailTemplate();
   const [selectedTemplateId, setSelectedTemplateId] = React.useState<string | undefined>(undefined);
@@ -134,7 +117,6 @@ const AdminPage = () => {
     defaultValues: { template_name: "", subject_template: "", body_template: "" },
   });
 
-  // --- Hooks for Addresses ---
   const { data: shippingAddresses, isLoading: isLoadingShipping } = useShippingAddresses();
   const { data: billingAddresses, isLoading: isLoadingBilling } = useBillingAddresses();
   const addShippingMutation = useAddShippingAddress();
@@ -149,7 +131,6 @@ const AdminPage = () => {
   const [editingAddress, setEditingAddress] = React.useState<Address | undefined>(undefined);
   const [currentAddressType, setCurrentAddressType] = React.useState<'shipping' | 'billing'>('shipping');
   
-  // --- Hooks for Notifications ---
   const sendTestNotificationMutation = useSendTestNotification();
   const { can, cargandoPermisos } = useCan();
   const pestanasVisibles = PESTANAS_ADMIN.filter((pestana) => puedeAbrirPestana(can, pestana));
@@ -159,8 +140,6 @@ const AdminPage = () => {
     : pestanasVisibles[0]?.value ?? "users";
   const puedeVer = (value: string) => pestanasVisibles.some((pestana) => pestana.value === value);
 
-
-  // --- Handlers for Account Managers ---
   const handleAddManager = async (data: AccountManagerFormValues) => {
     await addAccountManagerMutation.mutateAsync(data);
     setIsAddManagerDialogOpen(false);
@@ -175,7 +154,6 @@ const AdminPage = () => {
     setIsEditManagerDialogOpen(true);
   };
 
-  // --- Handlers for Projects ---
   const handleAddProject = async (data: ProjectFormValues) => {
     await addProjectMutation.mutateAsync(data);
     setIsAddProjectDialogOpen(false);
@@ -190,7 +168,6 @@ const AdminPage = () => {
     setIsEditProjectDialogOpen(true);
   };
 
-  // --- Handlers for Users ---
   const handleInviteUser = async (data: InviteUserFormValues) => {
     // Asegurar que los campos opcionales sean null si son undefined o cadena vacía
     const dataToSend = {
@@ -222,7 +199,6 @@ const AdminPage = () => {
     await resetUserPasswordMutation.mutateAsync(userId);
   };
 
-  // --- Handlers for Addresses ---
   const handleAddAddress = async (data: AddressFormValues) => {
     if (currentAddressType === 'shipping') {
       await addShippingMutation.mutateAsync(data);
@@ -261,8 +237,6 @@ const AdminPage = () => {
     setIsEditAddressDialogOpen(true);
   };
 
-
-  // --- Handlers and Effects for Email Templates ---
   React.useEffect(() => {
     if (templates && templates.length > 0 && !selectedTemplateId) {
       setSelectedTemplateId(templates[0].id);
@@ -289,14 +263,10 @@ const AdminPage = () => {
     await updateTemplateMutation.mutateAsync({ id: currentTemplate.id, data });
   };
   
-  // --- Handler for Notifications ---
-  // El botón de prueba se reemplaza por el formulario completo, pero mantenemos el hook de prueba por si acaso.
   const handleSendTestNotification = async () => {
     await sendTestNotificationMutation.mutateAsync();
   };
 
-
-  // --- Loading and Error States ---
   const isLoading = isLoadingManagers || isLoadingProjects || isLoadingUsers || isLoadingTemplates || sessionLoading || isLoadingShipping || isLoadingBilling || cargandoPermisos;
   const error = managersError || projectsError || usersError || templatesError;
 

@@ -1,19 +1,17 @@
-"use client";
-
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { SupabaseRequest, Address, Vendor, Profile, AccountManager, Project } from "@/data/types"; // Corrected imports
-import { useAccountManagers } from "@/hooks/use-account-managers"; // Usar el nuevo hook
-import { useProjects } from "@/hooks/use-projects"; // Usar el nuevo hook
-import { useShippingAddresses, useBillingAddresses } from "@/hooks/use-addresses"; // Importar hooks de direcciones
+import { SupabaseRequest, Address, Vendor, Profile, AccountManager, Project } from "@/data/types";
+import { useAccountManagers } from "@/hooks/use-account-managers";
+import { useProjects } from "@/hooks/use-projects";
+import { useShippingAddresses, useBillingAddresses } from "@/hooks/use-addresses";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Edit, Loader2 } from "lucide-react";
-import { generateSignedUrl } from "@/utils/supabase-storage"; // Importar utilidad
-import { getFullName } from "@/hooks/use-profiles"; // Importar getFullName
-import { toast } from "sonner"; // Importar toast
+import { generateSignedUrl } from "@/utils/supabase-storage";
+import { getFullName } from "@/hooks/use-profiles";
+import { toast } from "sonner";
 import { getRequestStatusLabel, getRequestStatusBadgeClass } from "@/lib/request-status";
 
 interface RequestSummaryCardProps {
@@ -38,8 +36,8 @@ const formatAddress = (address: Address | undefined) => {
 };
 
 const RequestSummaryCard: React.FC<RequestSummaryCardProps> = ({ request, vendor, profiles, onEditDetails, isEditable }) => {
-  const { data: accountManagers } = useAccountManagers(); // Usar el nuevo hook
-  const { data: projects } = useProjects(); // Usar el nuevo hook
+  const { data: accountManagers } = useAccountManagers();
+  const { data: projects } = useProjects();
   const { data: shippingAddresses } = useShippingAddresses();
   const { data: billingAddresses } = useBillingAddresses();
   const [isGeneratingQuoteUrl, setIsGeneratingQuoteUrl] = React.useState(false);

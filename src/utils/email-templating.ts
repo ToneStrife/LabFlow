@@ -105,11 +105,7 @@ const escapeHtml = (value: string | number | null | undefined): string =>
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
 
-/**
- * Lista de artículos compatible con ReactQuill (el editor del diálogo de correo).
- * Quill no registra blots de &lt;table&gt;, así que las tablas se aplastan a
- * «PRODUCTOREFCANT…». Usamos párrafos + separadores que Quill sí conserva.
- */
+/** Lista de artículos en párrafos (fallback cuando no hay {{items_table}}). */
 const formatItemsListHtml = (items: SupabaseRequestItem[] | null): string => {
   if (!items || items.length === 0) {
     return "<p>No hay artículos.</p>";
@@ -300,10 +296,8 @@ export const processEmailTemplate = (
   processedString = processedString.replace(/{{shipping_address}}/g, formatAddressHtml(shippingAddress));
   processedString = processedString.replace(/{{billing_address}}/g, formatAddressHtml(billingAddress));
   processedString = processedString.replace(/{{items_list}}/g, formatItemsListHtml(request.items));
-  // Bloques con diseño. Viven en email-blocks.ts porque el editor del panel de
-  // Admin (ReactQuill) se come las tablas y los estilos del cuerpo al guardar.
-  // Se insertan al final, con un marcador intermedio, para que la conversión de
-  // saltos de línea no los toque ni añada huecos a su alrededor.
+  // Bloques con diseño (email-blocks.ts). Marcador intermedio para que la
+  // conversión de saltos de línea no los toque ni añada huecos alrededor.
   const bloques: string[] = [];
   const reservar = (html: string): string => {
     bloques.push(html);

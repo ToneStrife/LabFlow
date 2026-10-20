@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Upload, Loader2 } from "lucide-react";

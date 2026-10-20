@@ -1,5 +1,3 @@
-"use client";
-
 import React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";

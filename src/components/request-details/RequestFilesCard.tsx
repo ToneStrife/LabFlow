@@ -1,17 +1,15 @@
-"use client";
-
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FileText, Upload, Paperclip, Loader2, Trash2 } from "lucide-react";
-import { SupabaseRequest } from "@/data/types"; // Corrected import
-import { FileType, useUpdateRequestFile } from "@/hooks/use-requests"; // Importar useUpdateRequestFile
-import { generateSignedUrl } from "@/utils/supabase-storage"; // Importar utilidad
+import { SupabaseRequest } from "@/data/types";
+import { FileType, useUpdateRequestFile } from "@/hooks/use-requests";
+import { generateSignedUrl } from "@/utils/supabase-storage";
 import { toast } from "sonner";
 
 interface RequestFilesCardProps {
   request: SupabaseRequest;
-  onUploadClick: (fileType: FileType) => void; // Mantener para quote/po
+  onUploadClick: (fileType: FileType) => void;
   onSimpleFileUpload: (file: File, fileType: FileType) => Promise<void>; // Nuevo prop para subida simple
 }
 

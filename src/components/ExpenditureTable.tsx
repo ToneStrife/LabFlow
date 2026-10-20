@@ -1,11 +1,9 @@
-"use client";
-
 import React from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Edit, Trash2 } from 'lucide-react';
 import { Expenditure, Project } from '@/data/types';
-import { format, isValid } from 'date-fns'; // Importar isValid
+import { format, isValid } from 'date-fns';
 
 interface ExpenditureTableProps {
   expenditures: Expenditure[];

@@ -1,5 +1,3 @@
-"use client";
-
 import React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -34,7 +32,7 @@ import { useSedeActiva } from "@/components/SedeContextProvider";
 import { getDefaultShippingAddressId, formatShippingAddressLabel } from "@/lib/sedes";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import { SupabaseRequest } from "@/data/types"; // Corrected import
+import { SupabaseRequest } from "@/data/types";
 
 const reorderSchema = z.object({
   vendorId: z.string().min(1, { message: "El proveedor es obligatorio." }),

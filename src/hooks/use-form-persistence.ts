@@ -30,7 +30,6 @@ export function useFormPersistence<TFieldValues extends Record<string, any>>(
           }
         });
         
-        console.log(`[FormPersistence] Restored form state for ${storageKey}.`);
       } catch (e) {
         console.error(`[FormPersistence] Failed to parse saved data for ${storageKey}.`, e);
         localStorage.removeItem(storageKey);
@@ -57,7 +56,6 @@ export function useFormPersistence<TFieldValues extends Record<string, any>>(
   // 3. Función para limpiar el estado persistido (llamada después de un envío exitoso)
   const clearPersistence = () => {
     localStorage.removeItem(storageKey);
-    console.log(`[FormPersistence] Cleared persisted state for ${storageKey}.`);
   };
 
   return { clearPersistence };

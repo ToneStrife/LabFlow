@@ -1,5 +1,3 @@
-"use client";
-
 import React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -15,8 +13,8 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2 } from "lucide-react"; // Import Loader2
-import { VendorFormValues } from "@/hooks/use-vendors"; // Import the correct type
+import { Loader2 } from "lucide-react";
+import { VendorFormValues } from "@/hooks/use-vendors";
 
 const optionalEmail = z
   .string()
@@ -27,23 +25,22 @@ const optionalEmail = z
 
 const vendorFormSchema = z.object({
   name: z.string().min(1, { message: "El nombre del proveedor es obligatorio." }),
-  contact_person: z.string().optional().nullable(), // Corrected to snake_case
+  contact_person: z.string().optional().nullable(),
   email: optionalEmail,
   email_presupuesto: optionalEmail,
   email_pedido: optionalEmail,
   phone: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
-  brands: z.string().optional().nullable(), // Permitir null
+  brands: z.string().optional().nullable(),
 });
 
 // This type is now correctly inferred from the schema above
-// export type VendorFormValues = z.infer<typeof vendorFormSchema>; // No longer needed as it's imported
 
 interface VendorFormProps {
   initialData?: VendorFormValues;
   onSubmit: (data: VendorFormValues) => void;
   onCancel?: () => void;
-  isSubmitting: boolean; // Add isSubmitting prop
+  isSubmitting: boolean;
 }
 
 const VendorForm: React.FC<VendorFormProps> = ({ initialData, onSubmit, onCancel, isSubmitting }) => {
@@ -102,7 +99,7 @@ const VendorForm: React.FC<VendorFormProps> = ({ initialData, onSubmit, onCancel
         />
         <FormField
           control={form.control}
-          name="contact_person" // Corrected to snake_case
+          name="contact_person"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Persona de Contacto (Opcional)</FormLabel>

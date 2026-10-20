@@ -1,5 +1,3 @@
-"use client";
-
 import React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -15,7 +13,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Loader2 } from "lucide-react";
-import { AccountManager } from "@/data/types"; // Corrected import to AccountManager
+import { AccountManager } from "@/data/types";
 
 const accountManagerFormSchema = z.object({
   first_name: z.string().min(1, { message: "El nombre es obligatorio." }),

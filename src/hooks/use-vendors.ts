@@ -6,7 +6,7 @@ import { Vendor } from '@/data/types';
 // Updated to use contact_person
 export interface VendorFormValues {
   name: string;
-  contact_person: string | null; // Corrected to snake_case
+  contact_person: string | null;
   email: string | null;
   email_presupuesto: string | null;
   email_pedido: string | null;
@@ -22,7 +22,6 @@ const parseBrandsString = (brandsString: string | null | undefined): string[] | 
   return brandsArray.length > 0 ? brandsArray : null;
 };
 
-// Hook to fetch all vendors
 export const useVendors = () => {
   return useQuery<Vendor[], Error>({
     queryKey: ['vendors'],
@@ -34,7 +33,6 @@ export const useVendors = () => {
   });
 };
 
-// Hook to add a new vendor
 export const useAddVendor = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -43,7 +41,7 @@ export const useAddVendor = () => {
         .from('vendors')
         .insert([{
           name: vendor.name,
-          contact_person: vendor.contact_person, // Corrected casing
+          contact_person: vendor.contact_person,
           email: vendor.email_presupuesto || vendor.email_pedido || vendor.email,
           email_presupuesto: vendor.email_presupuesto,
           email_pedido: vendor.email_pedido,
@@ -66,7 +64,6 @@ export const useAddVendor = () => {
   });
 };
 
-// Hook to update a vendor
 export const useUpdateVendor = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -75,7 +72,7 @@ export const useUpdateVendor = () => {
         .from('vendors')
         .update({
           name: data.name,
-          contact_person: data.contact_person, // Corrected casing
+          contact_person: data.contact_person,
           email: data.email_presupuesto || data.email_pedido || data.email,
           email_presupuesto: data.email_presupuesto,
           email_pedido: data.email_pedido,
@@ -99,7 +96,6 @@ export const useUpdateVendor = () => {
   });
 };
 
-// Hook to delete a vendor
 export const useDeleteVendor = () => {
   const queryClient = useQueryClient();
   return useMutation({

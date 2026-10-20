@@ -8,7 +8,6 @@ import { getRequestStatusLabel } from "@/lib/request-status";
 export interface SupabaseRequestItem extends SupabaseRequestItemType {}
 export interface SupabaseRequest extends SupabaseRequestType {}
 
-// --- Fetch Hook ---
 const fetchRequests = async (): Promise<SupabaseRequest[]> => {
   return apiGetRequests();
 };
@@ -19,8 +18,6 @@ export const useRequests = () => {
     queryFn: fetchRequests,
   });
 };
-
-// --- Mutation Hooks ---
 
 interface AddRequestFormData {
   vendorId: string;
@@ -134,7 +131,6 @@ export const useUpdateFullRequest = () => {
   });
 };
 
-
 // Update Request Metadata (Only Manager, Notes, Projects - kept for consistency if needed later)
 interface UpdateRequestMetadataData {
   id: string;
@@ -220,7 +216,6 @@ export const useDeleteRequest = () => {
   });
 };
 
-// Revert Request Reception (New Hook)
 export const useRevertRequestReception = () => {
   const queryClient = useQueryClient();
   return useMutation<void, Error, string>({
@@ -245,8 +240,6 @@ export const useRevertRequestReception = () => {
   });
 };
 
-
-// Hook for sending emails
 interface SendEmailData {
   to: string;
   subject: string;

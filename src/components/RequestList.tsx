@@ -1,5 +1,3 @@
-"use client";
-
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
@@ -27,7 +25,6 @@ import { useReceiveWizard } from "@/components/ReceiveWizardProvider";
 import { useSedeActiva } from "@/components/SedeContextProvider";
 import { requestMatchesSede } from "@/lib/sedes";
 import { camposCorreoConNiceto, correoSiLoHaceNiceto } from "@/lib/farmacia";
-
 
 // Definir el orden de prioridad de los estados
 // Los números más bajos van ARRIBA (mayor prioridad de acción)
@@ -86,7 +83,6 @@ const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
   
   const [isMergeDialogOpen, setIsMergeDialogOpen] = React.useState(false);
   const [sourceRequestToMerge, setSourceRequestToMerge] = React.useState<SupabaseRequest | null>(null);
-
 
   const getRequesterName = (requesterId: string) => {
     const profile = profiles?.find(p => p.id === requesterId);
@@ -311,7 +307,6 @@ const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
     }
   };
 
-
   const filteredAndSortedRequests = React.useMemo(() => {
     if (!requests) return [];
 
@@ -365,7 +360,6 @@ const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
   }, [requests, searchTerm, filterStatus, vendors, profiles, accountManagers, shippingAddresses, sedeActiva]);
-
 
   if (isLoadingRequests || isLoadingVendors || isLoadingProfiles || isLoadingAccountManagers || isLoadingProjects || isLoadingEmailTemplates || isLoadingShippingAddresses || isLoadingBillingAddresses) {
     return (

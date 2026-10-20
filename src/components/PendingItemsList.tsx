@@ -1,5 +1,3 @@
-"use client";
-
 import React from "react";
 import { usePendingItems } from "@/hooks/use-pending-items";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";

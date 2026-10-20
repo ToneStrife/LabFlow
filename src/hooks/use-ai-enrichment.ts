@@ -35,7 +35,6 @@ async function mensajeErrorFuncion(error: unknown, data: unknown): Promise<strin
   return "Error desconocido al enriquecer el producto.";
 }
 
-// Hook para enriquecer detalles de productos usando la función Edge de Gemini
 export const useEnrichProductDetails = () => {
   return useMutation<EnrichedProductDetails, Error, ProductQuery>({
     mutationFn: async ({ brand, catalogNumber }) => {

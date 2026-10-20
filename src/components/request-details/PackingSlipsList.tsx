@@ -1,5 +1,3 @@
-"use client";
-
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -108,7 +106,6 @@ const SlipItemsDialog: React.FC<{ slipId: string; slipNumber: string; requestId:
         </>
     );
 };
-
 
 const PackingSlipsList: React.FC<PackingSlipsListProps> = ({ requestId, requestNumber }) => {
   const { data: slips, isLoading, error } = usePackingSlips(requestId);

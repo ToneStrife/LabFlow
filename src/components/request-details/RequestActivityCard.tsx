@@ -1,5 +1,3 @@
-"use client";
-
 import React from "react";
 import { History, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

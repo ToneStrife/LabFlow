@@ -3,13 +3,8 @@ import type { TipoBloque } from "@/utils/email-blocks";
 export type { TipoBloque };
 
 /**
- * El diálogo de envío edita el cuerpo con ReactQuill, que no conoce <table> ni
- * estilos en línea: al cargar el HTML los aplasta (la tabla se convierte en
- * "PRODUCTOREFERENCIACANT.") y además reescribe el valor aunque nadie toque nada.
- *
- * Los bloques de email-blocks.ts no pasan por Quill: en el diálogo se muestran
- * como vista previa con los datos reales, y el texto libre se edita aparte.
- * Al enviar se vuelve a montar el HTML completo.
+ * Utilidades del diálogo de envío para localizar bloques HTML (tablas con
+ * data-bloque) dentro del cuerpo editable y volver a ensamblarlos al enviar.
  */
 
 const ETIQUETAS: Record<TipoBloque, string> = {
@@ -126,9 +121,8 @@ export const montarCuerpoDesdeSegmentos = (segmentos: SegmentoCorreo[]): string 
 
 /**
  * Devuelve cada marca a su bloque. Si el usuario borró una marca, ese bloque no
- * se envía. Si hubo bloques, además se ajusta el espaciado: Quill produce <p>
- * sin estilo y párrafos vacíos, y los clientes de correo les ponen un margen
- * grande que abre huecos entre líneas.
+ * se envía. Con bloques presentes se normaliza el espaciado de <p> para que los
+ * clientes de correo no abran huecos grandes entre líneas.
  */
 export const restaurarBloques = (html: string, bloques: BloquesCorreo): string => {
   const tipos = Object.keys(bloques) as TipoBloque[];

@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useState, useEffect } from 'react';
 import { useSession } from '@/components/SessionContextProvider';
 import { Button } from '@/components/ui/button';

@@ -1,5 +1,3 @@
-"use client";
-
 import React from "react";
 import {
   Table,
@@ -18,7 +16,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { getFullName } from "@/hooks/use-profiles";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Link } from "react-router-dom"; // Importar Link
+import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { getRequestStatusLabel, getRequestStatusBadgeClass } from "@/lib/request-status";
 
@@ -96,7 +94,6 @@ const RequestCard: React.FC<{ request: SupabaseRequest; vendor?: Vendor; request
     </Card>
   );
 };
-
 
 const RequestListTable: React.FC<RequestListTableProps> = ({
   requests,

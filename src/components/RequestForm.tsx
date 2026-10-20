@@ -1,5 +1,3 @@
-"use client";
-
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm, useFieldArray } from "react-hook-form";
@@ -42,7 +40,6 @@ import type { ParsedQuoteItem } from "@/data/quote-parse";
 import { useSedeActiva } from "@/components/SedeContextProvider";
 import { getDefaultShippingAddressId, formatShippingAddressLabel } from "@/lib/sedes";
 import { proyectoVigente } from "@/lib/projects";
-// -------------------- Schemas --------------------
 const itemSchema = z.object({
   productName: z.string().min(1, { message: "El nombre del producto es obligatorio." }),
   catalogNumber: z.string().min(1, { message: "El número de catálogo es obligatorio." }),
@@ -74,7 +71,6 @@ const formSchema = z.object({
 
 type RequestFormValues = z.infer<typeof formSchema>;
 
-// -------------------- Item Autofill Controls --------------------
 interface ItemAutofillControlsProps {
   index: number;
   form: ReturnType<typeof useForm<RequestFormValues>>;
@@ -93,7 +89,6 @@ const ItemAutofillControls: React.FC<ItemAutofillControlsProps> = ({ index, form
   const searchTermParts = [brand, catalogNumber, productName].filter(Boolean).map(s => s?.trim()).filter(Boolean);
   const searchTerm = searchTermParts.join(" ");
 
-  // Hook de búsqueda interna (DB)
   const { data: internalResults, isLoading: isSearchingDB } = useInternalFuzzySearch(searchTerm);
   
   // Helper para limpiar valores 'No disponible' a null
@@ -200,7 +195,6 @@ const ItemAutofillControls: React.FC<ItemAutofillControlsProps> = ({ index, form
   );
 };
 
-
 /** Bloque del formulario con cabecera propia. Antes todo flotaba suelto
  *  sobre el lienzo, sin agrupar y sin la estructura de tarjetas del resto. */
 const SeccionFormulario: React.FC<{
@@ -266,7 +260,6 @@ const RequestForm: React.FC = () => {
     },
   });
   
-  // --- PERSISTENCIA DEL FORMULARIO ---
   const fieldsToPersist: (keyof RequestFormValues)[] = [
     "vendorId", "accountManagerId", "shippingAddressId", "billingAddressId", 
     "items", "projectCodes", "notes"
@@ -302,7 +295,6 @@ const RequestForm: React.FC = () => {
       // No mostrar toast, solo restaurar silenciosamente
     }
   }, []);
-  // -----------------------------------
 
   // Establecer valores predeterminados para direcciones y solicitante
   React.useEffect(() => {
@@ -359,8 +351,7 @@ const RequestForm: React.FC = () => {
     }
   }, [billingAddresses, form]);
 
-
-  const { fields, append, remove, replace } = useFieldArray({ // Añadir replace
+  const { fields, append, remove, replace } = useFieldArray({
     control: form.control,
     name: "items",
   });
@@ -372,7 +363,7 @@ const RequestForm: React.FC = () => {
     }
 
     const managerId = data.accountManagerId === 'unassigned' || !data.accountManagerId ? null : data.accountManagerId;
-    const quoteFile = selectedQuoteFile; // Usar el objeto File real
+    const quoteFile = selectedQuoteFile;
     
     // 1. Crear la solicitud (inicialmente en estado Pending)
     const itemsToSubmit: RequestItem[] = data.items.map(item => ({

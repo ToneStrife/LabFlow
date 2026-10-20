@@ -1,5 +1,3 @@
-"use client";
-
 import React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -18,8 +16,8 @@ import { Loader2 } from "lucide-react";
 
 const inviteUserFormSchema = z.object({
   email: z.string().email({ message: "Debe ser una dirección de correo válida." }).min(1, { message: "El email es obligatorio." }),
-  first_name: z.string().optional().nullable(), // Changed to nullable
-  last_name: z.string().optional().nullable(), // Changed to nullable
+  first_name: z.string().optional().nullable(),
+  last_name: z.string().optional().nullable(),
 });
 
 export type InviteUserFormValues = z.infer<typeof inviteUserFormSchema>;
@@ -41,7 +39,6 @@ const InviteUserDialog: React.FC<InviteUserDialogProps> = ({ onSubmit, onCancel,
   });
 
   const handleSubmit = async (data: InviteUserFormValues) => {
-    console.log("Submitting invite user data:", data); // Added console.log
     await onSubmit(data);
     form.reset();
   };

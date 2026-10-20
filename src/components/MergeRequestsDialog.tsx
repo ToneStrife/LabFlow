@@ -1,5 +1,3 @@
-"use client";
-
 import React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -43,7 +41,6 @@ interface MergeRequestsDialogProps {
   mergeableRequests: SupabaseRequest[];
 }
 
-// --- Custom Hook para la lógica de fusión ---
 const useMergeRequests = () => {
   const queryClient = useQueryClient();
   const deleteRequestMutation = useDeleteRequest();
@@ -78,7 +75,6 @@ const useMergeRequests = () => {
     },
   });
 };
-// -------------------------------------------
 
 const MergeRequestsDialog: React.FC<MergeRequestsDialogProps> = ({
   isOpen,

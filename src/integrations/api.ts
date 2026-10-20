@@ -1,44 +1,26 @@
-import { supabase } from "./supabase/client"; // Importar cliente de Supabase
+import { supabase } from "./supabase/client";
 import {
   Profile,
   Vendor,
-  AccountManager, 
-  Project, 
+  AccountManager,
+  Project,
   SupabaseRequest,
   RequestItem,
   RequestStatus,
   InventoryItem,
-  MockEmail,
-  ProductDetails, 
-  EmailTemplate, 
-  Expenditure, 
-  UserNotificationPreferences, 
-  SupabaseRequestItem, 
+  EmailTemplate,
+  Expenditure,
+  UserNotificationPreferences,
+  SupabaseRequestItem,
 } from "@/data/types";
 import { buildAuthReturnUrl } from "@/lib/auth-redirect";
 import { uploadRequestFile } from "@/utils/upload-request-file";
-
-// Mantener las importaciones de mock data para otras tablas hasta que se conviertan
-import {
-  addMockRequest,
-  updateMockRequestStatus as mockUpdateStatus, 
-  updateMockRequestMetadata,
-  deleteMockRequest,
-  getMockInventory,
-  addMockInventoryItem as mockAddInventoryItem, 
-  updateMockInventoryItem,
-  deleteMockInventoryItem,
-  sendMockEmail,
-} from "@/data/crud";
 import { InventoryItemFormData } from "@/hooks/use-inventory"; 
 
-// --- Tipos de datos para la búsqueda ---
 interface FuzzySearchResult {
   inv: InventoryItem[];
   req: SupabaseRequestItem[];
 }
-
-// --- API de Búsqueda de Productos ---
 
 export const apiFuzzySearchInternal = async (searchTerm: string): Promise<FuzzySearchResult> => {
   const [inventoryResult, requestItemsResult] = await Promise.all([
@@ -61,8 +43,6 @@ export const apiFuzzySearchInternal = async (searchTerm: string): Promise<FuzzyS
   };
 };
 
-
-// --- API de Perfiles (Usuarios del sistema) ---
 export const apiGetProfiles = async (): Promise<Profile[]> => {
   const { data, error } = await supabase.from('profiles').select('id, first_name, last_name, email, avatar_url, updated_at, role, default_sede_id, notify_on_status_change, notify_on_new_request');
   if (error) throw new Error(error.message);
@@ -162,8 +142,6 @@ export const apiResetUserPassword = async (userId: string): Promise<void> => {
   });
 };
 
-
-// --- API de Vendedores ---
 export const apiGetVendors = async (): Promise<Vendor[]> => {
   const { data, error } = await supabase.from('vendors').select('*');
   if (error) throw new Error(error.message);
@@ -210,7 +188,6 @@ export const apiDeleteVendor = async (id: string): Promise<void> => {
   if (error) throw new Error(error.message);
 };
 
-// --- API de Account Managers ---
 export const apiGetAccountManagers = async (): Promise<AccountManager[]> => {
   const { data, error } = await supabase.from('account_managers').select('*');
   if (error) throw new Error(error.message);
@@ -234,7 +211,6 @@ export const apiDeleteAccountManager = async (id: string): Promise<void> => {
   if (error) throw new Error(error.message);
 };
 
-// --- API de Proyectos ---
 export const apiGetProjects = async (): Promise<Project[]> => {
   const { data, error } = await supabase.from('projects').select('*');
   if (error) throw new Error(error.message);
@@ -258,7 +234,6 @@ export const apiDeleteProject = async (id: string): Promise<void> => {
   if (error) throw new Error(error.message);
 };
 
-// --- API de Solicitudes ---
 export const apiGetRequests = async (): Promise<SupabaseRequest[]> => {
   const { data: requestsData, error: requestsError } = await supabase
     .from('requests')
@@ -328,7 +303,6 @@ const getRequesterProfile = async (requesterId: string): Promise<Profile | null>
     }
     return data as Profile;
 };
-
 
 export const apiAddRequest = async (data: AddRequestData): Promise<SupabaseRequest> => {
   const { vendorId, requesterId, accountManagerId, shippingAddressId, billingAddressId, notes, projectCodes, items } = data;
@@ -414,7 +388,6 @@ const getUserStatusPreferences = async (userId: string): Promise<RequestStatus[]
     }
     return data?.notified_statuses || [];
 };
-
 
 export const apiUpdateRequestStatus = async (
   id: string,
@@ -565,7 +538,6 @@ export const apiUpdateFullRequest = async (id: string, data: UpdateFullRequestDa
   return updatedRequest as SupabaseRequest;
 };
 
-
 export const apiUpdateRequestMetadata = async (
   id: string,
   data: {
@@ -649,8 +621,6 @@ export const apiRevertRequestReception = async (requestId: string): Promise<void
   }
 };
 
-
-// --- API de Inventario ---
 export const apiGetInventory = async (): Promise<InventoryItem[]> => {
   const { data, error } = await supabase.from('inventory').select('*');
   if (error) throw new Error(error.message);
@@ -692,7 +662,6 @@ export const apiDeleteInventoryItem = async (id: string): Promise<void> => {
   if (error) throw new Error(error.message);
 };
 
-// --- API de Gastos ---
 export const apiGetExpenditures = async (): Promise<Expenditure[]> => {
   const { data, error } = await supabase.from('expenditures').select('*').order('date_incurred', { ascending: false });
   if (error) throw new Error(error.message);
@@ -716,8 +685,6 @@ export const apiDeleteExpenditure = async (id: string): Promise<void> => {
   if (error) throw new Error(error.message);
 };
 
-
-// --- API de Envío de Correo Electrónico ---
 interface EmailData {
   to: string;
   subject: string;
@@ -752,7 +719,6 @@ export const apiSendEmail = async (email: EmailData): Promise<void> => {
   return data;
 };
 
-// --- API de cuentas SMTP alternativas (contraseña nunca en claro) ---
 export interface SmtpAccountPublic {
   id: string;
   email: string;
@@ -875,7 +841,6 @@ export const apiUpsertSmtpAccount = async (
   return filaSmtp(plano.data as unknown as Record<string, unknown>, Boolean(password) || Boolean(existing));
 };
 
-// --- API de Plantillas de Correo Electrónico ---
 export const apiGetEmailTemplates = async (): Promise<EmailTemplate[]> => {
   const { data, error } = await supabase.from('email_templates').select('*');
   if (error) throw new Error(error.message);

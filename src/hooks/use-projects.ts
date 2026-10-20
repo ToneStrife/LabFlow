@@ -4,7 +4,6 @@ import { toast } from 'sonner';
 import { Project } from '@/data/types';
 import { ProjectFormValues } from '@/components/ProjectForm';
 
-// Hook to fetch all projects
 export const useProjects = () => {
   return useQuery<Project[], Error>({
     queryKey: ['projects'],
@@ -16,7 +15,6 @@ export const useProjects = () => {
   });
 };
 
-// Hook to add a new project
 export const useAddProject = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -35,7 +33,6 @@ export const useAddProject = () => {
   });
 };
 
-// Hook to update a project
 export const useUpdateProject = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -54,7 +51,6 @@ export const useUpdateProject = () => {
   });
 };
 
-// Hook to delete a project
 export const useDeleteProject = () => {
   const queryClient = useQueryClient();
   return useMutation({

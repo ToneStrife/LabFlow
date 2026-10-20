@@ -19,7 +19,6 @@ const getFirebaseMessaging = () => {
 // Helper para obtener la ruta base dinámica
 const getBasePath = () => window.location.pathname.includes('/LabFlow/') ? '/LabFlow/' : '/';
 
-
 export async function registerPushToken(userId: string) {
   if (!isFirebaseConfigured()) {
     toast.info("Notificaciones push no disponibles", {
@@ -52,11 +51,7 @@ export async function registerPushToken(userId: string) {
         // Si no hay registro, intentamos registrarlo de nuevo (aunque index.html ya lo hace)
         console.warn("Service Worker registration not found, attempting to register now.");
         try {
-            const newRegistration = await navigator.serviceWorker.register(basePath + 'firebase-messaging-sw.js', { scope: basePath });
-            console.log('Service Worker registered successfully during token fetch.');
-            // Usamos el nuevo registro
-            // Nota: Si el Service Worker no está en la raíz, el scope puede ser un problema.
-            // Asumimos que el registro en index.html es suficiente. Si falla aquí, es un problema de ruta/scope.
+            await navigator.serviceWorker.register(basePath + 'firebase-messaging-sw.js', { scope: basePath });
         } catch (e) {
             console.error("Failed to register Service Worker during token fetch:", e);
             toast.error("Error de Service Worker", { description: "Fallo al registrar el Service Worker." });
@@ -105,7 +100,6 @@ export async function registerPushToken(userId: string) {
         console.warn("No se pudieron limpiar tokens FCM antiguos:", cleanupError);
       }
 
-      console.log("FCM Token guardado OK:", token);
       toast.success("Notificaciones activadas.", { description: "Este dispositivo recibirá alertas push." });
     }
 

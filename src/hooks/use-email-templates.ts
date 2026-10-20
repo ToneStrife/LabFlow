@@ -3,7 +3,6 @@ import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { EmailTemplate } from '@/data/types';
 
-// Hook to fetch all email templates
 export const useEmailTemplates = () => {
   return useQuery<EmailTemplate[], Error>({
     queryKey: ['email_templates'],
@@ -15,7 +14,6 @@ export const useEmailTemplates = () => {
   });
 };
 
-// Hook to update an email template
 export const useUpdateEmailTemplate = () => {
   const queryClient = useQueryClient();
   return useMutation({

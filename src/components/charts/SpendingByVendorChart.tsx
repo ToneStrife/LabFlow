@@ -1,5 +1,3 @@
-"use client";
-
 import React from 'react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { ChartData } from '@/hooks/use-expenditure-analytics';

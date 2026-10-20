@@ -1,5 +1,3 @@
-"use client";
-
 import React from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,7 +14,7 @@ import { Loader2, CheckCheck, DollarSign } from "lucide-react";
 import { SupabaseRequest } from "@/data/types";
 import { useAddExpenditure, ExpenditureFormValues } from "@/hooks/use-expenditures";
 import { useProjects } from "@/hooks/use-projects";
-import { useVendors } from "@/hooks/use-vendors"; // Importar useVendors
+import { useVendors } from "@/hooks/use-vendors";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import {
@@ -44,7 +42,6 @@ const calculateRequestTotal = (request: SupabaseRequest): number => {
   }, 0);
 };
 
-// Hook para manejar la importación masiva
 const useImportRequestsAsExpenditures = () => {
   const addExpenditureMutation = useAddExpenditure();
   
@@ -69,7 +66,6 @@ const useImportRequestsAsExpenditures = () => {
     return Promise.all(importPromises);
   };
 };
-
 
 const ImportExpendituresDialog: React.FC<ImportExpendituresDialogProps> = ({
   isOpen,

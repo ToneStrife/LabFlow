@@ -13,7 +13,6 @@ export const availableStatusNotifications: RequestStatus[] = [
   "Cancelled",
 ];
 
-// Hook para obtener las preferencias de notificación de estado del usuario actual
 export const useUserNotificationPreferences = (userId: string | undefined) => {
   return useQuery<UserNotificationPreferences | null, Error>({
     queryKey: ['userNotificationPreferences', userId],
@@ -45,7 +44,6 @@ export const useUserNotificationPreferences = (userId: string | undefined) => {
   });
 };
 
-// Hook para actualizar las preferencias de notificación de estado
 export const useUpdateNotificationPreferences = () => {
   const queryClient = useQueryClient();
   

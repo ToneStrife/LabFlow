@@ -5,7 +5,6 @@ import { apiGetInventory, apiAddInventoryItem, apiUpdateInventoryItem, apiDelete
 
 export interface InventoryItem extends InventoryItemType {}
 
-// --- Fetch Hook ---
 const fetchInventory = async (): Promise<InventoryItem[]> => {
   return apiGetInventory();
 };
@@ -16,8 +15,6 @@ export const useInventory = () => {
     queryFn: fetchInventory,
   });
 };
-
-// --- Mutation Hooks ---
 
 // Definir la forma de los datos que vienen del formulario (todos los campos de la tabla excepto IDs/timestamps)
 export interface InventoryItemFormData {
