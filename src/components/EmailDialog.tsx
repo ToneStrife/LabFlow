@@ -150,7 +150,7 @@ const EmailDialog: React.FC<EmailDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className={cn(mobileDialogClass, "sm:max-w-[640px] gap-0 overflow-hidden p-0")}>
+      <DialogContent className={cn(mobileDialogClass, "sm:max-w-[920px] gap-0 overflow-hidden p-0")}>
         <div className="shrink-0 space-y-1.5 border-b px-6 py-4 pr-12">
           <DialogHeader className="space-y-1.5 text-left">
             <DialogTitle>Redactar correo</DialogTitle>
