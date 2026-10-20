@@ -1,0 +1,1 @@
+function i(){const t=new Date,n=t.getFullYear(),e=String(t.getMonth()+1).padStart(2,"0"),a=String(t.getDate()).padStart(2,"0");return`${n}-${e}-${a}`}function f(t){if(t.activo===!1)return!1;const n=i();return!(t.fecha_inicio&&t.fecha_inicio>n||t.fecha_fin&&t.fecha_fin<n)}export{f as p};
