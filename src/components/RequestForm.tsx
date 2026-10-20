@@ -436,19 +436,22 @@ const RequestForm: React.FC = () => {
 
   const handleExtractProductsFromPdf = async () => {
     if (!selectedQuoteFile) {
-      toast.error("Sube un PDF de presupuesto antes de extraer productos.");
+      toast.error("Sube un presupuesto (PDF o imagen) antes de extraer productos.");
       return;
     }
-    if (selectedQuoteFile.type !== "application/pdf") {
-      toast.error("La extracción con IA solo funciona con archivos PDF.");
+    const mime = (selectedQuoteFile.type || "").toLowerCase();
+    const esPdfOImagen =
+      mime === "application/pdf" || mime.startsWith("image/");
+    if (!esPdfOImagen) {
+      toast.error("La extracción con IA admite PDF o imagen (JPG, PNG, WEBP).");
       return;
     }
 
     try {
       const { items } = await parseQuotePdfMutation.mutateAsync(selectedQuoteFile);
       if (items.length === 0) {
-        toast.warning("No se detectaron productos en el PDF.", {
-          description: "Prueba con otro documento o añade los artículos manualmente.",
+        toast.warning("No se detectaron productos en el presupuesto.", {
+          description: "Prueba con otra captura o PDF, o añade los artículos manualmente.",
         });
         return;
       }
@@ -465,7 +468,7 @@ const RequestForm: React.FC = () => {
     replace(mapParsedToFormItems(parsedQuoteItems));
     setIsParsePreviewOpen(false);
     setParsedQuoteItems(null);
-    toast.success("Artículos del formulario reemplazados con los datos del PDF.");
+    toast.success("Artículos del formulario reemplazados con los datos del presupuesto.");
   };
 
   const handleClearForm = () => {
@@ -496,7 +499,9 @@ const RequestForm: React.FC = () => {
     parseQuotePdfMutation.isPending;
   const isParsingQuote = parseQuotePdfMutation.isPending;
   const canExtractFromPdf =
-    Boolean(selectedQuoteFile) && selectedQuoteFile?.type === "application/pdf";
+    Boolean(selectedQuoteFile) &&
+    ((selectedQuoteFile?.type || "").toLowerCase() === "application/pdf" ||
+      (selectedQuoteFile?.type || "").toLowerCase().startsWith("image/"));
   
   // Determinar qué metadata mostrar: solo el archivo seleccionado (si existe)
   const fileMetaToDisplay = selectedQuoteFile ? { name: selectedQuoteFile.name, size: selectedQuoteFile.size } : null;
@@ -703,14 +708,14 @@ const RequestForm: React.FC = () => {
                   ) : (
                     <>
                       <FileScan className="mr-2 h-4 w-4" />
-                      Extraer productos del PDF con IA
+                      Extraer productos con IA
                     </>
                   )}
                 </Button>
                 {!canExtractFromPdf && (
                   <p className="text-xs text-muted-foreground flex items-start gap-1">
                     <Info className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-                    Sube un PDF para detectar líneas de producto automáticamente.
+                    Sube un PDF o una captura/imagen del presupuesto para detectar productos.
                   </p>
                 )}
               </div>
