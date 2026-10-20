@@ -25,6 +25,11 @@ export interface Documento {
   requesterName: string;
   fecha: string;
   nombreArchivo: string;
+  /**
+   * Productos / catálogos / marcas de la solicitud, para buscar por objeto
+   * (p. ej. "pipeta" o un número de catálogo).
+   */
+  textoObjetos: string;
 }
 
 export const ETIQUETA_TIPO: Record<TipoDocumento, string> = {
@@ -88,6 +93,20 @@ export const useDocumentos = () => {
       return s?.request_number || id.substring(0, 8);
     };
 
+    const textoObjetosDe = (requestId: string) => {
+      const items = porId.get(requestId)?.items;
+      if (!items?.length) return "";
+      return items
+        .flatMap((item) => [
+          item.product_name,
+          item.catalog_number,
+          item.brand,
+          item.ai_enriched_product_name,
+        ])
+        .filter(Boolean)
+        .join(" ");
+    };
+
     const lista: Documento[] = [];
 
     for (const s of solicitudes) {
@@ -99,6 +118,7 @@ export const useDocumentos = () => {
         requesterId: s.requester_id,
         requesterName: nombreSolicitante(s.requester_id),
         fecha: s.created_at,
+        textoObjetos: textoObjetosDe(s.id),
       };
       if (s.quote_url) {
         lista.push({
@@ -137,6 +157,7 @@ export const useDocumentos = () => {
         requesterName: nombreSolicitante(porId.get(a.request_id)?.requester_id ?? ""),
         fecha: a.received_at,
         nombreArchivo: getFileNameFromPath(a.slip_url),
+        textoObjetos: textoObjetosDe(a.request_id),
       });
     }
 
@@ -155,6 +176,7 @@ export const useDocumentos = () => {
         requesterName: nombreSolicitante(porId.get(f.request_id)?.requester_id ?? ""),
         fecha: f.invoiced_at,
         nombreArchivo: getFileNameFromPath(f.invoice_url),
+        textoObjetos: textoObjetosDe(f.request_id),
       });
     }
 

@@ -131,17 +131,19 @@ const Documentos = () => {
       if (hastaMs !== null && momento > hastaMs) return false;
 
       if (!texto) return true;
-      return [
+      const haystack = [
         d.nombreArchivo,
         d.referencia ?? "",
         d.requestNumber,
         d.vendorName,
         d.requesterName,
+        d.textoObjetos,
         ETIQUETA_TIPO[d.tipo],
       ]
         .join(" ")
-        .toLowerCase()
-        .includes(texto);
+        .toLowerCase();
+      // Varias palabras: todas deben aparecer (sirve para "marca catálogo").
+      return texto.split(/\s+/).filter(Boolean).every((token) => haystack.includes(token));
     });
   }, [documentos, busqueda, tipo, proveedorId, solicitanteId, desde, hasta]);
 
@@ -166,7 +168,7 @@ const Documentos = () => {
           <Input
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
-            placeholder="Buscar por número, proveedor, solicitud o nombre de archivo…"
+            placeholder="Buscar por objeto, catálogo, proveedor, solicitud o archivo…"
             className="h-11 pl-9"
           />
         </div>
