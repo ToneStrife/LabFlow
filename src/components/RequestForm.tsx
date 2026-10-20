@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -40,6 +41,7 @@ import QuoteParsePreviewDialog from "./QuoteParsePreviewDialog";
 import type { ParsedQuoteItem } from "@/data/quote-parse";
 import { useSedeActiva } from "@/components/SedeContextProvider";
 import { getDefaultShippingAddressId, formatShippingAddressLabel } from "@/lib/sedes";
+import { proyectoVigente } from "@/lib/projects";
 // -------------------- Schemas --------------------
 const itemSchema = z.object({
   productName: z.string().min(1, { message: "El nombre del producto es obligatorio." }),
@@ -222,11 +224,16 @@ const SeccionFormulario: React.FC<{
 );
 
 const RequestForm: React.FC = () => {
+  const navigate = useNavigate();
   const { session, profile } = useSession();
   const { sedeActiva } = useSedeActiva();
   const { data: vendors, isLoading: isLoadingVendors } = useVendors();
   const { data: accountManagers, isLoading: isLoadingAccountManagers } = useAccountManagers();
   const { data: projects, isLoading: isLoadingProjects } = useProjects();
+  const proyectosSeleccionables = React.useMemo(
+    () => (projects ?? []).filter(proyectoVigente),
+    [projects]
+  );
   const { data: shippingAddresses, isLoading: isLoadingShippingAddresses } = useShippingAddresses();
   const { data: billingAddresses, isLoading: isLoadingBillingAddresses } = useBillingAddresses();
   const addRequestMutation = useAddRequest();
@@ -409,22 +416,10 @@ const RequestForm: React.FC = () => {
       }
     }
 
-    // 3. Limpiar la persistencia del formulario después del envío exitoso
+    // 3. Limpiar y salir a la ficha de la solicitud creada.
     clearPersistence();
     clearQuoteFilePersistence();
-
-    // Restablecer el formulario, manteniendo los valores predeterminados de dirección si existen
-    form.reset({
-      vendorId: "",
-      requesterId: session.user.id,
-      accountManagerId: "unassigned",
-      shippingAddressId: getDefaultShippingAddressId(shippingAddresses, sedeActiva),
-      billingAddressId: billingAddresses?.[0]?.id || "",
-      items: [defaultItem],
-      quoteFile: undefined,
-      projectCodes: [],
-      notes: "",
-    });
+    navigate(`/requests/${newRequest.id}`);
   };
   
   const mapParsedToFormItems = (items: ParsedQuoteItem[]): RequestFormValues["items"] =>
@@ -441,19 +436,22 @@ const RequestForm: React.FC = () => {
 
   const handleExtractProductsFromPdf = async () => {
     if (!selectedQuoteFile) {
-      toast.error("Sube un PDF de presupuesto antes de extraer productos.");
+      toast.error("Sube un presupuesto (PDF o imagen) antes de extraer productos.");
       return;
     }
-    if (selectedQuoteFile.type !== "application/pdf") {
-      toast.error("La extracción con IA solo funciona con archivos PDF.");
+    const mime = (selectedQuoteFile.type || "").toLowerCase();
+    const esPdfOImagen =
+      mime === "application/pdf" || mime.startsWith("image/");
+    if (!esPdfOImagen) {
+      toast.error("La extracción con IA admite PDF o imagen (JPG, PNG, WEBP).");
       return;
     }
 
     try {
       const { items } = await parseQuotePdfMutation.mutateAsync(selectedQuoteFile);
       if (items.length === 0) {
-        toast.warning("No se detectaron productos en el PDF.", {
-          description: "Prueba con otro documento o añade los artículos manualmente.",
+        toast.warning("No se detectaron productos en el presupuesto.", {
+          description: "Prueba con otra captura o PDF, o añade los artículos manualmente.",
         });
         return;
       }
@@ -470,7 +468,7 @@ const RequestForm: React.FC = () => {
     replace(mapParsedToFormItems(parsedQuoteItems));
     setIsParsePreviewOpen(false);
     setParsedQuoteItems(null);
-    toast.success("Artículos del formulario reemplazados con los datos del PDF.");
+    toast.success("Artículos del formulario reemplazados con los datos del presupuesto.");
   };
 
   const handleClearForm = () => {
@@ -501,7 +499,9 @@ const RequestForm: React.FC = () => {
     parseQuotePdfMutation.isPending;
   const isParsingQuote = parseQuotePdfMutation.isPending;
   const canExtractFromPdf =
-    Boolean(selectedQuoteFile) && selectedQuoteFile?.type === "application/pdf";
+    Boolean(selectedQuoteFile) &&
+    ((selectedQuoteFile?.type || "").toLowerCase() === "application/pdf" ||
+      (selectedQuoteFile?.type || "").toLowerCase().startsWith("image/"));
   
   // Determinar qué metadata mostrar: solo el archivo seleccionado (si existe)
   const fileMetaToDisplay = selectedQuoteFile ? { name: selectedQuoteFile.name, size: selectedQuoteFile.size } : null;
@@ -642,7 +642,7 @@ const RequestForm: React.FC = () => {
                       <CommandInput placeholder="Buscar proyectos..." />
                       <CommandEmpty>No se encontró ningún proyecto.</CommandEmpty>
                       <CommandGroup>
-                        {projects?.map((project) => (
+                        {proyectosSeleccionables.map((project) => (
                           <CommandItem value={project.name} key={project.id} onSelect={() => {
                             const currentValues = field.value || [];
                             if (currentValues.includes(project.id)) {
@@ -670,7 +670,7 @@ const RequestForm: React.FC = () => {
         <SeccionFormulario
           titulo="Presupuesto y notas"
           icono={FileScan}
-          descripcion="Si adjuntas el presupuesto, se guarda con la solicitud; el IP del proyecto debe aprobarla antes de seguir."
+          descripcion="Puedes adjuntar un PDF, una imagen o una captura de pantalla del presupuesto. El IP del proyecto debe aprobarla antes de seguir."
         >
         <FormField
           control={form.control}
@@ -678,12 +678,17 @@ const RequestForm: React.FC = () => {
           render={({ field }) => (
             <FormItem>
               <FormControl>
-                <FileUploadInput 
-                    label="Adjuntar presupuesto, si ya lo tienes"
-                    onChange={handleQuoteFileChange} 
-                    disabled={isSubmitting} 
+                <FileUploadInput
+                    label="Adjuntar presupuesto (PDF, imagen o captura)"
+                    onChange={handleQuoteFileChange}
+                    disabled={isSubmitting}
                     accept="image/*,application/pdf"
-                    currentFileMeta={fileMetaToDisplay} // Mostrar metadata si se perdió el archivo
+                    capture="environment"
+                    compressImages
+                    cameraLabel="Hacer foto del presupuesto"
+                    galleryLabel="Elegir imagen, captura o PDF"
+                    hintText="PDF, JPG, PNG o captura pegada. Máx. 20 MB"
+                    currentFileMeta={fileMetaToDisplay}
                 />
               </FormControl>
               <FormMessage />
@@ -703,14 +708,14 @@ const RequestForm: React.FC = () => {
                   ) : (
                     <>
                       <FileScan className="mr-2 h-4 w-4" />
-                      Extraer productos del PDF con IA
+                      Extraer productos con IA
                     </>
                   )}
                 </Button>
                 {!canExtractFromPdf && (
                   <p className="text-xs text-muted-foreground flex items-start gap-1">
                     <Info className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-                    Sube un PDF para detectar líneas de producto automáticamente.
+                    Sube un PDF o una captura/imagen del presupuesto para detectar productos.
                   </p>
                 )}
               </div>

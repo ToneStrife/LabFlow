@@ -169,9 +169,11 @@ const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
           <DialogDescription>
             {fileType === "po"
               ? markAsOrdered
-                ? "Sube el PDF de la PO y/o indica el número. La solicitud pasará a Pedido."
+                ? "Sube el PDF o imagen de la PO y/o indica el número. La solicitud pasará a Pedido."
                 : "Introduce el número de PO y/o sube el archivo."
-              : "Selecciona un archivo para subir."}
+              : fileType === "quote"
+                ? "Sube el presupuesto en PDF, imagen o captura de pantalla."
+                : "Selecciona un archivo para subir."}
           </DialogDescription>
         </DialogHeader>
 
@@ -193,11 +195,22 @@ const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
           )}
 
           <FileUploadInput
-            label={getFileLabel()}
+            label={
+              fileType === "quote"
+                ? "Archivo de presupuesto (PDF, imagen o captura)"
+                : getFileLabel()
+            }
             onChange={handleFileChange}
             disabled={isUploading}
             accept="image/*,application/pdf"
-            currentFileMeta={fileMetaToDisplay} // Pasar la metadata para la visualización
+            capture={fileType === "quote" || fileType === "slip" ? "environment" : undefined}
+            compressImages={fileType === "quote" || fileType === "slip" || fileType === "po"}
+            cameraLabel={
+              fileType === "quote" ? "Hacer foto del presupuesto" : "Tomar foto"
+            }
+            galleryLabel="Elegir imagen, captura o PDF"
+            hintText="PDF, JPG, PNG o captura pegada. Máx. 20 MB"
+            currentFileMeta={fileMetaToDisplay}
           />
         </div>
 

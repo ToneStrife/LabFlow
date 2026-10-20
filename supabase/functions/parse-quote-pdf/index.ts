@@ -8,14 +8,23 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const MAX_PDF_BYTES = 5 * 1024 * 1024;
+const MAX_FILE_BYTES = 5 * 1024 * 1024;
 const MAX_ITEMS = 50;
+const MODELOS = ["gemini-2.5-flash", "gemini-2.0-flash"];
+
+const ALLOWED_MIMES = new Set([
+  "application/pdf",
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+]);
 
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
 if (!GEMINI_API_KEY) {
   console.error("GEMINI_API_KEY is not set.");
 }
-const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
 interface ParsedQuoteItem {
   productName: string;
@@ -75,6 +84,12 @@ function extractJsonString(text: string): string {
   return text.slice(start).trim();
 }
 
+function normalizeMime(mimeType: unknown): string {
+  const mime = String(mimeType || "application/pdf").toLowerCase().trim();
+  if (mime === "image/jpg") return "image/jpeg";
+  return mime;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -83,10 +98,15 @@ serve(async (req) => {
   try {
     if (!GEMINI_API_KEY) {
       return new Response(
-        JSON.stringify({ error: "GEMINI_API_KEY no está configurada en el servidor." }),
+        JSON.stringify({
+          error:
+            "GEMINI_API_KEY no está configurada en el servidor. Un administrador debe añadirla en los secretos de Supabase.",
+        }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
     const authClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
@@ -109,40 +129,54 @@ serve(async (req) => {
       });
     }
 
-    const { pdfBase64, mimeType = "application/pdf" } = await req.json();
+    const body = await req.json();
+    const fileBase64 =
+      (typeof body.fileBase64 === "string" && body.fileBase64) ||
+      (typeof body.pdfBase64 === "string" && body.pdfBase64) ||
+      "";
+    const mimeType = normalizeMime(body.mimeType);
 
-    if (!pdfBase64 || typeof pdfBase64 !== "string") {
-      return new Response(JSON.stringify({ error: "pdfBase64 is required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    if (mimeType !== "application/pdf") {
-      return new Response(JSON.stringify({ error: "Only application/pdf is supported" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const estimatedBytes = Math.floor((pdfBase64.length * 3) / 4);
-    if (estimatedBytes > MAX_PDF_BYTES) {
+    if (!fileBase64) {
       return new Response(
-        JSON.stringify({ error: "El PDF supera el tamaño máximo permitido (5 MB)." }),
+        JSON.stringify({ error: "Falta el archivo (fileBase64 / pdfBase64)." }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    if (!ALLOWED_MIMES.has(mimeType)) {
+      return new Response(
+        JSON.stringify({
+          error:
+            "Formato no soportado. Usa PDF o imagen (JPG, PNG, WEBP, GIF).",
+        }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
+    const estimatedBytes = Math.floor((fileBase64.length * 3) / 4);
+    if (estimatedBytes > MAX_FILE_BYTES) {
+      return new Response(
+        JSON.stringify({
+          error: "El archivo supera el tamaño máximo permitido (5 MB).",
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const esImagen = mimeType.startsWith("image/");
     const prompt = `
-Analiza el PDF adjunto (presupuesto o cotización de laboratorio) y extrae ÚNICAMENTE las líneas de productos o reactivos pedidos.
+Analiza el ${esImagen ? "archivo de imagen / captura de pantalla" : "PDF"} adjunto (presupuesto o cotización de laboratorio) y extrae ÚNICAMENTE las líneas de productos o reactivos pedidos.
 
 Reglas:
 - Ignora totales, subtotales, IVA, condiciones de pago, datos del cliente, cabeceras y pies de página.
 - Cada línea de producto debe incluir la mayor información disponible del documento.
-- Si un campo no aparece en el PDF, usa null (excepto quantity, mínimo 1).
+- Si un campo no aparece, usa null (excepto quantity, mínimo 1).
 - unitPrice debe ser un número sin símbolo de moneda; si no hay precio unitario claro, null.
 - quantity debe ser un entero >= 1.
-
+${esImagen ? "- Lee el texto visible en la captura aunque esté un poco borroso o sesgado.\n" : ""}
 Responde SOLO con un objeto JSON (puedes envolverlo en \`\`\`json ... \`\`\`) con esta estructura exacta:
 {
   "items": [
@@ -163,20 +197,39 @@ Si no encuentras ningún producto, devuelve { "items": [] }.
 No incluyas texto fuera del JSON.
 `;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: [
-        {
-          role: "user",
-          parts: [
-            { inlineData: { mimeType: "application/pdf", data: pdfBase64 } },
-            { text: prompt },
-          ],
-        },
-      ],
-    });
+    let lastError: unknown = null;
+    let responseText = "";
 
-    const responseText = response.text ?? "";
+    for (const model of MODELOS) {
+      try {
+        const response = await ai.models.generateContent({
+          model,
+          contents: [
+            {
+              role: "user",
+              parts: [
+                { inlineData: { mimeType, data: fileBase64 } },
+                { text: prompt },
+              ],
+            },
+          ],
+        });
+        responseText = response.text ?? "";
+        if (responseText.trim()) break;
+      } catch (err) {
+        lastError = err;
+        console.error(`[parse-quote-pdf] Modelo ${model} falló:`, err);
+      }
+    }
+
+    if (!responseText.trim()) {
+      const msg =
+        lastError instanceof Error
+          ? lastError.message
+          : "Gemini no devolvió respuesta al analizar el presupuesto.";
+      throw new Error(msg);
+    }
+
     const jsonString = extractJsonString(responseText);
     const parsed = JSON.parse(jsonString) as { items?: unknown[] };
     const rawItems = Array.isArray(parsed.items) ? parsed.items : [];

@@ -99,8 +99,9 @@ const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
     return manager ? `${manager.first_name} ${manager.last_name}` : "N/A";
   };
 
-  const getVendorEmail = (vendorId: string) => {
-    return vendors?.find(v => v.id === vendorId)?.email || "";
+  const getVendorQuoteEmail = (vendorId: string) => {
+    const vendor = vendors?.find((v) => v.id === vendorId);
+    return (vendor?.email_presupuesto || vendor?.email || "").trim();
   };
 
   const getAccountManagerEmail = (managerId: string | null) => {
@@ -298,7 +299,7 @@ const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
       // diálogo o algo falla antes, la solicitud sigue pendiente.
       setPendingStatusOnEmailSend({ requestId: request.id, status: "Quote Requested" });
       setEmailInitialData({
-        ...camposCorreoConNiceto(especial, getVendorEmail(request.vendor_id)),
+        ...camposCorreoConNiceto(especial, getVendorQuoteEmail(request.vendor_id)),
         subject,
         body,
       });

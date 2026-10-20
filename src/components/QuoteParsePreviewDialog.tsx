@@ -39,10 +39,10 @@ const QuoteParsePreviewDialog: React.FC<QuoteParsePreviewDialogProps> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={cn(mobileDialogClass, "sm:max-w-3xl gap-0 p-4 sm:p-6")}>
         <DialogHeader className="shrink-0">
-          <DialogTitle>Productos detectados en el PDF</DialogTitle>
+          <DialogTitle>Productos detectados en el presupuesto</DialogTitle>
           <DialogDescription>
             Revisa los datos antes de reemplazar los artículos del formulario. La IA puede
-            equivocarse en PDFs escaneados o tablas complejas.
+            equivocarse en capturas borrosas, PDFs escaneados o tablas complejas.
           </DialogDescription>
         </DialogHeader>
 

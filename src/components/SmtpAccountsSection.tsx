@@ -38,19 +38,24 @@ interface SmtpAccountsSectionProps {
   description?: string;
 }
 
-const emptyDefaults = (email?: string | null): FormValues => ({
-  email: email?.trim().toLowerCase() || CORREO_NICETO,
-  smtp_host: "",
-  smtp_user: email?.trim().toLowerCase() || CORREO_NICETO,
-  smtp_password: "",
-  label: "",
-});
+const emptyDefaults = (email?: string | null): FormValues => {
+  const correo = email?.trim().toLowerCase() || CORREO_NICETO;
+  const esGoUgr = correo.endsWith("@go.ugr.es") || correo.endsWith("@ugr.es");
+  return {
+    email: correo,
+    smtp_host: esGoUgr ? "smtp.gmail.com" : "",
+    smtp_user: correo,
+    smtp_password: "",
+    label: "",
+  };
+};
 
 const SmtpAccountsSection: React.FC<SmtpAccountsSectionProps> = ({
   adminMode = false,
   profileEmail,
   title = "Cuentas SMTP",
-  description = "Correo go.ugr.es (por ejemplo niceto@go.ugr.es) y la contraseña del buzón. LabFlow autentica con esa cuenta al enviar. La contraseña no se vuelve a mostrar; déjala en blanco para conservarla.",
+  description =
+    "Para @go.ugr.es (Google): Host smtp.gmail.com y una contraseña de aplicación de Google (no la contraseña normal de la cuenta). LabFlow autentica con esa cuenta al enviar. La contraseña no se vuelve a mostrar; déjala en blanco para conservarla.",
 }) => {
   const { data: accounts = [], isLoading, error } = useSmtpAccounts();
   const upsertMutation = useUpsertSmtpAccount();
@@ -250,17 +255,17 @@ const SmtpAccountsSection: React.FC<SmtpAccountsSectionProps> = ({
                   name="smtp_host"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Host SMTP (opcional)</FormLabel>
+                      <FormLabel>Host SMTP</FormLabel>
                       <FormControl>
                         <Input
-                          placeholder="Vacío = SMTP_HOST del entorno"
+                          placeholder="smtp.gmail.com"
                           autoComplete="off"
                           {...field}
                           disabled={upsertMutation.isPending}
                         />
                       </FormControl>
                       <FormDescription>
-                        Si lo dejas vacío se usa el mismo host que LabFlow.
+                        @go.ugr.es: smtp.gmail.com. Vacío = el host por defecto de LabFlow.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -303,7 +308,7 @@ const SmtpAccountsSection: React.FC<SmtpAccountsSectionProps> = ({
                         />
                       </FormControl>
                       <FormDescription>
-                        Nunca se muestra en claro. Déjala vacía para conservar la actual.
+                        En Google Workspace usa una contraseña de aplicación. Nunca se muestra en claro; vacía = conservar la actual.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>

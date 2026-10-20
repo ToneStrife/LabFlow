@@ -66,9 +66,9 @@ export function usuarioNiceto<T extends {
 }
 
 /**
- * Solo los pedidos de Farmacia que crea o aprueba Niceto prellenan su correo.
- * Prefill Para/De: niceto@go.ugr.es (ambos editables en el diálogo).
- * send-email autentica con smtp_accounts si De ≠ SMTP por defecto (contraseña en LabFlow).
+ * Solo los pedidos de Farmacia que crea o aprueba Niceto prellenan el De.
+ * El Para sigue siendo el del proveedor (presupuesto) o el gerente (cómprame).
+ * send-email autentica con smtp_accounts si De ≠ SMTP por defecto.
  */
 export function correoSiLoHaceNiceto(opts: {
   shippingAddressId: string | null | undefined;
@@ -86,17 +86,17 @@ export function correoSiLoHaceNiceto(opts: {
 
   const fromName = `${niceto.first_name ?? ""} ${niceto.last_name ?? ""}`.trim() || "Niceto";
   return {
-    to: CORREO_NICETO,
+    to: "",
     from: CORREO_NICETO,
     fromName,
   };
 }
 
-/** Rellena Para / De cuando el pedido de Farmacia lo hace Niceto. */
+/** Prefill De/nombre cuando aplica Niceto; el Para lo pone el llamador. */
 export function camposCorreoConNiceto(
   especial: CorreoNiceto | null | undefined,
   toPorDefecto: string
 ): { to: string; from?: string; fromName?: string } {
   if (!especial || especial.error) return { to: toPorDefecto };
-  return { to: especial.to, from: especial.from, fromName: especial.fromName };
+  return { to: toPorDefecto, from: especial.from, fromName: especial.fromName };
 }

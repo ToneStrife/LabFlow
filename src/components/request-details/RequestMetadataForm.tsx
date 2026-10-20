@@ -23,6 +23,7 @@ import { cn } from "@/lib/utils";
 import { SupabaseRequest, Profile } from "@/data/types"; // Corrected import source
 import { useAccountManagers } from "@/hooks/use-account-managers";
 import { useProjects } from "@/hooks/use-projects";
+import { proyectoVigente } from "@/lib/projects";
 
 const metadataSchema = z.object({
   accountManagerId: z.union([
@@ -47,6 +48,12 @@ const RequestMetadataForm: React.FC<RequestMetadataFormProps> = ({ request, onSu
   const { data: projects, isLoading: isLoadingProjects } = useProjects();
 
   const defaultProjectCodes = request.project_codes || [];
+  const proyectosSeleccionables = React.useMemo(() => {
+    const asignados = new Set(defaultProjectCodes);
+    return (projects ?? []).filter(
+      (p) => proyectoVigente(p) || asignados.has(p.id)
+    );
+  }, [projects, defaultProjectCodes]);
 
   const form = useForm<MetadataFormValues>({
     resolver: zodResolver(metadataSchema),
@@ -121,7 +128,7 @@ const RequestMetadataForm: React.FC<RequestMetadataFormProps> = ({ request, onSu
                     <CommandInput placeholder="Buscar proyectos..." />
                     <CommandEmpty>No se encontró ningún proyecto.</CommandEmpty>
                     <CommandGroup>
-                      {projects?.map((project) => (
+                      {proyectosSeleccionables.map((project) => (
                         <CommandItem value={project.name} key={project.id} onSelect={() => {
                           const currentValues = field.value || [];
                           if (currentValues.includes(project.id)) {

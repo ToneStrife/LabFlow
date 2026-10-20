@@ -102,6 +102,17 @@ serve(async (req) => {
       );
     }
 
+    // Varios destinatarios: "a@x.com, b@y.com" o array.
+    const toList: string[] = (Array.isArray(to) ? to : String(to).split(/[,;]+/))
+      .map((addr: string) => String(addr).trim())
+      .filter(Boolean);
+    if (toList.length === 0) {
+      return new Response(
+        JSON.stringify({ error: "Indica al menos un destinatario en Para." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const authClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_ANON_KEY") ?? "",
@@ -250,9 +261,9 @@ serve(async (req) => {
 
     const plainText = htmlToPlainText(String(body));
 
-    const toNorm = normalizeEmail(String(to));
+    const toNorms = new Set(toList.map((addr) => normalizeEmail(addr)));
     const ccList =
-      SMTP_CC && normalizeEmail(SMTP_CC) !== toNorm ? SMTP_CC : undefined;
+      SMTP_CC && !toNorms.has(normalizeEmail(SMTP_CC)) ? SMTP_CC : undefined;
 
     const headers: Record<string, string> | undefined = fromEsDistintoDelSmtp
       ? { Sender: smtpUser }
@@ -262,13 +273,14 @@ serve(async (req) => {
     console.log(
       `[send-email] De=${fromHeader}` +
         (replyToAddress ? ` Reply-To=${replyToAddress}` : "") +
+        ` Para=${toList.join(", ")}` +
         (ccList ? ` CC=${ccList}` : " CC=(ninguno)") +
         ` auth=${smtpUser} host=${smtpHost}`
     );
 
     await client.send({
       from: fromHeader,
-      to,
+      to: toList.length === 1 ? toList[0] : toList,
       ...(ccList ? { cc: ccList } : {}),
       ...(replyToAddress ? { replyTo: replyToAddress } : {}),
       ...(headers ? { headers } : {}),
@@ -292,9 +304,20 @@ serve(async (req) => {
     );
   } catch (err: any) {
     console.error("[send-email] Error crítico:", err.message);
-    logErrorMessage = err.message;
+    const raw = String(err?.message || err || "Error al enviar el correo");
+    // Gmail/Workspace: 535 BadCredentials → contraseña de cuenta, no de aplicación, o host mal.
+    const esCredenciales =
+      /\b535\b/.test(raw) ||
+      /BadCredentials/i.test(raw) ||
+      /Username and Password not accepted/i.test(raw);
+    logErrorMessage = esCredenciales
+      ? "El servidor SMTP rechazó usuario o contraseña (535). " +
+        "Si el correo es @go.ugr.es con Google, hace falta una contraseña de aplicación " +
+        "(no la de la cuenta) y el Host SMTP suele ser smtp.gmail.com. " +
+        "Revísalo en Perfil → Mi correo de envío o Admin → Cuentas SMTP."
+      : raw;
     return new Response(
-      JSON.stringify({ error: err.message }),
+      JSON.stringify({ error: logErrorMessage }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } finally {
