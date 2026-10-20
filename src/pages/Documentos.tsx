@@ -36,6 +36,8 @@ import {
 } from "@/hooks/use-documents";
 import { useClientPagination } from "@/hooks/use-client-pagination";
 import ListPagination from "@/components/ListPagination";
+import { useSedeActiva } from "@/components/SedeContextProvider";
+import { getSedeLabel } from "@/lib/sedes";
 
 const ESTILO_TIPO: Record<TipoDocumento, { icono: LucideIcon; caja: string; texto: string }> = {
   cotizacion: {
@@ -64,6 +66,7 @@ const ORDEN_TIPOS: TipoDocumento[] = ["cotizacion", "orden", "albaran", "factura
 
 const Documentos = () => {
   const { documentos, isLoading, error } = useDocumentos();
+  const { sedeActiva } = useSedeActiva();
   const [busqueda, setBusqueda] = React.useState("");
   const [tipo, setTipo] = React.useState<TipoDocumento | "todos">("todos");
   const [proveedorId, setProveedorId] = React.useState("todos");
@@ -155,7 +158,10 @@ const Documentos = () => {
       <div>
         <h2 className="text-2xl font-bold tracking-tight">Documentos</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Presupuestos, órdenes de compra, albaranes y facturas de todas las solicitudes.
+          Presupuestos, órdenes de compra, albaranes y facturas
+          {sedeActiva
+            ? ` de ${getSedeLabel(sedeActiva)}.`
+            : " de todas las sedes."}
         </p>
       </div>
 

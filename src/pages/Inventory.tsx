@@ -11,8 +11,11 @@ import { pageContainerClass, pageHeaderClass, mobileDialogClass } from "@/lib/la
 import { cn } from "@/lib/utils";
 import { useClientPagination } from "@/hooks/use-client-pagination";
 import ListPagination from "@/components/ListPagination";
+import { useSedeActiva } from "@/components/SedeContextProvider";
+import { getSedeLabel } from "@/lib/sedes";
 
 const Inventory = () => {
+  const { sedeActiva } = useSedeActiva();
   const { data: inventoryItems, isLoading, error } = useInventory();
   const addInventoryItemMutation = useAddInventoryItem();
   const updateInventoryItemMutation = useUpdateInventoryItem();
@@ -55,21 +58,27 @@ const Inventory = () => {
     }
   };
 
-  // Filtrado de ítems
   const filteredItems = React.useMemo(() => {
     if (!inventoryItems) return [];
     const lowerCaseSearch = searchTerm.toLowerCase();
-    return inventoryItems.filter(item => 
-      item.product_name.toLowerCase().includes(lowerCaseSearch) ||
-      item.catalog_number.toLowerCase().includes(lowerCaseSearch) ||
-      (item.brand && item.brand.toLowerCase().includes(lowerCaseSearch)) ||
-      (item.location && item.location.toLowerCase().includes(lowerCaseSearch))
-    );
-  }, [inventoryItems, searchTerm]);
+    return inventoryItems.filter((item) => {
+      if (sedeActiva && item.sede_id !== sedeActiva) return false;
+      return (
+        item.product_name.toLowerCase().includes(lowerCaseSearch) ||
+        item.catalog_number.toLowerCase().includes(lowerCaseSearch) ||
+        (item.brand && item.brand.toLowerCase().includes(lowerCaseSearch)) ||
+        (item.location && item.location.toLowerCase().includes(lowerCaseSearch))
+      );
+    });
+  }, [inventoryItems, searchTerm, sedeActiva]);
+
+  React.useEffect(() => {
+    setSelectedItems([]);
+  }, [sedeActiva]);
 
   const pagination = useClientPagination(filteredItems, {
     initialPageSize: 25,
-    resetKey: searchTerm,
+    resetKey: `${searchTerm}|${sedeActiva ?? "all"}`,
   });
   
   // Ítems seleccionados para reorder
@@ -99,7 +108,9 @@ const Inventory = () => {
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold">Inventario</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Gestiona el inventario de productos de tu laboratorio.
+            {sedeActiva
+              ? `Stock de ${getSedeLabel(sedeActiva)}. Cambia la sede en la cabecera para ver otra.`
+              : "Stock de todas las sedes. Usa el selector de sede para filtrar."}
           </p>
         </div>
         <Dialog open={isAddInventoryDialogOpen} onOpenChange={setIsAddInventoryDialogOpen}>
@@ -135,6 +146,7 @@ const Inventory = () => {
           onDelete={handleDeleteInventoryItem}
           selectedItems={selectedItems}
           onSelectChange={setSelectedItems}
+          showSede={!sedeActiva}
         />
         <ListPagination
           page={pagination.page}
