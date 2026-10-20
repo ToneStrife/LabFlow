@@ -225,8 +225,8 @@ const RequestDetails: React.FC = () => {
 
     const resolvedPoNumber = returnedPoNumber || request.po_number || null;
     const savedPoFile = Boolean(file || filePath || request.po_url);
-    // Al subir la orden de compra (PO/CPM), pasar a Pedido desde PO solicitado
-    // o desde presupuesto solicitado si ya hay PO.
+    // Solo la orden de compra (PO/CPM) avanza el estado. Subir un presupuesto
+    // no debe pasar a «PO solicitado» ni a «Pedido».
     if (
       fileTypeToUpload === "po" &&
       (request.status === "PO Requested" || request.status === "Quote Requested") &&

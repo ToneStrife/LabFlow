@@ -635,17 +635,22 @@ export const apiAddInventoryItem = async (data: InventoryItemFormData): Promise<
     quantity_in: data.quantity,
     unit_price_in: data.unit_price || null,
     format_in: data.format || null,
+    sede_id_in: data.sede_id || null,
   }).single();
   if (error) throw new Error(error.message);
 
-  if (data.location) {
-    const { data: withLocation, error: locationError } = await supabase
+  const extras: Partial<InventoryItem> = {};
+  if (data.location) extras.location = data.location;
+  if (data.sede_id !== undefined) extras.sede_id = data.sede_id || null;
+
+  if (Object.keys(extras).length > 0) {
+    const { data: updated, error: extrasError } = await supabase
       .from('inventory')
-      .update({ location: data.location })
+      .update(extras)
       .eq('id', (newItem as InventoryItem).id)
       .select()
       .single();
-    if (!locationError && withLocation) return withLocation as InventoryItem;
+    if (!extrasError && updated) return updated as InventoryItem;
   }
 
   return newItem as InventoryItem;

@@ -13,6 +13,7 @@ import { InventoryItem } from "@/hooks/use-inventory";
 import { format } from "date-fns";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
+import { getSedeLabel } from "@/lib/sedes";
 
 interface InventoryTableProps {
   items: InventoryItem[];
@@ -20,6 +21,8 @@ interface InventoryTableProps {
   onDelete: (itemId: string) => void;
   selectedItems: string[];
   onSelectChange: (selectedIds: string[]) => void;
+  /** En vista «Todas las sedes», mostrar columna de sede. */
+  showSede?: boolean;
 }
 
 function quantityClass(quantity: number) {
@@ -34,6 +37,7 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
   onDelete,
   selectedItems,
   onSelectChange,
+  showSede = false,
 }) => {
   const pageIds = items.map((item) => item.id);
   const selectedOnPage = pageIds.filter((id) => selectedItems.includes(id));
@@ -93,6 +97,9 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
                     {item.catalog_number}
                     {item.brand ? ` · ${item.brand}` : ""}
                     {item.location ? ` · ${item.location}` : ""}
+                    {showSede
+                      ? ` · ${item.sede_id ? getSedeLabel(item.sede_id) : "Sin sede"}`
+                      : ""}
                   </p>
                 </div>
                 <span className={cn("shrink-0 text-sm tabular-nums", quantityClass(item.quantity))}>
@@ -132,6 +139,7 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
               <TableHead>Catálogo #</TableHead>
               <TableHead>Cantidad</TableHead>
               <TableHead className="hidden sm:table-cell">Ubicación</TableHead>
+              {showSede && <TableHead className="hidden sm:table-cell">Sede</TableHead>}
               <TableHead className="hidden md:table-cell">Precio Unitario</TableHead>
               <TableHead className="hidden lg:table-cell">Formato</TableHead>
               <TableHead className="hidden lg:table-cell">Añadido el</TableHead>
@@ -141,7 +149,7 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
           <TableBody>
             {items.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={10} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={showSede ? 11 : 10} className="h-24 text-center text-muted-foreground">
                   No se encontraron artículos en el inventario.
                 </TableCell>
               </TableRow>
@@ -164,6 +172,11 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
                       {item.quantity}
                     </TableCell>
                     <TableCell className="hidden sm:table-cell">{item.location || "—"}</TableCell>
+                    {showSede && (
+                      <TableCell className="hidden sm:table-cell">
+                        {item.sede_id ? getSedeLabel(item.sede_id) : "—"}
+                      </TableCell>
+                    )}
                     <TableCell className="hidden md:table-cell">
                       {item.unit_price ? `€${Number(item.unit_price).toFixed(2)}` : "N/A"}
                     </TableCell>
