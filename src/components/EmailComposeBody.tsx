@@ -9,7 +9,6 @@ import {
   type TipoBloque,
 } from "@/utils/email-dialog-blocks";
 
-// Re-export tipo for callers that need it via this module.
 export type { BloquesCorreo };
 
 interface EmailComposeBodyProps {
@@ -20,21 +19,22 @@ interface EmailComposeBodyProps {
   className?: string;
 }
 
-function protegerBloquesEnDom(html: string): { html: string; bloques: BloquesCorreo } {
+/** Inserta las tablas/cajas con datos en el HTML listo para el editor. */
+function montarHtmlEditable(html: string): string {
   const { html: conMarcas, bloques } = extraerBloques(html || "");
   let montado = conMarcas;
   for (const tipo of Object.keys(bloques) as TipoBloque[]) {
     const bloque = bloques[tipo];
     if (!bloque) continue;
     const marca = marcaDeBloque(tipo);
-    const protegido = bloque.replace(/<table\b/i, '<table contenteditable="false" ');
+    const marcaEsc = marca.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const enParrafo = new RegExp(
-      `<p[^>]*>\\s*(?:<[^>]+>)*${marca.replace(/[[\]]/g, "\\$&")}(?:</[^>]+>)*\\s*</p>`,
+      `<p[^>]*>\\s*(?:<[^>]+>)*${marcaEsc}(?:</[^>]+>)*\\s*</p>`,
       "g"
     );
-    montado = montado.replace(enParrafo, () => protegido).replaceAll(marca, protegido);
+    montado = montado.replace(enParrafo, () => bloque).split(marca).join(bloque);
   }
-  return { html: montado, bloques };
+  return montado;
 }
 
 function htmlListoParaEnviar(raw: string): string {
@@ -50,8 +50,8 @@ function htmlListoParaEnviar(raw: string): string {
 }
 
 /**
- * Un solo lienzo de correo: texto editable + tablas/cajas con datos (no editables).
- * Así se ve el mensaje como lo recibirá el destinatario, sin recuadros sueltos.
+ * Lienzo único del correo. Todo el texto (incluido el de tablas y cajas) se
+ * puede editar; al enviar se manda el HTML tal cual queda.
  */
 const EmailComposeBody: React.FC<EmailComposeBodyProps> = ({
   initialHtml,
@@ -64,11 +64,7 @@ const EmailComposeBody: React.FC<EmailComposeBodyProps> = ({
   React.useEffect(() => {
     const el = rootRef.current;
     if (!el) return;
-    const { html } = protegerBloquesEnDom(initialHtml);
-    el.innerHTML = html;
-    el.querySelectorAll("table[data-bloque]").forEach((table) => {
-      table.setAttribute("contenteditable", "false");
-    });
+    el.innerHTML = montarHtmlEditable(initialHtml);
   }, [initialHtml]);
 
   React.useEffect(() => {
@@ -92,22 +88,15 @@ const EmailComposeBody: React.FC<EmailComposeBodyProps> = ({
         contentEditable={!disabled}
         suppressContentEditableWarning
         className={cn(
-          "min-h-[240px] max-h-[440px] overflow-y-auto px-5 py-4 text-[14px] leading-relaxed outline-none",
+          "min-h-[280px] max-h-[min(60vh,520px)] overflow-y-auto px-6 py-5 text-[15px] leading-relaxed outline-none",
           "[&_p]:my-2 [&_table]:my-3 [&_table]:w-full",
-          "[&_table[data-bloque]]:cursor-default [&_table[data-bloque]]:select-text",
           "focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/25",
           disabled && "pointer-events-none opacity-60"
         )}
-        onMouseDown={(e) => {
-          const t = e.target as HTMLElement;
-          if (t.closest("table[data-bloque]")) {
-            // Permitir selección/copia, no el caret de edición dentro de la tabla.
-          }
-        }}
       />
       <p className="border-t bg-muted/30 px-4 py-2 text-xs text-muted-foreground">
-        Edita el texto libremente. Las tablas y cajas de datos van fijas (como las verá quien
-        reciba el correo).
+        Puedes editar todo el texto, también el de las tablas y cajas. Se enviará tal como lo
+        dejes.
       </p>
     </div>
   );
