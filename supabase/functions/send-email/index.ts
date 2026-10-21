@@ -324,8 +324,8 @@ serve(async (req) => {
       /Username and Password not accepted/i.test(raw);
     logErrorMessage = esCredenciales
       ? "El servidor SMTP rechazó usuario o contraseña (535). " +
-        "Para niceto@go.ugr.es / @go.ugr.es hace falta una contraseña de aplicación de Google " +
-        "de 16 caracteres (cuenta Google → Seguridad → Contraseñas de aplicaciones), " +
+        "Para niceto@go.ugr.es / @go.ugr.es revisa la contraseña de aplicación de Google " +
+        "(cuenta Google → Seguridad → Contraseñas de aplicaciones), " +
         "no la contraseña normal del correo. Host: smtp.gmail.com. " +
         "Guárdala en Perfil → Mi correo de envío o Admin → Cuentas SMTP."
       : raw;

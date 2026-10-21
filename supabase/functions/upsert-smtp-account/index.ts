@@ -115,18 +115,6 @@ serve(async (req) => {
       );
     }
 
-    if (wantsPasswordUpdate && esGoogleWorkspaceUgr(email) && passwordRaw.length !== 16) {
-      return new Response(
-        JSON.stringify({
-          error:
-            "Para @go.ugr.es / Google hace falta una contraseña de aplicación de 16 caracteres " +
-            "(cuenta Google → Seguridad → Contraseñas de aplicaciones). " +
-            "No uses la contraseña normal del correo. Si Google la muestra con espacios, pégala igual: se quitan al guardar.",
-        }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
     const payload: Record<string, unknown> = {
       email,
       smtp_user,
