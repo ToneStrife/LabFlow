@@ -789,6 +789,14 @@ export const apiGetSmtpAccounts = async (): Promise<SmtpAccountPublic[]> => {
   return (plano.data ?? []).map((row) => filaSmtp(row as Record<string, unknown>));
 };
 
+const esGoogleWorkspaceUgr = (email: string) => {
+  const e = email.trim().toLowerCase();
+  return e.endsWith("@go.ugr.es") || e.endsWith("@ugr.es");
+};
+
+/** Google muestra las App Passwords con espacios; SMTP las quiere sin ellos. */
+const normalizeSmtpPassword = (password: string) => password.replace(/\s+/g, "").trim();
+
 export const apiUpsertSmtpAccount = async (
   input: UpsertSmtpAccountInput
 ): Promise<SmtpAccountPublic> => {
@@ -808,15 +816,27 @@ export const apiUpsertSmtpAccount = async (
     .maybeSingle();
   if (existingError) throw new Error(explicarErrorSmtp(existingError.message));
 
-  const password = input.smtp_password?.trim() ?? "";
+  const password = normalizeSmtpPassword(input.smtp_password ?? "");
   if (!existing && !password) {
     throw new Error("Al crear la cuenta debes indicar la contraseña SMTP.");
+  }
+  if (password && esGoogleWorkspaceUgr(email) && password.length !== 16) {
+    throw new Error(
+      "Para @go.ugr.es / Google hace falta una contraseña de aplicación de 16 caracteres " +
+        "(cuenta Google → Seguridad → Contraseñas de aplicaciones). " +
+        "No uses la contraseña normal del correo."
+    );
+  }
+
+  let smtpHost = input.smtp_host?.trim() || null;
+  if (!smtpHost && esGoogleWorkspaceUgr(email)) {
+    smtpHost = "smtp.gmail.com";
   }
 
   const payload: Record<string, unknown> = {
     email,
     smtp_user: smtpUser,
-    smtp_host: input.smtp_host?.trim() || null,
+    smtp_host: smtpHost,
     label: input.label?.trim() || null,
     updated_at: new Date().toISOString(),
     updated_by: userId,

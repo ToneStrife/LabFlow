@@ -53,7 +53,7 @@ const SmtpAccountsSection: React.FC<SmtpAccountsSectionProps> = ({
   profileEmail,
   title = "Cuentas SMTP",
   description =
-    "Para @go.ugr.es (Google): Host smtp.gmail.com y una contraseña de aplicación de Google (no la contraseña normal de la cuenta). LabFlow autentica con esa cuenta al enviar. La contraseña no se vuelve a mostrar; déjala en blanco para conservarla.",
+    "Para @go.ugr.es (Google Workspace): Host smtp.gmail.com y una contraseña de aplicación de 16 caracteres (cuenta Google → Seguridad → Contraseñas de aplicaciones). No vale la contraseña normal del correo. Si Google la muestra con espacios, pégala igual. Vacío = conservar la guardada.",
 }) => {
   const { data: accounts = [], isLoading, error } = useSmtpAccounts();
   const upsertMutation = useUpsertSmtpAccount();
@@ -75,9 +75,11 @@ const SmtpAccountsSection: React.FC<SmtpAccountsSectionProps> = ({
 
     const mine = accounts.find((a) => a.email === lockedEmail) || null;
     setEditing(mine);
+    const esGo =
+      lockedEmail.endsWith("@go.ugr.es") || lockedEmail.endsWith("@ugr.es");
     form.reset({
       email: mine?.email || lockedEmail,
-      smtp_host: mine?.smtp_host || "",
+      smtp_host: mine?.smtp_host || (esGo ? "smtp.gmail.com" : ""),
       smtp_user: mine?.smtp_user || lockedEmail,
       smtp_password: "",
       label: mine?.label || "",
@@ -89,9 +91,11 @@ const SmtpAccountsSection: React.FC<SmtpAccountsSectionProps> = ({
   // Admin: al elegir Editar, rellenar el formulario.
   React.useEffect(() => {
     if (!adminMode || !editing || !showNewForm) return;
+    const esGo =
+      editing.email.endsWith("@go.ugr.es") || editing.email.endsWith("@ugr.es");
     form.reset({
       email: editing.email,
-      smtp_host: editing.smtp_host || "",
+      smtp_host: editing.smtp_host || (esGo ? "smtp.gmail.com" : ""),
       smtp_user: editing.smtp_user,
       smtp_password: "",
       label: editing.label || "",
@@ -105,11 +109,20 @@ const SmtpAccountsSection: React.FC<SmtpAccountsSectionProps> = ({
       return;
     }
 
+    const esGo = email.endsWith("@go.ugr.es") || email.endsWith("@ugr.es");
+    const password = (values.smtp_password || "").replace(/\s+/g, "").trim();
+    if (password && esGo && password.length !== 16) {
+      toast.error(
+        "La contraseña de aplicación de Google tiene 16 caracteres (sin contar espacios)."
+      );
+      return;
+    }
+
     await upsertMutation.mutateAsync({
       email,
-      smtp_host: values.smtp_host?.trim() || null,
+      smtp_host: values.smtp_host?.trim() || (esGo ? "smtp.gmail.com" : null),
       smtp_user: values.smtp_user.trim(),
-      smtp_password: values.smtp_password || undefined,
+      smtp_password: password || undefined,
       label: values.label?.trim() || null,
     });
 
@@ -306,7 +319,8 @@ const SmtpAccountsSection: React.FC<SmtpAccountsSectionProps> = ({
                         />
                       </FormControl>
                       <FormDescription>
-                        En Google Workspace usa una contraseña de aplicación. Nunca se muestra en claro; vacía = conservar la actual.
+                        Google Workspace: contraseña de aplicación de 16 caracteres (no la del correo).
+                        Vacía = conservar la actual.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
