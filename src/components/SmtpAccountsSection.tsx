@@ -2,7 +2,7 @@ import React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Loader2, Save, PlusCircle, CheckCircle2, AlertCircle } from "lucide-react";
+import { Loader2, Save, PlusCircle, CheckCircle2, AlertCircle, CircleHelp } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +10,14 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   useSmtpAccounts,
   useUpsertSmtpAccount,
@@ -59,6 +67,7 @@ const SmtpAccountsSection: React.FC<SmtpAccountsSectionProps> = ({
   const upsertMutation = useUpsertSmtpAccount();
   const [editing, setEditing] = React.useState<SmtpAccountPublic | null>(null);
   const [showNewForm, setShowNewForm] = React.useState(false);
+  const [ayudaAppPasswordOpen, setAyudaAppPasswordOpen] = React.useState(false);
 
   const lockedEmail = !adminMode ? (profileEmail || "").trim().toLowerCase() : "";
 
@@ -312,7 +321,19 @@ const SmtpAccountsSection: React.FC<SmtpAccountsSectionProps> = ({
                   name="smtp_password"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Contraseña SMTP</FormLabel>
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <FormLabel className="m-0">Contraseña SMTP</FormLabel>
+                        <Button
+                          type="button"
+                          variant="link"
+                          size="sm"
+                          className="h-auto p-0 text-xs"
+                          onClick={() => setAyudaAppPasswordOpen(true)}
+                        >
+                          <CircleHelp className="mr-1 h-3.5 w-3.5" />
+                          Cómo sacar la contraseña de aplicación
+                        </Button>
+                      </div>
                       <FormControl>
                         <Input
                           type="password"
@@ -381,6 +402,52 @@ const SmtpAccountsSection: React.FC<SmtpAccountsSectionProps> = ({
           </CardContent>
         </Card>
       )}
+
+      <Dialog open={ayudaAppPasswordOpen} onOpenChange={setAyudaAppPasswordOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Contraseña de aplicación de Google</DialogTitle>
+            <DialogDescription>
+              Gmail no acepta la contraseña normal del correo para SMTP. Hay que crear una
+              contraseña de aplicación y pegarla aquí.
+            </DialogDescription>
+          </DialogHeader>
+          <ol className="list-decimal space-y-2 pl-5 text-sm text-foreground">
+            <li>
+              Entra en la cuenta Google del buzón (
+              <a
+                href="https://myaccount.google.com/security"
+                target="_blank"
+                rel="noreferrer"
+                className="underline underline-offset-2"
+              >
+                myaccount.google.com/security
+              </a>
+              ).
+            </li>
+            <li>Activa <strong>Verificación en 2 pasos</strong> si aún no lo está.</li>
+            <li>
+              Abre{" "}
+              <a
+                href="https://myaccount.google.com/apppasswords"
+                target="_blank"
+                rel="noreferrer"
+                className="underline underline-offset-2"
+              >
+                Contraseñas de aplicaciones
+              </a>
+              .
+            </li>
+            <li>Nombre: «LabFlow» o «Correo» → Crear.</li>
+            <li>Copia la clave (16 caracteres; si sale con espacios, pégala igual) y guárdala aquí.</li>
+          </ol>
+          <DialogFooter>
+            <Button type="button" onClick={() => setAyudaAppPasswordOpen(false)}>
+              Entendido
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
