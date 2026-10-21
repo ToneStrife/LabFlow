@@ -322,18 +322,31 @@ serve(async (req) => {
   } catch (err: any) {
     console.error("[send-email] Error crítico:", err.message);
     const raw = String(err?.message || err || "Error al enviar el correo");
-    // Gmail/Workspace: 535 BadCredentials → contraseña de cuenta, no de aplicación, o host mal.
+    // Gmail exige App Password si hay 2FA (534) o rechaza credenciales (535).
+    const pideAppPassword =
+      /\b534\b/.test(raw) ||
+      /Application-specific password required/i.test(raw) ||
+      /InvalidSecondFactor/i.test(raw);
     const esCredenciales =
       /\b535\b/.test(raw) ||
       /BadCredentials/i.test(raw) ||
       /Username and Password not accepted/i.test(raw);
-    logErrorMessage = esCredenciales
-      ? "El servidor SMTP rechazó usuario o contraseña (535). " +
-        "Para niceto@go.ugr.es / @go.ugr.es revisa la contraseña de aplicación de Google " +
+    if (pideAppPassword) {
+      logErrorMessage =
+        "Google pide una contraseña de aplicación (no la del correo). " +
+        "En la cuenta Gmail/Google: Seguridad → Verificación en 2 pasos (debe estar activa) → " +
+        "Contraseñas de aplicaciones → crear una para «Correo» / LabFlow. " +
+        "Pégala en Admin → Cuentas SMTP (o Correo) y vuelve a enviar.";
+    } else if (esCredenciales) {
+      logErrorMessage =
+        "El servidor SMTP rechazó usuario o contraseña (535). " +
+        "Revisa la contraseña de aplicación de Google " +
         "(cuenta Google → Seguridad → Contraseñas de aplicaciones), " +
         "no la contraseña normal del correo. Host: smtp.gmail.com. " +
-        "Guárdala en Perfil → Mi correo de envío o Admin → Cuentas SMTP."
-      : raw;
+        "Guárdala en Admin → Cuentas SMTP o Correo.";
+    } else {
+      logErrorMessage = raw;
+    }
     return new Response(
       JSON.stringify({ error: logErrorMessage }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
