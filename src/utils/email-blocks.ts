@@ -13,7 +13,13 @@ import { SupabaseRequestItem } from "@/data/types";
 
 export type VarianteTabla = "claro" | "oscuro";
 
-export type TipoBloque = "items" | "billing" | "shipping" | "project" | "warning";
+export type TipoBloque =
+  | "items"
+  | "billing"
+  | "billing_address"
+  | "shipping"
+  | "project"
+  | "warning";
 
 const BORDE = "#d4d4d4";
 const TIPO = "Arial, Helvetica, sans-serif";

@@ -10,6 +10,7 @@ export type { TipoBloque };
 const ETIQUETAS: Record<TipoBloque, string> = {
   items: "tabla de artículos",
   billing: "datos de facturación",
+  billing_address: "dirección de facturación",
   shipping: "dirección de envío",
   project: "datos del proyecto",
   warning: "aviso",
