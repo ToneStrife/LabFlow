@@ -8,6 +8,14 @@ const corsHeaders = {
 
 const normalizeEmail = (addr: string): string => addr.trim().toLowerCase();
 
+const normalizeSmtpPassword = (password: string): string =>
+  password.replace(/\s+/g, "").trim();
+
+const esGoogleWorkspaceUgr = (email: string): boolean => {
+  const e = normalizeEmail(email);
+  return e.endsWith("@go.ugr.es") || e.endsWith("@ugr.es");
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -53,13 +61,19 @@ serve(async (req) => {
     const emailRaw = typeof body.email === "string" ? body.email : "";
     const email = normalizeEmail(emailRaw);
     const smtp_user = typeof body.smtp_user === "string" ? body.smtp_user.trim() : "";
-    const smtp_host =
+    let smtp_host =
       typeof body.smtp_host === "string" && body.smtp_host.trim()
         ? body.smtp_host.trim()
         : null;
+    if (!smtp_host && esGoogleWorkspaceUgr(emailRaw || "")) {
+      smtp_host = "smtp.gmail.com";
+    }
     const label =
       typeof body.label === "string" && body.label.trim() ? body.label.trim() : null;
-    const passwordRaw = typeof body.smtp_password === "string" ? body.smtp_password : "";
+    const passwordRaw =
+      typeof body.smtp_password === "string"
+        ? normalizeSmtpPassword(body.smtp_password)
+        : "";
     // Contraseña vacía = conservar la existente (no borrar).
     const wantsPasswordUpdate = passwordRaw.length > 0;
 
@@ -96,6 +110,18 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({
           error: "Al crear la cuenta debes indicar la contraseña SMTP.",
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (wantsPasswordUpdate && esGoogleWorkspaceUgr(email) && passwordRaw.length !== 16) {
+      return new Response(
+        JSON.stringify({
+          error:
+            "Para @go.ugr.es / Google hace falta una contraseña de aplicación de 16 caracteres " +
+            "(cuenta Google → Seguridad → Contraseñas de aplicaciones). " +
+            "No uses la contraseña normal del correo. Si Google la muestra con espacios, pégala igual: se quitan al guardar.",
         }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );

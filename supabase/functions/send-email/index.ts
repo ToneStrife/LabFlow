@@ -12,6 +12,15 @@ const CORREO_NICETO = "niceto@go.ugr.es";
 
 const normalizeEmail = (addr: string): string => addr.trim().toLowerCase();
 
+/** Google muestra las App Passwords con espacios; SMTP las quiere sin ellos. */
+const normalizeSmtpPassword = (password: string): string =>
+  password.replace(/\s+/g, "").trim();
+
+const esGoogleWorkspaceUgr = (email: string): boolean => {
+  const e = normalizeEmail(email);
+  return e.endsWith("@go.ugr.es") || e.endsWith("@ugr.es");
+};
+
 const resolveStoragePath = (urlOrPath: string): string => {
   if (!urlOrPath.startsWith("http://") && !urlOrPath.startsWith("https://")) {
     return urlOrPath;
@@ -189,9 +198,12 @@ serve(async (req) => {
         );
       }
 
-      smtpHost = (account.smtp_host && String(account.smtp_host).trim()) || SMTP_HOST;
+      const hostGuardado = account.smtp_host && String(account.smtp_host).trim();
+      smtpHost =
+        hostGuardado ||
+        (esGoogleWorkspaceUgr(fromNorm) ? "smtp.gmail.com" : SMTP_HOST);
       smtpUser = String(account.smtp_user).trim();
-      smtpPassword = String(account.smtp_password);
+      smtpPassword = normalizeSmtpPassword(String(account.smtp_password));
     }
 
     // Remitentes permitidos: default + niceto@ + cualquier email en smtp_accounts.
@@ -312,9 +324,10 @@ serve(async (req) => {
       /Username and Password not accepted/i.test(raw);
     logErrorMessage = esCredenciales
       ? "El servidor SMTP rechazó usuario o contraseña (535). " +
-        "Si el correo es @go.ugr.es con Google, hace falta una contraseña de aplicación " +
-        "(no la de la cuenta) y el Host SMTP suele ser smtp.gmail.com. " +
-        "Revísalo en Perfil → Mi correo de envío o Admin → Cuentas SMTP."
+        "Para niceto@go.ugr.es / @go.ugr.es hace falta una contraseña de aplicación de Google " +
+        "de 16 caracteres (cuenta Google → Seguridad → Contraseñas de aplicaciones), " +
+        "no la contraseña normal del correo. Host: smtp.gmail.com. " +
+        "Guárdala en Perfil → Mi correo de envío o Admin → Cuentas SMTP."
       : raw;
     return new Response(
       JSON.stringify({ error: logErrorMessage }),
