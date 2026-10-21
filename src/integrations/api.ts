@@ -14,6 +14,7 @@ import {
   SupabaseRequestItem,
 } from "@/data/types";
 import { buildAuthReturnUrl } from "@/lib/auth-redirect";
+import { esHostGmailSmtp } from "@/lib/smtp";
 import { uploadRequestFile } from "@/utils/upload-request-file";
 import { InventoryItemFormData } from "@/hooks/use-inventory"; 
 
@@ -789,11 +790,6 @@ export const apiGetSmtpAccounts = async (): Promise<SmtpAccountPublic[]> => {
   return (plano.data ?? []).map((row) => filaSmtp(row as Record<string, unknown>));
 };
 
-const esGoogleWorkspaceUgr = (email: string) => {
-  const e = email.trim().toLowerCase();
-  return e.endsWith("@go.ugr.es") || e.endsWith("@ugr.es");
-};
-
 /** Google muestra las App Passwords con espacios; SMTP las quiere sin ellos. */
 const normalizeSmtpPassword = (password: string) => password.replace(/\s+/g, "").trim();
 
@@ -822,7 +818,7 @@ export const apiUpsertSmtpAccount = async (
   }
 
   let smtpHost = input.smtp_host?.trim() || null;
-  if (!smtpHost && esGoogleWorkspaceUgr(email)) {
+  if (!smtpHost && esHostGmailSmtp(email)) {
     smtpHost = "smtp.gmail.com";
   }
 

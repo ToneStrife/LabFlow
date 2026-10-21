@@ -11,9 +11,14 @@ const normalizeEmail = (addr: string): string => addr.trim().toLowerCase();
 const normalizeSmtpPassword = (password: string): string =>
   password.replace(/\s+/g, "").trim();
 
-const esGoogleWorkspaceUgr = (email: string): boolean => {
+const esHostGmailSmtp = (email: string): boolean => {
   const e = normalizeEmail(email);
-  return e.endsWith("@go.ugr.es") || e.endsWith("@ugr.es");
+  return (
+    e.endsWith("@gmail.com") ||
+    e.endsWith("@googlemail.com") ||
+    e.endsWith("@go.ugr.es") ||
+    e.endsWith("@ugr.es")
+  );
 };
 
 serve(async (req) => {
@@ -65,7 +70,7 @@ serve(async (req) => {
       typeof body.smtp_host === "string" && body.smtp_host.trim()
         ? body.smtp_host.trim()
         : null;
-    if (!smtp_host && esGoogleWorkspaceUgr(emailRaw || "")) {
+    if (!smtp_host && esHostGmailSmtp(emailRaw || "")) {
       smtp_host = "smtp.gmail.com";
     }
     const label =

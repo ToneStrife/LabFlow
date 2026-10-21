@@ -16,9 +16,10 @@ import {
   type SmtpAccountPublic,
 } from "@/hooks/use-smtp-accounts";
 import { CORREO_NICETO } from "@/lib/farmacia";
+import { esHostGmailSmtp } from "@/lib/smtp";
 
 const formSchema = z.object({
-  email: z.string().email({ message: "Correo inválido." }),
+  email: z.string().email({ message: "Correo inválido." }).or(z.literal("")),
   smtp_host: z.string().optional(),
   smtp_user: z.string().min(1, { message: "El usuario SMTP es obligatorio." }),
   smtp_password: z.string().optional(),
@@ -37,11 +38,10 @@ interface SmtpAccountsSectionProps {
 }
 
 const emptyDefaults = (email?: string | null): FormValues => {
-  const correo = email?.trim().toLowerCase() || CORREO_NICETO;
-  const esGoUgr = correo.endsWith("@go.ugr.es") || correo.endsWith("@ugr.es");
+  const correo = (email ?? "").trim().toLowerCase();
   return {
     email: correo,
-    smtp_host: esGoUgr ? "smtp.gmail.com" : "",
+    smtp_host: correo && esHostGmailSmtp(correo) ? "smtp.gmail.com" : correo ? "" : "smtp.gmail.com",
     smtp_user: correo,
     smtp_password: "",
     label: "",
@@ -53,7 +53,7 @@ const SmtpAccountsSection: React.FC<SmtpAccountsSectionProps> = ({
   profileEmail,
   title = "Cuentas SMTP",
   description =
-    "Para @go.ugr.es (Google Workspace): Host smtp.gmail.com y la contraseña de aplicación del buzón (cuenta Google → Seguridad → Contraseñas de aplicaciones), no la contraseña normal del correo. Si Google la muestra con espacios, pégala igual: se quitan al guardar. Vacío = conservar la guardada.",
+    "Puedes añadir cualquier buzón (p. ej. un Gmail de prueba): email, usuario, host smtp.gmail.com y contraseña de aplicación (cuenta Google → Seguridad → Contraseñas de aplicaciones; no la contraseña normal). Si Google la muestra con espacios, pégala igual. Vacío en contraseña = conservar la guardada.",
 }) => {
   const { data: accounts = [], isLoading, error } = useSmtpAccounts();
   const upsertMutation = useUpsertSmtpAccount();
@@ -75,11 +75,9 @@ const SmtpAccountsSection: React.FC<SmtpAccountsSectionProps> = ({
 
     const mine = accounts.find((a) => a.email === lockedEmail) || null;
     setEditing(mine);
-    const esGo =
-      lockedEmail.endsWith("@go.ugr.es") || lockedEmail.endsWith("@ugr.es");
     form.reset({
       email: mine?.email || lockedEmail,
-      smtp_host: mine?.smtp_host || (esGo ? "smtp.gmail.com" : ""),
+      smtp_host: mine?.smtp_host || (esHostGmailSmtp(lockedEmail) ? "smtp.gmail.com" : ""),
       smtp_user: mine?.smtp_user || lockedEmail,
       smtp_password: "",
       label: mine?.label || "",
@@ -91,11 +89,9 @@ const SmtpAccountsSection: React.FC<SmtpAccountsSectionProps> = ({
   // Admin: al elegir Editar, rellenar el formulario.
   React.useEffect(() => {
     if (!adminMode || !editing || !showNewForm) return;
-    const esGo =
-      editing.email.endsWith("@go.ugr.es") || editing.email.endsWith("@ugr.es");
     form.reset({
       email: editing.email,
-      smtp_host: editing.smtp_host || (esGo ? "smtp.gmail.com" : ""),
+      smtp_host: editing.smtp_host || (esHostGmailSmtp(editing.email) ? "smtp.gmail.com" : ""),
       smtp_user: editing.smtp_user,
       smtp_password: "",
       label: editing.label || "",
@@ -104,18 +100,22 @@ const SmtpAccountsSection: React.FC<SmtpAccountsSectionProps> = ({
 
   const onSubmit = async (values: FormValues) => {
     const email = values.email.trim().toLowerCase();
+    if (!email) {
+      toast.error("Indica el correo (From).");
+      return;
+    }
     if (!adminMode && lockedEmail && email !== lockedEmail) {
       toast.error("Solo puedes configurar tu propio correo.");
       return;
     }
 
-    const esGo = email.endsWith("@go.ugr.es") || email.endsWith("@ugr.es");
     const password = (values.smtp_password || "").replace(/\s+/g, "").trim();
+    const smtpUser = values.smtp_user.trim() || email;
 
     await upsertMutation.mutateAsync({
       email,
-      smtp_host: values.smtp_host?.trim() || (esGo ? "smtp.gmail.com" : null),
-      smtp_user: values.smtp_user.trim(),
+      smtp_host: values.smtp_host?.trim() || (esHostGmailSmtp(email) ? "smtp.gmail.com" : null),
+      smtp_user: smtpUser,
       smtp_password: password || undefined,
       label: values.label?.trim() || null,
     });
@@ -170,7 +170,7 @@ const SmtpAccountsSection: React.FC<SmtpAccountsSectionProps> = ({
           <CardContent>
             {accounts.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                No hay cuentas. Crea una para niceto@go.ugr.es u otro remitente.
+                No hay cuentas. Crea una para niceto@go.ugr.es, un Gmail de prueba u otro remitente.
               </p>
             ) : (
               <div className="rounded-md border overflow-x-auto">
@@ -247,7 +247,20 @@ const SmtpAccountsSection: React.FC<SmtpAccountsSectionProps> = ({
                         <Input
                           type="email"
                           autoComplete="off"
+                          placeholder="tu.gmail@gmail.com"
                           {...field}
+                          onChange={(e) => {
+                            const next = e.target.value;
+                            const prev = field.value;
+                            field.onChange(next);
+                            const userActual = form.getValues("smtp_user");
+                            if (!userActual || userActual === prev) {
+                              form.setValue("smtp_user", next.trim().toLowerCase());
+                            }
+                            if (esHostGmailSmtp(next) && !form.getValues("smtp_host")?.trim()) {
+                              form.setValue("smtp_host", "smtp.gmail.com");
+                            }
+                          }}
                           disabled={upsertMutation.isPending || !adminMode}
                         />
                       </FormControl>
@@ -270,7 +283,7 @@ const SmtpAccountsSection: React.FC<SmtpAccountsSectionProps> = ({
                         />
                       </FormControl>
                       <FormDescription>
-                        @go.ugr.es: smtp.gmail.com. Vacío = el host por defecto de LabFlow.
+                        Gmail / @go.ugr.es: smtp.gmail.com. Vacío = el host por defecto de LabFlow.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -285,6 +298,7 @@ const SmtpAccountsSection: React.FC<SmtpAccountsSectionProps> = ({
                       <FormControl>
                         <Input
                           autoComplete="username"
+                          placeholder="igual que el email"
                           {...field}
                           disabled={upsertMutation.isPending}
                         />
@@ -306,14 +320,14 @@ const SmtpAccountsSection: React.FC<SmtpAccountsSectionProps> = ({
                           placeholder={
                             editing?.has_password || accounts.some((a) => a.email === form.getValues("email") && a.has_password)
                               ? "•••••••• (dejar en blanco para no cambiar)"
-                              : "Contraseña del buzón / app password"
+                              : "Contraseña de aplicación"
                           }
                           {...field}
                           disabled={upsertMutation.isPending}
                         />
                       </FormControl>
                       <FormDescription>
-                        Google Workspace: contraseña de aplicación (no la del correo).
+                        En Gmail/Google: contraseña de aplicación (no la del correo).
                         Vacía = conservar la actual.
                       </FormDescription>
                       <FormMessage />
