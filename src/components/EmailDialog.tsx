@@ -31,6 +31,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { mobileDialogClass, dialogBodyScrollClass, dialogFooterMobileClass } from "@/lib/layout";
 import { CORREO_NICETO } from "@/lib/farmacia";
+import { useSmtpAccounts } from "@/hooks/use-smtp-accounts";
 import { normalizeAttachments, type EmailAttachment } from "@/utils/email-attachments";
 import EmailComposeBody from "@/components/EmailComposeBody";
 
@@ -87,9 +88,23 @@ const EmailDialog: React.FC<EmailDialogProps> = ({
   onSend,
   isSending,
 }) => {
+  const { data: smtpAccounts = [] } = useSmtpAccounts();
   const attachmentsForSendRef = React.useRef<EmailAttachment[]>([]);
   const composeApiRef = React.useRef<{ getHtml: () => string } | null>(null);
   const [composeKey, setComposeKey] = React.useState(0);
+
+  const fromOptions = React.useMemo(() => {
+    const emails = new Set<string>();
+    emails.add(CORREO_NICETO);
+    for (const account of smtpAccounts) {
+      if (account.email) emails.add(account.email.trim().toLowerCase());
+    }
+    return [...emails].sort((a, b) => {
+      if (a === CORREO_NICETO) return -1;
+      if (b === CORREO_NICETO) return 1;
+      return a.localeCompare(b);
+    });
+  }, [smtpAccounts]);
 
   const form = useForm<z.infer<typeof emailFormSchema>>({
     resolver: zodResolver(emailFormSchema),
@@ -204,15 +219,26 @@ const EmailDialog: React.FC<EmailDialogProps> = ({
                         <SelectItem value={FROM_SMTP_DEFAULT}>
                           Cuenta SMTP de LabFlow (por defecto)
                         </SelectItem>
-                        <SelectItem value={CORREO_NICETO}>{CORREO_NICETO}</SelectItem>
+                        {fromOptions.map((email) => {
+                          const account = smtpAccounts.find(
+                            (a) => a.email.trim().toLowerCase() === email
+                          );
+                          const pendiente = account && !account.has_password;
+                          return (
+                            <SelectItem key={email} value={email}>
+                              {email}
+                              {pendiente ? " (sin contraseña)" : ""}
+                            </SelectItem>
+                          );
+                        })}
                       </SelectContent>
                     </Select>
-                    {field.value === CORREO_NICETO && (
+                    {field.value ? (
                       <p className="text-xs text-muted-foreground">
-                        Se autentica con la cuenta SMTP de {CORREO_NICETO} (Perfil o Admin →
-                        Cuentas SMTP).
+                        Se autentica con la cuenta SMTP de {field.value} (Admin → Cuentas SMTP
+                        o Correo).
                       </p>
-                    )}
+                    ) : null}
                     <FormMessage />
                   </FormItem>
                 )}

@@ -16,9 +16,14 @@ const normalizeEmail = (addr: string): string => addr.trim().toLowerCase();
 const normalizeSmtpPassword = (password: string): string =>
   password.replace(/\s+/g, "").trim();
 
-const esGoogleWorkspaceUgr = (email: string): boolean => {
+const esHostGmailSmtp = (email: string): boolean => {
   const e = normalizeEmail(email);
-  return e.endsWith("@go.ugr.es") || e.endsWith("@ugr.es");
+  return (
+    e.endsWith("@gmail.com") ||
+    e.endsWith("@googlemail.com") ||
+    e.endsWith("@go.ugr.es") ||
+    e.endsWith("@ugr.es")
+  );
 };
 
 const resolveStoragePath = (urlOrPath: string): string => {
@@ -201,7 +206,7 @@ serve(async (req) => {
       const hostGuardado = account.smtp_host && String(account.smtp_host).trim();
       smtpHost =
         hostGuardado ||
-        (esGoogleWorkspaceUgr(fromNorm) ? "smtp.gmail.com" : SMTP_HOST);
+        (esHostGmailSmtp(fromNorm) ? "smtp.gmail.com" : SMTP_HOST);
       smtpUser = String(account.smtp_user).trim();
       smtpPassword = normalizeSmtpPassword(String(account.smtp_password));
     }
