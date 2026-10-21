@@ -133,11 +133,11 @@ export const buildShippingBoxHtml = (direccion: string | null | undefined): stri
   "</td></tr></table>";
 
 /**
- * Dirección de facturación (calle/ciudad). Sin data-bloque: en el mismo correo
- * ya puede ir {{billing_box}} (datos fiscales) y no deben chocar.
+ * Dirección postal de facturación. Tipo distinto de "billing" (datos fiscales
+ * del {{billing_box}}) para que puedan coexistir en el mismo correo.
  */
 export const buildBillingAddressBoxHtml = (direccion: string | null | undefined): string =>
-  `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="${MARGEN}font-family:${TIPO};">` +
+  abrirBloque("billing_address", `${MARGEN}font-family:${TIPO};`) +
   '<tr><td style="padding:0 0 10px 0;font-size:13px;font-weight:bold;letter-spacing:.04em;' +
   'color:#1a1a1a;">DIRECCIÓN DE FACTURACIÓN:</td></tr>' +
   '<tr><td style="border-left:3px solid #c0392b;padding:2px 0 2px 14px;">' +

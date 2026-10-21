@@ -28,7 +28,7 @@ export const etiquetaDeBloque = (tipo: TipoBloque): string => ETIQUETAS[tipo];
 
 /** Cada bloque es exactamente una <table> con data-bloque (ver email-blocks.ts). */
 const REGEX_BLOQUE =
-  /<table\b[^>]*\sdata-bloque="(items|billing|shipping|project|warning)"[^>]*>[\s\S]*?<\/table>/g;
+  /<table\b[^>]*\sdata-bloque="(items|billing|billing_address|shipping|project|warning)"[^>]*>[\s\S]*?<\/table>/g;
 
 const escaparRegExp = (texto: string): string => texto.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
