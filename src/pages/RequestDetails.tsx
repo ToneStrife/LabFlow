@@ -19,7 +19,7 @@ import { useAccountManagers } from "@/hooks/use-account-managers";
 import { useProjects } from "@/hooks/use-projects";
 import { useEmailTemplates } from "@/hooks/use-email-templates";
 import { useShippingAddresses, useBillingAddresses } from "@/hooks/use-addresses";
-import { processEmailTemplate, processTextTemplate, processNamedEmailTemplate } from "@/utils/email-templating";
+import { processNamedEmailTemplate } from "@/utils/email-templating";
 import EmailDialog, { EmailFormValues } from "@/components/EmailDialog";
 import InvoiceItemsDialog from "@/components/request-details/InvoiceItemsDialog";
 import { useReceiveWizard } from "@/components/ReceiveWizardProvider";
@@ -260,30 +260,50 @@ const RequestDetails: React.FC = () => {
       shippingAddress: shippingAddresses?.find(a => a.id === request.shipping_address_id),
       billingAddress: billingAddresses?.find(a => a.id === request.billing_address_id),
     };
-    
+
+    const faltan: string[] = [];
+    if (!request.quote_url) faltan.push("presupuesto");
+    if (!request.po_url) faltan.push("CÓMPRAME");
+    if (faltan.length) {
+      toast.warning(`Falta adjuntar: ${faltan.join(" y ")}. El correo se abre igual para que puedas añadirlo.`);
+    }
+
     const attachmentsForDialog: { name: string; url: string }[] = [];
     const attachmentsForSend: { name: string; url: string }[] = [];
 
     if (request.quote_url) {
-      const quoteAttachment = await buildStorageAttachment(request.quote_url);
+      const quoteAttachment = await buildStorageAttachment(request.quote_url, "Presupuesto");
       attachmentsForDialog.push(...quoteAttachment.forDialog);
       attachmentsForSend.push(...quoteAttachment.forSend);
     }
 
     if (request.po_url) {
-      const poAttachment = await buildStorageAttachment(request.po_url);
+      const poAttachment = await buildStorageAttachment(request.po_url, "CÓMPRAME");
       attachmentsForDialog.push(...poAttachment.forDialog);
       attachmentsForSend.push(...poAttachment.forSend);
     }
 
-    setEmailInitialData({
-      to: getVendorOrderEmail(request.vendor_id),
-      subject: processTextTemplate(orderConfirmationTemplate.subject_template, context as any),
-      body: processEmailTemplate(orderConfirmationTemplate.body_template, context as any),
-      attachments: attachmentsForDialog,
-      attachmentsForSend: attachmentsForSend,
-    });
-    setIsEmailDialogOpen(true);
+    try {
+      const { subject, body } = processNamedEmailTemplate(
+        "Order Confirmation",
+        orderConfirmationTemplate.subject_template,
+        orderConfirmationTemplate.body_template,
+        context
+      );
+
+      setEmailInitialData({
+        to: getVendorOrderEmail(request.vendor_id),
+        subject,
+        body,
+        attachments: attachmentsForDialog,
+        attachmentsForSend: attachmentsForSend,
+      });
+      setIsEmailDialogOpen(true);
+    } catch (error) {
+      toast.error("No se pudo preparar el correo de confirmación de pedido.", {
+        description: error instanceof Error ? error.message : undefined,
+      });
+    }
   };
 
   const handleUpdateFullRequest = async (data: FullEditFormValues) => {

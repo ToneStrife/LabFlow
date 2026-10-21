@@ -99,32 +99,44 @@ export const buildBillingBoxHtml = (datos: {
   linea("CIF", datos.cif) +
   "</td></tr></table>";
 
-/** Dirección de envío, con el filete azul a la izquierda. El título va dentro de la tabla. */
-export const buildShippingBoxHtml = (direccion: string | null | undefined): string => {
+const cuerpoDireccionHtml = (direccion: string | null | undefined): string => {
   const lineas = String(direccion ?? "")
     .split("\n")
     .map((l) => l.trim())
     .filter(Boolean);
 
-  const cuerpo = lineas.length
-    ? lineas
-        .map(
-          (l, i) =>
-            `<p style="margin:0 0 ${i === lineas.length - 1 ? 0 : 4}px 0;` +
-            `font-size:14px;color:#1a1a1a;">${escapar(l)}</p>`
-        )
-        .join("")
-    : '<p style="margin:0;font-size:14px;color:#1a1a1a;">N/A</p>';
-
-  return (
-    abrirBloque("shipping", `${MARGEN}font-family:${TIPO};`) +
-    '<tr><td style="padding:0 0 10px 0;font-size:13px;font-weight:bold;letter-spacing:.04em;' +
-    'color:#1a1a1a;">DIRECCIÓN DE ENVÍO:</td></tr>' +
-    '<tr><td style="border-left:3px solid #9bb4cc;padding:2px 0 2px 14px;">' +
-    cuerpo +
-    "</td></tr></table>"
-  );
+  if (!lineas.length) {
+    return '<p style="margin:0;font-size:14px;color:#1a1a1a;">N/A</p>';
+  }
+  return lineas
+    .map(
+      (l, i) =>
+        `<p style="margin:0 0 ${i === lineas.length - 1 ? 0 : 4}px 0;` +
+        `font-size:14px;color:#1a1a1a;">${escapar(l)}</p>`
+    )
+    .join("");
 };
+
+/** Dirección de envío, con el filete azul a la izquierda. El título va dentro de la tabla. */
+export const buildShippingBoxHtml = (direccion: string | null | undefined): string =>
+  abrirBloque("shipping", `${MARGEN}font-family:${TIPO};`) +
+  '<tr><td style="padding:0 0 10px 0;font-size:13px;font-weight:bold;letter-spacing:.04em;' +
+  'color:#1a1a1a;">DIRECCIÓN DE ENVÍO:</td></tr>' +
+  '<tr><td style="border-left:3px solid #9bb4cc;padding:2px 0 2px 14px;">' +
+  cuerpoDireccionHtml(direccion) +
+  "</td></tr></table>";
+
+/**
+ * Dirección de facturación (calle/ciudad). Sin data-bloque: en el mismo correo
+ * ya puede ir {{billing_box}} (datos fiscales) y no deben chocar.
+ */
+export const buildBillingAddressBoxHtml = (direccion: string | null | undefined): string =>
+  `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="${MARGEN}font-family:${TIPO};">` +
+  '<tr><td style="padding:0 0 10px 0;font-size:13px;font-weight:bold;letter-spacing:.04em;' +
+  'color:#1a1a1a;">DIRECCIÓN DE FACTURACIÓN:</td></tr>' +
+  '<tr><td style="border-left:3px solid #c0392b;padding:2px 0 2px 14px;">' +
+  cuerpoDireccionHtml(direccion) +
+  "</td></tr></table>";
 
 /** Caja de investigador, proyecto y entidad del CÓMPRAME. */
 export const buildProjectBoxHtml = (datos: {
@@ -169,6 +181,9 @@ export const buildBillingBoxPlainText = (datos: {
 
 export const buildShippingBoxPlainText = (direccion: string | null | undefined): string =>
   ["DIRECCIÓN DE ENVÍO:", "", String(direccion ?? "").trim() || "N/A"].join("\n");
+
+export const buildBillingAddressBoxPlainText = (direccion: string | null | undefined): string =>
+  ["DIRECCIÓN DE FACTURACIÓN:", "", String(direccion ?? "").trim() || "N/A"].join("\n");
 
 export const buildProjectBoxPlainText = (datos: {
   investigador?: string | null;
