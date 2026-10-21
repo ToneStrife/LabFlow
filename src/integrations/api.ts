@@ -820,13 +820,6 @@ export const apiUpsertSmtpAccount = async (
   if (!existing && !password) {
     throw new Error("Al crear la cuenta debes indicar la contraseña SMTP.");
   }
-  if (password && esGoogleWorkspaceUgr(email) && password.length !== 16) {
-    throw new Error(
-      "Para @go.ugr.es / Google hace falta una contraseña de aplicación de 16 caracteres " +
-        "(cuenta Google → Seguridad → Contraseñas de aplicaciones). " +
-        "No uses la contraseña normal del correo."
-    );
-  }
 
   let smtpHost = input.smtp_host?.trim() || null;
   if (!smtpHost && esGoogleWorkspaceUgr(email)) {

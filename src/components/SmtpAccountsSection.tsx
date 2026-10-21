@@ -53,7 +53,7 @@ const SmtpAccountsSection: React.FC<SmtpAccountsSectionProps> = ({
   profileEmail,
   title = "Cuentas SMTP",
   description =
-    "Para @go.ugr.es (Google Workspace): Host smtp.gmail.com y una contraseña de aplicación de 16 caracteres (cuenta Google → Seguridad → Contraseñas de aplicaciones). No vale la contraseña normal del correo. Si Google la muestra con espacios, pégala igual. Vacío = conservar la guardada.",
+    "Para @go.ugr.es (Google Workspace): Host smtp.gmail.com y la contraseña de aplicación del buzón (cuenta Google → Seguridad → Contraseñas de aplicaciones), no la contraseña normal del correo. Si Google la muestra con espacios, pégala igual: se quitan al guardar. Vacío = conservar la guardada.",
 }) => {
   const { data: accounts = [], isLoading, error } = useSmtpAccounts();
   const upsertMutation = useUpsertSmtpAccount();
@@ -111,12 +111,6 @@ const SmtpAccountsSection: React.FC<SmtpAccountsSectionProps> = ({
 
     const esGo = email.endsWith("@go.ugr.es") || email.endsWith("@ugr.es");
     const password = (values.smtp_password || "").replace(/\s+/g, "").trim();
-    if (password && esGo && password.length !== 16) {
-      toast.error(
-        "La contraseña de aplicación de Google tiene 16 caracteres (sin contar espacios)."
-      );
-      return;
-    }
 
     await upsertMutation.mutateAsync({
       email,
@@ -319,7 +313,7 @@ const SmtpAccountsSection: React.FC<SmtpAccountsSectionProps> = ({
                         />
                       </FormControl>
                       <FormDescription>
-                        Google Workspace: contraseña de aplicación de 16 caracteres (no la del correo).
+                        Google Workspace: contraseña de aplicación (no la del correo).
                         Vacía = conservar la actual.
                       </FormDescription>
                       <FormMessage />
