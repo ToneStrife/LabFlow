@@ -4,10 +4,12 @@ import { resolveTemplateForSend } from "@/utils/email-template-defaults";
 import {
   buildItemsTableHtml,
   buildBillingBoxHtml,
+  buildBillingAddressBoxHtml,
   buildShippingBoxHtml,
   buildProjectBoxHtml,
   buildWarningBoxHtml,
   buildBillingBoxPlainText,
+  buildBillingAddressBoxPlainText,
   buildShippingBoxPlainText,
   buildProjectBoxPlainText,
   buildWarningBoxPlainText,
@@ -266,9 +268,13 @@ export const processPlainTextTemplate = (templateString: string, context: EmailT
   processedString = processedString.replace(/{{billing_address}}/g, formatAddressPlainText(billingAddress));
   processedString = processedString.replace(/{{items_list}}/g, formatItemsListPlainText(request.items));
   // Bloques con diseño: en texto plano caen a su equivalente sin HTML, para que
-  // ningún marcador se cuele literal en los clientes que solo leen texto.
+  // ningún marcador se cuele literal en los clientes que leen solo texto.
   processedString = processedString.replace(/{{items_table}}/g, formatItemsListPlainText(request.items));
   processedString = processedString.replace(/{{billing_box}}/g, buildBillingBoxPlainText(proyecto));
+  processedString = processedString.replace(
+    /{{billing_address_box}}/g,
+    buildBillingAddressBoxPlainText(formatAddressPlainText(billingAddress))
+  );
   processedString = processedString.replace(
     /{{shipping_box}}/g,
     buildShippingBoxPlainText(formatAddressPlainText(shippingAddress))
@@ -308,6 +314,10 @@ export const processEmailTemplate = (
   );
   processedString = processedString.replace(/{{billing_box}}/g, () =>
     reservar(buildBillingBoxHtml(proyecto))
+  );
+  // Dirección postal de facturación (distinta de billing_box = datos fiscales).
+  processedString = processedString.replace(/{{billing_address_box}}/g, () =>
+    reservar(buildBillingAddressBoxHtml(formatAddressPlainText(billingAddress)))
   );
   processedString = processedString.replace(/{{shipping_box}}/g, () =>
     reservar(buildShippingBoxHtml(formatAddressPlainText(shippingAddress)))

@@ -27,11 +27,30 @@ export const NICETO_PO_REQUEST_BODY =
   "Saludos,\n\n" +
   "{{actor.full_name}}";
 
+export const NICETO_ORDER_CONFIRMATION_SUBJECT =
+  'Confirmación de pedido {{request.po_number | "s/n"}} — {{request.id}} {{vendor.name}}';
+
+export const NICETO_ORDER_CONFIRMATION_BODY =
+  "Estimados señores de {{vendor.name}},\n\n" +
+  'Confirmamos el pedido nº {{request.po_number | "s/n"}} (solicitud {{request.id}}).\n' +
+  "Adjunto encontrará el presupuesto y el CÓMPRAME.\n\n" +
+  "{{items_table}}\n" +
+  "{{billing_address_box}}\n" +
+  "{{shipping_box}}\n" +
+  "Atentamente,\n\n" +
+  "{{actor.full_name}}";
+
 /** Texto genérico previo al modelo Niceto (aún puede estar en BD remota). */
 const OLD_QUOTE_BODY_MARKERS = [
   "Nos gustaría solicitar un presupuesto",
   "proporcione sus mejores precios",
   "mejores precios y plazos de entrega",
+];
+
+const OLD_ORDER_CONFIRMATION_MARKERS = [
+  "confirma el pedido oficial",
+  "Orden de Compra y la Cotización",
+  "Adjunto encontrará la Orden de Compra",
 ];
 
 /**
@@ -47,6 +66,12 @@ const looksLikeOldPoBody = (body: string): boolean =>
   !body.includes("{{items_table}}") ||
   !body.includes("{{project_box}}") ||
   !body.includes("CÓMPRAME correspondiente");
+
+const looksLikeOldOrderConfirmationBody = (body: string): boolean =>
+  OLD_ORDER_CONFIRMATION_MARKERS.some((marker) => body.includes(marker)) ||
+  !body.includes("{{items_table}}") ||
+  !body.includes("{{billing_address_box}}") ||
+  !body.includes("{{shipping_box}}");
 
 /**
  * Devuelve asunto/cuerpo a usar al redactar. Si la BD sigue con la plantilla
@@ -68,6 +93,13 @@ export function resolveTemplateForSend(
     return {
       subject: NICETO_PO_REQUEST_SUBJECT,
       body: NICETO_PO_REQUEST_BODY,
+      usedFallback: true,
+    };
+  }
+  if (templateName === "Order Confirmation" && looksLikeOldOrderConfirmationBody(body)) {
+    return {
+      subject: NICETO_ORDER_CONFIRMATION_SUBJECT,
+      body: NICETO_ORDER_CONFIRMATION_BODY,
       usedFallback: true,
     };
   }

@@ -33,10 +33,24 @@ export const normalizeAttachments = (
     (adjunto): adjunto is EmailAttachment => Boolean(adjunto?.name && adjunto?.url)
   );
 
+/**
+ * @param displayName Nombre visible (p. ej. «Presupuesto»). Si no lleva
+ * extensión, se reutiliza la del archivo en storage.
+ */
 export const buildStorageAttachment = async (
-  storagePath: string
+  storagePath: string,
+  displayName?: string
 ): Promise<{ forDialog: EmailAttachment[]; forSend: EmailAttachment[] }> => {
-  const fileName = getFileNameFromPath(storagePath);
+  const originalName = getFileNameFromPath(storagePath);
+  const extension = originalName.includes(".")
+    ? originalName.slice(originalName.lastIndexOf("."))
+    : "";
+  const fileName =
+    displayName && displayName.trim()
+      ? displayName.includes(".")
+        ? displayName.trim()
+        : `${displayName.trim()}${extension}`
+      : originalName;
   const signedUrl = await generateSignedUrl(storagePath);
 
   const forSend: EmailAttachment[] = [{ name: fileName, url: storagePath }];

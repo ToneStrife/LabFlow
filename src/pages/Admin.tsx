@@ -72,9 +72,10 @@ const availablePlaceholders = [
   "{{requester.full_name}}",
   "{{requester.email}}", "{{vendor.name}}", "{{vendor.contact_person}}", "{{vendor.email}}",
   "{{account_manager.full_name}}", "{{account_manager.first_name}}", "{{account_manager.email}}",
-  "{{items_list}}", "{{cta_button}}",
+  "{{items_list}}", "{{items_table}}", "{{cta_button}}",
   "{{message}}", "{{actor.full_name}}", "{{order.itemName}}", "{{order.id}}",
   "{{shipping_address}}", "{{billing_address}}",
+  "{{shipping_box}}", "{{billing_address_box}}", "{{billing_box}}",
 ];
 
 const templateNameMap: Record<string, string> = {
@@ -564,6 +565,17 @@ const AdminPage = () => {
                         <code className="text-xs">{"{{project.entidad}}"}</code>, listado{" "}
                         <code className="text-xs">{"{{items_list}}"}</code> y firma{" "}
                         <code className="text-xs">{"{{actor.full_name}}"}</code>.
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Confirmación de pedido: asunto con{" "}
+                        <code className="text-xs">{"{{request.po_number}}"}</code>,{" "}
+                        <code className="text-xs">{"{{request.id}}"}</code> y{" "}
+                        <code className="text-xs">{"{{vendor.name}}"}</code>; cuerpo con{" "}
+                        <code className="text-xs">{"{{items_table}}"}</code>,{" "}
+                        <code className="text-xs">{"{{billing_address_box}}"}</code>,{" "}
+                        <code className="text-xs">{"{{shipping_box}}"}</code> y firma{" "}
+                        <code className="text-xs">{"{{actor.full_name}}"}</code>.
+                        La app adjunta el presupuesto y el CÓMPRAME si están subidos.
                       </p>
                       <div className="flex flex-wrap gap-2">{availablePlaceholders.map((p) => <Badge key={p} variant="secondary" className="font-mono text-xs">{p}</Badge>)}</div>
                     </div>
