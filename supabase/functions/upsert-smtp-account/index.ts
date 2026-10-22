@@ -21,6 +21,15 @@ const esHostGmailSmtp = (email: string): boolean => {
   );
 };
 
+const resolveSmtpUser = (email: string, smtpUser: string): string => {
+  const user = smtpUser.trim();
+  const correo = normalizeEmail(email);
+  if (esHostGmailSmtp(correo) && (!user || !user.includes("@"))) {
+    return correo;
+  }
+  return user || correo;
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -65,7 +74,10 @@ serve(async (req) => {
     const body = await req.json();
     const emailRaw = typeof body.email === "string" ? body.email : "";
     const email = normalizeEmail(emailRaw);
-    const smtp_user = typeof body.smtp_user === "string" ? body.smtp_user.trim() : "";
+    const smtp_user = resolveSmtpUser(
+      email,
+      typeof body.smtp_user === "string" ? body.smtp_user : ""
+    );
     let smtp_host =
       typeof body.smtp_host === "string" && body.smtp_host.trim()
         ? body.smtp_host.trim()

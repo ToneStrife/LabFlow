@@ -8,3 +8,16 @@ export function esHostGmailSmtp(email: string): boolean {
     e.endsWith("@ugr.es")
   );
 }
+
+/**
+ * Gmail/Workspace exige el correo completo como usuario SMTP.
+ * Si alguien guarda solo «niceto», usamos el email de la cuenta.
+ */
+export function resolveSmtpUser(email: string, smtpUser: string | null | undefined): string {
+  const user = (smtpUser ?? "").trim();
+  const correo = email.trim().toLowerCase();
+  if (esHostGmailSmtp(correo) && (!user || !user.includes("@"))) {
+    return correo;
+  }
+  return user || correo;
+}

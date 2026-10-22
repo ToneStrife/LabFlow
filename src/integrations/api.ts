@@ -14,7 +14,7 @@ import {
   SupabaseRequestItem,
 } from "@/data/types";
 import { buildAuthReturnUrl } from "@/lib/auth-redirect";
-import { esHostGmailSmtp } from "@/lib/smtp";
+import { esHostGmailSmtp, resolveSmtpUser } from "@/lib/smtp";
 import { uploadRequestFile } from "@/utils/upload-request-file";
 import { InventoryItemFormData } from "@/hooks/use-inventory"; 
 
@@ -798,7 +798,7 @@ export const apiUpsertSmtpAccount = async (
 ): Promise<SmtpAccountPublic> => {
   // No loguear input: puede contener smtp_password.
   const email = input.email.trim().toLowerCase();
-  const smtpUser = input.smtp_user.trim();
+  const smtpUser = resolveSmtpUser(email, input.smtp_user);
   if (!email || !email.includes("@")) throw new Error("Email inválido");
   if (!smtpUser) throw new Error("El usuario SMTP es obligatorio");
 

@@ -119,7 +119,11 @@ const SmtpAccountsSection: React.FC<SmtpAccountsSectionProps> = ({
     }
 
     const password = (values.smtp_password || "").replace(/\s+/g, "").trim();
-    const smtpUser = values.smtp_user.trim() || email;
+    // Gmail/Workspace: el usuario SMTP debe ser el correo completo.
+    const smtpUser =
+      esHostGmailSmtp(email) && !values.smtp_user.trim().includes("@")
+        ? email
+        : values.smtp_user.trim() || email;
 
     await upsertMutation.mutateAsync({
       email,
@@ -307,11 +311,14 @@ const SmtpAccountsSection: React.FC<SmtpAccountsSectionProps> = ({
                       <FormControl>
                         <Input
                           autoComplete="username"
-                          placeholder="igual que el email"
+                          placeholder="igual que el email (con @)"
                           {...field}
                           disabled={upsertMutation.isPending}
                         />
                       </FormControl>
+                      <FormDescription>
+                        En Gmail/@go.ugr.es debe ser el correo completo (p. ej. niceto@go.ugr.es), no solo el nombre.
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
