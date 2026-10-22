@@ -26,6 +26,16 @@ const esHostGmailSmtp = (email: string): boolean => {
   );
 };
 
+/** Gmail exige el correo completo como usuario; corrige valores tipo «niceto». */
+const resolveSmtpUser = (email: string, smtpUser: string | null | undefined): string => {
+  const user = String(smtpUser ?? "").trim();
+  const correo = normalizeEmail(email);
+  if (esHostGmailSmtp(correo) && (!user || !user.includes("@"))) {
+    return correo;
+  }
+  return user || correo;
+};
+
 const resolveStoragePath = (urlOrPath: string): string => {
   if (!urlOrPath.startsWith("http://") && !urlOrPath.startsWith("https://")) {
     return urlOrPath;
@@ -207,7 +217,7 @@ serve(async (req) => {
       smtpHost =
         hostGuardado ||
         (esHostGmailSmtp(fromNorm) ? "smtp.gmail.com" : SMTP_HOST);
-      smtpUser = String(account.smtp_user).trim();
+      smtpUser = resolveSmtpUser(account.email || fromNorm, account.smtp_user);
       smtpPassword = normalizeSmtpPassword(String(account.smtp_password));
     }
 
@@ -286,13 +296,15 @@ serve(async (req) => {
       ? { Sender: smtpUser }
       : undefined;
 
-    // No loguear contraseñas; solo identidad de auth (usuario SMTP).
+    // No loguear contraseñas; solo identidad y longitud de auth.
     console.log(
       `[send-email] De=${fromHeader}` +
         (replyToAddress ? ` Reply-To=${replyToAddress}` : "") +
         ` Para=${toList.join(", ")}` +
         (ccList ? ` CC=${ccList}` : " CC=(ninguno)") +
-        ` auth=${smtpUser} host=${smtpHost}`
+        ` auth=${smtpUser} host=${smtpHost}` +
+        ` pwd_len=${smtpPassword.length}` +
+        ` via=${usesDefaultSmtp ? "env" : "smtp_accounts"}`
     );
 
     await client.send({
