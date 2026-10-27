@@ -19,7 +19,7 @@ import { useAccountManagers } from "@/hooks/use-account-managers";
 import { useProjects } from "@/hooks/use-projects";
 import { useEmailTemplates } from "@/hooks/use-email-templates";
 import { useShippingAddresses, useBillingAddresses } from "@/hooks/use-addresses";
-import { processEmailTemplate, processTextTemplate, processNamedEmailTemplate } from "@/utils/email-templating";
+import { processNamedEmailTemplate } from "@/utils/email-templating";
 import EmailDialog, { EmailFormValues } from "@/components/EmailDialog";
 import InvoiceItemsDialog from "@/components/request-details/InvoiceItemsDialog";
 import { useReceiveWizard } from "@/components/ReceiveWizardProvider";
