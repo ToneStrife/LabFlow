@@ -15,10 +15,10 @@
       rel="stylesheet"
     />
 
-    <link rel="manifest" href="/LabFlow/manifest.json" />
-    <link rel="apple-touch-icon" href="/LabFlow/logo-192.png" sizes="192x192" />
-    <link rel="icon" type="image/png" href="/LabFlow/favicon.png" />
-    <script type="module" crossorigin src="/LabFlow/assets/index-DcmNL5dp.js"></script>
+    <link rel="manifest" href="manifest.json" />
+    <link rel="apple-touch-icon" href="logo-192.png" sizes="192x192" />
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <script type="module" crossorigin src="/LabFlow/assets/index-CyWOjL5u.js"></script>
     <link rel="stylesheet" crossorigin href="/LabFlow/assets/index-GeH7kDea.css">
   </head>
 
@@ -28,6 +28,7 @@
     <script>
       if ("serviceWorker" in navigator) {
         window.addEventListener("load", () => {
+          // GitHub Pages: /LabFlow/; Vercel y local: /
           const basePath = window.location.pathname.includes("/LabFlow/") ? "/LabFlow/" : "/";
           const swPath = basePath + "firebase-messaging-sw.js";
           navigator.serviceWorker.register(swPath, { scope: basePath }).catch((error) => {
