@@ -63,7 +63,14 @@ const VendorTable: React.FC<VendorTableProps> = ({
                 <TableRow key={vendor.id} className="align-top">
                   <TableCell className="pl-4">
                     <div className="space-y-1">
-                      <p className="font-medium leading-tight">{vendor.name}</p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-medium leading-tight">{vendor.name}</p>
+                        {vendor.scope === "lab" ? (
+                          <Badge variant="outline" className="text-[10px]">Solo lab</Badge>
+                        ) : (
+                          <Badge variant="secondary" className="text-[10px]">Global</Badge>
+                        )}
+                      </div>
                       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground md:hidden">
                         {vendor.contact_person && (
                           <span className="inline-flex items-center gap-1">

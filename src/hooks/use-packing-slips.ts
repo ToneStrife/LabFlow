@@ -265,6 +265,8 @@ export const useDeleteSlip = () => {
 interface ReceiveItemsData {
   requestId: string;
   slipNumber: string;
+  /** Sede del stock; la recepción siempre debe escribirla. */
+  sedeId?: string | null;
   file?: File;
   items: {
     requestItemId: string;
@@ -284,6 +286,25 @@ export const useReceiveItems = () => {
       const receivedBy = session?.user?.id;
 
       if (!receivedBy) throw new Error("El usuario debe iniciar sesión para recibir artículos.");
+
+      // Resolver sede: la del request, o la pasada por el diálogo
+      let sedeId = data.sedeId ?? null;
+      if (!sedeId) {
+        const { data: reqRow } = await supabase
+          .from("requests")
+          .select("sede_id, shipping_address_id")
+          .eq("id", requestId)
+          .maybeSingle();
+        sedeId = (reqRow as { sede_id?: string | null } | null)?.sede_id ?? null;
+        if (!sedeId && (reqRow as { shipping_address_id?: string | null } | null)?.shipping_address_id) {
+          const { data: addr } = await supabase
+            .from("shipping_addresses")
+            .select("sede_id")
+            .eq("id", (reqRow as { shipping_address_id: string }).shipping_address_id)
+            .maybeSingle();
+          sedeId = (addr as { sede_id?: string | null } | null)?.sede_id ?? null;
+        }
+      }
 
       let slipFilePath: string | null = null;
       if (file) {
@@ -332,6 +353,7 @@ export const useReceiveItems = () => {
             quantity_in: item.quantityReceived,
             unit_price_in: item.itemDetails.unit_price,
             format_in: item.itemDetails.format,
+            sede_id_in: sedeId,
           });
           if (inventoryError) throw new Error(`Fallo al actualizar el inventario para ${item.itemDetails.product_name}: ${inventoryError.message}`);
 

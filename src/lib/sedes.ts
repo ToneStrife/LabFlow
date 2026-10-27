@@ -1,4 +1,5 @@
 import { sedeAssetUrl } from "@/lib/sede-theme";
+import type { SedeRecord, SedeTipo } from "@/data/types";
 
 export interface Sede {
   id: string;
@@ -11,9 +12,11 @@ export interface Sede {
   heroImageUrl?: string;
   /** Gradiente CSS de respaldo si no hay foto */
   heroGradient: string;
+  tipo?: SedeTipo;
+  lab_id?: string;
 }
 
-/** Logo e identidad del grupo de investigación (compartido por todas las sedes) */
+/** Logo e identidad por defecto (FarBioQ) hasta cargar labs desde BD */
 export const GRUPO = {
   nombre: "FarBioQ",
   descripcion: "Farmacología y Bioquímica de Enfermedades Inmunomediadas",
@@ -23,7 +26,8 @@ export const GRUPO = {
 /** Valor del selector cuando el usuario puede ver todas las sedes */
 export const TODAS_LAS_SEDES = "all";
 
-export const SEDES: Sede[] = [
+/** Catálogo semilla FarBioQ (fallback si la BD aún no responde). */
+export const SEDES_FALLBACK: Sede[] = [
   {
     id: "cibm",
     name: "CIBM",
@@ -31,6 +35,7 @@ export const SEDES: Sede[] = [
     descripcion: "Centro de Investigación Biomédica · Universidad de Granada",
     heroImageUrl: sedeAssetUrl("sedes/cibm-hero.jpg"),
     heroGradient: "linear-gradient(135deg, #1e3a8a 0%, #2563eb 42%, #60a5fa 100%)",
+    tipo: "cibm",
   },
   {
     id: "farmacia",
@@ -40,17 +45,46 @@ export const SEDES: Sede[] = [
     heroImageUrl: sedeAssetUrl("sedes/farmacia-hero.jpg"),
     heroGradient:
       "linear-gradient(135deg, #581c87 0%, #9333ea 38%, #a855f7 62%, #c4b5fd 100%)",
+    tipo: "farmacia",
   },
 ];
 
+/** @deprecated Preferir catálogo dinámico vía useSedesCatalog */
+export const SEDES = SEDES_FALLBACK;
+
+export const sedeFromRecord = (row: SedeRecord): Sede => ({
+  id: row.id,
+  name: row.name,
+  color: row.color,
+  descripcion: row.descripcion ?? undefined,
+  heroImageUrl: row.hero_image_url ?? undefined,
+  heroGradient: row.hero_gradient,
+  tipo: row.tipo,
+  lab_id: row.lab_id,
+});
+
+let catalogoActual: Sede[] = SEDES_FALLBACK;
+
+export const setSedesCatalog = (sedes: Sede[]) => {
+  catalogoActual = sedes.length ? sedes : SEDES_FALLBACK;
+};
+
+export const getSedesCatalog = (): Sede[] => catalogoActual;
+
 export const isValidSedeId = (id: string | null | undefined): id is string =>
-  !!id && SEDES.some((sede) => sede.id === id);
+  !!id && getSedesCatalog().some((sede) => sede.id === id);
 
 export const getSedeById = (id: string | null | undefined): Sede | undefined =>
-  id ? SEDES.find((sede) => sede.id === id) : undefined;
+  id ? getSedesCatalog().find((sede) => sede.id === id) : undefined;
 
 export const getSedeLabel = (id: string | null | undefined): string =>
   id ? getSedeById(id)?.name ?? id : "Todas";
+
+export const sedeEsFarmacia = (sede: Pick<Sede, "id" | "tipo"> | null | undefined): boolean => {
+  if (!sede) return false;
+  if (sede.tipo === "farmacia") return true;
+  return sede.id === "farmacia" || sede.id.endsWith("-farmacia");
+};
 
 /** Solo sede_id explícito; la inferencia por nombre es solo ayuda visual en Admin */
 export const resolveAddressSedeId = (address: {
@@ -66,14 +100,12 @@ export const inferSedeIdFromName = (name: string | null | undefined): string | n
   const normalized = name?.toLowerCase() ?? "";
   if (!normalized) return null;
 
-  const alias: Record<string, string[]> = {
-    cibm: ["cibm", "centro de investigación biomédica", "centro de investigacion biomedica"],
-    farmacia: ["facultad de farmacia", "farmacia"],
-  };
-
-  for (const sede of SEDES) {
-    const tokens = alias[sede.id] ?? [sede.id, sede.name.toLowerCase()];
-    if (tokens.some((token) => normalized.includes(token))) {
+  for (const sede of getSedesCatalog()) {
+    if (sede.tipo === "farmacia" && (normalized.includes("farmacia") || /\bfarma\b/.test(normalized))) {
+      return sede.id;
+    }
+    if (sede.tipo === "cibm" && normalized.includes("cibm")) return sede.id;
+    if (normalized.includes(sede.name.toLowerCase()) || normalized.includes(sede.id)) {
       return sede.id;
     }
   }
@@ -102,17 +134,20 @@ export const formatShippingAddressLabel = (address: {
 export const requestMatchesSede = (
   shippingAddressId: string | null | undefined,
   shippingAddresses: { id: string; name?: string | null; sede_id?: string | null }[] | undefined,
-  sedeActiva: string | null
+  sedeActiva: string | null,
+  requestSedeId?: string | null
 ): boolean => {
   if (!sedeActiva) return true;
-  // Sin lista de direcciones aún: no excluir (evita vaciar listados al cargar)
+  if (requestSedeId) return requestSedeId === sedeActiva;
   if (!shippingAddresses) return true;
   const address = shippingAddresses.find((item) => item.id === shippingAddressId);
   if (!address) return false;
   return resolveAddressSedeId(address) === sedeActiva;
 };
 
-export const filterRequestsBySede = <T extends { shipping_address_id?: string | null }>(
+export const filterRequestsBySede = <
+  T extends { shipping_address_id?: string | null; sede_id?: string | null },
+>(
   requests: T[] | undefined,
   shippingAddresses: { id: string; name?: string | null; sede_id?: string | null }[] | undefined,
   sedeActiva: string | null
@@ -120,6 +155,6 @@ export const filterRequestsBySede = <T extends { shipping_address_id?: string | 
   if (!requests) return [];
   if (!sedeActiva) return requests;
   return requests.filter((request) =>
-    requestMatchesSede(request.shipping_address_id, shippingAddresses, sedeActiva)
+    requestMatchesSede(request.shipping_address_id, shippingAddresses, sedeActiva, request.sede_id)
   );
 };

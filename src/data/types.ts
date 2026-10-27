@@ -31,6 +31,7 @@ export interface Profile {
   role: "Requester" | "Account Manager" | "Admin";
   /** NULL = puede ver todas las sedes */
   default_sede_id: string | null;
+  is_owner?: boolean;
   
   // Preferencias de Notificación
   notify_on_status_change: boolean;
@@ -42,6 +43,8 @@ export interface UserNotificationPreferences {
   notified_statuses: RequestStatus[];
   created_at: string;
 }
+
+export type VendorScope = "global" | "lab";
 
 export interface Vendor {
   id: string;
@@ -57,6 +60,55 @@ export interface Vendor {
   phone: string | null;
   notes: string | null;
   brands: string[] | null;
+  /** global = todos los labs; lab = solo lab_id */
+  scope: VendorScope;
+  lab_id: string | null;
+}
+
+export interface VendorLabOverride {
+  vendor_id: string;
+  lab_id: string;
+  email: string | null;
+  email_presupuesto: string | null;
+  email_pedido: string | null;
+  contact_person: string | null;
+  phone: string | null;
+  notes: string | null;
+  disabled_for_lab: boolean;
+}
+
+export type LabMemberRole = "member" | "admin_lab" | "lab_order_manager";
+export type SedeTipo = "cibm" | "farmacia" | "otro";
+
+export interface Lab {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  logo_url: string | null;
+  activo: boolean;
+  created_at: string;
+}
+
+export interface SedeRecord {
+  id: string;
+  lab_id: string;
+  name: string;
+  tipo: SedeTipo;
+  color: string;
+  descripcion: string | null;
+  hero_image_url: string | null;
+  hero_gradient: string;
+  activo: boolean;
+  created_at: string;
+}
+
+export interface LabMember {
+  lab_id: string;
+  user_id: string;
+  role: LabMemberRole;
+  smtp_from: string | null;
+  created_at: string;
 }
 
 export interface AccountManager {
@@ -83,6 +135,7 @@ export interface Project {
   fecha_inicio: string | null;
   fecha_fin: string | null;
   activo: boolean;
+  lab_id: string | null;
 }
 
 export interface EmailTemplate {
@@ -91,6 +144,8 @@ export interface EmailTemplate {
   subject_template: string;
   body_template: string;
   created_at: string;
+  /** null = plantilla global de la app */
+  lab_id: string | null;
 }
 
 export interface Address {
@@ -174,6 +229,8 @@ export interface SupabaseRequest {
   quote_url: string | null;
   po_url: string | null;
   slip_url: string | null;
+  lab_id: string | null;
+  sede_id: string | null;
 }
 
 export interface InventoryItem {

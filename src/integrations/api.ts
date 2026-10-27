@@ -336,6 +336,39 @@ export const apiAddRequest = async (data: AddRequestData): Promise<SupabaseReque
   }
 
   let created = newRequest as SupabaseRequest;
+
+  // Rellenar sede_id / lab_id desde la dirección de envío si el RPC no lo hizo
+  // (el trigger requests_fill_lab_sede también cubre INSERT/UPDATE).
+  if (created?.id && (!created.sede_id || !created.lab_id) && shippingAddressId) {
+    const { data: addr } = await supabase
+      .from("shipping_addresses")
+      .select("sede_id")
+      .eq("id", shippingAddressId)
+      .maybeSingle();
+    const sedeId = (addr as { sede_id?: string | null } | null)?.sede_id ?? null;
+    let labId: string | null = null;
+    if (sedeId) {
+      const { data: sede } = await supabase
+        .from("sedes")
+        .select("lab_id")
+        .eq("id", sedeId)
+        .maybeSingle();
+      labId = (sede as { lab_id?: string } | null)?.lab_id ?? null;
+    }
+    const patch: Record<string, string> = {};
+    if (!created.sede_id && sedeId) patch.sede_id = sedeId;
+    if (!created.lab_id && labId) patch.lab_id = labId;
+    if (Object.keys(patch).length) {
+      const { data: withScope } = await supabase
+        .from("requests")
+        .update(patch)
+        .eq("id", created.id)
+        .select(`*, items:request_items (*)`)
+        .maybeSingle();
+      if (withScope) created = withScope as SupabaseRequest;
+    }
+  }
+
   // La función de la base a veces deja el pedido ya en "Quote Requested".
   // Todo pedido nuevo empieza pendiente de presupuesto.
   if (created?.id && created.status === "Quote Requested") {

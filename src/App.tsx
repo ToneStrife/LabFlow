@@ -18,6 +18,7 @@ import { PERMISOS_PANEL_ADMIN } from "@/lib/admin-access";
 
 import { ReceiveWizardProvider } from "./components/ReceiveWizardProvider";
 import { SedeContextProvider } from "./components/SedeContextProvider";
+import { LabsCatalogProvider } from "./components/LabsCatalogProvider";
 import SedeThemeEffect from "./components/SedeThemeEffect";
 
 // Estas paginas arrastran las librerias pesadas (graficas, editor de texto
@@ -157,9 +158,11 @@ const App = () => (
             <React.Suspense fallback={null}>
               <FirebaseInitializer />
             </React.Suspense>
+            <LabsCatalogProvider>
             <ReceiveWizardProvider>
               <AppRoutes />
             </ReceiveWizardProvider>
+            </LabsCatalogProvider>
           </SedeContextProvider>
         </SessionContextProvider>
       </HashRouter>

@@ -1,7 +1,10 @@
 import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Loader2, MapPin, DollarSign, Users, Briefcase, Shield, Mail, ScrollText, Bell, KeyRound, Server } from "lucide-react";
+import { PlusCircle, Loader2, MapPin, DollarSign, Users, Briefcase, Shield, Mail, ScrollText, Bell, KeyRound, Server, FlaskConical, Copy } from "lucide-react";
+import LabsAdminSection from "@/components/LabsAdminSection";
+import { useLabs } from "@/hooks/use-labs";
+import { templateScopeLabel } from "@/lib/email-templates";
 import PermissionsMatrix from "@/components/PermissionsMatrix";
 import SmtpAccountsSection from "@/components/SmtpAccountsSection";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -36,7 +39,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Save } from "lucide-react";
-import { useEmailTemplates, useUpdateEmailTemplate } from "@/hooks/use-email-templates";
+import { useEmailTemplates, useUpdateEmailTemplate, useCreateLabEmailTemplate } from "@/hooks/use-email-templates";
 import { EmailTemplate, Address } from "@/data/types";
 import { Badge } from "@/components/ui/badge";
 
@@ -109,9 +112,12 @@ const AdminPage = () => {
   const [isInviteUserDialogOpen, setIsInviteUserDialogOpen] = React.useState(false);
 
   const { data: templates, isLoading: isLoadingTemplates, error: templatesError } = useEmailTemplates();
+  const { data: labsList = [] } = useLabs();
   const updateTemplateMutation = useUpdateEmailTemplate();
+  const createLabTemplateMutation = useCreateLabEmailTemplate();
   const [selectedTemplateId, setSelectedTemplateId] = React.useState<string | undefined>(undefined);
   const [currentTemplate, setCurrentTemplate] = React.useState<EmailTemplate | undefined>(undefined);
+  const [copyLabId, setCopyLabId] = React.useState<string>("");
   const emailTemplateForm = useForm<EmailTemplateFormValues>({
     resolver: zodResolver(emailTemplateFormSchema),
     defaultValues: { template_name: "", subject_template: "", body_template: "" },
@@ -301,6 +307,11 @@ const AdminPage = () => {
             <Shield className="h-4 w-4" /> Usuarios
           </TabsTrigger>
           )}
+          {puedeVer("labs") && (
+          <TabsTrigger value="labs" className="flex items-center gap-2 px-4 py-2">
+            <FlaskConical className="h-4 w-4" /> Laboratorios
+          </TabsTrigger>
+          )}
           {puedeVer("account-managers") && (
           <TabsTrigger value="account-managers" className="flex items-center gap-2 px-4 py-2">
             <Users className="h-4 w-4" /> Gerentes de Cuenta
@@ -354,6 +365,12 @@ const AdminPage = () => {
               <PermissionsMatrix />
             </CardContent>
           </Card>
+        </TabsContent>
+        )}
+
+        {puedeVer("labs") && (
+        <TabsContent value="labs" className="mt-6">
+          <LabsAdminSection />
         </TabsContent>
         )}
 
@@ -518,18 +535,66 @@ const AdminPage = () => {
             <CardHeader><CardTitle className="text-xl">Plantillas de Correo Electrónico</CardTitle></CardHeader>
             <CardContent className="space-y-6">
               <Select value={selectedTemplateId} onValueChange={handleTemplateChange}>
-                <SelectTrigger className="w-full md:w-[300px]"><SelectValue placeholder="Selecciona una plantilla" /></SelectTrigger>
+                <SelectTrigger className="w-full md:w-[360px]"><SelectValue placeholder="Selecciona una plantilla" /></SelectTrigger>
                 <SelectContent>
-                  {templates?.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>
-                      {templateNameMap[t.template_name] || t.template_name}
-                    </SelectItem>
-                  ))}
+                  {templates?.map((t) => {
+                    const labName = labsList.find((l) => l.id === t.lab_id)?.name;
+                    return (
+                      <SelectItem key={t.id} value={t.id}>
+                        {(templateNameMap[t.template_name] || t.template_name) +
+                          ` · ${templateScopeLabel(t, labName)}`}
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
               {currentTemplate && (
                 <Form {...emailTemplateForm}>
                   <form onSubmit={emailTemplateForm.handleSubmit(onTemplateSubmit)} className="space-y-4">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant={currentTemplate.lab_id ? "outline" : "secondary"}>
+                        {templateScopeLabel(
+                          currentTemplate,
+                          labsList.find((l) => l.id === currentTemplate.lab_id)?.name
+                        )}
+                      </Badge>
+                      {!currentTemplate.lab_id && (
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Select value={copyLabId || undefined} onValueChange={setCopyLabId}>
+                            <SelectTrigger className="w-[200px]">
+                              <SelectValue placeholder="Copiar a lab…" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {labsList.map((lab) => (
+                                <SelectItem key={lab.id} value={lab.id}>
+                                  {lab.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={!copyLabId || createLabTemplateMutation.isPending}
+                            onClick={async () => {
+                              if (!copyLabId || !currentTemplate) return;
+                              const created = await createLabTemplateMutation.mutateAsync({
+                                templateName: currentTemplate.template_name,
+                                subjectTemplate: emailTemplateForm.getValues("subject_template"),
+                                bodyTemplate: emailTemplateForm.getValues("body_template"),
+                                labId: copyLabId,
+                              });
+                              setSelectedTemplateId(created.id);
+                              setCurrentTemplate(created);
+                              setCopyLabId("");
+                            }}
+                          >
+                            <Copy className="mr-1 h-3.5 w-3.5" /> Crear copia para lab
+                          </Button>
+                        </div>
+                      )}
+                    </div>
                     <FormField control={emailTemplateForm.control} name="template_name" render={({ field }) => <FormItem><FormLabel>Nombre de la Plantilla</FormLabel><FormControl><Input {...field} disabled={updateTemplateMutation.isPending} /></FormControl><FormMessage /></FormItem>} />
                     <FormField control={emailTemplateForm.control} name="subject_template" render={({ field }) => <FormItem><FormLabel>Asunto</FormLabel><FormControl><Input {...field} disabled={updateTemplateMutation.isPending} /></FormControl><FormMessage /></FormItem>} />
                     <FormField control={emailTemplateForm.control} name="body_template" render={({ field }) => <FormItem><FormLabel>Cuerpo del Correo</FormLabel><FormControl><Textarea rows={18} {...field} disabled={updateTemplateMutation.isPending} /></FormControl><FormMessage /></FormItem>} />

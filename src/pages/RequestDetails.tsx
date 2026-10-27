@@ -43,7 +43,9 @@ import { buildStorageAttachment, normalizeAttachments } from "@/utils/email-atta
 import { RequestStatus as RequestStatusType, Vendor, Profile, AccountManager, Project, ShippingAddress, BillingAddress } from "@/data/types";
 import { cn } from "@/lib/utils";
 import { pageContainerClass, mobileDialogClass } from "@/lib/layout";
-import { camposCorreoConNiceto, correoSiLoHaceNiceto } from "@/lib/farmacia";
+import { camposCorreoConGestor, correoSiGestorLab } from "@/lib/farmacia";
+import { pickEmailTemplate } from "@/lib/email-templates";
+import { useLabsCatalog } from "@/components/LabsCatalogProvider";
 import { getRequestStatusLabelLong, REQUEST_STATUS_ORDER } from "@/lib/request-status";
 
 const RequestDetails: React.FC = () => {
@@ -52,6 +54,7 @@ const RequestDetails: React.FC = () => {
   const { profile, session } = useSession();
   const { can } = useCan();
   const { openReceive } = useReceiveWizard();
+  const { memberships } = useLabsCatalog();
   const userIsAdmin = isAdmin(profile?.role);
   
   const { data: requests, isLoading: isLoadingRequests } = useRequests();
@@ -108,13 +111,16 @@ const RequestDetails: React.FC = () => {
     return manager?.email || "";
   };
 
-  const correoNiceto = (request: SupabaseRequest) =>
-    correoSiLoHaceNiceto({
+  const correoGestor = (request: SupabaseRequest) =>
+    correoSiGestorLab({
       shippingAddressId: request.shipping_address_id,
       addresses: shippingAddresses,
       requesterId: request.requester_id,
       actorId: profile?.id,
       personas: profiles,
+      labId: request.lab_id,
+      requestSedeId: request.sede_id,
+      memberships,
     });
 
   const handleEmailDialogOpenChange = (open: boolean) => {
@@ -144,7 +150,7 @@ const RequestDetails: React.FC = () => {
   };
 
   const handleSendPORequest = async (request: SupabaseRequest) => {
-    const especial = correoNiceto(request);
+    const especial = correoGestor(request);
     if (especial?.error) {
       toast.error(especial.error);
       return;
@@ -153,7 +159,7 @@ const RequestDetails: React.FC = () => {
       toast.error("No hay un gerente de cuenta asignado.");
       return;
     }
-    const poRequestTemplate = emailTemplates?.find(t => t.template_name === 'PO Request');
+    const poRequestTemplate = pickEmailTemplate(emailTemplates, 'PO Request', request.lab_id);
     if (!poRequestTemplate) {
       toast.error("Plantilla de correo electrónico 'PO Request' no encontrada. Por favor, crea una en el panel de Admin.");
       return;
@@ -184,7 +190,7 @@ const RequestDetails: React.FC = () => {
 
     setPendingStatusOnEmailSend({ requestId: request.id, status: "PO Requested" });
     setEmailInitialData({
-      ...camposCorreoConNiceto(especial, getAccountManagerEmail(request.account_manager_id)),
+      ...camposCorreoConGestor(especial, getAccountManagerEmail(request.account_manager_id)),
       subject,
       body,
       attachments: forDialog,
@@ -243,7 +249,7 @@ const RequestDetails: React.FC = () => {
   };
 
   const handleMarkAsOrderedAndSendEmail = async (request: SupabaseRequest) => {
-    const orderConfirmationTemplate = emailTemplates?.find(t => t.template_name === 'Order Confirmation');
+    const orderConfirmationTemplate = pickEmailTemplate(emailTemplates, 'Order Confirmation', request.lab_id);
     if (!orderConfirmationTemplate) {
       toast.error("Plantilla de correo electrónico 'Order Confirmation' no encontrada. Por favor, crea una en el panel de Admin.");
       return;
@@ -342,12 +348,12 @@ const RequestDetails: React.FC = () => {
   };
 
   const handleSendQuoteRequest = async (request: SupabaseRequest) => {
-    const especial = correoNiceto(request);
+    const especial = correoGestor(request);
     if (especial?.error) {
       toast.error(especial.error);
       return;
     }
-    const quoteTemplate = emailTemplates?.find(t => t.template_name === 'Quote Request');
+    const quoteTemplate = pickEmailTemplate(emailTemplates, 'Quote Request', request.lab_id);
     if (!quoteTemplate) {
       toast.error("Plantilla de correo electrónico 'Quote Request' no encontrada. Por favor, crea una en el panel de Admin.");
       return;
@@ -377,7 +383,7 @@ const RequestDetails: React.FC = () => {
       // diálogo o algo falla antes, la solicitud sigue pendiente.
       setPendingStatusOnEmailSend({ requestId: request.id, status: "Quote Requested" });
       setEmailInitialData({
-        ...camposCorreoConNiceto(especial, getVendorQuoteEmail(request.vendor_id)),
+        ...camposCorreoConGestor(especial, getVendorQuoteEmail(request.vendor_id)),
         subject,
         body,
       });

@@ -13,8 +13,10 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
 import { VendorFormValues } from "@/hooks/use-vendors";
+import type { Lab } from "@/data/types";
 
 const optionalEmail = z
   .string()
@@ -32,18 +34,31 @@ const vendorFormSchema = z.object({
   phone: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
   brands: z.string().optional().nullable(),
+  scope: z.enum(["global", "lab"]).optional(),
+  lab_id: z.string().optional().nullable(),
 });
-
-// This type is now correctly inferred from the schema above
 
 interface VendorFormProps {
   initialData?: VendorFormValues;
   onSubmit: (data: VendorFormValues) => void;
   onCancel?: () => void;
   isSubmitting: boolean;
+  /** Labs disponibles para alcance «solo este lab» */
+  labs?: Lab[];
+  /** Lab activo por defecto al crear scope=lab */
+  defaultLabId?: string | null;
+  showScope?: boolean;
 }
 
-const VendorForm: React.FC<VendorFormProps> = ({ initialData, onSubmit, onCancel, isSubmitting }) => {
+const VendorForm: React.FC<VendorFormProps> = ({
+  initialData,
+  onSubmit,
+  onCancel,
+  isSubmitting,
+  labs = [],
+  defaultLabId = null,
+  showScope = true,
+}) => {
   const form = useForm<VendorFormValues>({
     resolver: zodResolver(vendorFormSchema),
     defaultValues: initialData
@@ -52,6 +67,8 @@ const VendorForm: React.FC<VendorFormProps> = ({ initialData, onSubmit, onCancel
           email_presupuesto:
             initialData.email_presupuesto ?? initialData.email ?? null,
           email_pedido: initialData.email_pedido ?? initialData.email ?? null,
+          scope: initialData.scope ?? "global",
+          lab_id: initialData.lab_id ?? null,
         }
       : {
           name: "",
@@ -62,8 +79,12 @@ const VendorForm: React.FC<VendorFormProps> = ({ initialData, onSubmit, onCancel
           phone: null,
           notes: null,
           brands: null,
+          scope: "global",
+          lab_id: defaultLabId,
         },
   });
+
+  const scope = form.watch("scope") ?? "global";
 
   const handleSubmit = (data: VendorFormValues) => {
     const emailPresupuesto = data.email_presupuesto || null;
@@ -77,6 +98,8 @@ const VendorForm: React.FC<VendorFormProps> = ({ initialData, onSubmit, onCancel
       phone: data.phone || null,
       notes: data.notes || null,
       brands: data.brands || null,
+      scope: data.scope ?? "global",
+      lab_id: (data.scope ?? "global") === "lab" ? data.lab_id || defaultLabId || null : null,
     };
     onSubmit(cleanedData);
   };
@@ -97,6 +120,65 @@ const VendorForm: React.FC<VendorFormProps> = ({ initialData, onSubmit, onCancel
             </FormItem>
           )}
         />
+        {showScope && (
+          <>
+            <FormField
+              control={form.control}
+              name="scope"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Alcance</FormLabel>
+                  <Select
+                    value={field.value ?? "global"}
+                    onValueChange={field.onChange}
+                    disabled={isSubmitting}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Alcance" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="global">Global (todos los labs)</SelectItem>
+                      <SelectItem value="lab">Solo de un laboratorio</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {scope === "lab" && labs.length > 0 && (
+              <FormField
+                control={form.control}
+                name="lab_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Laboratorio</FormLabel>
+                    <Select
+                      value={field.value ?? defaultLabId ?? undefined}
+                      onValueChange={field.onChange}
+                      disabled={isSubmitting}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecciona laboratorio" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {labs.map((lab) => (
+                          <SelectItem key={lab.id} value={lab.id}>
+                            {lab.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+          </>
+        )}
         <FormField
           control={form.control}
           name="contact_person"

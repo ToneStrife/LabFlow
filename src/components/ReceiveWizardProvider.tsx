@@ -107,6 +107,7 @@ export function ReceiveWizardProvider({ children }: { children: React.ReactNode 
           }}
           requestId={request.id}
           requestItems={request.items}
+          requestSedeId={request.sede_id}
         />
       )}
 

@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 import { SupabaseRequestItem } from "@/data/types";
 import { useReceiveItems, useAggregatedReceivedItems } from "@/hooks/use-packing-slips";
+import { useSedeActiva } from "@/components/SedeContextProvider";
 import { toast } from "sonner";
 import FileUploadInput from "@/components/FileUploadInput";
 import { cn } from "@/lib/utils";
@@ -90,6 +91,8 @@ interface ReceiveItemsDialogProps {
   onOpenChange: (open: boolean) => void;
   requestId: string;
   requestItems: SupabaseRequestItem[];
+  /** Sede del pedido; si falta, se usa la sede activa del selector. */
+  requestSedeId?: string | null;
 }
 
 const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
@@ -97,8 +100,10 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
   onOpenChange,
   requestId,
   requestItems,
+  requestSedeId,
 }) => {
   const isMobile = useIsMobile();
+  const { sedeActiva } = useSedeActiva();
   const { data: aggregatedReceived, isLoading: isLoadingReceived } = useAggregatedReceivedItems(requestId);
   const receiveItemsMutation = useReceiveItems();
   const [slipFile, setSlipFile] = React.useState<File | null>(null);
@@ -357,6 +362,7 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
     await receiveItemsMutation.mutateAsync({
       requestId,
       slipNumber: data.slipNumber || "",
+      sedeId: requestSedeId || sedeActiva,
       file: slipFile ?? undefined,
       items: itemsToReceive,
     });
