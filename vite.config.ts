@@ -14,7 +14,11 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  base: mode === "production" ? "/LabFlow/" : "/",
+  // GitHub Pages vive en /LabFlow/; Vercel (y local) en la raíz.
+  // En el build de Vercel la env VERCEL=1 ya viene definida.
+  base:
+    process.env.VITE_BASE_PATH ||
+    (mode === "production" && !process.env.VERCEL ? "/LabFlow/" : "/"),
   build: {
     // Sin manualChunks a mano: separar librerías por nombre rompía el orden
     // de evaluación entre trozos y la app se quedaba en blanco en producción.
