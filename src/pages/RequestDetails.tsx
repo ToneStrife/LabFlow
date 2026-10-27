@@ -282,10 +282,17 @@ const RequestDetails: React.FC = () => {
       attachmentsForSend.push(...poAttachment.forSend);
     }
 
+    const { subject, body } = processNamedEmailTemplate(
+      "Order Confirmation",
+      orderConfirmationTemplate.subject_template,
+      orderConfirmationTemplate.body_template,
+      context as any
+    );
+
     setEmailInitialData({
       to: getVendorOrderEmail(request.vendor_id),
-      subject: processTextTemplate(orderConfirmationTemplate.subject_template, context as any),
-      body: processEmailTemplate(orderConfirmationTemplate.body_template, context as any),
+      subject,
+      body,
       attachments: attachmentsForDialog,
       attachmentsForSend: attachmentsForSend,
     });

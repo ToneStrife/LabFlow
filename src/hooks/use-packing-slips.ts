@@ -358,11 +358,15 @@ export const useReceiveItems = () => {
           if (inventoryError) throw new Error(`Fallo al actualizar el inventario para ${item.itemDetails.product_name}: ${inventoryError.message}`);
 
           if (item.storageLocation) {
-            const { error: locationError } = await supabase
+            let locationQuery = supabase
               .from('inventory')
               .update({ location: item.storageLocation })
               .eq('catalog_number', item.itemDetails.catalog_number)
               .eq('product_name', item.itemDetails.product_name);
+            locationQuery = sedeId
+              ? locationQuery.eq('sede_id', sedeId)
+              : locationQuery.is('sede_id', null);
+            const { error: locationError } = await locationQuery;
             if (locationError) {
               console.error("Error updating inventory location:", locationError);
             }
