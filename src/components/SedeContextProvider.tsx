@@ -1,15 +1,18 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { useSession } from "@/components/SessionContextProvider";
 import { TODAS_LAS_SEDES, isValidSedeId } from "@/lib/sedes";
+import { isAdmin } from "@/lib/permissions";
 
 const STORAGE_KEY = "labflow_sede_activa";
 
 interface SedeContextType {
-  /** null = Todas las sedes visibles */
+  /** null = Todas las sedes visibles (solo Admin/owner) */
   sedeActiva: string | null;
   setSedeActiva: (sedeId: string | null) => void;
   /** false hasta leer localStorage / perfil */
   sedeLista: boolean;
+  /** Si el usuario puede elegir «Todas» */
+  puedeVerTodas: boolean;
 }
 
 const SedeContext = createContext<SedeContextType | undefined>(undefined);
@@ -36,6 +39,7 @@ const readStoredSede = (): string | null | undefined => {
 
 export const SedeContextProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { profile } = useSession();
+  const puedeVerTodas = Boolean(isAdmin(profile?.role) || profile?.is_owner);
   const [sedeActiva, setSedeActivaState] = useState<string | null>(() => {
     const stored = readStoredSede();
     return stored === undefined ? null : stored;
@@ -47,7 +51,14 @@ export const SedeContextProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
     const stored = readStoredSede();
     if (stored !== undefined) {
-      setSedeActivaState(stored);
+      if (stored === null && !puedeVerTodas && profile) {
+        const fromProfile = isValidSedeId(profile.default_sede_id)
+          ? profile.default_sede_id
+          : "cibm";
+        setSedeActivaState(fromProfile);
+      } else {
+        setSedeActivaState(stored);
+      }
       setSedeLista(true);
       return;
     }
@@ -55,14 +66,39 @@ export const SedeContextProvider: React.FC<{ children: React.ReactNode }> = ({ c
     if (profile) {
       const fromProfile = isValidSedeId(profile.default_sede_id)
         ? profile.default_sede_id
-        : null;
+        : puedeVerTodas
+          ? null
+          : "cibm";
       setSedeActivaState(fromProfile);
       setSedeLista(true);
     }
-  }, [profile, sedeLista]);
+  }, [profile, sedeLista, puedeVerTodas]);
+
+  // No-admins: no pueden quedarse en «Todas»
+  useEffect(() => {
+    if (!sedeLista || !profile) return;
+    if (!puedeVerTodas && sedeActiva === null) {
+      const fallback = isValidSedeId(profile.default_sede_id) ? profile.default_sede_id : "cibm";
+      setSedeActivaState(fallback);
+      try {
+        localStorage.setItem(STORAGE_KEY, fallback);
+      } catch {
+        /* ignore */
+      }
+    }
+  }, [puedeVerTodas, sedeActiva, sedeLista, profile]);
 
   const setSedeActiva = (sedeId: string | null) => {
-    const next = sedeId && isValidSedeId(sedeId) ? sedeId : null;
+    const next =
+      sedeId === null
+        ? puedeVerTodas
+          ? null
+          : isValidSedeId(profile?.default_sede_id)
+            ? profile!.default_sede_id
+            : "cibm"
+        : isValidSedeId(sedeId)
+          ? sedeId
+          : null;
     setSedeActivaState(next);
     setSedeLista(true);
     try {
@@ -73,7 +109,7 @@ export const SedeContextProvider: React.FC<{ children: React.ReactNode }> = ({ c
   };
 
   return (
-    <SedeContext.Provider value={{ sedeActiva, setSedeActiva, sedeLista }}>
+    <SedeContext.Provider value={{ sedeActiva, setSedeActiva, sedeLista, puedeVerTodas }}>
       {children}
     </SedeContext.Provider>
   );

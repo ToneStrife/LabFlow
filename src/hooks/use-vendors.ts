@@ -1,9 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
-import { Vendor } from '@/data/types';
+import { Vendor, VendorLabOverride, VendorScope } from '@/data/types';
 
-// Updated to use contact_person
 export interface VendorFormValues {
   name: string;
   contact_person: string | null;
@@ -12,10 +11,21 @@ export interface VendorFormValues {
   email_pedido: string | null;
   phone: string | null;
   notes: string | null;
-  brands: string | null; // CHANGED: Now accepts string | null from the form
+  brands: string | null;
+  scope?: VendorScope;
+  lab_id?: string | null;
 }
 
-// Helper function to convert comma-separated string to array
+export interface VendorOverrideFormValues {
+  email: string | null;
+  email_presupuesto: string | null;
+  email_pedido: string | null;
+  contact_person: string | null;
+  phone: string | null;
+  notes: string | null;
+  disabled_for_lab: boolean;
+}
+
 const parseBrandsString = (brandsString: string | null | undefined): string[] | null => {
   if (!brandsString) return null;
   const brandsArray = brandsString.split(",").map((brand) => brand.trim()).filter(Boolean);
@@ -28,7 +38,20 @@ export const useVendors = () => {
     queryFn: async () => {
       const { data, error } = await supabase.from('vendors').select('*');
       if (error) throw new Error(error.message);
-      return data || [];
+      return (data || []) as Vendor[];
+    },
+  });
+};
+
+export const useVendorLabOverrides = (labId?: string | null) => {
+  return useQuery<VendorLabOverride[], Error>({
+    queryKey: ['vendor_lab_overrides', labId ?? 'all'],
+    queryFn: async () => {
+      let q = supabase.from('vendor_lab_overrides').select('*');
+      if (labId) q = q.eq('lab_id', labId);
+      const { data, error } = await q;
+      if (error) throw new Error(error.message);
+      return (data || []) as VendorLabOverride[];
     },
   });
 };
@@ -37,6 +60,7 @@ export const useAddVendor = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (vendor: VendorFormValues) => {
+      const scope = vendor.scope ?? 'global';
       const { data, error } = await supabase
         .from('vendors')
         .insert([{
@@ -47,7 +71,9 @@ export const useAddVendor = () => {
           email_pedido: vendor.email_pedido,
           phone: vendor.phone,
           notes: vendor.notes,
-          brands: parseBrandsString(vendor.brands), // Conversion here
+          brands: parseBrandsString(vendor.brands),
+          scope,
+          lab_id: scope === 'lab' ? vendor.lab_id ?? null : null,
         }])
         .select()
         .single();
@@ -68,6 +94,7 @@ export const useUpdateVendor = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, data }: { id: string; data: VendorFormValues }) => {
+      const scope = data.scope ?? 'global';
       const { data: updatedData, error } = await supabase
         .from('vendors')
         .update({
@@ -78,7 +105,9 @@ export const useUpdateVendor = () => {
           email_pedido: data.email_pedido,
           phone: data.phone,
           notes: data.notes,
-          brands: parseBrandsString(data.brands), // Conversion here
+          brands: parseBrandsString(data.brands),
+          scope,
+          lab_id: scope === 'lab' ? data.lab_id ?? null : null,
         })
         .eq('id', id)
         .select()
@@ -92,6 +121,49 @@ export const useUpdateVendor = () => {
     },
     onError: (error) => {
       toast.error('Fallo al actualizar proveedor.', { description: error.message });
+    },
+  });
+};
+
+export const useUpsertVendorLabOverride = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      vendorId,
+      labId,
+      data,
+    }: {
+      vendorId: string;
+      labId: string;
+      data: VendorOverrideFormValues;
+    }) => {
+      const { data: row, error } = await supabase
+        .from('vendor_lab_overrides')
+        .upsert(
+          {
+            vendor_id: vendorId,
+            lab_id: labId,
+            email: data.email,
+            email_presupuesto: data.email_presupuesto,
+            email_pedido: data.email_pedido,
+            contact_person: data.contact_person,
+            phone: data.phone,
+            notes: data.notes,
+            disabled_for_lab: data.disabled_for_lab,
+          },
+          { onConflict: 'vendor_id,lab_id' }
+        )
+        .select()
+        .single();
+      if (error) throw new Error(error.message);
+      return row as VendorLabOverride;
+    },
+    onSuccess: () => {
+      toast.success('Personalización del proveedor guardada para este laboratorio.');
+      queryClient.invalidateQueries({ queryKey: ['vendor_lab_overrides'] });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'No se pudo guardar la personalización.');
     },
   });
 };

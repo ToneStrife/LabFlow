@@ -8,6 +8,7 @@
  */
 export const PESTANAS_ADMIN = [
   { value: "users", permission: "users.manage" },
+  { value: "labs", permission: "users.manage" },
   { value: "account-managers", permission: "account_managers.manage" },
   { value: "projects", permission: "projects.manage" },
   { value: "addresses", permission: "addresses.manage" },

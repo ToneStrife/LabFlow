@@ -6,10 +6,14 @@ import { useCan } from "@/hooks/use-permissions";
 import { Loader2, PlusCircle, Search, X } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import VendorForm from "@/components/VendorForm";
-import { useVendors, useAddVendor, useUpdateVendor, useDeleteVendor, VendorFormValues } from "@/hooks/use-vendors";
+import { useVendors, useAddVendor, useUpdateVendor, useDeleteVendor, useVendorLabOverrides, VendorFormValues } from "@/hooks/use-vendors";
 import { Vendor } from "@/data/types";
 import { pageContainerClass, pageHeaderClass, mobileDialogClass } from "@/lib/layout";
 import { cn } from "@/lib/utils";
+import { useLabsCatalog } from "@/components/LabsCatalogProvider";
+import { useSedeActiva } from "@/components/SedeContextProvider";
+import { getSedeById } from "@/lib/sedes";
+import { vendorsVisibleForLab } from "@/lib/vendors";
 
 interface EditingVendorData extends VendorFormValues {
   id: string;
@@ -38,6 +42,10 @@ const Vendors = () => {
   const deleteVendorMutation = useDeleteVendor();
   const { can } = useCan();
   const puedeGestionar = can("vendors.manage");
+  const { labs } = useLabsCatalog();
+  const { sedeActiva } = useSedeActiva();
+  const labActivoId = getSedeById(sedeActiva)?.lab_id ?? labs[0]?.id ?? null;
+  const { data: overrides = [] } = useVendorLabOverrides(labActivoId);
 
   const [busqueda, setBusqueda] = React.useState("");
   const [isAddVendorDialogOpen, setIsAddVendorDialogOpen] = React.useState(false);
@@ -75,13 +83,16 @@ const Vendors = () => {
       phone: vendor.phone || null,
       notes: vendor.notes || null,
       brands: vendor.brands && Array.isArray(vendor.brands) ? vendor.brands.join(", ") : null,
+      scope: vendor.scope ?? "global",
+      lab_id: vendor.lab_id ?? null,
     };
     setEditingVendorInitialData(initialData);
     setIsEditVendorDialogOpen(true);
   };
 
   const proveedoresFiltrados = React.useMemo(() => {
-    const lista = [...(vendors || [])].sort((a, b) =>
+    const scoped = vendorsVisibleForLab(vendors, overrides, labActivoId);
+    const lista = [...scoped].sort((a, b) =>
       a.name.localeCompare(b.name, "es", { sensitivity: "base" })
     );
     const q = busqueda.trim().toLowerCase();
@@ -91,7 +102,7 @@ const Vendors = () => {
       const haystack = textoBuscable(vendor);
       return tokens.every((token) => haystack.includes(token));
     });
-  }, [vendors, busqueda]);
+  }, [vendors, overrides, labActivoId, busqueda]);
 
   if (isLoading) {
     return (
@@ -136,6 +147,8 @@ const Vendors = () => {
                 onSubmit={handleAddVendor}
                 onCancel={() => setIsAddVendorDialogOpen(false)}
                 isSubmitting={addVendorMutation.isPending}
+                labs={labs}
+                defaultLabId={labActivoId}
               />
             </div>
           </DialogContent>
@@ -196,6 +209,8 @@ const Vendors = () => {
                 onSubmit={(data) => handleEditVendor(editingVendorInitialData.id, data)}
                 onCancel={() => setIsEditVendorDialogOpen(false)}
                 isSubmitting={updateVendorMutation.isPending}
+                labs={labs}
+                defaultLabId={labActivoId}
               />
             </div>
           )}
