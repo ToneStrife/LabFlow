@@ -40,3 +40,16 @@ Un push a `main` redeploya cada proyecto Vercel enganchado al repo. Las migracio
 ## GitHub Pages
 
 Sigue funcionando: el build sin `VERCEL` usa `base: /LabFlow/`.
+
+## Variables obligatorias en Vercel
+
+En **Settings → Environment Variables** (Production + Preview):
+
+| Nombre | Valor |
+| --- | --- |
+| `VITE_SUPABASE_URL` | `https://<project-ref>.supabase.co` (Supabase → Settings → API) |
+| `VITE_SUPABASE_ANON_KEY` | la clave **anon** / **publishable** (misma pantalla) |
+
+No uses la URI `postgresql://…` ni la `service_role`.
+
+Después: Deployments → … → Redeploy (o un push a main).
