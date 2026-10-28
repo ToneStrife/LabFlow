@@ -52,12 +52,18 @@ export const SEDES_FALLBACK: Sede[] = [
 /** @deprecated Preferir catálogo dinámico vía useSedesCatalog */
 export const SEDES = SEDES_FALLBACK;
 
+const urlDeFondo = (valor: string | null | undefined, sedeId: string): string | undefined => {
+  if (!valor) return SEDES_FALLBACK.find((sede) => sede.id === sedeId)?.heroImageUrl;
+  if (valor.startsWith("http")) return valor;
+  return sedeAssetUrl(valor);
+};
+
 export const sedeFromRecord = (row: SedeRecord): Sede => ({
   id: row.id,
   name: row.name,
   color: row.color,
   descripcion: row.descripcion ?? undefined,
-  heroImageUrl: row.hero_image_url ?? undefined,
+  heroImageUrl: urlDeFondo(row.hero_image_url, row.id),
   heroGradient: row.hero_gradient,
   tipo: row.tipo,
   lab_id: row.lab_id,
