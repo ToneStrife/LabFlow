@@ -386,17 +386,49 @@ export const apiAddRequest = async (data: AddRequestData): Promise<SupabaseReque
   }
 
   try {
-    const recipients = await getNotificationRecipients('notify_on_new_request', ['Admin']);
-    const recipientIds = recipients.map(m => m.id);
     const requester = await getRequesterProfile(requesterId);
-    const requesterName = requester ? `${requester.first_name || ''} ${requester.last_name || ''}`.trim() : 'Unkown Requester';
+    const requesterName = requester ? `${requester.first_name || ''} ${requester.last_name || ''}`.trim() : 'Alguien';
     const requestNumber = created.request_number || created.id.substring(0, 8);
-    
-    if (recipientIds.length > 0) {
+    const sedeId = created.sede_id ?? null;
+    const pushIds = new Set<string>();
+
+    if (sedeId) {
+      const { data: destinatarios } = await supabase.rpc('destinatarios_aviso_solicitud', { p_sede_id: sedeId });
+      const lista = (destinatarios ?? []) as Array<{ user_id: string; email: string | null; push: boolean; correo: string }>;
+      const yaElegidos = new Set(lista.map((item) => item.user_id));
+      for (const item of lista) {
+        if (item.push) pushIds.add(item.user_id);
+        if (item.correo === 'daily') {
+          await supabase.rpc('encolar_aviso_diario', {
+            p_user_id: item.user_id,
+            p_request_id: created.id,
+            p_sede_id: sedeId,
+          });
+        }
+        if (item.correo === 'instant' && item.email) {
+          await apiSendEmail({
+            to: item.email,
+            subject: `Nueva solicitud #${requestNumber}`,
+            body: `<p><strong>${requesterName}</strong> ha creado la solicitud #${requestNumber}.</p>`,
+          }).catch((error) => {
+            console.error('No se pudo enviar el correo al momento:', error);
+          });
+        }
+      }
+      const legacy = await getNotificationRecipients('notify_on_new_request', ['Admin']);
+      for (const admin of legacy) {
+        if (!yaElegidos.has(admin.id)) pushIds.add(admin.id);
+      }
+    } else {
+      const legacy = await getNotificationRecipients('notify_on_new_request', ['Admin']);
+      for (const admin of legacy) pushIds.add(admin.id);
+    }
+
+    if (pushIds.size > 0) {
         await supabase.functions.invoke('send-notification', {
             method: 'POST',
             body: JSON.stringify({
-                user_ids: recipientIds,
+                user_ids: [...pushIds],
                 title: `🔔 Nueva Solicitud #${requestNumber}`,
                 body: `El usuario ${requesterName} ha enviado una nueva solicitud pendiente.`,
                 link: `/requests/${created.id}`,
