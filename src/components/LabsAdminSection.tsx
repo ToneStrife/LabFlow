@@ -11,6 +11,7 @@ import SedeDot from "@/components/SedeDot";
 import { cn } from "@/lib/utils";
 import { mobileDialogClass } from "@/lib/layout";
 import type { Lab } from "@/data/types";
+import { useSession } from "@/components/SessionContextProvider";
 
 const ROLE_LABEL: Record<string, string> = {
   member: "Miembro",
@@ -63,6 +64,8 @@ const LabDetail: React.FC<{ lab: Lab }> = ({ lab }) => {
 };
 
 const LabsAdminSection: React.FC = () => {
+  const { profile } = useSession();
+  const puedeCrear = Boolean(profile?.is_owner);
   const { data: labs = [], isLoading, error } = useLabs();
   const [wizardOpen, setWizardOpen] = React.useState(false);
   const [expandedId, setExpandedId] = React.useState<string | null>(null);
@@ -86,14 +89,16 @@ const LabsAdminSection: React.FC = () => {
           <CardTitle className="flex items-center gap-2 text-xl">
             <FlaskConical className="h-5 w-5" /> Laboratorios
           </CardTitle>
-          <Button size="sm" onClick={() => setWizardOpen(true)}>
-            <PlusCircle className="mr-2 h-4 w-4" /> Nuevo laboratorio
-          </Button>
+          {puedeCrear && (
+            <Button size="sm" onClick={() => setWizardOpen(true)}>
+              <PlusCircle className="mr-2 h-4 w-4" /> Nuevo laboratorio
+            </Button>
+          )}
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-sm text-muted-foreground">
-            Cada laboratorio es un grupo de investigación con sus sedes (p. ej. Farmacia) y
-            gestores de pedidos. FarBioQ conserva las sedes CIBM y Farmacia.
+            Cada laboratorio es un grupo de investigación con sus sedes. FarBioQ sigue en
+            lab-flow.es, con CIBM y Farmacia. Solo el propietario puede crear uno nuevo.
           </p>
           {labs.map((lab) => (
             <div key={lab.id} className="rounded-lg border p-4">
@@ -122,7 +127,7 @@ const LabsAdminSection: React.FC = () => {
         </CardContent>
       </Card>
 
-      <Dialog open={wizardOpen} onOpenChange={setWizardOpen}>
+      <Dialog open={puedeCrear && wizardOpen} onOpenChange={setWizardOpen}>
         <DialogContent className={cn(mobileDialogClass, "sm:max-w-2xl")}>
           <DialogHeader>
             <DialogTitle>Nuevo laboratorio</DialogTitle>
