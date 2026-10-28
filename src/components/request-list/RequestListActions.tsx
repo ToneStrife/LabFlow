@@ -4,7 +4,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -26,9 +25,10 @@ import { useCan } from "@/hooks/use-permissions";
 import { useProjects } from "@/hooks/use-projects";
 import {
   canApprovePendingRequest,
+  canGivePurchaseOrder,
   canMergeRequest,
-  canPerformWorkflowAction,
   canReceivePackages,
+  isRequestAuthor,
 } from "@/lib/permissions";
 interface RequestListActionsProps {
   request: SupabaseRequest;
@@ -50,7 +50,6 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
   isUpdatingStatus,
   onViewDetails,
   onEnterQuoteDetails,
-  onSendPORequest,
   onMarkAsOrdered,
   onMarkAsReceived,
   onDeny,
@@ -69,11 +68,16 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
     can,
     projectCodes: request.project_codes,
     projects,
+    requesterId: request.requester_id,
   };
-  const canApprove = canApprovePendingRequest(approvalCtx);
+  const daElPo = canGivePurchaseOrder(approvalCtx);
+  const esAutor = isRequestAuthor(approvalCtx);
+  const puedeSeguir = esAutor || daElPo;
+  const puedeDenegar = canApprovePendingRequest(approvalCtx);
   const canMerge = canMergeRequest(profile?.role) && request.status === "Pending";
-  const canWorkflow = canPerformWorkflowAction(approvalCtx, request.status);
   const canReceive = canReceivePackages(profile?.role, request.status);
+  const tienePresupuesto = Boolean(request.quote_url);
+  const tienePo = Boolean(request.po_url || request.po_number);
 
   const iconButtons = (
     <>
@@ -100,89 +104,65 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
         </Button>
       )}
 
-      {request.status === "Pending" && canApprove && (
-        <>
-          {request.quote_url ? (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => onSendPORequest(request)}
-              title="Enviar solicitud de compra (Cómprame)"
-              disabled={isUpdatingStatus}
-              className="shrink-0"
-            >
-              <Mail className="h-4 w-4 text-orange-600 dark:text-orange-400" />
-            </Button>
-          ) : (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => onSendQuoteRequest(request)}
-              title="Solicitar presupuesto"
-              disabled={isUpdatingStatus}
-              className="shrink-0"
-            >
-              <Mail className="h-4 w-4 text-blue-500 dark:text-blue-400" />
-            </Button>
-          )}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onDeny(request)}
-            title="Denegar Solicitud"
-            disabled={isUpdatingStatus}
-            className="shrink-0"
-          >
-            <Ban className="h-4 w-4 text-red-600 dark:text-red-400" />
-          </Button>
-        </>
-      )}
-
-      {request.status === "Quote Requested" && !request.quote_url && canWorkflow && (
-        <>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onEnterQuoteDetails(request)}
-            title="Subir presupuesto"
-            disabled={isUpdatingStatus}
-            className="shrink-0"
-          >
-            <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onDeny(request)}
-            title="Denegar Solicitud"
-            disabled={isUpdatingStatus}
-            className="shrink-0"
-          >
-            <Ban className="h-4 w-4 text-red-600 dark:text-red-400" />
-          </Button>
-        </>
-      )}
-
-      {request.status === "Quote Requested" && request.quote_url && canWorkflow && request.account_manager_id && (
+      {!tienePresupuesto && puedeSeguir && (request.status === "Pending" || request.status === "Quote Requested") && (
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => onSendPORequest(request)}
-          title="Enviar solicitud de compra (Cómprame)"
+          onClick={() => onSendQuoteRequest(request)}
+          title="Solicitar presupuesto"
           disabled={isUpdatingStatus}
           className="shrink-0"
         >
-          <Mail className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+          <Mail className="h-4 w-4 text-blue-500 dark:text-blue-400" />
         </Button>
       )}
 
-      {request.status === "PO Requested" && canWorkflow && (
+      {!tienePresupuesto && puedeSeguir && (request.status === "Pending" || request.status === "Quote Requested") && (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => onEnterQuoteDetails(request)}
+          title="Subir presupuesto"
+          disabled={isUpdatingStatus}
+          className="shrink-0"
+        >
+          <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+        </Button>
+      )}
+
+      {tienePresupuesto && !tienePo && daElPo && request.status !== "Ordered" && request.status !== "Received" && (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => onEnterQuoteDetails(request)}
+          title="Registrar PO"
+          disabled={isUpdatingStatus}
+          className="shrink-0"
+        >
+          <FileText className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+        </Button>
+      )}
+
+      {puedeDenegar && (request.status === "Pending" || request.status === "Quote Requested") && (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => onDeny(request)}
+          title="Denegar solicitud"
+          disabled={isUpdatingStatus}
+          className="shrink-0"
+        >
+          <Ban className="h-4 w-4 text-red-600 dark:text-red-400" />
+        </Button>
+      )}
+
+      {tienePo && puedeSeguir && (request.status === "Pending" || request.status === "Quote Requested" || request.status === "PO Requested") && (
         <>
           <Button
             variant="ghost"
             size="icon"
             onClick={() => onMarkAsOrdered(request)}
-            title="Subir PO y Marcar como Pedido"
+            title="Marcar como pedido"
             disabled={isUpdatingStatus}
             className="shrink-0"
           >
@@ -215,12 +195,12 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
               <Receipt className="h-4 w-4 text-purple-600 dark:text-purple-400" />
             </Button>
           )}
-          {canWorkflow && (
+          {puedeSeguir && (
             <Button
               variant="ghost"
               size="icon"
               onClick={() => onCancel(request)}
-              title="Cancelar Solicitud"
+              title="Cancelar solicitud"
               disabled={isUpdatingStatus}
               className="shrink-0"
             >
@@ -256,61 +236,40 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
                 <Combine className="mr-2 h-4 w-4 text-purple-600 dark:text-purple-400" /> Fusionar solicitud
               </DropdownMenuItem>
             )}
-            {request.status === "Pending" && canApprove && (
+            {!tienePresupuesto && puedeSeguir && (request.status === "Pending" || request.status === "Quote Requested") && (
               <>
-                {canMerge && <DropdownMenuSeparator />}
-                {request.quote_url ? (
-                  <DropdownMenuItem onClick={() => onSendPORequest(request)} disabled={isUpdatingStatus}>
-                    <Mail className="mr-2 h-4 w-4 text-orange-600 dark:text-orange-400" /> Enviar Cómprame
-                  </DropdownMenuItem>
-                ) : (
-                  <DropdownMenuItem onClick={() => onSendQuoteRequest(request)} disabled={isUpdatingStatus}>
-                    <Mail className="mr-2 h-4 w-4 text-blue-500 dark:text-blue-400" /> Solicitar presupuesto
-                  </DropdownMenuItem>
-                )}
-                <DropdownMenuItem onClick={() => onDeny(request)} disabled={isUpdatingStatus} className="text-red-600 dark:text-red-400">
-                  <Ban className="mr-2 h-4 w-4" /> Denegar
+                <DropdownMenuItem onClick={() => onSendQuoteRequest(request)} disabled={isUpdatingStatus}>
+                  <Mail className="mr-2 h-4 w-4 text-blue-500 dark:text-blue-400" /> Solicitar presupuesto
                 </DropdownMenuItem>
-              </>
-            )}
-            {request.status === "Quote Requested" && !request.quote_url && canWorkflow && (
-              <>
                 <DropdownMenuItem onClick={() => onEnterQuoteDetails(request)} disabled={isUpdatingStatus}>
                   <FileText className="mr-2 h-4 w-4 text-blue-600 dark:text-blue-400" /> Subir presupuesto
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onDeny(request)} disabled={isUpdatingStatus} className="text-red-600 dark:text-red-400">
-                  <Ban className="mr-2 h-4 w-4" /> Denegar
-                </DropdownMenuItem>
               </>
             )}
-            {request.status === "Quote Requested" && request.quote_url && canWorkflow && request.account_manager_id && (
-              <DropdownMenuItem onClick={() => onSendPORequest(request)} disabled={isUpdatingStatus}>
-                <Mail className="mr-2 h-4 w-4 text-orange-600 dark:text-orange-400" /> Solicitar compra (Cómprame)
+            {tienePresupuesto && !tienePo && daElPo && request.status !== "Ordered" && request.status !== "Received" && (
+              <DropdownMenuItem onClick={() => onEnterQuoteDetails(request)} disabled={isUpdatingStatus}>
+                <FileText className="mr-2 h-4 w-4 text-orange-600 dark:text-orange-400" /> Registrar PO
               </DropdownMenuItem>
             )}
-            {request.status === "PO Requested" && canWorkflow && (
-              <>
-                <DropdownMenuItem onClick={() => onMarkAsOrdered(request)} disabled={isUpdatingStatus}>
-                  <Package className="mr-2 h-4 w-4 text-green-700 dark:text-green-400" /> Marcar como pedido
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onCancel(request)} disabled={isUpdatingStatus} className="text-red-600 dark:text-red-400">
-                  <XCircle className="mr-2 h-4 w-4" /> Cancelar
-                </DropdownMenuItem>
-              </>
+            {puedeDenegar && (request.status === "Pending" || request.status === "Quote Requested") && (
+              <DropdownMenuItem onClick={() => onDeny(request)} disabled={isUpdatingStatus} className="text-red-600 dark:text-red-400">
+                <Ban className="mr-2 h-4 w-4" /> Denegar
+              </DropdownMenuItem>
             )}
-            {request.status === "Ordered" && (canReceive || canWorkflow) && (
-              <>
-                {canReceive && (
-                  <DropdownMenuItem onClick={() => onMarkAsReceived(request)} disabled={isUpdatingStatus}>
-                    <Receipt className="mr-2 h-4 w-4 text-purple-600 dark:text-purple-400" /> Recibir artículos
-                  </DropdownMenuItem>
-                )}
-                {canWorkflow && (
-                  <DropdownMenuItem onClick={() => onCancel(request)} disabled={isUpdatingStatus} className="text-red-600 dark:text-red-400">
-                    <XCircle className="mr-2 h-4 w-4" /> Cancelar
-                  </DropdownMenuItem>
-                )}
-              </>
+            {tienePo && puedeSeguir && (request.status === "Pending" || request.status === "Quote Requested" || request.status === "PO Requested") && (
+              <DropdownMenuItem onClick={() => onMarkAsOrdered(request)} disabled={isUpdatingStatus}>
+                <Package className="mr-2 h-4 w-4 text-green-700 dark:text-green-400" /> Marcar como pedido
+              </DropdownMenuItem>
+            )}
+            {puedeSeguir && (request.status === "PO Requested" || request.status === "Ordered") && (
+              <DropdownMenuItem onClick={() => onCancel(request)} disabled={isUpdatingStatus} className="text-red-600 dark:text-red-400">
+                <XCircle className="mr-2 h-4 w-4" /> Cancelar
+              </DropdownMenuItem>
+            )}
+            {request.status === "Ordered" && canReceive && (
+              <DropdownMenuItem onClick={() => onMarkAsReceived(request)} disabled={isUpdatingStatus}>
+                <Receipt className="mr-2 h-4 w-4 text-purple-600 dark:text-purple-400" /> Recibir artículos
+              </DropdownMenuItem>
             )}
           </DropdownMenuContent>
         </DropdownMenu>

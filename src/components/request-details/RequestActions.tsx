@@ -16,15 +16,16 @@ import { useCan } from "@/hooks/use-permissions";
 import { useProjects } from "@/hooks/use-projects";
 import {
   canApprovePendingRequest,
-  canPerformWorkflowAction,
+  canGivePurchaseOrder,
   canReceivePackages,
+  isRequestAuthor,
 } from "@/lib/permissions";
 interface RequestActionsProps {
   request: SupabaseRequest;
   isUpdatingStatus: boolean;
-  handleSendPORequest: (request: SupabaseRequest) => void;
   handleUploadQuote: () => void;
   handleUploadPOAndOrder: () => void;
+  handleRegisterPo: () => void;
   handleMarkAsReceived: () => void;
   handleMarkAsOrderedAndSendEmail: (request: SupabaseRequest) => void;
   openDenyRequestDialog: () => void;
@@ -35,9 +36,9 @@ interface RequestActionsProps {
 const RequestActions: React.FC<RequestActionsProps> = ({
   request,
   isUpdatingStatus,
-  handleSendPORequest,
   handleUploadQuote,
   handleUploadPOAndOrder,
+  handleRegisterPo,
   handleMarkAsReceived,
   handleMarkAsOrderedAndSendEmail,
   openDenyRequestDialog,
@@ -53,149 +54,110 @@ const RequestActions: React.FC<RequestActionsProps> = ({
     can,
     projectCodes: request.project_codes,
     projects,
+    requesterId: request.requester_id,
   };
-  const canApprove = canApprovePendingRequest(approvalCtx);
-  const canWorkflow = canPerformWorkflowAction(approvalCtx, request.status);
+  const daElPo = canGivePurchaseOrder(approvalCtx);
+  const esAutor = isRequestAuthor(approvalCtx);
+  const puedeSeguir = esAutor || daElPo;
+  const puedeDenegar = canApprovePendingRequest(approvalCtx);
   const canReceive = canReceivePackages(profile?.role, request.status);
+  const tienePresupuesto = Boolean(request.quote_url);
+  const tienePo = Boolean(request.po_url || request.po_number);
+  const antesDelPedido =
+    request.status === "Pending" ||
+    request.status === "Quote Requested" ||
+    request.status === "PO Requested";
 
-  if (request.status === "Pending" && !canApprove) {
+  const cerrar = (
+    <Button
+      variant="outline"
+      onClick={request.status === "Pending" || request.status === "Quote Requested" ? openDenyRequestDialog : openCancelRequestDialog}
+      className="w-full justify-start text-red-600 dark:text-red-400 border-red-200 dark:border-red-900 hover:bg-red-50 dark:hover:bg-red-950/50"
+      disabled={isUpdatingStatus}
+    >
+      {request.status === "Pending" || request.status === "Quote Requested" ? (
+        <><Ban className="mr-2 h-4 w-4" /> Denegar solicitud</>
+      ) : (
+        <><XCircle className="mr-2 h-4 w-4" /> Cancelar solicitud</>
+      )}
+    </Button>
+  );
+
+  if (request.status === "Received") {
     return (
-      <p className="text-sm text-muted-foreground italic">
-        Pendiente de presupuesto. Lo revisa el IP del proyecto o un administrador.
+      <p className="text-sm text-green-600 dark:text-green-400 font-medium flex items-center">
+        <CheckCircle className="mr-2 h-4 w-4" /> Solicitud completada y recibida.
       </p>
     );
   }
 
-  if (!canWorkflow && request.status !== "Received") {
-    return (
-      <p className="text-sm text-muted-foreground italic">
-        No tienes permisos para realizar acciones en esta solicitud.
-      </p>
-    );
+  if (request.status === "Denied" || request.status === "Cancelled") {
+    return null;
   }
 
   return (
     <div className="flex flex-col space-y-2">
-      {/* PENDING: pedir presupuesto (o enviar el Cómprame si ya hay presupuesto) */}
-      {request.status === "Pending" && canApprove && (
+      {!tienePresupuesto && puedeSeguir && (request.status === "Pending" || request.status === "Quote Requested") && (
         <>
-          {request.quote_url ? (
-            <Button 
-              onClick={() => handleSendPORequest(request)} 
-              className="w-full justify-start" 
-              disabled={isUpdatingStatus}
-            >
-              <Send className="mr-2 h-4 w-4" /> Solicitar PO (Cómprame)
-            </Button>
-          ) : (
-            <Button 
-              onClick={() => onSendQuoteRequest(request)} 
-              className="w-full justify-start" 
-              disabled={isUpdatingStatus}
-            >
-              <Mail className="mr-2 h-4 w-4" /> Solicitar presupuesto
-            </Button>
-          )}
-          <Button 
-            variant="outline" 
-            onClick={openDenyRequestDialog} 
-            className="w-full justify-start text-red-600 dark:text-red-400 border-red-200 dark:border-red-900 hover:bg-red-50 dark:hover:bg-red-950/50" 
-            disabled={isUpdatingStatus}
-          >
-            <Ban className="mr-2 h-4 w-4" /> Denegar Solicitud
+          <Button onClick={() => onSendQuoteRequest(request)} className="w-full justify-start" disabled={isUpdatingStatus}>
+            <Mail className="mr-2 h-4 w-4" /> Solicitar presupuesto
+          </Button>
+          <Button variant="outline" onClick={handleUploadQuote} className="w-full justify-start" disabled={isUpdatingStatus}>
+            <FileText className="mr-2 h-4 w-4" /> Subir presupuesto
           </Button>
         </>
       )}
 
-      {/* QUOTE REQUESTED: Upload Quote or Send PO Request */}
-      {request.status === "Quote Requested" && canWorkflow && (
+      {tienePresupuesto && !tienePo && daElPo && antesDelPedido && (
+        <Button onClick={handleRegisterPo} className="w-full justify-start" disabled={isUpdatingStatus}>
+          <Send className="mr-2 h-4 w-4" /> Registrar PO
+        </Button>
+      )}
+
+      {tienePresupuesto && !tienePo && esAutor && !daElPo && antesDelPedido && (
+        <p className="text-sm text-muted-foreground">
+          El presupuesto ya está. El PO lo registra el administrador o el IP del proyecto.
+        </p>
+      )}
+
+      {tienePo && puedeSeguir && antesDelPedido && (
         <>
-          {!request.quote_url ? (
-            <Button 
-              onClick={handleUploadQuote} 
-              className="w-full justify-start" 
-              disabled={isUpdatingStatus}
-            >
-              <FileText className="mr-2 h-4 w-4" /> Subir presupuesto
-            </Button>
-          ) : (
-            <Button 
-              onClick={() => handleSendPORequest(request)} 
-              className="w-full justify-start" 
-              disabled={isUpdatingStatus}
-            >
-              <Send className="mr-2 h-4 w-4" /> Solicitar PO (Cómprame)
-            </Button>
-          )}
-          <Button 
-            variant="outline" 
-            onClick={openDenyRequestDialog} 
-            className="w-full justify-start text-red-600 dark:text-red-400 border-red-200 dark:border-red-900 hover:bg-red-50 dark:hover:bg-red-950/50" 
-            disabled={isUpdatingStatus}
-          >
-            <Ban className="mr-2 h-4 w-4" /> Denegar Solicitud
+          <Button onClick={handleUploadPOAndOrder} className="w-full justify-start" disabled={isUpdatingStatus}>
+            <Package className="mr-2 h-4 w-4" /> Marcar como pedido
+          </Button>
+          <Button variant="outline" onClick={() => handleMarkAsOrderedAndSendEmail(request)} className="w-full justify-start" disabled={isUpdatingStatus}>
+            <Mail className="mr-2 h-4 w-4" /> Enviar correo de pedido
           </Button>
         </>
       )}
 
-      {/* PO REQUESTED: Mark as Ordered */}
-      {request.status === "PO Requested" && canWorkflow && (
-        <>
-          <Button 
-            onClick={handleUploadPOAndOrder} 
-            className="w-full justify-start" 
-            disabled={isUpdatingStatus}
-          >
-            <Package className="mr-2 h-4 w-4" /> Marcar como Pedido
-          </Button>
-          <Button 
-            variant="outline" 
-            onClick={openCancelRequestDialog} 
-            className="w-full justify-start text-red-600 dark:text-red-400 border-red-200 dark:border-red-900 hover:bg-red-50 dark:hover:bg-red-950/50" 
-            disabled={isUpdatingStatus}
-          >
-            <XCircle className="mr-2 h-4 w-4" /> Cancelar Solicitud
-          </Button>
-        </>
-      )}
-
-      {/* ORDERED: Mark as Received or Send Confirmation */}
       {request.status === "Ordered" && canReceive && (
-        <>
-          <Button 
-            onClick={handleMarkAsReceived} 
-            className="w-full justify-start" 
-            disabled={isUpdatingStatus}
-          >
-            <Receipt className="mr-2 h-4 w-4" /> Recibir Artículos
-          </Button>
-          {request.po_url && canWorkflow && (
-            <Button 
-              variant="outline" 
-              onClick={() => handleMarkAsOrderedAndSendEmail(request)} 
-              className="w-full justify-start" 
-              disabled={isUpdatingStatus}
-            >
-              <Mail className="mr-2 h-4 w-4" /> Reenviar Confirmación Pedido
-            </Button>
-          )}
-          {canWorkflow && (
-            <Button 
-              variant="outline" 
-              onClick={openCancelRequestDialog} 
-              className="w-full justify-start text-red-600 dark:text-red-400 border-red-200 dark:border-red-900 hover:bg-red-50 dark:hover:bg-red-950/50" 
-              disabled={isUpdatingStatus}
-            >
-              <XCircle className="mr-2 h-4 w-4" /> Cancelar Solicitud
-            </Button>
-          )}
-        </>
+        <Button onClick={handleMarkAsReceived} className="w-full justify-start" disabled={isUpdatingStatus}>
+          <Receipt className="mr-2 h-4 w-4" /> Recibir artículos
+        </Button>
       )}
 
-      {/* RECEIVED: No actions usually needed here */}
-      {request.status === "Received" && (
-        <p className="text-sm text-green-600 dark:text-green-400 font-medium flex items-center">
-          <CheckCircle className="mr-2 h-4 w-4" /> Solicitud completada y recibida.
+      {request.status === "Ordered" && puedeSeguir && (
+        <Button variant="outline" onClick={() => handleMarkAsOrderedAndSendEmail(request)} className="w-full justify-start" disabled={isUpdatingStatus}>
+          <Mail className="mr-2 h-4 w-4" /> Enviar correo de pedido
+        </Button>
+      )}
+
+      {puedeDenegar && (request.status === "Pending" || request.status === "Quote Requested") && cerrar}
+      {puedeSeguir && (request.status === "PO Requested" || request.status === "Ordered") && (
+        <Button
+          variant="outline"
+          onClick={openCancelRequestDialog}
+          className="w-full justify-start text-red-600 dark:text-red-400 border-red-200 dark:border-red-900 hover:bg-red-50 dark:hover:bg-red-950/50"
+          disabled={isUpdatingStatus}
+        >
+          <XCircle className="mr-2 h-4 w-4" /> Cancelar solicitud
+        </Button>
+      )}
+
+      {!puedeSeguir && !canReceive && request.status !== "Ordered" && (
+        <p className="text-sm text-muted-foreground italic">
+          No tienes acciones en esta solicitud.
         </p>
       )}
     </div>

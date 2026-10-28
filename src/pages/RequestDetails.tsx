@@ -35,7 +35,7 @@ import InvoicesList from "@/components/request-details/InvoicesList";
 import RequestActivityCard from "@/components/request-details/RequestActivityCard";
 import { toast } from "sonner";
 import { useSession } from "@/components/SessionContextProvider";
-import { isAdmin, canEditRequestDetails, canDeleteRequest, canOverrideStatus } from "@/lib/permissions";
+import { gestionaPedidos, canEditRequestDetails, canDeleteRequest, canOverrideStatus } from "@/lib/permissions";
 import { useCan } from "@/hooks/use-permissions";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAggregatedReceivedItems } from "@/hooks/use-packing-slips";
@@ -55,7 +55,7 @@ const RequestDetails: React.FC = () => {
   const { can } = useCan();
   const { openReceive } = useReceiveWizard();
   const { memberships } = useLabsCatalog();
-  const userIsAdmin = isAdmin(profile?.role);
+  const userIsAdmin = gestionaPedidos(profile?.role);
   
   const { data: requests, isLoading: isLoadingRequests } = useRequests();
   const { data: vendors, isLoading: isLoadingVendors } = useVendors();
@@ -209,16 +209,28 @@ const RequestDetails: React.FC = () => {
     setIsUploadDialogOpen(true);
   };
 
+  const [poMode, setPoMode] = React.useState<"register" | "finish">("finish");
   const handleUploadQuote = () => handleUploadClick("quote");
-  const handleUploadPOAndOrder = () => handleUploadClick("po");
+  const handleRegisterPo = () => {
+    setPoMode("register");
+    handleUploadClick("po");
+  };
+  const handleUploadPOAndOrder = () => {
+    setPoMode("finish");
+    handleUploadClick("po");
+  };
 
-  const handleFileUpload = async (file: File | null, poNumber?: string) => {
+  const handleFileUpload = async (
+    file: File | null,
+    poNumber: string | undefined,
+    intent: "save" | "order" | "email"
+  ) => {
     if (!request) return;
-    const hasNewPoData = Boolean(file || poNumber?.trim());
+    const debeGuardar = Boolean(file) || (fileTypeToUpload === "po" && Boolean(poNumber?.trim()));
     let returnedPoNumber = poNumber?.trim() || null;
     let filePath: string | null = null;
 
-    if (hasNewPoData) {
+    if (debeGuardar) {
       const result = await updateFileMutation.mutateAsync({
         id: request.id,
         fileType: fileTypeToUpload,
@@ -231,13 +243,20 @@ const RequestDetails: React.FC = () => {
 
     const resolvedPoNumber = returnedPoNumber || request.po_number || null;
     const savedPoFile = Boolean(file || filePath || request.po_url);
-    // Solo la orden de compra (PO/CPM) avanza el estado. Subir un presupuesto
-    // no debe pasar a «PO solicitado» ni a «Pedido».
-    if (
-      fileTypeToUpload === "po" &&
-      (request.status === "PO Requested" || request.status === "Quote Requested") &&
-      (resolvedPoNumber || savedPoFile)
-    ) {
+    const hayPo = Boolean(resolvedPoNumber || savedPoFile);
+
+    if (fileTypeToUpload === "po" && hayPo && intent === "save") {
+      if (request.status === "Pending" || request.status === "Quote Requested") {
+        await updateStatusMutation.mutateAsync({
+          id: request.id,
+          status: "PO Requested",
+          poNumber: resolvedPoNumber,
+          quoteUrl: request.quote_url,
+        });
+      }
+    }
+
+    if (fileTypeToUpload === "po" && hayPo && intent === "order" && request.status !== "Ordered") {
       await updateStatusMutation.mutateAsync({
         id: request.id,
         status: "Ordered",
@@ -245,7 +264,16 @@ const RequestDetails: React.FC = () => {
         quoteUrl: request.quote_url,
       });
     }
+
     setIsUploadDialogOpen(false);
+
+    if (fileTypeToUpload === "po" && intent === "email") {
+      await handleMarkAsOrderedAndSendEmail({
+        ...request,
+        po_number: resolvedPoNumber,
+        po_url: filePath || request.po_url,
+      });
+    }
   };
 
   const handleMarkAsOrderedAndSendEmail = async (request: SupabaseRequest) => {
@@ -288,6 +316,10 @@ const RequestDetails: React.FC = () => {
       orderConfirmationTemplate.body_template,
       context as any
     );
+
+    if (request.status !== "Ordered") {
+      setPendingStatusOnEmailSend({ requestId: request.id, status: "Ordered" });
+    }
 
     setEmailInitialData({
       to: getVendorOrderEmail(request.vendor_id),
@@ -474,9 +506,9 @@ const RequestDetails: React.FC = () => {
             <RequestActions
               request={request}
               isUpdatingStatus={updateStatusMutation.isPending || updateFileMutation.isPending || revertReceptionMutation.isPending}
-              handleSendPORequest={handleSendPORequest}
               handleUploadQuote={handleUploadQuote}
               handleUploadPOAndOrder={handleUploadPOAndOrder}
+              handleRegisterPo={handleRegisterPo}
               handleMarkAsReceived={handleOpenReceiveItemsDialog}
               handleMarkAsOrderedAndSendEmail={handleMarkAsOrderedAndSendEmail}
               openDenyRequestDialog={() => setIsDenyDialogOpen(true)}
@@ -560,7 +592,7 @@ const RequestDetails: React.FC = () => {
       </Dialog>
 
       <EmailDialog isOpen={isEmailDialogOpen} onOpenChange={handleEmailDialogOpenChange} initialData={emailInitialData} onSend={handleSendEmail} isSending={sendEmailMutation.isPending} />
-      <FileUploadDialog isOpen={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen} onUpload={handleFileUpload} isUploading={updateFileMutation.isPending} fileType={fileTypeToUpload} markAsOrdered={fileTypeToUpload === "po" && (request?.status === "PO Requested" || request?.status === "Quote Requested")} hasExistingPoFile={Boolean(request?.po_url)} />
+      <FileUploadDialog isOpen={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen} onUpload={handleFileUpload} isUploading={updateFileMutation.isPending || updateStatusMutation.isPending} fileType={fileTypeToUpload} markAsOrdered={fileTypeToUpload === "po" && poMode === "finish"} hasExistingPoFile={Boolean(request?.po_url || request?.po_number)} />
       {request && request.items && <InvoiceItemsDialog isOpen={isInvoiceItemsDialogOpen} onOpenChange={setIsInvoiceItemsDialogOpen} requestId={request.id} requestItems={request.items} />}
     </div>
   );

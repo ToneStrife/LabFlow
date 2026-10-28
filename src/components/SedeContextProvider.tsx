@@ -1,12 +1,12 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { useSession } from "@/components/SessionContextProvider";
 import { TODAS_LAS_SEDES, isValidSedeId } from "@/lib/sedes";
-import { isAdmin } from "@/lib/permissions";
+import { gestionaPedidos } from "@/lib/permissions";
 
 const STORAGE_KEY = "labflow_sede_activa";
 
 interface SedeContextType {
-  /** null = Todas las sedes visibles (solo Admin/owner) */
+  /** null = Todas las sedes visibles (admin, gestor de pedidos o propietario) */
   sedeActiva: string | null;
   setSedeActiva: (sedeId: string | null) => void;
   /** false hasta leer localStorage / perfil */
@@ -39,7 +39,7 @@ const readStoredSede = (): string | null | undefined => {
 
 export const SedeContextProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { profile } = useSession();
-  const puedeVerTodas = Boolean(isAdmin(profile?.role) || profile?.is_owner);
+  const puedeVerTodas = Boolean(gestionaPedidos(profile?.role) || profile?.is_owner);
   const [sedeActiva, setSedeActivaState] = useState<string | null>(() => {
     const stored = readStoredSede();
     return stored === undefined ? null : stored;

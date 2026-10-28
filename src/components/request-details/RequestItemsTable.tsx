@@ -22,6 +22,7 @@ import { useSession } from "@/components/SessionContextProvider";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { mobileDialogClass } from "@/lib/layout";
+import { gestionaPedidos } from "@/lib/permissions";
 
 interface RequestItemsTableProps {
   items: SupabaseRequestItem[] | null;
@@ -31,7 +32,7 @@ interface RequestItemsTableProps {
 const RequestItemsTable: React.FC<RequestItemsTableProps> = ({ items, isEditable }) => {
   const isMobile = useIsMobile();
   const { profile } = useSession();
-  const isAdmin = profile?.role === 'Admin';
+  const isAdmin = gestionaPedidos(profile?.role);
   const requestId = items?.[0]?.request_id || '';
   
   const updateItemMutation = useUpdateRequestItem();

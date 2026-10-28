@@ -209,21 +209,43 @@ ON CONFLICT (lab_id, user_id) DO UPDATE SET
   role = EXCLUDED.role,
   smtp_from = EXCLUDED.smtp_from;
 
-INSERT INTO public.vendors (id, name, contact_person, email, phone, notes, scope, lab_id)
+-- Correos de prueba: el mismo buzón, para poder enviar sin escribir a una empresa real.
+INSERT INTO public.vendors (
+  id, name, contact_person, email, email_presupuesto, email_pedido, phone, notes, scope, lab_id
+)
 VALUES (
   'b0000000-0000-4000-8000-0000000000a1',
   'Reactivos Imaginarios',
-  'Ana Prueba',
-  'pedidos@reactivos-imaginarios.example',
+  'Carlos (prueba)',
+  'cjaranda@go.ugr.es',
+  'cjaranda@go.ugr.es',
+  'cjaranda@go.ugr.es',
   '600 000 000',
-  'Proveedor ficticio de Inmuno Demo.',
+  'Proveedor ficticio. El correo es el de prueba, no el de una empresa.',
   'lab',
   'b0000000-0000-4000-8000-000000000002'
 )
 ON CONFLICT (id) DO UPDATE SET
   name = EXCLUDED.name,
+  contact_person = EXCLUDED.contact_person,
+  email = EXCLUDED.email,
+  email_presupuesto = EXCLUDED.email_presupuesto,
+  email_pedido = EXCLUDED.email_pedido,
+  notes = EXCLUDED.notes,
   scope = EXCLUDED.scope,
   lab_id = EXCLUDED.lab_id;
+
+INSERT INTO public.account_managers (id, first_name, last_name, email)
+VALUES (
+  'b0000000-0000-4000-8000-0000000000f1',
+  'Gerente',
+  'Demo',
+  'cjaranda@go.ugr.es'
+)
+ON CONFLICT (id) DO UPDATE SET
+  first_name = EXCLUDED.first_name,
+  last_name = EXCLUDED.last_name,
+  email = EXCLUDED.email;
 
 INSERT INTO public.projects (id, name, code, lab_id)
 VALUES (
@@ -255,7 +277,7 @@ ON CONFLICT (id) DO UPDATE SET
   sede_id = EXCLUDED.sede_id;
 
 INSERT INTO public.requests (
-  id, vendor_id, requester_id, status, notes, project_codes,
+  id, vendor_id, requester_id, account_manager_id, status, notes, project_codes,
   shipping_address_id, request_number, lab_id, sede_id
 )
 VALUES
@@ -263,6 +285,7 @@ VALUES
     'b0000000-0000-4000-8000-0000000000e1',
     'b0000000-0000-4000-8000-0000000000a1',
     'b0000000-0000-4000-8000-0000000000d1',
+    'b0000000-0000-4000-8000-0000000000f1',
     'Quote Pending',
     'Pedido de demostración. No es real.',
     ARRAY['b0000000-0000-4000-8000-0000000000b1'],
@@ -275,6 +298,7 @@ VALUES
     'b0000000-0000-4000-8000-0000000000e2',
     'b0000000-0000-4000-8000-0000000000a1',
     'b0000000-0000-4000-8000-0000000000d1',
+    'b0000000-0000-4000-8000-0000000000f1',
     'Ordered',
     'Pedido de demostración, marcado como enviado.',
     ARRAY['b0000000-0000-4000-8000-0000000000b1'],
@@ -287,6 +311,7 @@ VALUES
     'b0000000-0000-4000-8000-0000000000e3',
     'b0000000-0000-4000-8000-0000000000a1',
     'b0000000-0000-4000-8000-0000000000d1',
+    'b0000000-0000-4000-8000-0000000000f1',
     'Received',
     'Pedido de demostración, ya recibido.',
     ARRAY['b0000000-0000-4000-8000-0000000000b1'],
@@ -299,7 +324,9 @@ ON CONFLICT (id) DO UPDATE SET
   status = EXCLUDED.status,
   notes = EXCLUDED.notes,
   lab_id = EXCLUDED.lab_id,
-  sede_id = EXCLUDED.sede_id;
+  sede_id = EXCLUDED.sede_id,
+  account_manager_id = EXCLUDED.account_manager_id,
+  vendor_id = EXCLUDED.vendor_id;
 
 INSERT INTO public.request_items (request_id, product_name, catalog_number, quantity, unit_price, format, brand, notes)
 SELECT v.request_id, v.product_name, v.catalog_number, v.quantity, v.unit_price, v.format, v.brand, v.notes

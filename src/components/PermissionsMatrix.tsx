@@ -29,7 +29,7 @@ import { useAllProfiles, getFullName } from "@/hooks/use-profiles";
 import { ROL_ETIQUETA } from "@/lib/navigation";
 import { Profile } from "@/data/types";
 
-const ROLES: Profile["role"][] = ["Requester", "Account Manager", "Admin"];
+const ROLES: Profile["role"][] = ["Requester", "Order Manager", "Admin"];
 
 /** Agrupa el catalogo por area, respetando el orden que trae de la base. */
 const agruparPorCategoria = (permisos: PermissionDef[]) => {
@@ -103,13 +103,16 @@ const PorRol: React.FC = () => {
                       const fijoParaAdmin =
                         rol === "Admin" &&
                         (permiso.key === "users.manage" || permiso.key === "permissions.manage");
+                      const fueraDelGestor =
+                        rol === "Order Manager" &&
+                        (permiso.key === "users.manage" || permiso.key === "permissions.manage");
 
                       return (
                         <TableCell key={rol} className="text-center">
                           <div className="flex flex-col items-center gap-1">
                             <Switch
-                              checked={fijoParaAdmin ? true : concedido(rol, permiso.key)}
-                              disabled={fijoParaAdmin || setRolePermission.isPending}
+                              checked={fueraDelGestor ? false : fijoParaAdmin ? true : concedido(rol, permiso.key)}
+                              disabled={fueraDelGestor || fijoParaAdmin || setRolePermission.isPending}
                               onCheckedChange={(valor) =>
                                 setRolePermission.mutate({
                                   role: rol,
@@ -141,6 +144,8 @@ const PorRol: React.FC = () => {
           está en el menú Correo, para cualquier usuario.
           Gestionar usuarios y gestionar permisos están fijos para el administrador, para que
           no sea posible dejar la aplicación sin nadie que pueda repartir permisos.
+          El gestor de pedidos tiene el resto del trabajo de compras y no esas dos casillas.
+          El gerente de cuenta no entra por aquí: es el contacto del pedido, no un rol de acceso.
         </span>
       </div>
     </div>

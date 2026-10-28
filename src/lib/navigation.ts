@@ -60,6 +60,7 @@ export const getPageTitle = (pathname: string): string => {
 
 export const ROL_ETIQUETA: Record<Profile["role"], string> = {
   Requester: "Solicitante",
+  "Order Manager": "Gestor de pedidos",
   "Account Manager": "Gerente de cuenta",
   Admin: "Administrador",
 };

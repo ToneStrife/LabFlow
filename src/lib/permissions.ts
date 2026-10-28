@@ -11,6 +11,16 @@ export function isAdmin(role?: UserRole): boolean {
   return role === "Admin";
 }
 
+/** Lleva los pedidos. No invita, no cambia roles y no toca la matriz de permisos. */
+export function isOrderManager(role?: UserRole): boolean {
+  return role === "Order Manager";
+}
+
+/** Administrador o gestor de pedidos: el trabajo diario de compras. */
+export function gestionaPedidos(role?: UserRole): boolean {
+  return isAdmin(role) || isOrderManager(role);
+}
+
 /** IPs de los proyectos enlazados a una solicitud (project_codes guarda UUIDs). */
 export function getRequestProjectIpIds(
   projectCodes: string[] | null | undefined,
@@ -43,16 +53,23 @@ export interface ApprovalContext {
   requesterId?: string;
 }
 
+export function isRequestAuthor(ctx: ApprovalContext): boolean {
+  return Boolean(ctx.userId && ctx.requesterId && ctx.userId === ctx.requesterId);
+}
+
+/** El PO lo registra un administrador, un gestor de pedidos o el IP del proyecto. */
+export function canGivePurchaseOrder(ctx: ApprovalContext): boolean {
+  if (gestionaPedidos(ctx.role)) return true;
+  return isProjectIpForRequest(ctx.userId, ctx.projectCodes, ctx.projects);
+}
+
 /**
- * Quién puede aprobar pendientes:
- * - permiso requests.approve (matriz),
- * - Admin,
- * - IP de alguno de los proyectos de la solicitud.
+ * Quién puede denegar una solicitud pendiente:
+ * administrador, gestor, IP o el permiso de aprobar.
  */
 export function canApprovePendingRequest(ctx: ApprovalContext): boolean {
   if (ctx.can?.("requests.approve")) return true;
-  if (isAdmin(ctx.role)) return true;
-  return isProjectIpForRequest(ctx.userId, ctx.projectCodes, ctx.projects);
+  return canGivePurchaseOrder(ctx);
 }
 
 export function canMergeRequest(role?: UserRole): boolean {
@@ -64,6 +81,7 @@ export function canPerformWorkflowAction(
   status?: RequestStatus
 ): boolean {
   if (!ctx.role || !status) return false;
+  if (isRequestAuthor(ctx) || canGivePurchaseOrder(ctx)) return true;
   if (status === "Pending") return canApprovePendingRequest(ctx);
   return true;
 }
@@ -96,12 +114,12 @@ export function canDeleteRequest(
   requesterId?: string
 ): boolean {
   if (!role) return false;
-  if (isAdmin(role)) return true;
+  if (gestionaPedidos(role)) return true;
   return !!userId && !!requesterId && userId === requesterId;
 }
 
 export function canOverrideStatus(role?: UserRole): boolean {
-  return isAdmin(role);
+  return gestionaPedidos(role);
 }
 
 export function canAccessInventory(_role?: UserRole): boolean {

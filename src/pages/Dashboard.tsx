@@ -27,13 +27,14 @@ import { getFullName } from "@/hooks/use-profiles";
 import SedeHeroBanner from "@/components/SedeHeroBanner";
 import { useSedeActiva } from "@/components/SedeContextProvider";
 import { Link } from "react-router-dom";
+import { gestionaPedidos } from "@/lib/permissions";
 
 type Pestana = "pending-items" | "pending-invoices" | "all-requests";
 
 const Dashboard = () => {
   const { profile } = useSession();
   const { sedeActiva } = useSedeActiva();
-  const isAdmin = profile?.role === "Admin";
+  const isAdmin = gestionaPedidos(profile?.role);
 
   const { data: requests, isLoading: isLoadingRequests, error } = useRequests();
   const { data: shippingAddresses, isLoading: isLoadingShipping } = useShippingAddresses();

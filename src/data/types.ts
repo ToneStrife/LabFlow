@@ -28,7 +28,7 @@ export interface Profile {
   email: string | null;
   avatar_url: string | null;
   updated_at: string | null;
-  role: "Requester" | "Account Manager" | "Admin";
+  role: "Requester" | "Order Manager" | "Account Manager" | "Admin";
   /** NULL = puede ver todas las sedes */
   default_sede_id: string | null;
   is_owner?: boolean;

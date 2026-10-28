@@ -388,7 +388,10 @@ const AdminPage = () => {
                 </DialogContent>
               </Dialog>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                El gestor de pedidos lleva las compras igual que un administrador: presupuestos, pedidos, recepción y facturas. No invita gente, no cambia roles y no abre la matriz de permisos. El gerente de cuenta no es un usuario: es el contacto que se elige en cada solicitud.
+              </p>
               <UserTable
                 users={allProfiles || []}
                 onRoleChange={handleUpdateUserRole}

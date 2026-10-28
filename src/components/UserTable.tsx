@@ -48,7 +48,7 @@ const UserTable: React.FC<UserTableProps> = ({
   isDeletingUser,
   isResettingPassword,
 }) => {
-  const availableRoles: Profile["role"][] = ["Requester", "Account Manager", "Admin"];
+  const availableRoles: Profile["role"][] = ["Requester", "Order Manager", "Admin"];
 
   return (
     <div className="rounded-md border overflow-x-auto">
@@ -89,7 +89,7 @@ const UserTable: React.FC<UserTableProps> = ({
                       <SelectValue placeholder="Rol" />
                     </SelectTrigger>
                     <SelectContent>
-                      {availableRoles.map((role) => (
+                      {(availableRoles.includes(user.role) ? availableRoles : [...availableRoles, user.role]).map((role) => (
                         <SelectItem key={role} value={role} className="text-xs">
                           {ROL_ETIQUETA[role] ?? role}
                         </SelectItem>

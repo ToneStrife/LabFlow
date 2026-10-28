@@ -388,8 +388,8 @@ const RequestForm: React.FC = () => {
       items: itemsToSubmit,
     });
     
-    // 2. Si hay presupuesto, adjuntarlo pero dejar la solicitud en Pending:
-    //    debe aprobarla el IP del proyecto (o un admin), no el solicitante.
+    // 2. Si ya hay presupuesto, se guarda y no se manda el correo de solicitud.
+    //    El PO lo registra después el administrador o el IP.
     if (quoteFile) {
       try {
         const { filePath } = await updateFileMutation.mutateAsync({
@@ -399,7 +399,7 @@ const RequestForm: React.FC = () => {
         });
         
         if (filePath) {
-            toast.success("Presupuesto adjunto. La solicitud queda pendiente de presupuesto.");
+            toast.success("Presupuesto adjunto. El PO lo registra el administrador o el IP.");
         }
       } catch (error) {
         showError("La solicitud fue creada, pero falló la subida del archivo de presupuesto.");
@@ -661,7 +661,7 @@ const RequestForm: React.FC = () => {
         <SeccionFormulario
           titulo="Presupuesto y notas"
           icono={FileScan}
-          descripcion="Puedes adjuntar un PDF, una imagen o una captura de pantalla del presupuesto. El IP del proyecto debe aprobarla antes de seguir."
+          descripcion="Si ya tienes el presupuesto, adjúntalo. No se envía un correo. El PO lo registra el administrador o el IP, y tú puedes seguir hasta el final."
         >
         <FormField
           control={form.control}

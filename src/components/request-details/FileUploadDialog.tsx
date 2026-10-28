@@ -20,7 +20,7 @@ import { mobileDialogClass, dialogFooterMobileClass } from "@/lib/layout";
 interface FileUploadDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  onUpload: (file: File | null, poNumber?: string) => Promise<void>;
+  onUpload: (file: File | null, poNumber: string | undefined, intent: "save" | "order" | "email") => Promise<void>;
   isUploading: boolean;
   fileType: FileType; // 'quote' | 'po' | 'slip'
   draftKey?: string;   // pásame algo estable (p.ej. requestId)
@@ -97,7 +97,7 @@ const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
     setSelectedFile(f);
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (intent: "save" | "order" | "email") => {
     const isPoUpload = fileType === "po";
     const isQuoteUpload = fileType === "quote";
     const isSlipUpload = fileType === "slip";
@@ -115,9 +115,9 @@ const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
           toast.error("Faltan datos", { description: "Indica un número de PO y/o selecciona un archivo." });
           return;
         }
-        await onUpload(selectedFile, poNumber.trim() || undefined);
+        await onUpload(selectedFile, poNumber.trim() || undefined, intent);
       } else if (isQuoteUpload || isSlipUpload) {
-        await onUpload(selectedFile, poNumber.trim() || undefined);
+        await onUpload(selectedFile, poNumber.trim() || undefined, "save");
       }
 
       clearDraft();
@@ -163,8 +163,8 @@ const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
           <DialogDescription>
             {fileType === "po"
               ? markAsOrdered
-                ? "Sube el PDF o imagen de la PO y/o indica el número. La solicitud pasará a Pedido."
-                : "Introduce el número de PO y/o sube el archivo."
+                ? "Puedes dejar la solicitud como pedido o abrir el correo al proveedor."
+                : "Número o archivo del PO. No se envía ningún correo."
               : fileType === "quote"
                 ? "Sube el presupuesto en PDF, imagen o captura de pantalla."
                 : "Selecciona un archivo para subir."}
@@ -212,19 +212,29 @@ const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isUploading} className="w-full sm:w-auto">
             Cancelar
           </Button>
-          <Button onClick={handleSubmit} disabled={isSubmitDisabled} className="w-full sm:w-auto">
-            {isUploading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Subiendo...
-              </>
-            ) : fileType === "po" && markAsOrdered ? (
-              "Marcar como Pedido"
-            ) : fileType === "po" ? (
-              "Guardar Detalles de PO"
-            ) : (
-              "Subir"
-            )}
-          </Button>
+          {fileType === "po" && markAsOrdered ? (
+            <>
+              <Button onClick={() => handleSubmit("order")} disabled={isSubmitDisabled} className="w-full sm:w-auto">
+                {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Marcar como pedido
+              </Button>
+              <Button variant="outline" onClick={() => handleSubmit("email")} disabled={isSubmitDisabled} className="w-full sm:w-auto">
+                Enviar correo de pedido
+              </Button>
+            </>
+          ) : (
+            <Button onClick={() => handleSubmit("save")} disabled={isSubmitDisabled} className="w-full sm:w-auto">
+              {isUploading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Subiendo...
+                </>
+              ) : fileType === "po" ? (
+                "Guardar PO"
+              ) : (
+                "Subir"
+              )}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
