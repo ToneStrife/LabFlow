@@ -439,6 +439,87 @@ const getUserStatusPreferences = async (userId: string): Promise<RequestStatus[]
     return data?.notified_statuses || [];
 };
 
+/** Avisa del cambio de estado a quien lo tenga activado en sus preferencias. */
+const notifyStatusChange = async (
+  id: string,
+  status: RequestStatus,
+  requesterId: string,
+  accountManagerId: string | null,
+  requestNumber: string
+): Promise<void> => {
+  try {
+    const allProfiles = await apiGetProfiles();
+    let targetUserIds: string[] = [];
+    let title: string;
+    let body: string;
+    const link = `/requests/${id}`;
+
+    const requesterProfile = allProfiles.find(p => p.id === requesterId);
+    if (requesterProfile?.notify_on_status_change) {
+        const preferredStatuses = await getUserStatusPreferences(requesterId);
+        if (preferredStatuses.includes(status)) {
+            targetUserIds.push(requesterId);
+        }
+    }
+    
+    if (accountManagerId) {
+        const managerProfile = allProfiles.find(p => p.id === accountManagerId);
+        if (managerProfile?.notify_on_status_change) {
+            const preferredStatuses = await getUserStatusPreferences(accountManagerId);
+            if (preferredStatuses.includes(status)) {
+                targetUserIds.push(accountManagerId);
+            }
+        }
+    }
+    
+    switch (status) {
+      case 'Quote Requested':
+          title = `✅ Solicitud #${requestNumber} Aprobada`;
+          body = `Tu solicitud ha sido aprobada y se ha solicitado un presupuesto.`;
+          break;
+      case 'PO Requested':
+          title = `📝 Presupuesto recibido para #${requestNumber}`;
+          body = `El presupuesto ha sido recibido. Se requiere la orden de compra.`;
+          break;
+      case 'Ordered':
+          title = `📦 Solicitud #${requestNumber} Pedida`;
+          body = `Tu solicitud ha sido marcada como 'Pedido'. Esperando la recepción.`;
+          break;
+      case 'Received':
+          title = `🎉 Solicitud #${requestNumber} Recibida`;
+          body = `Los artículos de tu solicitud han sido recibidos y añadidos al inventario.`;
+          break;
+      case 'Denied':
+          title = `❌ Solicitud #${requestNumber} Denegada`;
+          body = `Tu solicitud ha sido denegada. Revisa los detalles para más información.`;
+          break;
+      case 'Cancelled':
+          title = `🚫 Solicitud #${requestNumber} Cancelada`;
+          body = `Tu solicitud ha sido cancelada.`;
+          break;
+      default:
+          title = `Cambio de Estado en Solicitud #${requestNumber}`;
+          body = `El estado ha cambiado a ${status}.`;
+          break;
+    }
+    
+    if (targetUserIds.length > 0) {
+        const uniqueTargetIds = Array.from(new Set(targetUserIds));
+        await supabase.functions.invoke('send-notification', {
+            method: 'POST',
+            body: JSON.stringify({
+                user_ids: uniqueTargetIds,
+                title: title,
+                body: body,
+                link: link,
+            }),
+        });
+    }
+  } catch (e) {
+    console.error("Failed to send notification for status change:", e);
+  }
+};
+
 export const apiUpdateRequestStatus = async (
   id: string,
   status: RequestStatus,
@@ -476,77 +557,7 @@ export const apiUpdateRequestStatus = async (
   if (error) throw new Error(error.message);
 
   if (oldStatus !== status) {
-    try {
-      const allProfiles = await apiGetProfiles();
-      let targetUserIds: string[] = [];
-      let title: string;
-      let body: string;
-      const link = `/requests/${id}`;
-
-      const requesterProfile = allProfiles.find(p => p.id === requesterId);
-      if (requesterProfile?.notify_on_status_change) {
-          const preferredStatuses = await getUserStatusPreferences(requesterId);
-          if (preferredStatuses.includes(status)) {
-              targetUserIds.push(requesterId);
-          }
-      }
-      
-      if (accountManagerId) {
-          const managerProfile = allProfiles.find(p => p.id === accountManagerId);
-          if (managerProfile?.notify_on_status_change) {
-              const preferredStatuses = await getUserStatusPreferences(accountManagerId);
-              if (preferredStatuses.includes(status)) {
-                  targetUserIds.push(accountManagerId);
-              }
-          }
-      }
-      
-      switch (status) {
-        case 'Quote Requested':
-            title = `✅ Solicitud #${requestNumber} Aprobada`;
-            body = `Tu solicitud ha sido aprobada y se ha solicitado un presupuesto.`;
-            break;
-        case 'PO Requested':
-            title = `📝 Presupuesto recibido para #${requestNumber}`;
-            body = `El presupuesto ha sido recibido. Se requiere la orden de compra.`;
-            break;
-        case 'Ordered':
-            title = `📦 Solicitud #${requestNumber} Pedida`;
-            body = `Tu solicitud ha sido marcada como 'Pedido'. Esperando la recepción.`;
-            break;
-        case 'Received':
-            title = `🎉 Solicitud #${requestNumber} Recibida`;
-            body = `Los artículos de tu solicitud han sido recibidos y añadidos al inventario.`;
-            break;
-        case 'Denied':
-            title = `❌ Solicitud #${requestNumber} Denegada`;
-            body = `Tu solicitud ha sido denegada. Revisa los detalles para más información.`;
-            break;
-        case 'Cancelled':
-            title = `🚫 Solicitud #${requestNumber} Cancelada`;
-            body = `Tu solicitud ha sido cancelada.`;
-            break;
-        default:
-            title = `Cambio de Estado en Solicitud #${requestNumber}`;
-            body = `El estado ha cambiado a ${status}.`;
-            break;
-      }
-      
-      if (targetUserIds.length > 0) {
-          const uniqueTargetIds = Array.from(new Set(targetUserIds));
-          await supabase.functions.invoke('send-notification', {
-              method: 'POST',
-              body: JSON.stringify({
-                  user_ids: uniqueTargetIds,
-                  title: title,
-                  body: body,
-                  link: link,
-              }),
-          });
-      }
-    } catch (e) {
-      console.error("Failed to send notification for status change:", e);
-    }
+    await notifyStatusChange(id, status, requesterId, accountManagerId, requestNumber);
   }
 
   return updatedRequest as SupabaseRequest;
@@ -647,13 +658,33 @@ export const apiUpdateRequestFile = async (
       return { filePath: filePath, poNumber: returnedPoNumber };
   }
 
-  const { error: dbUpdateError } = await supabase
+  const { data: before } = await supabase
+    .from('requests')
+    .select('status')
+    .eq('id', id)
+    .maybeSingle();
+
+  const { data: after, error: dbUpdateError } = await supabase
     .from('requests')
     .update(updateData)
-    .eq('id', id);
+    .eq('id', id)
+    .select('status, requester_id, account_manager_id, request_number')
+    .single();
 
   if (dbUpdateError) {
     throw new Error(`File uploaded, but failed to update database: ${dbUpdateError.message}`);
+  }
+
+  // Adjuntar presupuesto o PO hace avanzar el estado en la base
+  // (trigger requests_avanza_con_documentos): se avisa igual que si lo cambiara la app.
+  if (before && after.status !== before.status) {
+    await notifyStatusChange(
+      id,
+      after.status as RequestStatus,
+      after.requester_id,
+      after.account_manager_id,
+      after.request_number || id.substring(0, 8)
+    );
   }
 
   return { filePath: filePath, poNumber: returnedPoNumber };
