@@ -41,9 +41,10 @@ const PendingItemsList: React.FC = () => {
     resetKey: sedeActiva ?? "all",
   });
 
+  const articulosPagina = pagination.pageItems;
   const groupedPageItems = React.useMemo(() => {
-    const groups = new Map<string, typeof pagination.pageItems>();
-    pagination.pageItems.forEach((item) => {
+    const groups = new Map<string, typeof articulosPagina>();
+    articulosPagina.forEach((item) => {
       const list = groups.get(item.requestId) || [];
       list.push(item);
       groups.set(item.requestId, list);
@@ -54,7 +55,7 @@ const PendingItemsList: React.FC = () => {
       vendorName: items[0].vendorName,
       items,
     }));
-  }, [pagination.pageItems]);
+  }, [articulosPagina]);
 
   if (isLoading || isLoadingRequests || isLoadingShipping) {
     return (

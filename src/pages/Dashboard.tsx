@@ -50,7 +50,7 @@ const Dashboard = () => {
   );
   const viendoEstado = (estado: RequestStatus) => pestana === "all-requests" && filtroEstado === estado;
 
-  const allRequests = requests || [];
+  const allRequests = React.useMemo(() => requests || [], [requests]);
   const requestsForSede = React.useMemo(
     () => filterRequestsBySede(allRequests, shippingAddresses, sedeActiva),
     [allRequests, shippingAddresses, sedeActiva]

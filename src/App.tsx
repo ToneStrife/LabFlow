@@ -10,8 +10,6 @@ import NotFound from "./pages/NotFound";
 
 import { SessionContextProvider, useSession } from "./components/SessionContextProvider";
 import React from "react";
-import Login from "./pages/Login";
-import ResetPassword from "./pages/ResetPassword";
 import { Loader2 } from "lucide-react";
 import { useCan } from "@/hooks/use-permissions";
 import { PERMISOS_PANEL_ADMIN } from "@/lib/admin-access";
@@ -28,6 +26,10 @@ import SedeThemeEffect from "./components/SedeThemeEffect";
 // pintar la primera pantalla.
 const FirebaseInitializer = React.lazy(() => import("./components/FirebaseInitializer"));
 
+// Login lleva el formulario de Supabase Auth UI: quien ya tiene sesión
+// no necesita descargarlo.
+const Login = React.lazy(() => import("./pages/Login"));
+const ResetPassword = React.lazy(() => import("./pages/ResetPassword"));
 const NewRequest = React.lazy(() => import("./pages/NewRequest"));
 const Vendors = React.lazy(() => import("./pages/Vendors"));
 const RequestDetails = React.lazy(() => import("./pages/RequestDetails"));
@@ -48,6 +50,10 @@ const queryClient = new QueryClient({
       // nota como un parpadeo y como listas que se reordenan bajo el cursor.
       // Los datos se siguen refrescando al navegar y despues de cada cambio.
       refetchOnWindowFocus: false,
+      // Cada pantalla pide solicitudes, proveedores, perfiles… Sin esto, cada
+      // cambio de página volvía a descargarlo todo aunque se acabara de pedir.
+      // Tras guardar algo, las mutaciones invalidan y se recarga al momento.
+      staleTime: 30_000,
     },
   },
 });
@@ -118,7 +124,7 @@ const AppRoutes = () => {
       <React.Suspense
         fallback={
           <div className="flex items-center justify-center py-24 text-muted-foreground">
-            <Loader2 className="h-6 w-6 animate-spin mr-2" /> Cargando página...
+            <Loader2 className="h-6 w-6 animate-spin mr-2" /> Cargando página…
           </div>
         }
       >
