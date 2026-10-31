@@ -12,15 +12,15 @@ import {
 } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
-import { useRequests, SupabaseRequest, useUpdateRequestStatus, useSendEmail, useUpdateRequestFile, useUpdateRequestMetadata, useUpdateFullRequest, useRevertRequestReception, useDeleteRequest, FileType } from "@/hooks/use-requests";
+import { useRequests, SupabaseRequest, useUpdateRequestStatus, useUpdateRequestFile, useUpdateRequestMetadata, useUpdateFullRequest, useRevertRequestReception, useDeleteRequest, FileType } from "@/hooks/use-requests";
 import { useVendors } from "@/hooks/use-vendors";
 import { useAllProfiles, getFullName } from "@/hooks/use-profiles";
 import { useAccountManagers } from "@/hooks/use-account-managers";
 import { useProjects } from "@/hooks/use-projects";
 import { useEmailTemplates } from "@/hooks/use-email-templates";
 import { useShippingAddresses, useBillingAddresses } from "@/hooks/use-addresses";
-import { processNamedEmailTemplate } from "@/utils/email-templating";
-import EmailDialog, { EmailFormValues } from "@/components/EmailDialog";
+import { useRequestEmails } from "@/hooks/use-request-emails";
+import EmailDialog from "@/components/EmailDialog";
 import InvoiceItemsDialog from "@/components/request-details/InvoiceItemsDialog";
 import { useReceiveWizard } from "@/components/ReceiveWizardProvider";
 
@@ -39,13 +39,9 @@ import { gestionaPedidos, canEditRequestDetails, canDeleteRequest, canOverrideSt
 import { useCan } from "@/hooks/use-permissions";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAggregatedReceivedItems } from "@/hooks/use-packing-slips";
-import { buildStorageAttachment, normalizeAttachments } from "@/utils/email-attachments";
 import { RequestStatus as RequestStatusType, Vendor, Profile, AccountManager, Project, ShippingAddress, BillingAddress } from "@/data/types";
 import { cn } from "@/lib/utils";
 import { pageContainerClass, mobileDialogClass } from "@/lib/layout";
-import { camposCorreoConGestor, correoSiGestorLab } from "@/lib/farmacia";
-import { pickEmailTemplate } from "@/lib/email-templates";
-import { useLabsCatalog } from "@/components/LabsCatalogProvider";
 import { getRequestStatusLabelLong, REQUEST_STATUS_ORDER } from "@/lib/request-status";
 
 const RequestDetails: React.FC = () => {
@@ -54,7 +50,6 @@ const RequestDetails: React.FC = () => {
   const { profile, session } = useSession();
   const { can } = useCan();
   const { openReceive } = useReceiveWizard();
-  const { memberships } = useLabsCatalog();
   const userIsAdmin = gestionaPedidos(profile?.role);
   
   const { data: requests, isLoading: isLoadingRequests } = useRequests();
@@ -62,25 +57,18 @@ const RequestDetails: React.FC = () => {
   const { data: profiles, isLoading: isLoadingProfiles } = useAllProfiles();
   const { data: accountManagers, isLoading: isLoadingAccountManagers } = useAccountManagers();
   const { data: projects, isLoading: isLoadingProjects } = useProjects();
-  const { data: emailTemplates, isLoading: isLoadingEmailTemplates } = useEmailTemplates();
+  const { isLoading: isLoadingEmailTemplates } = useEmailTemplates();
   const { data: shippingAddresses, isLoading: isLoadingShippingAddresses } = useShippingAddresses();
-  const { data: billingAddresses, isLoading: isLoadingBillingAddresses } = useBillingAddresses();
+  const { isLoading: isLoadingBillingAddresses } = useBillingAddresses();
   
   const updateStatusMutation = useUpdateRequestStatus();
   const updateFileMutation = useUpdateRequestFile();
   const updateFullRequestMutation = useUpdateFullRequest();
   const revertReceptionMutation = useRevertRequestReception();
   const deleteRequestMutation = useDeleteRequest();
-  const sendEmailMutation = useSendEmail();
+  const correos = useRequestEmails();
 
   const request = requests?.find(req => req.id === id);
-
-  const [isEmailDialogOpen, setIsEmailDialogOpen] = React.useState(false);
-  const [emailInitialData, setEmailInitialData] = React.useState<Partial<EmailFormValues>>({});
-  const [pendingStatusOnEmailSend, setPendingStatusOnEmailSend] = React.useState<{
-    requestId: string;
-    status: RequestStatusType;
-  } | null>(null);
 
   const [isUploadDialogOpen, setIsUploadDialogOpen] = React.useState(false);
   const [fileTypeToUpload, setFileTypeToUpload] = React.useState<FileType>("quote");
@@ -95,110 +83,6 @@ const RequestDetails: React.FC = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   
   const [newStatus, setNewStatus] = React.useState<RequestStatusType>(request?.status || "Pending");
-
-  const getVendorQuoteEmail = (vendorId: string) => {
-    const vendor = vendors?.find((v) => v.id === vendorId);
-    return (vendor?.email_presupuesto || vendor?.email || "").trim();
-  };
-  const getVendorOrderEmail = (vendorId: string) => {
-    const vendor = vendors?.find((v) => v.id === vendorId);
-    return (vendor?.email_pedido || vendor?.email || "").trim();
-  };
-  
-  const getAccountManagerEmail = (managerId: string | null) => {
-    if (!managerId) return "";
-    const manager = accountManagers?.find(am => am.id === managerId);
-    return manager?.email || "";
-  };
-
-  const correoGestor = (request: SupabaseRequest) =>
-    correoSiGestorLab({
-      shippingAddressId: request.shipping_address_id,
-      addresses: shippingAddresses,
-      requesterId: request.requester_id,
-      actorId: profile?.id,
-      personas: profiles,
-      labId: request.lab_id,
-      requestSedeId: request.sede_id,
-      memberships,
-    });
-
-  const handleEmailDialogOpenChange = (open: boolean) => {
-    setIsEmailDialogOpen(open);
-    if (!open) setPendingStatusOnEmailSend(null);
-  };
-
-  const handleSendEmail = async (emailData: EmailFormValues) => {
-    await sendEmailMutation.mutateAsync({
-      to: emailData.to!,
-      subject: emailData.subject,
-      body: emailData.body,
-      fromName: emailData.fromName,
-      from: emailData.from || undefined,
-      attachments: normalizeAttachments(emailData.attachments),
-    });
-
-    if (pendingStatusOnEmailSend) {
-      await updateStatusMutation.mutateAsync({
-        id: pendingStatusOnEmailSend.requestId,
-        status: pendingStatusOnEmailSend.status,
-      });
-      setPendingStatusOnEmailSend(null);
-    }
-
-    setIsEmailDialogOpen(false);
-  };
-
-  const handleSendPORequest = async (request: SupabaseRequest) => {
-    const especial = correoGestor(request);
-    if (especial?.error) {
-      toast.error(especial.error);
-      return;
-    }
-    if (!especial && !request.account_manager_id) {
-      toast.error("No hay un gerente de cuenta asignado.");
-      return;
-    }
-    const poRequestTemplate = pickEmailTemplate(emailTemplates, 'PO Request', request.lab_id);
-    if (!poRequestTemplate) {
-      toast.error("Plantilla de correo electrónico 'PO Request' no encontrada. Por favor, crea una en el panel de Admin.");
-      return;
-    }
-
-    const context = {
-      request,
-      vendor: vendors?.find(v => v.id === request.vendor_id),
-      requesterProfile: profiles?.find(p => p.id === request.requester_id),
-      accountManager: accountManagers?.find(am => am.id === request.account_manager_id),
-      projects: projects,
-      profiles: profiles,
-      actorProfile: profile,
-      shippingAddress: shippingAddresses?.find(a => a.id === request.shipping_address_id),
-      billingAddress: billingAddresses?.find(a => a.id === request.billing_address_id),
-    };
-
-    const { forDialog, forSend } = request.quote_url
-      ? await buildStorageAttachment(request.quote_url)
-      : { forDialog: [], forSend: [] };
-
-    const { subject, body } = processNamedEmailTemplate(
-      "PO Request",
-      poRequestTemplate.subject_template,
-      poRequestTemplate.body_template,
-      context
-    );
-
-    setPendingStatusOnEmailSend({ requestId: request.id, status: "PO Requested" });
-    setEmailInitialData({
-      ...camposCorreoConGestor(especial, getAccountManagerEmail(request.account_manager_id)),
-      subject,
-      body,
-      attachments: forDialog,
-      attachmentsForSend: forSend,
-    });
-
-    setIsEmailDialogOpen(true);
-  };
 
   const handleOpenReceiveItemsDialog = () => {
     if (request?.items && request.items.length > 0) openReceive(request.id);
@@ -268,67 +152,12 @@ const RequestDetails: React.FC = () => {
     setIsUploadDialogOpen(false);
 
     if (fileTypeToUpload === "po" && intent === "email") {
-      await handleMarkAsOrderedAndSendEmail({
+      await correos.enviarPedido({
         ...request,
         po_number: resolvedPoNumber,
         po_url: filePath || request.po_url,
       });
     }
-  };
-
-  const handleMarkAsOrderedAndSendEmail = async (request: SupabaseRequest) => {
-    const orderConfirmationTemplate = pickEmailTemplate(emailTemplates, 'Order Confirmation', request.lab_id);
-    if (!orderConfirmationTemplate) {
-      toast.error("Plantilla de correo electrónico 'Order Confirmation' no encontrada. Por favor, crea una en el panel de Admin.");
-      return;
-    }
-
-    const context = {
-      request,
-      vendor: vendors?.find(v => v.id === request.vendor_id),
-      requesterProfile: profiles?.find(p => p.id === request.requester_id),
-      accountManager: accountManagers?.find(am => am.id === request.account_manager_id),
-      projects: projects,
-      profiles: profiles,
-      actorProfile: profile,
-      shippingAddress: shippingAddresses?.find(a => a.id === request.shipping_address_id),
-      billingAddress: billingAddresses?.find(a => a.id === request.billing_address_id),
-    };
-    
-    const attachmentsForDialog: { name: string; url: string }[] = [];
-    const attachmentsForSend: { name: string; url: string }[] = [];
-
-    if (request.quote_url) {
-      const quoteAttachment = await buildStorageAttachment(request.quote_url);
-      attachmentsForDialog.push(...quoteAttachment.forDialog);
-      attachmentsForSend.push(...quoteAttachment.forSend);
-    }
-
-    if (request.po_url) {
-      const poAttachment = await buildStorageAttachment(request.po_url);
-      attachmentsForDialog.push(...poAttachment.forDialog);
-      attachmentsForSend.push(...poAttachment.forSend);
-    }
-
-    const { subject, body } = processNamedEmailTemplate(
-      "Order Confirmation",
-      orderConfirmationTemplate.subject_template,
-      orderConfirmationTemplate.body_template,
-      context as any
-    );
-
-    if (request.status !== "Ordered") {
-      setPendingStatusOnEmailSend({ requestId: request.id, status: "Ordered" });
-    }
-
-    setEmailInitialData({
-      to: getVendorOrderEmail(request.vendor_id),
-      subject,
-      body,
-      attachments: attachmentsForDialog,
-      attachmentsForSend: attachmentsForSend,
-    });
-    setIsEmailDialogOpen(true);
   };
 
   const handleUpdateFullRequest = async (data: FullEditFormValues) => {
@@ -357,81 +186,53 @@ const RequestDetails: React.FC = () => {
 
   const handleStatusOverride = async () => {
     if (!request || !newStatus) return;
-    await updateStatusMutation.mutateAsync({ id: request.id, status: newStatus as RequestStatusType });
+    try {
+      await updateStatusMutation.mutateAsync({ id: request.id, status: newStatus as RequestStatusType });
+    } catch {
+      return; // la mutación ya avisa del error
+    }
     setIsStatusOverrideDialogOpen(false);
   };
   
   const handleRevertReception = async () => {
     if (!request) return;
-    await revertReceptionMutation.mutateAsync(request.id);
+    try {
+      await revertReceptionMutation.mutateAsync(request.id);
+    } catch {
+      return; // la mutación ya avisa del error
+    }
     setIsRevertReceptionDialogOpen(false);
   };
   
   const confirmDenyRequest = async () => {
     if (!request) return;
-    await updateStatusMutation.mutateAsync({ id: request.id, status: "Denied" });
+    try {
+      await updateStatusMutation.mutateAsync({ id: request.id, status: "Denied" });
+    } catch {
+      return; // la mutación ya avisa del error
+    }
     setIsDenyDialogOpen(false);
   };
 
   const confirmCancelRequest = async () => {
     if (!request) return;
-    await updateStatusMutation.mutateAsync({ id: request.id, status: "Cancelled" });
+    try {
+      await updateStatusMutation.mutateAsync({ id: request.id, status: "Cancelled" });
+    } catch {
+      return; // la mutación ya avisa del error
+    }
     setIsCancelDialogOpen(false);
   };
   
   const confirmDeleteRequest = async () => {
     if (!request) return;
-    await deleteRequestMutation.mutateAsync(request.id);
+    try {
+      await deleteRequestMutation.mutateAsync(request.id);
+    } catch {
+      return; // la mutación ya avisa del error
+    }
     setIsDeleteDialogOpen(false);
     navigate("/dashboard");
-  };
-
-  const handleSendQuoteRequest = async (request: SupabaseRequest) => {
-    const especial = correoGestor(request);
-    if (especial?.error) {
-      toast.error(especial.error);
-      return;
-    }
-    const quoteTemplate = pickEmailTemplate(emailTemplates, 'Quote Request', request.lab_id);
-    if (!quoteTemplate) {
-      toast.error("Plantilla de correo electrónico 'Quote Request' no encontrada. Por favor, crea una en el panel de Admin.");
-      return;
-    }
-
-    const context = {
-      request: { ...request, status: "Quote Requested" as const },
-      vendor: vendors?.find(v => v.id === request.vendor_id),
-      requesterProfile: profiles?.find(p => p.id === request.requester_id),
-      accountManager: accountManagers?.find(am => am.id === request.account_manager_id),
-      projects: projects,
-      profiles: profiles,
-      actorProfile: profile,
-      shippingAddress: shippingAddresses?.find(a => a.id === request.shipping_address_id),
-      billingAddress: billingAddresses?.find(a => a.id === request.billing_address_id),
-    };
-
-    try {
-      const { subject, body } = processNamedEmailTemplate(
-        "Quote Request",
-        quoteTemplate.subject_template,
-        quoteTemplate.body_template,
-        context
-      );
-
-      // El estado avanza solo cuando el correo se envía de verdad. Si se cierra el
-      // diálogo o algo falla antes, la solicitud sigue pendiente.
-      setPendingStatusOnEmailSend({ requestId: request.id, status: "Quote Requested" });
-      setEmailInitialData({
-        ...camposCorreoConGestor(especial, getVendorQuoteEmail(request.vendor_id)),
-        subject,
-        body,
-      });
-      setIsEmailDialogOpen(true);
-    } catch (error) {
-      toast.error("No se pudo preparar el correo de presupuesto.", {
-        description: error instanceof Error ? error.message : undefined,
-      });
-    }
   };
 
   if (isLoadingRequests || isLoadingVendors || isLoadingProfiles || isLoadingAccountManagers || isLoadingProjects || isLoadingEmailTemplates || isLoadingShippingAddresses || isLoadingBillingAddresses) {
@@ -509,12 +310,12 @@ const RequestDetails: React.FC = () => {
               handleUploadQuote={handleUploadQuote}
               handleUploadPOAndOrder={handleUploadPOAndOrder}
               handleRegisterPo={handleRegisterPo}
-              handleSendPORequest={handleSendPORequest}
+              handleSendPORequest={correos.solicitarPo}
               handleMarkAsReceived={handleOpenReceiveItemsDialog}
-              handleMarkAsOrderedAndSendEmail={handleMarkAsOrderedAndSendEmail}
+              handleMarkAsOrderedAndSendEmail={correos.enviarPedido}
               openDenyRequestDialog={() => setIsDenyDialogOpen(true)}
               openCancelRequestDialog={() => setIsCancelDialogOpen(true)}
-              onSendQuoteRequest={handleSendQuoteRequest}
+              onSendQuoteRequest={correos.solicitarPresupuesto}
             />
             {userIsAdmin && (
                 <Button 
@@ -592,7 +393,7 @@ const RequestDetails: React.FC = () => {
         <DialogContent><DialogHeader><DialogTitle>Revertir Recepción</DialogTitle></DialogHeader><DialogFooter><Button variant="outline" onClick={() => setIsRevertReceptionDialogOpen(false)}>Cancelar</Button><Button variant="destructive" onClick={handleRevertReception}>Confirmar</Button></DialogFooter></DialogContent>
       </Dialog>
 
-      <EmailDialog isOpen={isEmailDialogOpen} onOpenChange={handleEmailDialogOpenChange} initialData={emailInitialData} onSend={handleSendEmail} isSending={sendEmailMutation.isPending} />
+      <EmailDialog {...correos.dialogProps} />
       <FileUploadDialog isOpen={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen} onUpload={handleFileUpload} isUploading={updateFileMutation.isPending || updateStatusMutation.isPending} fileType={fileTypeToUpload} markAsOrdered={fileTypeToUpload === "po" && poMode === "finish"} hasExistingPoFile={Boolean(request?.po_url || request?.po_number)} />
       {request && request.items && <InvoiceItemsDialog isOpen={isInvoiceItemsDialogOpen} onOpenChange={setIsInvoiceItemsDialogOpen} requestId={request.id} requestItems={request.items} />}
     </div>
