@@ -1,14 +1,15 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { 
-  CheckCircle, 
-  Package, 
-  Receipt, 
-  Mail, 
-  FileText, 
-  Ban, 
+import {
+  CheckCircle,
+  Package,
+  Receipt,
+  Mail,
+  FileText,
+  Ban,
   XCircle,
-  Send
+  Send,
+  type LucideIcon,
 } from "lucide-react";
 import { SupabaseRequest } from "@/data/types";
 import { useSession } from "@/components/SessionContextProvider";
@@ -20,12 +21,15 @@ import {
   canReceivePackages,
   isRequestAuthor,
 } from "@/lib/permissions";
+import { AccionSolicitud, accionesDeSolicitud } from "@/lib/request-actions";
+
 interface RequestActionsProps {
   request: SupabaseRequest;
   isUpdatingStatus: boolean;
   handleUploadQuote: () => void;
   handleUploadPOAndOrder: () => void;
   handleRegisterPo: () => void;
+  handleSendPORequest: (request: SupabaseRequest) => void;
   handleMarkAsReceived: () => void;
   handleMarkAsOrderedAndSendEmail: (request: SupabaseRequest) => void;
   openDenyRequestDialog: () => void;
@@ -33,12 +37,16 @@ interface RequestActionsProps {
   onSendQuoteRequest: (request: SupabaseRequest) => void;
 }
 
+const claseRoja =
+  "text-red-600 dark:text-red-400 border-red-200 dark:border-red-900 hover:bg-red-50 dark:hover:bg-red-950/50";
+
 const RequestActions: React.FC<RequestActionsProps> = ({
   request,
   isUpdatingStatus,
   handleUploadQuote,
   handleUploadPOAndOrder,
   handleRegisterPo,
+  handleSendPORequest,
   handleMarkAsReceived,
   handleMarkAsOrderedAndSendEmail,
   openDenyRequestDialog,
@@ -57,31 +65,6 @@ const RequestActions: React.FC<RequestActionsProps> = ({
     requesterId: request.requester_id,
   };
   const daElPo = canGivePurchaseOrder(approvalCtx);
-  const esAutor = isRequestAuthor(approvalCtx);
-  const puedeSeguir = esAutor || daElPo;
-  const puedeDenegar = canApprovePendingRequest(approvalCtx);
-  const canReceive = canReceivePackages(profile?.role, request.status);
-  const tienePresupuesto = Boolean(request.quote_url);
-  const tienePo = Boolean(request.po_url || request.po_number);
-  const antesDelPedido =
-    request.status === "Pending" ||
-    request.status === "Quote Requested" ||
-    request.status === "PO Requested";
-
-  const cerrar = (
-    <Button
-      variant="outline"
-      onClick={request.status === "Pending" || request.status === "Quote Requested" ? openDenyRequestDialog : openCancelRequestDialog}
-      className="w-full justify-start text-red-600 dark:text-red-400 border-red-200 dark:border-red-900 hover:bg-red-50 dark:hover:bg-red-950/50"
-      disabled={isUpdatingStatus}
-    >
-      {request.status === "Pending" || request.status === "Quote Requested" ? (
-        <><Ban className="mr-2 h-4 w-4" /> Denegar solicitud</>
-      ) : (
-        <><XCircle className="mr-2 h-4 w-4" /> Cancelar solicitud</>
-      )}
-    </Button>
-  );
 
   if (request.status === "Received") {
     return (
@@ -95,71 +78,54 @@ const RequestActions: React.FC<RequestActionsProps> = ({
     return null;
   }
 
+  const acciones = accionesDeSolicitud(request, {
+    puedeSeguir: isRequestAuthor(approvalCtx) || daElPo,
+    daElPo,
+    puedeDenegar: canApprovePendingRequest(approvalCtx),
+    puedeRecibir: canReceivePackages(profile?.role, request.status),
+  });
+
+  const boton: Record<AccionSolicitud, { icono: LucideIcon; texto: string; onClick: () => void }> = {
+    "solicitar-presupuesto": { icono: Mail, texto: "Solicitar presupuesto", onClick: () => onSendQuoteRequest(request) },
+    "subir-presupuesto": { icono: FileText, texto: "Subir presupuesto", onClick: handleUploadQuote },
+    "solicitar-po": { icono: Send, texto: "Solicitar PO (correo)", onClick: () => handleSendPORequest(request) },
+    "registrar-po": { icono: FileText, texto: "Registrar PO recibido", onClick: handleRegisterPo },
+    "marcar-pedido": { icono: Package, texto: "Marcar como pedido", onClick: handleUploadPOAndOrder },
+    "correo-pedido": {
+      icono: Mail,
+      texto: request.status === "Ordered" ? "Reenviar correo de pedido" : "Enviar correo de pedido",
+      onClick: () => handleMarkAsOrderedAndSendEmail(request),
+    },
+    "recibir": { icono: Receipt, texto: "Recibir artículos", onClick: handleMarkAsReceived },
+    "denegar": { icono: Ban, texto: "Denegar solicitud", onClick: openDenyRequestDialog },
+    "cancelar": { icono: XCircle, texto: "Cancelar solicitud", onClick: openCancelRequestDialog },
+  };
+
+  if (acciones.length === 0) {
+    return (
+      <p className="text-sm text-muted-foreground italic">
+        No tienes acciones en esta solicitud.
+      </p>
+    );
+  }
+
   return (
     <div className="flex flex-col space-y-2">
-      {!tienePresupuesto && puedeSeguir && (request.status === "Pending" || request.status === "Quote Requested") && (
-        <>
-          <Button onClick={() => onSendQuoteRequest(request)} className="w-full justify-start" disabled={isUpdatingStatus}>
-            <Mail className="mr-2 h-4 w-4" /> Solicitar presupuesto
+      {acciones.map((accion, i) => {
+        const { icono: Icono, texto, onClick } = boton[accion];
+        const destructiva = accion === "denegar" || accion === "cancelar";
+        return (
+          <Button
+            key={accion}
+            variant={i === 0 && !destructiva ? "default" : "outline"}
+            onClick={onClick}
+            className={destructiva ? `w-full justify-start ${claseRoja}` : "w-full justify-start"}
+            disabled={isUpdatingStatus}
+          >
+            <Icono className="mr-2 h-4 w-4" /> {texto}
           </Button>
-          <Button variant="outline" onClick={handleUploadQuote} className="w-full justify-start" disabled={isUpdatingStatus}>
-            <FileText className="mr-2 h-4 w-4" /> Subir presupuesto
-          </Button>
-        </>
-      )}
-
-      {tienePresupuesto && !tienePo && daElPo && antesDelPedido && (
-        <Button onClick={handleRegisterPo} className="w-full justify-start" disabled={isUpdatingStatus}>
-          <Send className="mr-2 h-4 w-4" /> Registrar PO
-        </Button>
-      )}
-
-      {tienePresupuesto && !tienePo && esAutor && !daElPo && antesDelPedido && (
-        <p className="text-sm text-muted-foreground">
-          El presupuesto ya está. El PO lo registra el administrador o el IP del proyecto.
-        </p>
-      )}
-
-      {tienePo && puedeSeguir && antesDelPedido && (
-        <>
-          <Button onClick={handleUploadPOAndOrder} className="w-full justify-start" disabled={isUpdatingStatus}>
-            <Package className="mr-2 h-4 w-4" /> Marcar como pedido
-          </Button>
-          <Button variant="outline" onClick={() => handleMarkAsOrderedAndSendEmail(request)} className="w-full justify-start" disabled={isUpdatingStatus}>
-            <Mail className="mr-2 h-4 w-4" /> Enviar correo de pedido
-          </Button>
-        </>
-      )}
-
-      {request.status === "Ordered" && canReceive && (
-        <Button onClick={handleMarkAsReceived} className="w-full justify-start" disabled={isUpdatingStatus}>
-          <Receipt className="mr-2 h-4 w-4" /> Recibir artículos
-        </Button>
-      )}
-
-      {request.status === "Ordered" && puedeSeguir && (
-        <Button variant="outline" onClick={() => handleMarkAsOrderedAndSendEmail(request)} className="w-full justify-start" disabled={isUpdatingStatus}>
-          <Mail className="mr-2 h-4 w-4" /> Enviar correo de pedido
-        </Button>
-      )}
-
-      {puedeDenegar && (request.status === "Pending" || request.status === "Quote Requested") && cerrar}
-      {puedeSeguir && (request.status === "PO Requested" || request.status === "Ordered") && (
-        <Button
-          variant="outline"
-          onClick={openCancelRequestDialog}
-          className="w-full justify-start text-red-600 dark:text-red-400 border-red-200 dark:border-red-900 hover:bg-red-50 dark:hover:bg-red-950/50"
-          disabled={isUpdatingStatus}
-        >
-          <XCircle className="mr-2 h-4 w-4" /> Cancelar solicitud
-        </Button>
-      )}
-
-      {!puedeSeguir && !canReceive && request.status !== "Ordered" && (
-        <p className="text-sm text-muted-foreground italic">
-          No tienes acciones en esta solicitud.
-        </p>
-      )}
+        );
+      })}
     </div>
   );
 };

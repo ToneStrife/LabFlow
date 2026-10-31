@@ -509,6 +509,7 @@ const RequestDetails: React.FC = () => {
               handleUploadQuote={handleUploadQuote}
               handleUploadPOAndOrder={handleUploadPOAndOrder}
               handleRegisterPo={handleRegisterPo}
+              handleSendPORequest={handleSendPORequest}
               handleMarkAsReceived={handleOpenReceiveItemsDialog}
               handleMarkAsOrderedAndSendEmail={handleMarkAsOrderedAndSendEmail}
               openDenyRequestDialog={() => setIsDenyDialogOpen(true)}

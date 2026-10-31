@@ -94,7 +94,7 @@ const Dashboard = () => {
       id: "po",
       etiqueta: "PO pendientes",
       valor: cuentaPorEstado("PO Requested"),
-      pie: "orden por emitir",
+      pie: "falta PO o pedir",
       icono: CreditCard,
       tono: "indigo",
       onSelect: () => verHistorialFiltrado("PO Requested"),
