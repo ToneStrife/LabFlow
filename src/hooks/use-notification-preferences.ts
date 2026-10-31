@@ -63,7 +63,7 @@ export const useUpdateNotificationPreferences = () => {
       queryClient.invalidateQueries({ queryKey: ['userNotificationPreferences'] });
     },
     onError: (error) => {
-      toast.error('Fallo al guardar las preferencias.', { description: error.message });
+      toast.error('No se pudieron guardar las preferencias.', { description: error.message });
     },
   });
 };

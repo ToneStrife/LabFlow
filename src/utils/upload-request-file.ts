@@ -60,7 +60,7 @@ async function invokeUploadFile(body: FormData | Record<string, unknown>) {
 
   if (error) {
     throw new Error(
-      await extractFunctionError(error, data, "Fallo al subir el archivo.")
+      await extractFunctionError(error, data, "No se pudo subir el archivo.")
     );
   }
 

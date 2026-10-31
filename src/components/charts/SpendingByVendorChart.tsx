@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatEuros } from "@/lib/format";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { ChartData } from '@/hooks/use-expenditure-analytics';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,7 +19,7 @@ const CustomTooltip = ({ active, payload }: any) => {
     return (
       <div className="p-2 bg-white border rounded-md shadow-lg text-sm">
         <p className="font-bold">{data.name}</p>
-        <p className="text-muted-foreground">Gasto: <span className="font-semibold text-red-600 dark:text-red-400">€{data.value.toFixed(2)}</span></p>
+        <p className="text-muted-foreground">Gasto: <span className="font-semibold text-foreground">{formatEuros(data.value)}</span></p>
         <p className="text-muted-foreground">Porcentaje: <span className="font-semibold">{percentage}%</span></p>
       </div>
     );
@@ -38,7 +39,7 @@ const SpendingByVendorChart: React.FC<SpendingByVendorChartProps> = ({ data }) =
   return (
     <Card className="h-full">
       <CardHeader>
-        <CardTitle className="text-lg">Distribución por Proveedor</CardTitle>
+        <CardTitle className="text-lg">Distribución por proveedor</CardTitle>
       </CardHeader>
       <CardContent className="h-[300px] p-2">
         {chartData.length === 0 ? (

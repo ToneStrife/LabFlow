@@ -39,14 +39,14 @@ const AccountManagerTable: React.FC<AccountManagerTableProps> = ({ managers, onE
             managers.map((manager) => (
               <TableRow key={manager.id}>
                 <TableCell className="font-medium">{`${manager.first_name} ${manager.last_name}`}</TableCell>
-                <TableCell>{manager.email || "N/A"}</TableCell>
+                <TableCell>{manager.email || "—"}</TableCell>
                 <TableCell className="text-right">
                   <Button
                     variant="ghost"
                     size="icon"
                     onClick={() => onEdit(manager)}
                     className="mr-2"
-                    title="Editar Gerente"
+                    title="Editar gerente"
                   >
                     <Edit className="h-4 w-4" />
                   </Button>
@@ -54,7 +54,7 @@ const AccountManagerTable: React.FC<AccountManagerTableProps> = ({ managers, onE
                     variant="destructive"
                     size="icon"
                     onClick={() => onDelete(manager.id)}
-                    title="Eliminar Gerente"
+                    title="Eliminar gerente"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>

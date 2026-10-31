@@ -57,12 +57,12 @@ export const useAddExpenditure = () => {
       return apiAddExpenditure(dataToSubmit);
     },
     onSuccess: () => {
-      toast.success('Gasto registrado exitosamente!');
+      toast.success('Gasto registrado.');
       queryClient.invalidateQueries({ queryKey: ['expenditures'] });
       queryClient.invalidateQueries({ queryKey: ['unaccountedReceivedRequests'] }); // Invalidar el nuevo hook
     },
     onError: (error) => {
-      toast.error('Fallo al registrar el gasto.', { description: error.message });
+      toast.error('No se pudo registrar el gasto.', { description: error.message });
     },
   });
 };
@@ -78,12 +78,12 @@ export const useUpdateExpenditure = () => {
       return apiUpdateExpenditure(id, dataToSubmit);
     },
     onSuccess: () => {
-      toast.success('Gasto actualizado exitosamente!');
+      toast.success('Gasto actualizado.');
       queryClient.invalidateQueries({ queryKey: ['expenditures'] });
       queryClient.invalidateQueries({ queryKey: ['unaccountedReceivedRequests'] }); // Invalidar el nuevo hook
     },
     onError: (error) => {
-      toast.error('Fallo al actualizar el gasto.', { description: error.message });
+      toast.error('No se pudo actualizar el gasto.', { description: error.message });
     },
   });
 };
@@ -95,12 +95,12 @@ export const useDeleteExpenditure = () => {
       await apiDeleteExpenditure(id);
     },
     onSuccess: () => {
-      toast.success('Gasto eliminado exitosamente!');
+      toast.success('Gasto eliminado.');
       queryClient.invalidateQueries({ queryKey: ['expenditures'] });
       queryClient.invalidateQueries({ queryKey: ['unaccountedReceivedRequests'] }); // Invalidar el nuevo hook
     },
     onError: (error) => {
-      toast.error('Fallo al eliminar el gasto.', { description: error.message });
+      toast.error('No se pudo eliminar el gasto.', { description: error.message });
     },
   });
 };

@@ -54,7 +54,7 @@ export async function registerPushToken(userId: string) {
             await navigator.serviceWorker.register(basePath + 'firebase-messaging-sw.js', { scope: basePath });
         } catch (e) {
             console.error("Failed to register Service Worker during token fetch:", e);
-            toast.error("Error de Service Worker", { description: "Fallo al registrar el Service Worker." });
+            toast.error("Error de Service Worker", { description: "No se pudo registrar el Service Worker." });
             return null;
         }
     }
@@ -69,7 +69,7 @@ export async function registerPushToken(userId: string) {
     });
     
     if (!token) {
-      toast.error("Fallo al obtener token FCM.", { description: "Revisa el Service Worker, VAPID Key y la conexión HTTPS." });
+      toast.error("No se pudieron activar las notificaciones.", { description: "Revisa el Service Worker, VAPID Key y la conexión HTTPS." });
       return null;
     }
 
@@ -86,7 +86,7 @@ export async function registerPushToken(userId: string) {
 
     if (error) {
       console.error("Error guardando token:", error);
-      toast.error("Fallo al guardar el token de notificación.", { description: error.message });
+      toast.error("No se pudo guardar el token de notificación.", { description: error.message });
     } else {
       // Un solo token activo por usuario: los viejos provocan la misma alerta dos veces
       // en el mismo dispositivo (rotación FCM / reactivar notificaciones).
@@ -141,7 +141,7 @@ export async function unregisterPushToken(token: string) {
     return true;
   } catch (error) {
     console.error("Error unregistering push token:", error);
-    toast.error("Fallo al desactivar notificaciones.");
+    toast.error("No se pudieron desactivar las notificaciones.");
     return false;
   }
 }

@@ -1,6 +1,6 @@
 import React from "react";
+import { formatFechaHora } from "@/lib/format";
 import { Link } from "react-router-dom";
-import { format } from "date-fns";
 import {
   FilePlus,
   ArrowRightLeft,
@@ -59,7 +59,7 @@ const ActivityEventRow: React.FC<ActivityEventRowProps> = ({
 }) => {
   const estilo = ESTILO[event.event_type];
   const Icono = estilo.icono;
-  const cuando = format(new Date(event.created_at), "yyyy-MM-dd HH:mm");
+  const cuando = formatFechaHora(event.created_at);
 
   return (
     <li className="flex items-start gap-2.5 px-3 py-2 hover:bg-muted/40">

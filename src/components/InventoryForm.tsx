@@ -90,9 +90,9 @@ const InventoryForm: React.FC<InventoryFormProps> = ({ initialData, onSubmit, on
           name="product_name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Nombre del Producto</FormLabel>
+              <FormLabel>Nombre del producto</FormLabel>
               <FormControl>
-                <Input placeholder="ej. Anticuerpo Anti-GFP" {...field} disabled={isSubmitting} />
+                <Input placeholder="ej. Anticuerpo anti-GFP" {...field} disabled={isSubmitting} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -116,7 +116,7 @@ const InventoryForm: React.FC<InventoryFormProps> = ({ initialData, onSubmit, on
           name="catalog_number"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Número de Catálogo</FormLabel>
+              <FormLabel>Número de catálogo</FormLabel>
               <FormControl>
                 <Input placeholder="ej. 18265017" {...field} disabled={isSubmitting} />
               </FormControl>
@@ -200,7 +200,7 @@ const InventoryForm: React.FC<InventoryFormProps> = ({ initialData, onSubmit, on
               <FormLabel>Ubicación (Opcional)</FormLabel>
               <FormControl>
                 <Input
-                  placeholder="ej. Nevera 2 / Estantería B"
+                  placeholder="ej. Nevera 2 / estantería B"
                   {...field}
                   disabled={isSubmitting}
                   value={field.value || ""}
@@ -223,7 +223,7 @@ const InventoryForm: React.FC<InventoryFormProps> = ({ initialData, onSubmit, on
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando...
               </>
             ) : (
-              initialData ? "Guardar Cambios" : "Añadir Artículo"
+              initialData ? "Guardar cambios" : "Añadir artículo"
             )}
           </Button>
         </div>

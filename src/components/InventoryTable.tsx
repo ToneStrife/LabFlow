@@ -1,4 +1,5 @@
 import React from "react";
+import { formatEuros, formatFecha } from "@/lib/format";
 import {
   Table,
   TableBody,
@@ -10,7 +11,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Edit, Trash2 } from "lucide-react";
 import { InventoryItem } from "@/hooks/use-inventory";
-import { format } from "date-fns";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { getSedeLabel } from "@/lib/sedes";
@@ -134,13 +134,13 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
                   aria-label="Seleccionar todos en esta página"
                 />
               </TableHead>
-              <TableHead>Nombre del Producto</TableHead>
+              <TableHead>Nombre del producto</TableHead>
               <TableHead className="hidden sm:table-cell">Marca</TableHead>
               <TableHead>Catálogo #</TableHead>
               <TableHead>Cantidad</TableHead>
               <TableHead className="hidden sm:table-cell">Ubicación</TableHead>
               {showSede && <TableHead className="hidden sm:table-cell">Sede</TableHead>}
-              <TableHead className="hidden md:table-cell">Precio Unitario</TableHead>
+              <TableHead className="hidden md:table-cell">Precio unitario</TableHead>
               <TableHead className="hidden lg:table-cell">Formato</TableHead>
               <TableHead className="hidden lg:table-cell">Añadido el</TableHead>
               <TableHead className="text-right">Acciones</TableHead>
@@ -166,7 +166,7 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
                       />
                     </TableCell>
                     <TableCell className="font-medium">{item.product_name}</TableCell>
-                    <TableCell className="hidden sm:table-cell">{item.brand || "N/A"}</TableCell>
+                    <TableCell className="hidden sm:table-cell">{item.brand || "—"}</TableCell>
                     <TableCell>{item.catalog_number}</TableCell>
                     <TableCell className={cn("tabular-nums", quantityClass(item.quantity))}>
                       {item.quantity}
@@ -178,14 +178,14 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
                       </TableCell>
                     )}
                     <TableCell className="hidden md:table-cell">
-                      {item.unit_price ? `€${Number(item.unit_price).toFixed(2)}` : "N/A"}
+                      {formatEuros(item.unit_price)}
                     </TableCell>
-                    <TableCell className="hidden lg:table-cell">{item.format || "N/A"}</TableCell>
+                    <TableCell className="hidden lg:table-cell">{item.format || "—"}</TableCell>
                     <TableCell className="hidden lg:table-cell">
-                      {format(new Date(item.added_at), "yyyy-MM-dd")}
+                      {formatFecha(item.added_at)}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(item)} title="Editar Artículo">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(item)} title="Editar artículo">
                         <Edit className="h-4 w-4" />
                       </Button>
                       <Button
@@ -193,7 +193,7 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
                         size="icon"
                         className="h-8 w-8 text-destructive hover:text-destructive"
                         onClick={() => onDelete(item.id)}
-                        title="Eliminar Artículo"
+                        title="Eliminar artículo"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>

@@ -37,11 +37,11 @@ const createAddressMutations = (tableName: 'shipping_addresses' | 'billing_addre
         return data;
       },
       onSuccess: () => {
-        toast.success(`${typeName} añadida exitosamente!`);
+        toast.success(`${typeName} añadida.`);
         queryClient.invalidateQueries({ queryKey: [queryKey] });
       },
       onError: (error) => {
-        toast.error(`Fallo al añadir ${typeName.toLowerCase()}.`, { description: error.message });
+        toast.error(`No se pudo añadir ${typeName.toLowerCase()}.`, { description: error.message });
       },
     });
   };
@@ -56,11 +56,11 @@ const createAddressMutations = (tableName: 'shipping_addresses' | 'billing_addre
         return updatedData;
       },
       onSuccess: () => {
-        toast.success(`${typeName} actualizada exitosamente!`);
+        toast.success(`${typeName} actualizada.`);
         queryClient.invalidateQueries({ queryKey: [queryKey] });
       },
       onError: (error) => {
-        toast.error(`Fallo al actualizar ${typeName.toLowerCase()}.`, { description: error.message });
+        toast.error(`No se pudo actualizar ${typeName.toLowerCase()}.`, { description: error.message });
       },
     });
   };
@@ -72,11 +72,11 @@ const createAddressMutations = (tableName: 'shipping_addresses' | 'billing_addre
       mutationFn: async (id: string) => {
         const { error } = await supabase.from(tableName).delete().eq('id', id);
         if (error) {
-          throw new Error(`Fallo al eliminar ${typeName.toLowerCase()}: ${error.message}`);
+          throw new Error(`No se pudo eliminar ${typeName.toLowerCase()}: ${error.message}`);
         }
       },
       onSuccess: () => {
-        toast.success(`${typeName} eliminada exitosamente!`);
+        toast.success(`${typeName} eliminada.`);
         queryClient.invalidateQueries({ queryKey: [queryKey] });
       },
       onError: (error) => {

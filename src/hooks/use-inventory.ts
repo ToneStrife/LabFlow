@@ -53,7 +53,7 @@ export const useAddInventoryItem = () => {
       });
     },
     onError: (error) => {
-      toast.error("Fallo al añadir/actualizar el artículo de inventario.", {
+      toast.error("No se pudo guardar el artículo de inventario.", {
         description: error.message,
       });
     },
@@ -79,10 +79,10 @@ export const useUpdateInventoryItem = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["inventory"] });
-      toast.success("Artículo de inventario actualizado exitosamente!");
+      toast.success("Artículo de inventario actualizado.");
     },
     onError: (error) => {
-      toast.error("Fallo al actualizar el artículo de inventario.", {
+      toast.error("No se pudo actualizar el artículo de inventario.", {
         description: error.message,
       });
     },
@@ -98,10 +98,10 @@ export const useDeleteInventoryItem = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["inventory"] });
-      toast.success("Artículo de inventario eliminado exitosamente!");
+      toast.success("Artículo de inventario eliminado.");
     },
     onError: (error) => {
-      toast.error("Fallo al eliminar el artículo de inventario.", {
+      toast.error("No se pudo eliminar el artículo de inventario.", {
         description: error.message,
       });
     },

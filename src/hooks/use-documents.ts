@@ -114,7 +114,6 @@ export const useDocumentos = () => {
           item.product_name,
           item.catalog_number,
           item.brand,
-          item.ai_enriched_product_name,
         ])
         .filter(Boolean)
         .join(" ");

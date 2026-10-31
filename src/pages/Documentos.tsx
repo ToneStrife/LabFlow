@@ -1,6 +1,6 @@
 import React from "react";
+import { formatFecha } from "@/lib/format";
 import { Link } from "react-router-dom";
-import { format } from "date-fns";
 import { toast } from "sonner";
 import {
   Search,
@@ -375,7 +375,7 @@ const Documentos = () => {
                     <p className="truncate text-muted-foreground">{doc.vendorName}</p>
                   </div>
                   <span className="tabular-figures shrink-0 font-mono text-xs text-muted-foreground">
-                    {format(new Date(doc.fecha), "yyyy-MM-dd")}
+                    {formatFecha(doc.fecha)}
                   </span>
                   <Button
                     size="sm"

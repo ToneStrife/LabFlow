@@ -112,7 +112,7 @@ const VendorForm: React.FC<VendorFormProps> = ({
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Nombre del Proveedor</FormLabel>
+              <FormLabel>Nombre del proveedor</FormLabel>
               <FormControl>
                 <Input placeholder="ej. Thermo Fisher Scientific" {...field} disabled={isSubmitting} />
               </FormControl>
@@ -314,7 +314,7 @@ const VendorForm: React.FC<VendorFormProps> = ({
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando...
               </>
             ) : (
-              initialData ? "Guardar Cambios" : "Añadir Proveedor"
+              initialData ? "Guardar cambios" : "Añadir proveedor"
             )}
           </Button>
         </div>

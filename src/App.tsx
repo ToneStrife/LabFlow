@@ -63,7 +63,7 @@ const PrivateRoute: React.FC<{
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin mr-2" /> Loading authentication...
+        <Loader2 className="h-8 w-8 animate-spin mr-2" /> Cargando LabFlow…
       </div>
     );
   }
@@ -75,7 +75,7 @@ const PrivateRoute: React.FC<{
   if (session && !profile) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin mr-2" /> Loading user profile...
+        <Loader2 className="h-8 w-8 animate-spin mr-2" /> Cargando LabFlow…
       </div>
     );
   }
@@ -86,7 +86,7 @@ const PrivateRoute: React.FC<{
   if (esperaPermisos && cargandoPermisos) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin mr-2" /> Comprobando permisos...
+        <Loader2 className="h-8 w-8 animate-spin mr-2" /> Comprobando permisos…
       </div>
     );
   }
@@ -108,7 +108,7 @@ const AppRoutes = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin mr-2" /> Loading application...
+        <Loader2 className="h-8 w-8 animate-spin mr-2" /> Cargando LabFlow…
       </div>
     );
   }

@@ -108,14 +108,14 @@ const NotificationSenderForm: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Columna de Contenido del Mensaje */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold flex items-center">Contenido del Mensaje</h3>
+            <h3 className="text-lg font-semibold flex items-center">Contenido del mensaje</h3>
             <FormField
               control={form.control}
               name="title"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Título de la Notificación</FormLabel>
-                  <FormControl><Input placeholder="ej. Nueva Solicitud Pendiente" {...field} disabled={isSubmitting} /></FormControl>
+                  <FormLabel>Título de la notificación</FormLabel>
+                  <FormControl><Input placeholder="ej. Nueva solicitud pendiente" {...field} disabled={isSubmitting} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -125,7 +125,7 @@ const NotificationSenderForm: React.FC = () => {
               name="body"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Cuerpo del Mensaje</FormLabel>
+                  <FormLabel>Cuerpo del mensaje</FormLabel>
                   <FormControl><Textarea rows={4} placeholder="Detalles del mensaje..." {...field} disabled={isSubmitting} /></FormControl>
                   <FormMessage />
                 </FormItem>
@@ -146,7 +146,7 @@ const NotificationSenderForm: React.FC = () => {
 
           {/* Columna de Selección de Usuarios */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold flex items-center"><Users className="mr-2 h-5 w-5" /> Seleccionar Destinatarios</h3>
+            <h3 className="text-lg font-semibold flex items-center"><Users className="mr-2 h-5 w-5" /> Seleccionar destinatarios</h3>
             
             <FormField
               control={form.control}
@@ -186,12 +186,12 @@ const NotificationSenderForm: React.FC = () => {
                     onClick={() => handleSelectAll(!isAllSelected)}
                     disabled={sendToAll || isLoadingProfiles || isSubmitting}
                 >
-                    {isAllSelected ? "Deseleccionar Todos" : "Seleccionar Todos"}
+                    {isAllSelected ? "Quitar todos" : "Seleccionar todos"}
                 </Button>
               </FormLabel>
               <ScrollArea className="h-[200px] w-full rounded-md border p-4 bg-background">
                 {isLoadingProfiles ? (
-                  <div className="flex justify-center items-center h-full"><Loader2 className="h-4 w-4 animate-spin" /> Cargando usuarios...</div>
+                  <div className="flex justify-center items-center h-full"><Loader2 className="h-4 w-4 animate-spin" /> Cargando usuarios…</div>
                 ) : (
                   profiles?.map(profile => (
                     <div key={profile.id} className="flex items-center space-x-2 py-1.5">
@@ -239,7 +239,7 @@ const NotificationSenderForm: React.FC = () => {
               </>
             ) : (
               <>
-                <Send className="mr-2 h-4 w-4" /> Enviar Notificación
+                <Send className="mr-2 h-4 w-4" /> Enviar notificación
               </>
             )}
           </Button>

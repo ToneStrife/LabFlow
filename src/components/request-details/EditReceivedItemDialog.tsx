@@ -95,7 +95,7 @@ const EditReceivedItemDialog: React.FC<EditReceivedItemDialogProps> = ({
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className={cn(mobileDialogClass, "sm:max-w-[450px]")}>
         <DialogHeader>
-          <DialogTitle>Corregir Cantidad Recibida</DialogTitle>
+          <DialogTitle>Corregir cantidad recibida</DialogTitle>
           <DialogDescription>
             Ajusta la cantidad recibida para este ítem en este albarán. El inventario se ajustará automáticamente por la diferencia.
           </DialogDescription>
@@ -108,7 +108,7 @@ const EditReceivedItemDialog: React.FC<EditReceivedItemDialogProps> = ({
             </div>
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                    <Label>Cantidad Pedida</Label>
+                    <Label>Cantidad pedida</Label>
                     <Input value={itemData.quantityOrdered} disabled />
                 </div>
                 <div className="space-y-2">
@@ -122,7 +122,7 @@ const EditReceivedItemDialog: React.FC<EditReceivedItemDialogProps> = ({
               name="newQuantity"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Nueva Cantidad Recibida</FormLabel>
+                  <FormLabel>Nueva cantidad recibida</FormLabel>
                   <FormControl>
                     <Input 
                       type="number" 
@@ -149,7 +149,7 @@ const EditReceivedItemDialog: React.FC<EditReceivedItemDialogProps> = ({
                   </>
                 ) : (
                   <>
-                    <Save className="mr-2 h-4 w-4" /> Guardar Corrección
+                    <Save className="mr-2 h-4 w-4" /> Guardar corrección
                   </>
                 )}
               </Button>

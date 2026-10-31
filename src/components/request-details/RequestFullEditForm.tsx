@@ -140,7 +140,7 @@ const RequestFullEditForm: React.FC<RequestFullEditFormProps> = ({
               name="shippingAddressId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Dirección de Envío</FormLabel>
+                  <FormLabel>Dirección de envío</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingShippingAddresses || isSubmitting}>
                     <FormControl>
                       <SelectTrigger>
@@ -164,7 +164,7 @@ const RequestFullEditForm: React.FC<RequestFullEditFormProps> = ({
               name="billingAddressId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Dirección de Facturación</FormLabel>
+                  <FormLabel>Dirección de facturación</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingBillingAddresses || isSubmitting}>
                     <FormControl>
                       <SelectTrigger>
@@ -197,7 +197,7 @@ const RequestFullEditForm: React.FC<RequestFullEditFormProps> = ({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="unassigned">Sin Gerente</SelectItem>
+                      <SelectItem value="unassigned">Sin gerente</SelectItem>
                       {accountManagers?.map((manager) => (
                         <SelectItem key={manager.id} value={manager.id}>
                           {`${manager.first_name} ${manager.last_name}`}
@@ -300,7 +300,7 @@ const RequestFullEditForm: React.FC<RequestFullEditFormProps> = ({
             </Button>
           )}
           <Button type="submit" disabled={isSubmitting || isLoading}>
-            {isSubmitting ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando...</>) : "Guardar Cambios"}
+            {isSubmitting ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando…</>) : "Guardar cambios"}
           </Button>
         </div>
       </form>

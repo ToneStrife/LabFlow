@@ -33,10 +33,10 @@ const RequestListToolbar: React.FC<RequestListToolbarProps> = ({
       />
       <Select value={filterStatus} onValueChange={onStatusChange}>
         <SelectTrigger className="w-full sm:w-[260px]">
-          <SelectValue placeholder="Filtrar por Estado" />
+          <SelectValue placeholder="Filtrar por estado" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="All">Todos los Estados</SelectItem>
+          <SelectItem value="All">Todos los estados</SelectItem>
           <SelectItem value="Active">Activas (Excl. Recibidas)</SelectItem> {/* Nuevo filtro */}
           {REQUEST_STATUS_ORDER.map((status) => (
             <SelectItem key={status} value={status}>{getRequestStatusLabelLong(status)}</SelectItem>

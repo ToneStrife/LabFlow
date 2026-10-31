@@ -174,7 +174,7 @@ const ItemAutofillControls: React.FC<ItemAutofillControlsProps> = ({ index, form
         </PopoverTrigger>
         <PopoverContent className="w-80 p-0">
           <Command>
-            {isSearchingDB && <CommandEmpty>Buscando...</CommandEmpty>}
+            {isSearchingDB && <CommandEmpty>Buscando…</CommandEmpty>}
             {!isSearchingDB && !hasInternalResults && <CommandEmpty>No se encontraron sugerencias internas.</CommandEmpty>}
             <CommandGroup heading="Sugerencias de la Base de Datos">
               {internalResults?.map((result, i) => (
@@ -596,7 +596,7 @@ const RequestForm: React.FC = () => {
                     <SelectTrigger><SelectValue placeholder={isLoadingAccountManagers ? "Cargando gerentes..." : "Selecciona un gerente de cuenta"} /></SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="unassigned">Sin Asignar</SelectItem>
+                    <SelectItem value="unassigned">Sin asignar</SelectItem>
                     {accountManagers?.map((manager) => (
                       <SelectItem key={manager.id} value={manager.id}>{`${manager.first_name} ${manager.last_name}`}</SelectItem>
                     ))}
@@ -802,7 +802,7 @@ const RequestForm: React.FC = () => {
                   render={({ field: itemField }) => (
                     <FormItem className="sm:col-span-2 lg:col-span-2">
                       <FormLabel>Nombre del producto</FormLabel>
-                      <FormControl><Input placeholder="ej. Células Competentes E. coli DH5a" {...itemField} /></FormControl>
+                      <FormControl><Input placeholder="ej. Células competentes E. coli DH5a" {...itemField} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}

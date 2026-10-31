@@ -38,7 +38,7 @@ const ProjectTable: React.FC<ProjectTableProps> = ({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Código Proyecto</TableHead>
+            <TableHead>Código proyecto</TableHead>
             <TableHead>Entidad</TableHead>
             <TableHead>CIF</TableHead>
             <TableHead>Investigador responsable</TableHead>
@@ -84,7 +84,7 @@ const ProjectTable: React.FC<ProjectTableProps> = ({
                     size="icon"
                     onClick={() => onEdit(project)}
                     className="mr-2"
-                    title="Editar Proyecto"
+                    title="Editar proyecto"
                   >
                     <Edit className="h-4 w-4" />
                   </Button>
@@ -92,7 +92,7 @@ const ProjectTable: React.FC<ProjectTableProps> = ({
                     variant="destructive"
                     size="icon"
                     onClick={() => onDelete(project.id)}
-                    title="Eliminar Proyecto"
+                    title="Eliminar proyecto"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>

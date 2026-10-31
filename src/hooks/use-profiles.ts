@@ -53,7 +53,7 @@ export const useInviteUser = () => {
       });
     },
     onError: (error) => {
-      toast.error("Fallo al enviar la invitación.", {
+      toast.error("No se pudo enviar la invitación.", {
         description: error.message,
       });
     },
@@ -71,10 +71,10 @@ export const useUpdateProfile = () => {
       queryClient.invalidateQueries({ queryKey: ["allProfiles"] });
       queryClient.invalidateQueries({ queryKey: ["accountManagers"] });
       queryClient.invalidateQueries({ queryKey: ["session"] });
-      toast.success("Perfil actualizado exitosamente!");
+      toast.success("Perfil actualizado.");
     },
     onError: (error) => {
-      toast.error("Fallo al actualizar el perfil.", {
+      toast.error("No se pudo actualizar el perfil.", {
         description: error.message,
       });
     },
@@ -90,10 +90,10 @@ export const useDeleteProfile = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["allProfiles"] });
       queryClient.invalidateQueries({ queryKey: ["accountManagers"] });
-      toast.success("Perfil eliminado exitosamente!");
+      toast.success("Perfil eliminado.");
     },
     onError: (error) => {
-      toast.error("Fallo al eliminar el perfil.", {
+      toast.error("No se pudo eliminar el perfil.", {
         description: error.message,
       });
     },
@@ -110,7 +110,7 @@ export const useResetUserPassword = () => {
       });
     },
     onError: (error) => {
-      toast.error("Fallo al enviar el restablecimiento.", {
+      toast.error("No se pudo enviar el restablecimiento.", {
         description: error.message,
       });
     },

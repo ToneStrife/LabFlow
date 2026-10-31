@@ -72,7 +72,7 @@ const Profile: React.FC = () => {
   return (
     <div className="p-4 sm:p-6 max-w-2xl mx-auto space-y-6">
       <Card>
-        <CardHeader><CardTitle>Información Personal</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Información personal</CardTitle></CardHeader>
         <CardContent>
           <form onSubmit={handleUpdateProfile} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -102,7 +102,7 @@ const Profile: React.FC = () => {
               </p>
             </div>
             <Button type="submit" disabled={updateProfileMutation.isPending} className="w-full">
-              {updateProfileMutation.isPending ? <Loader2 className="animate-spin mr-2" /> : "Guardar Cambios"}
+              {updateProfileMutation.isPending ? <Loader2 className="animate-spin mr-2" /> : "Guardar cambios"}
             </Button>
           </form>
         </CardContent>
@@ -122,7 +122,7 @@ const Profile: React.FC = () => {
         <CardContent>
           <form onSubmit={handleUpdatePassword} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="password">Nueva Contraseña</Label>
+              <Label htmlFor="password">Nueva contraseña</Label>
               <Input 
                 id="password" 
                 type="password" 
@@ -145,7 +145,7 @@ const Profile: React.FC = () => {
         </CardContent>
       </Card>
 
-      <Button variant="destructive" onClick={handleLogout} className="w-full">Cerrar Sesión</Button>
+      <Button variant="destructive" onClick={handleLogout} className="w-full">Cerrar sesión</Button>
     </div>
   );
 };

@@ -33,6 +33,7 @@ import RequestFullEditForm, { FullEditFormValues } from "@/components/request-de
 import PackingSlipsList from "@/components/request-details/PackingSlipsList";
 import InvoicesList from "@/components/request-details/InvoicesList";
 import RequestActivityCard from "@/components/request-details/RequestActivityCard";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import { toast } from "sonner";
 import { useSession } from "@/components/SessionContextProvider";
 import { gestionaPedidos, canEditRequestDetails, canDeleteRequest, canOverrideStatus } from "@/lib/permissions";
@@ -236,7 +237,7 @@ const RequestDetails: React.FC = () => {
   };
 
   if (isLoadingRequests || isLoadingVendors || isLoadingProfiles || isLoadingAccountManagers || isLoadingProjects || isLoadingEmailTemplates || isLoadingShippingAddresses || isLoadingBillingAddresses) {
-    return <div className="p-4 sm:p-6 flex justify-center items-center"><Loader2 className="h-8 w-8 animate-spin mr-2" /> Cargando Detalles...</div>;
+    return <div className="p-4 sm:p-6 flex justify-center items-center"><Loader2 className="h-8 w-8 animate-spin mr-2" /> Cargando detalles…</div>;
   }
 
   if (!request) {
@@ -244,7 +245,7 @@ const RequestDetails: React.FC = () => {
       <div className={pageContainerClass}>
         <p className="text-muted-foreground">No se encontró la solicitud.</p>
         <Button variant="outline" onClick={() => navigate("/dashboard")} className="mt-4 w-fit">
-          <ArrowLeft className="mr-2 h-4 w-4" /> Volver al Panel
+          <ArrowLeft className="mr-2 h-4 w-4" /> Volver al panel
         </Button>
       </div>
     );
@@ -285,11 +286,11 @@ const RequestDetails: React.FC = () => {
           </h1>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon" disabled={updateStatusMutation.isPending || deleteRequestMutation.isPending}><MoreVertical className="h-4 w-4" /></Button>
+              <Button variant="outline" size="icon" aria-label="Más acciones" title="Más acciones" disabled={updateStatusMutation.isPending || deleteRequestMutation.isPending}><MoreVertical className="h-4 w-4" /></Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              {canOverrideStatus(profile?.role) && <DropdownMenuItem onClick={() => { setNewStatus(request.status); setIsStatusOverrideDialogOpen(true); }}><Edit className="mr-2 h-4 w-4" /> Cambiar Estado Manualmente</DropdownMenuItem>}
-              {canDelete && <><DropdownMenuSeparator /><DropdownMenuItem onClick={() => setIsDeleteDialogOpen(true)} className="text-red-600 dark:text-red-400"><Trash2 className="mr-2 h-4 w-4" /> Eliminar Solicitud</DropdownMenuItem></>}
+              {canOverrideStatus(profile?.role) && <DropdownMenuItem onClick={() => { setNewStatus(request.status); setIsStatusOverrideDialogOpen(true); }}><Edit className="mr-2 h-4 w-4" /> Cambiar estado manualmente</DropdownMenuItem>}
+              {canDelete && <><DropdownMenuSeparator /><DropdownMenuItem onClick={() => setIsDeleteDialogOpen(true)} className="text-red-600 dark:text-red-400"><Trash2 className="mr-2 h-4 w-4" /> Eliminar solicitud</DropdownMenuItem></>}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -323,7 +324,7 @@ const RequestDetails: React.FC = () => {
                     className="w-full mt-2 justify-start" 
                     onClick={() => setIsInvoiceItemsDialogOpen(true)}
                 >
-                    <CreditCard className="mr-2 h-4 w-4" /> Registrar Facturación
+                    <CreditCard className="mr-2 h-4 w-4" /> Registrar facturación
                 </Button>
             )}
           </div>
@@ -342,7 +343,7 @@ const RequestDetails: React.FC = () => {
         <DialogContent className={cn(mobileDialogClass, "sm:max-w-[600px] gap-0 overflow-hidden p-0")}>
           <div className="shrink-0 space-y-1.5 border-b px-6 py-4 pr-12">
             <DialogHeader className="space-y-1.5 text-left">
-              <DialogTitle>Editar Detalles</DialogTitle>
+              <DialogTitle>Editar detalles</DialogTitle>
               <DialogDescription>
                 Gerente de cuenta y proyectos son opcionales. Puedes guardar el reorden tal cual.
               </DialogDescription>
@@ -363,7 +364,10 @@ const RequestDetails: React.FC = () => {
 
       <Dialog open={isStatusOverrideDialogOpen} onOpenChange={setIsStatusOverrideDialogOpen}>
         <DialogContent className={cn(mobileDialogClass, "sm:max-w-[425px]")}>
-          <DialogHeader><DialogTitle>Anular Estado</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>Cambiar estado manualmente</DialogTitle>
+            <DialogDescription>Solo para corregir errores. No envía correos ni avisos.</DialogDescription>
+          </DialogHeader>
           <div className="py-4">
             <Select value={newStatus} onValueChange={(value) => setNewStatus(value as RequestStatusType)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
@@ -377,21 +381,47 @@ const RequestDetails: React.FC = () => {
         </DialogContent>
       </Dialog>
       
-      <Dialog open={isDenyDialogOpen} onOpenChange={setIsDenyDialogOpen}>
-        <DialogContent><DialogHeader><DialogTitle>Denegar Solicitud</DialogTitle></DialogHeader><DialogFooter><Button variant="outline" onClick={() => setIsDenyDialogOpen(false)}>Cancelar</Button><Button variant="destructive" onClick={confirmDenyRequest}>Confirmar</Button></DialogFooter></DialogContent>
-      </Dialog>
-
-      <Dialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
-        <DialogContent><DialogHeader><DialogTitle>Cancelar Solicitud</DialogTitle></DialogHeader><DialogFooter><Button variant="outline" onClick={() => setIsCancelDialogOpen(false)}>No</Button><Button variant="destructive" onClick={confirmCancelRequest}>Sí, Cancelar</Button></DialogFooter></DialogContent>
-      </Dialog>
-
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent><DialogHeader><DialogTitle>Eliminar Solicitud</DialogTitle></DialogHeader><DialogFooter><Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>Cancelar</Button><Button variant="destructive" onClick={confirmDeleteRequest}>Eliminar</Button></DialogFooter></DialogContent>
-      </Dialog>
-      
-      <Dialog open={isRevertReceptionDialogOpen} onOpenChange={setIsRevertReceptionDialogOpen}>
-        <DialogContent><DialogHeader><DialogTitle>Revertir Recepción</DialogTitle></DialogHeader><DialogFooter><Button variant="outline" onClick={() => setIsRevertReceptionDialogOpen(false)}>Cancelar</Button><Button variant="destructive" onClick={handleRevertReception}>Confirmar</Button></DialogFooter></DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={isDenyDialogOpen}
+        onOpenChange={setIsDenyDialogOpen}
+        title={`Denegar la solicitud ${displayRequestNumber}`}
+        description="Quedará como denegada y ya no se podrá pedir."
+        confirmLabel="Denegar"
+        onConfirm={confirmDenyRequest}
+        isPending={updateStatusMutation.isPending}
+      />
+      <ConfirmDialog
+        open={isCancelDialogOpen}
+        onOpenChange={setIsCancelDialogOpen}
+        title={`Cancelar la solicitud ${displayRequestNumber}`}
+        description={
+          request.status === "Ordered"
+            ? "Ya está pedida: avisa tú al proveedor para anular el pedido. LabFlow no le manda ningún correo."
+            : "Quedará como cancelada y saldrá de las solicitudes activas."
+        }
+        cancelLabel="No, mantener"
+        confirmLabel="Sí, cancelar"
+        onConfirm={confirmCancelRequest}
+        isPending={updateStatusMutation.isPending}
+      />
+      <ConfirmDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        title={`Eliminar la solicitud ${displayRequestNumber}`}
+        description="Se borran la solicitud, sus artículos y sus documentos. No se puede deshacer."
+        confirmLabel="Eliminar"
+        onConfirm={confirmDeleteRequest}
+        isPending={deleteRequestMutation.isPending}
+      />
+      <ConfirmDialog
+        open={isRevertReceptionDialogOpen}
+        onOpenChange={setIsRevertReceptionDialogOpen}
+        title="Revertir la recepción"
+        description="Se quitan del inventario los artículos recibidos y la solicitud vuelve a «Pedido realizado»."
+        confirmLabel="Revertir"
+        onConfirm={handleRevertReception}
+        isPending={revertReceptionMutation.isPending}
+      />
 
       <EmailDialog {...correos.dialogProps} />
       <FileUploadDialog isOpen={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen} onUpload={handleFileUpload} isUploading={updateFileMutation.isPending || updateStatusMutation.isPending} fileType={fileTypeToUpload} markAsOrdered={fileTypeToUpload === "po" && poMode === "finish"} hasExistingPoFile={Boolean(request?.po_url || request?.po_number)} />

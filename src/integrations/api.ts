@@ -803,7 +803,7 @@ export const apiSendEmail = async (email: EmailData): Promise<void> => {
   });
 
   if (error) {
-    let errorMessage = 'Fallo al enviar correo via Edge Function.';
+    let errorMessage = 'No se pudo enviar el correo.';
     if (data && typeof data === 'object' && 'error' in data) {
         errorMessage = (data as any).error;
     } else if (error.message) {

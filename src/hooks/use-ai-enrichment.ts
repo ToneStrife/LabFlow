@@ -64,7 +64,7 @@ export const useEnrichProductDetails = () => {
       toast.success('Detalles del producto enriquecidos por IA.');
     },
     onError: (error) => {
-      toast.error('Fallo al enriquecer por IA.', {
+      toast.error('La IA no pudo completar los datos.', {
         description: error.message,
       });
     },

@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatEuros, formatEurosRedondos } from "@/lib/format";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { ChartData } from '@/hooks/use-expenditure-analytics';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,7 +17,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     return (
       <div className="p-2 bg-white border rounded-md shadow-lg text-sm">
         <p className="font-bold">{label}</p>
-        <p className="text-muted-foreground">Gasto: <span className="font-semibold text-red-600 dark:text-red-400">€{payload[0].value.toFixed(2)}</span></p>
+        <p className="text-muted-foreground">Gasto: <span className="font-semibold text-foreground">{formatEuros(payload[0].value)}</span></p>
       </div>
     );
   }
@@ -45,7 +46,7 @@ const SpendingByProjectChart: React.FC<SpendingByProjectChartProps> = ({ data })
               margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
             >
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis type="number" tickFormatter={(value) => `€${value.toFixed(0)}`} />
+              <XAxis type="number" tickFormatter={(value) => formatEurosRedondos(value)} />
               <YAxis dataKey="name" type="category" width={80} />
               <Tooltip content={<CustomTooltip />} />
               <Bar dataKey="value" fill="#8884d8" radius={[4, 4, 0, 0]}>

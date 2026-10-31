@@ -107,7 +107,7 @@ const PendingInvoicesList: React.FC = () => {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Link to={`/requests/${item.requestId}`} title="Ver Solicitud y Registrar Factura">
+                      <Link to={`/requests/${item.requestId}`} title="Ver solicitud y registrar factura">
                         <ArrowRight className="h-4 w-4 text-muted-foreground hover:text-primary" />
                       </Link>
                     </TableCell>

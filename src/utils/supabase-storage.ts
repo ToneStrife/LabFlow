@@ -19,14 +19,14 @@ export const generateSignedUrl = async (filePath: string): Promise<string | null
 
     if (error) {
       console.error("[Storage] Error generating signed URL:", error);
-      toast.error("Failed to generate secure file link.", { description: error.message });
+      toast.error("No se pudo abrir el archivo.", { description: error.message });
       return null;
     }
 
     return data.signedUrl;
   } catch (e) {
     console.error("[Storage] Unexpected error during signed URL generation:", e);
-    toast.error("An unexpected error occurred while securing the file link.");
+    toast.error("No se pudo abrir el archivo.");
     return null;
   }
 };

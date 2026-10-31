@@ -36,8 +36,8 @@ const AddressTable: React.FC<AddressTableProps> = ({
           <TableRow>
             <TableHead>Nombre</TableHead>
             {showSede && <TableHead>Sede</TableHead>}
-            <TableHead>Línea de Dirección 1</TableHead>
-            <TableHead>Ciudad, Estado, CP</TableHead>
+            <TableHead>Línea de dirección 1</TableHead>
+            <TableHead>Ciudad, estado, CP</TableHead>
             <TableHead>País</TableHead>
             <TableHead>CIF / ID de IVA</TableHead>
             <TableHead className="text-right">Acciones</TableHead>
@@ -79,14 +79,14 @@ const AddressTable: React.FC<AddressTableProps> = ({
                   <TableCell>{address.address_line_1}</TableCell>
                   <TableCell>{address.city}, {address.state}, {address.zip_code}</TableCell>
                   <TableCell>{address.country}</TableCell>
-                  <TableCell>{address.cif || "N/A"}</TableCell>
+                  <TableCell>{address.cif || "—"}</TableCell>
                   <TableCell className="text-right">
                     <Button
                       variant="ghost"
                       size="icon"
                       onClick={() => onEdit(address)}
                       className="mr-2"
-                      title="Editar Dirección"
+                      title="Editar dirección"
                     >
                       <Edit className="h-4 w-4" />
                     </Button>
@@ -94,7 +94,7 @@ const AddressTable: React.FC<AddressTableProps> = ({
                       variant="destructive"
                       size="icon"
                       onClick={() => onDelete(address.id)}
-                      title="Eliminar Dirección"
+                      title="Eliminar dirección"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>

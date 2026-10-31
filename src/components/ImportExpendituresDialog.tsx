@@ -1,4 +1,5 @@
 import React from "react";
+import { formatEuros, formatFecha } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -117,7 +118,7 @@ const ImportExpendituresDialog: React.FC<ImportExpendituresDialogProps> = ({
       toast.success(`Importación completada. Se registraron ${requestsToImport.length} gastos.`);
       onOpenChange(false);
     } catch (e) {
-      toast.error("Fallo al importar gastos.", { description: (e as Error).message });
+      toast.error("No se pudieron importar los gastos.", { description: (e as Error).message });
     } finally {
       setIsSubmitting(false);
     }
@@ -148,7 +149,7 @@ const ImportExpendituresDialog: React.FC<ImportExpendituresDialogProps> = ({
       <DialogContent className={cn(mobileDialogClass, "sm:max-w-[800px]")}>
         <DialogHeader>
           <DialogTitle className="flex items-center">
-            <DollarSign className="mr-2 h-5 w-5" /> Importar Gastos de Solicitudes Recibidas
+            <DollarSign className="mr-2 h-5 w-5" /> Importar gastos de solicitudes recibidas
           </DialogTitle>
           <DialogDescription>
             Las siguientes {requests.length} solicitudes han sido recibidas pero aún no tienen un gasto asociado. Asigna un proyecto para importar el costo total de la solicitud.
@@ -161,8 +162,8 @@ const ImportExpendituresDialog: React.FC<ImportExpendituresDialogProps> = ({
               <TableRow>
                 <TableHead>Solicitud</TableHead>
                 <TableHead>Proveedor</TableHead>
-                <TableHead className="text-right">Costo Total</TableHead>
-                <TableHead className="min-w-[200px]">Asignar Proyecto</TableHead>
+                <TableHead className="text-right">Costo total</TableHead>
+                <TableHead className="min-w-[200px]">Asignar proyecto</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -174,7 +175,7 @@ const ImportExpendituresDialog: React.FC<ImportExpendituresDialogProps> = ({
                   <TableRow key={req.id}>
                     <TableCell className="font-medium">{requestNumber}</TableCell>
                     <TableCell>{getVendorName(req.vendor_id)}</TableCell> {/* Mostrar nombre del proveedor */}
-                    <TableCell className="text-right font-semibold">€{total.toFixed(2)}</TableCell>
+                    <TableCell className="text-right font-semibold">{formatEuros(total)}</TableCell>
                     <TableCell>
                       <Select 
                         value={projectSelections[req.id] || ""} 
@@ -199,7 +200,7 @@ const ImportExpendituresDialog: React.FC<ImportExpendituresDialogProps> = ({
         </div>
         
         <div className="flex justify-between items-center pt-4 border-t">
-            <p className="text-lg font-bold">Total a Importar: <span className="text-red-600 dark:text-red-400">€{totalImportAmount.toFixed(2)}</span></p>
+            <p className="text-lg font-bold">Total a importar: <span>{formatEuros(totalImportAmount)}</span></p>
         </div>
 
         <DialogFooter>

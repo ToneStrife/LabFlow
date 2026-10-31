@@ -152,7 +152,7 @@ const AddressForm: React.FC<AddressFormProps> = ({
           name="address_line_1"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Línea de Dirección 1</FormLabel>
+              <FormLabel>Línea de dirección 1</FormLabel>
               <FormControl><Input {...field} disabled={isSubmitting} /></FormControl>
               <FormMessage />
             </FormItem>
@@ -174,7 +174,7 @@ const AddressForm: React.FC<AddressFormProps> = ({
           name="zip_code"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Código Postal</FormLabel>
+              <FormLabel>Código postal</FormLabel>
               <FormControl><Input {...field} disabled={isSubmitting} /></FormControl>
               <FormMessage />
             </FormItem>
@@ -250,7 +250,7 @@ const AddressForm: React.FC<AddressFormProps> = ({
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando...
               </>
             ) : (
-              initialData ? "Guardar Cambios" : "Añadir Dirección"
+              initialData ? "Guardar cambios" : "Añadir dirección"
             )}
           </Button>
         </div>

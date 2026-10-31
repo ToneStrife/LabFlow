@@ -1,4 +1,5 @@
 import React from "react";
+import { formatFechaHora } from "@/lib/format";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { EmailLog } from "@/data/types";
@@ -6,7 +7,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, CheckCircle, XCircle, Info } from "lucide-react";
-import { format } from "date-fns";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAllProfiles } from "@/hooks/use-profiles";
 
@@ -47,7 +47,7 @@ const EmailLogs: React.FC = () => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-xl">Registros de Correo Electrónico</CardTitle>
+        <CardTitle className="text-xl">Registros de correo electrónico</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="rounded-md border overflow-x-auto">
@@ -58,8 +58,8 @@ const EmailLogs: React.FC = () => {
                 <TableHead>Para</TableHead>
                 <TableHead>Asunto</TableHead>
                 <TableHead>Estado</TableHead>
-                <TableHead>Enviado Por</TableHead>
-                <TableHead className="w-[200px]">Vista Previa del Cuerpo / Error</TableHead>
+                <TableHead>Enviado por</TableHead>
+                <TableHead className="w-[200px]">Vista previa del cuerpo / error</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -72,7 +72,7 @@ const EmailLogs: React.FC = () => {
               ) : (
                 emailLogs?.map((log) => (
                   <TableRow key={log.id}>
-                    <TableCell className="font-medium">{format(new Date(log.created_at), 'yyyy-MM-dd HH:mm')}</TableCell>
+                    <TableCell className="font-medium">{formatFechaHora(log.created_at)}</TableCell>
                     <TableCell>{log.to_email}</TableCell>
                     <TableCell>{log.subject}</TableCell>
                     <TableCell>

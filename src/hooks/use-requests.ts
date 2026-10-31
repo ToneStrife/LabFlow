@@ -51,12 +51,10 @@ export const useAddRequest = () => {
     onSuccess: (newRequest) => {
       queryClient.invalidateQueries({ queryKey: ["requests"] });
       invalidateRequestEvents(queryClient);
-      toast.success("Solicitud enviada exitosamente!", {
-        description: `ID de Solicitud: ${newRequest.id}`,
-      });
+      toast.success(newRequest.request_number ? `Solicitud ${newRequest.request_number} creada.` : "Solicitud creada.");
     },
     onError: (error) => {
-      toast.error("Fallo al enviar la solicitud.", {
+      toast.error("No se pudo enviar la solicitud.", {
         description: error.message,
       });
     },
@@ -91,7 +89,7 @@ export const useUpdateRequestStatus = () => {
       toast.success(`Estado actualizado a ${getRequestStatusLabel(updatedRequest.status)}.`);
     },
     onError: (error) => {
-      toast.error("Fallo al actualizar el estado de la solicitud.", {
+      toast.error("No se pudo actualizar el estado de la solicitud.", {
         description: error.message,
       });
     },
@@ -121,10 +119,10 @@ export const useUpdateFullRequest = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["requests"] });
       invalidateRequestEvents(queryClient);
-      toast.success(`Detalles de la solicitud actualizados exitosamente!`);
+      toast.success("Solicitud actualizada.");
     },
     onError: (error) => {
-      toast.error("Fallo al actualizar los detalles de la solicitud.", {
+      toast.error("No se pudo actualizar la solicitud.", {
         description: error.message,
       });
     },
@@ -149,10 +147,10 @@ export const useUpdateRequestMetadata = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["requests"] });
-      toast.success(`Metadatos de la solicitud actualizados exitosamente!`);
+      toast.success("Solicitud actualizada.");
     },
     onError: (error) => {
-      toast.error("Fallo al actualizar los metadatos de la solicitud.", {
+      toast.error("No se pudo actualizar la solicitud.", {
         description: error.message,
       });
     },
@@ -179,17 +177,17 @@ export const useUpdateRequestFile = () => {
       queryClient.invalidateQueries({ queryKey: ["requests"] });
       invalidateRequestEvents(queryClient);
       
-      let message = `${variables.fileType.toUpperCase()} detalles guardados exitosamente!`;
+      let message = "Datos guardados.";
       if (data.filePath) {
-        message = `${variables.fileType.toUpperCase()} archivo subido exitosamente!`;
+        message = variables.fileType === "quote" ? "Presupuesto subido." : variables.fileType === "po" ? "PO subido." : "Archivo subido.";
       } else if (variables.fileType === 'po' && data.poNumber) {
-        message = `Número de PO ${data.poNumber} guardado exitosamente!`;
+        message = `Número de PO ${data.poNumber} guardado.`;
       }
 
       toast.success(message);
     },
     onError: (error, variables) => {
-      toast.error(`Fallo al guardar los detalles de ${variables.fileType.toUpperCase()}.`, {
+      toast.error("No se pudo guardar el documento.", {
         description: error.message,
       });
     },
@@ -206,10 +204,10 @@ export const useDeleteRequest = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["requests"] });
       invalidateRequestEvents(queryClient);
-      toast.success("Solicitud eliminada exitosamente!");
+      toast.success("Solicitud eliminada.");
     },
     onError: (error) => {
-      toast.error("Fallo al eliminar la solicitud.", {
+      toast.error("No se pudo eliminar la solicitud.", {
         description: error.message,
       });
     },
@@ -233,7 +231,7 @@ export const useRevertRequestReception = () => {
       });
     },
     onError: (error) => {
-      toast.error("Fallo al revertir la recepción.", {
+      toast.error("No se pudo revertir la recepción.", {
         description: error.message,
       });
     },
@@ -256,10 +254,10 @@ export const useSendEmail = () => {
       await apiSendEmail(emailData);
     },
     onSuccess: () => {
-      toast.success("Correo enviado exitosamente!");
+      toast.success("Correo enviado.");
     },
     onError: (error) => {
-      toast.error("Fallo al enviar correo.", {
+      toast.error("No se pudo enviar el correo.", {
         description: error.message,
       });
     },

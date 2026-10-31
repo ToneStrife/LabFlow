@@ -114,7 +114,7 @@ const PendingItemsList: React.FC = () => {
                         <span className="text-muted-foreground">
                           {item.quantityReceived}/{item.quantityOrdered}
                         </span>
-                        <Badge variant="destructive" className="font-bold">
+                        <Badge variant="outline" className="font-bold border-amber-300 bg-amber-100 text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300">
                           Faltan {item.quantityPending}
                         </Badge>
                       </div>
@@ -164,7 +164,7 @@ const PendingItemsList: React.FC = () => {
                     <TableCell className="text-center">{item.quantityOrdered}</TableCell>
                     <TableCell className="text-center text-green-600 dark:text-green-400">{item.quantityReceived}</TableCell>
                     <TableCell className="text-right">
-                      <Badge variant="destructive" className="font-bold">
+                      <Badge variant="outline" className="font-bold border-amber-300 bg-amber-100 text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300">
                         {item.quantityPending}
                       </Badge>
                     </TableCell>

@@ -8,8 +8,7 @@ import { useVendors } from "@/hooks/use-vendors";
 import { useAllProfiles, getFullName } from "@/hooks/use-profiles";
 import { useAccountManagers } from "@/hooks/use-account-managers";
 import EmailDialog from "@/components/EmailDialog";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import RequestListToolbar from "@/components/request-list/RequestListToolbar";
 import RequestListTable from "@/components/request-list/RequestListTable";
 import { toast } from "sonner";
@@ -18,8 +17,6 @@ import { useProjects } from "@/hooks/use-projects";
 import { useEmailTemplates } from "@/hooks/use-email-templates";
 import MergeRequestsDialog from "@/components/MergeRequestsDialog";
 import { useShippingAddresses, useBillingAddresses } from "@/hooks/use-addresses";
-import { cn } from "@/lib/utils";
-import { mobileDialogClass, dialogFooterMobileClass } from "@/lib/layout";
 import { useReceiveWizard } from "@/components/ReceiveWizardProvider";
 import { useSedeActiva } from "@/components/SedeContextProvider";
 import { requestMatchesSede } from "@/lib/sedes";
@@ -81,9 +78,9 @@ const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
   };
 
   const getAccountManagerName = (managerId: string | null) => {
-    if (!managerId) return "N/A";
+    if (!managerId) return "—";
     const manager = accountManagers?.find(am => am.id === managerId);
-    return manager ? `${manager.first_name} ${manager.last_name}` : "N/A";
+    return manager ? `${manager.first_name} ${manager.last_name}` : "—";
   };
 
   const openQuoteAndPODetailsDialog = (request: SupabaseRequest) => {
@@ -102,6 +99,8 @@ const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
     openReceive(request.id);
   };
   
+  const numeroAModificar = requestToModify?.request_number || requestToModify?.id.substring(0, 8) || "";
+
   const handleDenyRequest = (request: SupabaseRequest) => {
     setRequestToModify(request);
     setIsDenyDialogOpen(true);
@@ -208,7 +207,7 @@ const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
   if (isLoadingRequests || isLoadingVendors || isLoadingProfiles || isLoadingAccountManagers || isLoadingProjects || isLoadingEmailTemplates || isLoadingShippingAddresses || isLoadingBillingAddresses) {
     return (
       <div className="flex justify-center items-center h-40">
-        <Loader2 className="h-6 w-6 animate-spin mr-2" /> Cargando Solicitudes...
+        <Loader2 className="h-6 w-6 animate-spin mr-2" /> Cargando solicitudes...
       </div>
     );
   }
@@ -252,43 +251,29 @@ const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
         />
       )}
       
-      <Dialog open={isDenyDialogOpen} onOpenChange={setIsDenyDialogOpen}>
-        <DialogContent className={cn(mobileDialogClass, "sm:max-w-[425px]")}>
-          <DialogHeader>
-            <DialogTitle>Denegar Solicitud</DialogTitle>
-            <DialogDescription>
-              ¿Estás seguro de que deseas denegar la Solicitud {requestToModify?.request_number || requestToModify?.id.substring(0, 8)}? Esta acción cambiará su estado a "Denegada".
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDenyDialogOpen(false)} disabled={updateStatusMutation.isPending}>
-              Cancelar
-            </Button>
-            <Button variant="destructive" onClick={confirmDenyRequest} disabled={updateStatusMutation.isPending}>
-              {updateStatusMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Confirmar Denegación"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
-        <DialogContent className={cn(mobileDialogClass, "sm:max-w-[425px]")}>
-          <DialogHeader>
-            <DialogTitle>Cancelar Solicitud</DialogTitle>
-            <DialogDescription>
-              ¿Estás seguro de que deseas cancelar la Solicitud {requestToModify?.request_number || requestToModify?.id.substring(0, 8)}? Esta acción cambiará su estado a "Cancelada".
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsCancelDialogOpen(false)} disabled={updateStatusMutation.isPending}>
-              No, Mantener
-            </Button>
-            <Button variant="destructive" onClick={confirmCancelRequest} disabled={updateStatusMutation.isPending}>
-              {updateStatusMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Sí, Cancelar Solicitud"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={isDenyDialogOpen}
+        onOpenChange={setIsDenyDialogOpen}
+        title={`Denegar la solicitud ${numeroAModificar}`}
+        description="Quedará como denegada y ya no se podrá pedir."
+        confirmLabel="Denegar"
+        onConfirm={confirmDenyRequest}
+        isPending={updateStatusMutation.isPending}
+      />
+      <ConfirmDialog
+        open={isCancelDialogOpen}
+        onOpenChange={setIsCancelDialogOpen}
+        title={`Cancelar la solicitud ${numeroAModificar}`}
+        description={
+          requestToModify?.status === "Ordered"
+            ? "Ya está pedida: avisa tú al proveedor para anular el pedido. LabFlow no le manda ningún correo."
+            : "Quedará como cancelada y saldrá de las solicitudes activas."
+        }
+        cancelLabel="No, mantener"
+        confirmLabel="Sí, cancelar"
+        onConfirm={confirmCancelRequest}
+        isPending={updateStatusMutation.isPending}
+      />
     </div>
   );
 };

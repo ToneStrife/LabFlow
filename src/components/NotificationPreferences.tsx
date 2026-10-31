@@ -146,12 +146,12 @@ const NotificationPreferences: React.FC<NotificationPreferencesProps> = ({ profi
           </div>
         )}
 
-        <h3 className="text-lg font-semibold">Gestión de Dispositivos Push</h3>
+        <h3 className="text-lg font-semibold">Gestión de dispositivos push</h3>
         <PushManagerButton />
         
         <Separator />
         
-        <h3 className="text-lg font-semibold">Preferencias de Notificación</h3>
+        <h3 className="text-lg font-semibold">Preferencias de notificación</h3>
         
         {/* Interruptor Maestro */}
         <div className="flex items-center justify-between border p-3 rounded-md bg-muted/50">

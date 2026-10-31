@@ -135,7 +135,7 @@ const InvoiceItemsDialog: React.FC<InvoiceItemsDialogProps> = ({
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className={cn(mobileDialogClass, "sm:max-w-[700px] flex flex-col")}>
         <DialogHeader>
-          <DialogTitle>Registrar Facturación</DialogTitle>
+          <DialogTitle>Registrar facturación</DialogTitle>
           <DialogDescription>Registra qué artículos se incluyen en esta factura.</DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -146,7 +146,7 @@ const InvoiceItemsDialog: React.FC<InvoiceItemsDialogProps> = ({
                 name="invoiceNumber"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Número de Factura</FormLabel>
+                    <FormLabel>Número de factura</FormLabel>
                     <FormControl><Input placeholder="ej. FAC-2024-001" {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
@@ -203,7 +203,7 @@ const InvoiceItemsDialog: React.FC<InvoiceItemsDialogProps> = ({
                 onClick={handleInvoiceAll}
                 className="w-full sm:w-auto"
               >
-                <CheckCheck className="mr-2 h-4 w-4" /> Facturar Todo lo Pendiente
+                <CheckCheck className="mr-2 h-4 w-4" /> Facturar todo lo pendiente
               </Button>
               <Button 
                 type="submit" 

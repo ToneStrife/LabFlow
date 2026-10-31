@@ -1,11 +1,11 @@
 import React from "react";
+import { formatFecha } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FileText, Loader2, Paperclip, PlusCircle, Trash2, Edit, RotateCcw, List, CheckSquare } from "lucide-react";
 import { usePackingSlips, useDeleteSlip, useReceivedItemsBySlip } from "@/hooks/use-packing-slips";
 import { generateSignedUrl } from "@/utils/supabase-storage";
 import { toast } from "sonner";
-import { format } from "date-fns";
 import SlipUploadButton from "../SlipUploadButton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { useRevertRequestReception, useRequests, SupabaseRequest } from "@/hooks/use-requests";
@@ -179,11 +179,11 @@ const PackingSlipsList: React.FC<PackingSlipsListProps> = ({ requestId, requestN
         
         // Invalida la consulta específica para que se recargue la lista
         queryClient.invalidateQueries({ queryKey: ['packingSlips', requestId] });
-        toast.success("Número de albarán actualizado exitosamente!", { id: loadingToastId });
+        toast.success("Número de albarán actualizado.", { id: loadingToastId });
         setIsEditSlipDialogOpen(false);
         setEditingSlip(null);
     } catch (e) {
-        toast.error("Fallo al actualizar el número de albarán.", { description: (e as Error).message, id: loadingToastId });
+        toast.error("No se pudo actualizar el número de albarán.", { description: (e as Error).message, id: loadingToastId });
     }
   };
   
@@ -200,7 +200,7 @@ const PackingSlipsList: React.FC<PackingSlipsListProps> = ({ requestId, requestN
   if (isLoading) {
     return (
       <Card>
-        <CardHeader><CardTitle className="text-lg">Albaranes de Recepción</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-lg">Albaranes de recepción</CardTitle></CardHeader>
         <CardContent className="flex justify-center items-center h-20">
           <Loader2 className="h-5 w-5 animate-spin mr-2" /> Cargando albaranes...
         </CardContent>
@@ -239,7 +239,7 @@ const PackingSlipsList: React.FC<PackingSlipsListProps> = ({ requestId, requestN
                         <RotateCcw className="h-4 w-4 mr-2" />
                     )}
                     <span className="sm:hidden">Revertir</span>
-                    <span className="hidden sm:inline">Revertir Recepción</span>
+                    <span className="hidden sm:inline">Revertir recepción</span>
                 </Button>
             )}
             <SlipUploadButton requestId={requestId} />
@@ -255,7 +255,7 @@ const PackingSlipsList: React.FC<PackingSlipsListProps> = ({ requestId, requestN
                     {formatSlipName(slip.slip_number, index)}
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    Recibido el {format(new Date(slip.received_at), 'yyyy-MM-dd')}
+                    Recibido el {formatFecha(slip.received_at)}
                   </span>
                 </div>
                 
@@ -265,7 +265,7 @@ const PackingSlipsList: React.FC<PackingSlipsListProps> = ({ requestId, requestN
                         variant="ghost"
                         size="icon"
                         onClick={() => handleViewSlipItems(slip)}
-                        title="Ver Artículos Recibidos"
+                        title="Ver artículos recibidos"
                         disabled={deleteSlipMutation.isPending || revertReceptionMutation.isPending}
                     >
                         <List className="h-4 w-4" />
@@ -276,7 +276,7 @@ const PackingSlipsList: React.FC<PackingSlipsListProps> = ({ requestId, requestN
                         variant="ghost"
                         size="icon"
                         onClick={() => handleEditSlipNumber(slip)}
-                        title="Editar Número de Albarán"
+                        title="Editar número de albarán"
                         disabled={deleteSlipMutation.isPending || revertReceptionMutation.isPending}
                     >
                         <Edit className="h-4 w-4" />
@@ -299,14 +299,14 @@ const PackingSlipsList: React.FC<PackingSlipsListProps> = ({ requestId, requestN
                         <span className="truncate">{getFileNameFromPath(slip.slip_url)}</span>
                       </Button>
                     ) : (
-                      <span className="text-sm text-muted-foreground">Sin Archivo</span>
+                      <span className="text-sm text-muted-foreground">Sin archivo</span>
                     )}
                     
                     <Button
                         variant="destructive"
                         size="icon"
                         onClick={() => handleDeleteClick(slip.id)}
-                        title="Eliminar Albarán"
+                        title="Eliminar albarán"
                         disabled={deleteSlipMutation.isPending || revertReceptionMutation.isPending}
                     >
                         <Trash2 className="h-4 w-4" />
@@ -326,9 +326,9 @@ const PackingSlipsList: React.FC<PackingSlipsListProps> = ({ requestId, requestN
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent className={cn(mobileDialogClass, "sm:max-w-[425px]")}>
           <DialogHeader>
-            <DialogTitle>Eliminar Albarán</DialogTitle>
+            <DialogTitle>Eliminar albarán</DialogTitle>
             <DialogDescription>
-              ¿Estás seguro de que deseas eliminar este albarán? Si la solicitud está en estado "Recibido" y tiene artículos asociados, debes usar la opción de Revertir Recepción. De lo contrario, se eliminará el registro.
+              ¿Estás seguro de que deseas eliminar este albarán? Si la solicitud está en estado «Recibida» y tiene artículos asociados, debes usar la opción de revertir recepción. De lo contrario, se eliminará el registro.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -346,13 +346,13 @@ const PackingSlipsList: React.FC<PackingSlipsListProps> = ({ requestId, requestN
       <Dialog open={isEditSlipDialogOpen} onOpenChange={setIsEditSlipDialogOpen}>
         <DialogContent className={cn(mobileDialogClass, "sm:max-w-[425px]")}>
           <DialogHeader>
-            <DialogTitle>Editar Número de Albarán</DialogTitle>
+            <DialogTitle>Editar número de albarán</DialogTitle>
             <DialogDescription>
               Actualiza el número de albarán para el registro seleccionado.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <Label htmlFor="newSlipNumber">Número de Albarán</Label>
+            <Label htmlFor="newSlipNumber">Número de albarán</Label>
             <Input
               id="newSlipNumber"
               value={newSlipNumber}

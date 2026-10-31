@@ -149,7 +149,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
           name="code"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Código Proyecto</FormLabel>
+              <FormLabel>Código proyecto</FormLabel>
               <FormControl>
                 <Input
                   placeholder="ej. ND-001"
@@ -292,9 +292,9 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando...
               </>
             ) : initialData ? (
-              "Guardar Cambios"
+              "Guardar cambios"
             ) : (
-              "Añadir Proyecto"
+              "Añadir proyecto"
             )}
           </Button>
         </div>

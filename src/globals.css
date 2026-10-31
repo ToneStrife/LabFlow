@@ -14,7 +14,7 @@
     --popover-foreground: 222.2 84% 4.9%;
 
     /* Primary: Azul más vibrante (ej. 217 91.2% 59.8% - un azul cian) */
-    --primary: 217.2 91.2% 59.8%;
+    --primary: 217.2 91.2% 53%;
     --primary-foreground: 210 40% 98%; /* Blanco */
 
     --secondary: 210 40% 96.1%;
@@ -43,7 +43,7 @@
     --sidebar-background: 222.2 47.4% 11.2%; /* Dark Blue/Navy */
     --sidebar-foreground: 210 40% 98%; /* Light text */
 
-    --sidebar-primary: 217.2 91.2% 59.8%; /* Primary Blue */
+    --sidebar-primary: 217.2 91.2% 53%; /* Primary Blue */
     --sidebar-primary-foreground: 210 40% 98%; /* Texto claro sobre el azul primario */
 
     --sidebar-accent: 222.2 47.4% 17.2%; /* Slightly lighter dark blue for hover */
