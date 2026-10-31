@@ -369,22 +369,6 @@ export const apiAddRequest = async (data: AddRequestData): Promise<SupabaseReque
     }
   }
 
-  // La función de la base a veces deja el pedido ya en "Quote Requested".
-  // Todo pedido nuevo empieza pendiente de presupuesto.
-  if (created?.id && created.status === "Quote Requested") {
-    const { data: corregida, error: errorEstado } = await supabase
-      .from("requests")
-      .update({ status: "Pending" })
-      .eq("id", created.id)
-      .select(`*, items:request_items (*)`)
-      .maybeSingle();
-    if (errorEstado) {
-      console.error("No se pudo dejar el pedido en pendiente de presupuesto:", errorEstado.message);
-    } else if (corregida) {
-      created = corregida as SupabaseRequest;
-    }
-  }
-
   try {
     const requester = await getRequesterProfile(requesterId);
     const requesterName = requester ? `${requester.first_name || ''} ${requester.last_name || ''}`.trim() : 'Alguien';
