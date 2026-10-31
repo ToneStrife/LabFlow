@@ -1,4 +1,5 @@
 import React from "react";
+import ErrorState from "@/components/ErrorState";
 import VendorTable from "@/components/VendorTable";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -114,9 +115,7 @@ const Vendors = () => {
 
   if (error) {
     return (
-      <div className="p-4 text-red-600 sm:p-6 dark:text-red-400">
-        Error al cargar proveedores: {error.message}
-      </div>
+<ErrorState que="los proveedores" error={error} />
     );
   }
 

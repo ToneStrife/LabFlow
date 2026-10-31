@@ -1,4 +1,5 @@
 import React from "react";
+import ErrorState from "@/components/ErrorState";
 import InventoryTable from "@/components/InventoryTable";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Loader2 } from "lucide-react";
@@ -89,16 +90,14 @@ const Inventory = () => {
   if (isLoading) {
     return (
       <div className="p-4 sm:p-6 flex justify-center items-center">
-        <Loader2 className="h-8 w-8 animate-spin mr-2" /> Cargando Inventario...
+        <Loader2 className="h-8 w-8 animate-spin mr-2" /> Cargando inventario...
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="p-4 sm:p-6 text-red-600 dark:text-red-400">
-        Error al cargar el inventario: {error.message}
-      </div>
+<ErrorState que="el inventario" error={error} />
     );
   }
 
@@ -121,7 +120,7 @@ const Inventory = () => {
           </DialogTrigger>
           <DialogContent className={cn(mobileDialogClass, "sm:max-w-[425px]")}>
             <DialogHeader>
-              <DialogTitle>Añadir Nuevo Artículo al Inventario</DialogTitle>
+              <DialogTitle>Añadir nuevo artículo al inventario</DialogTitle>
             </DialogHeader>
             <InventoryForm
               onSubmit={handleAddInventoryItem}
@@ -165,7 +164,7 @@ const Inventory = () => {
       <Dialog open={isEditInventoryDialogOpen} onOpenChange={setIsEditInventoryDialogOpen}>
         <DialogContent className={cn(mobileDialogClass, "sm:max-w-[425px]")}>
           <DialogHeader>
-            <DialogTitle>Editar Artículo de Inventario</DialogTitle>
+            <DialogTitle>Editar artículo de inventario</DialogTitle>
           </DialogHeader>
           {editingInventoryItem && (
             <InventoryForm

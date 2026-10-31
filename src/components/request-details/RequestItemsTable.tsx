@@ -1,4 +1,5 @@
 import React from "react";
+import { formatEuros } from "@/lib/format";
 import {
   Table,
   TableBody,
@@ -12,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Edit, Trash2, CheckCircle2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { SupabaseRequestItem } from "@/data/types";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import RequestItemForm, { ItemEditFormValues } from "./RequestItemForm";
 import { useUpdateRequestItem, useDeleteRequestItem } from "@/hooks/use-request-items";
 import { useAggregatedReceivedItems } from "@/hooks/use-packing-slips";
@@ -55,12 +57,26 @@ const RequestItemsTable: React.FC<RequestItemsTableProps> = ({ items, isEditable
     setEditingItem(undefined);
   };
 
-  const handleDeleteItem = async (itemId: string) => {
+  const [articuloABorrar, setArticuloABorrar] = React.useState<SupabaseRequestItem | null>(null);
+
+  const handleDeleteItem = (item: SupabaseRequestItem) => {
     if (items && items.length <= 1) {
-      toast.error("No se puede eliminar el último artículo.");
+      toast.error("No se puede quitar el último artículo.", {
+        description: "Si ya no hace falta nada, cancela la solicitud.",
+      });
       return;
     }
-    await deleteItemMutation.mutateAsync(itemId);
+    setArticuloABorrar(item);
+  };
+
+  const confirmDeleteItem = async () => {
+    if (!articuloABorrar) return;
+    try {
+      await deleteItemMutation.mutateAsync(articuloABorrar.id);
+    } catch {
+      return; // la mutación ya avisa del error
+    }
+    setArticuloABorrar(null);
   };
 
   if (!items || items.length === 0) return null;
@@ -78,7 +94,7 @@ const RequestItemsTable: React.FC<RequestItemsTableProps> = ({ items, isEditable
   return (
     <>
       <Separator />
-      <h2 className="text-lg sm:text-xl font-semibold mb-4">Artículos Solicitados</h2>
+      <h2 className="text-lg sm:text-xl font-semibold mb-4">Artículos solicitados</h2>
 
       {isMobile ? (
         <div className="space-y-3">
@@ -98,14 +114,14 @@ const RequestItemsTable: React.FC<RequestItemsTableProps> = ({ items, isEditable
                     Fac: {invoiced}
                   </Badge>
                 )}
-                <span>{item.unit_price ? `€${Number(item.unit_price).toFixed(2)}` : "N/A"}</span>
+                <span>{formatEuros(item.unit_price)}</span>
               </div>
               {isEditable && (
                 <div className="flex gap-2 pt-1">
                   <Button variant="outline" size="sm" className="flex-1" onClick={() => handleEditItem(item)}>
                     <Edit className="h-4 w-4 mr-2" /> Editar
                   </Button>
-                  <Button variant="outline" size="sm" className="text-red-500 dark:text-red-400" onClick={() => handleDeleteItem(item.id)}>
+                  <Button variant="outline" size="sm" className="text-red-500 dark:text-red-400" onClick={() => handleDeleteItem(item)} aria-label="Quitar artículo">
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
@@ -161,11 +177,11 @@ const RequestItemsTable: React.FC<RequestItemsTableProps> = ({ items, isEditable
                         </Badge>
                     </TableCell>
                   )}
-                  <TableCell>{item.unit_price ? `€${Number(item.unit_price).toFixed(2)}` : "N/A"}</TableCell>
+                  <TableCell>{formatEuros(item.unit_price)}</TableCell>
                   {isEditable && (
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" onClick={() => handleEditItem(item)} className="mr-1"><Edit className="h-4 w-4" /></Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDeleteItem(item.id)} className="text-red-500 dark:text-red-400"><Trash2 className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleEditItem(item)} className="mr-1" title="Editar artículo" aria-label="Editar artículo"><Edit className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleDeleteItem(item)} className="text-red-500 dark:text-red-400" title="Quitar artículo" aria-label="Quitar artículo"><Trash2 className="h-4 w-4" /></Button>
                     </TableCell>
                   )}
                 </TableRow>
@@ -176,9 +192,19 @@ const RequestItemsTable: React.FC<RequestItemsTableProps> = ({ items, isEditable
       </div>
       )}
 
+      <ConfirmDialog
+        open={Boolean(articuloABorrar)}
+        onOpenChange={(abierto) => !abierto && setArticuloABorrar(null)}
+        title="Quitar artículo"
+        description={`Se quita «${articuloABorrar?.product_name ?? ""}» de la solicitud.`}
+        confirmLabel="Quitar"
+        onConfirm={confirmDeleteItem}
+        isPending={deleteItemMutation.isPending}
+      />
+
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className={cn(mobileDialogClass, "sm:max-w-[600px]")}>
-          <DialogHeader><DialogTitle>Editar Artículo</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Editar artículo</DialogTitle></DialogHeader>
           {editingItem && <RequestItemForm initialData={editingItem} onSubmit={handleUpdateItem} onCancel={() => setIsEditDialogOpen(false)} isSubmitting={updateItemMutation.isPending} />}
         </DialogContent>
       </Dialog>

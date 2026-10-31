@@ -1,4 +1,5 @@
 import React from "react";
+import { formatFechaHora } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -6,7 +7,6 @@ import { SupabaseRequest, Address, Vendor, Profile, AccountManager, Project } fr
 import { useAccountManagers } from "@/hooks/use-account-managers";
 import { useProjects } from "@/hooks/use-projects";
 import { useShippingAddresses, useBillingAddresses } from "@/hooks/use-addresses";
-import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Edit, Loader2 } from "lucide-react";
 import { generateSignedUrl } from "@/utils/supabase-storage";
@@ -23,7 +23,7 @@ interface RequestSummaryCardProps {
 }
 
 const formatAddress = (address: Address | undefined) => {
-  if (!address) return "N/A";
+  if (!address) return "—";
   return (
     <div className="text-sm">
       <p className="font-medium">{address.name}</p>
@@ -48,9 +48,9 @@ const RequestSummaryCard: React.FC<RequestSummaryCardProps> = ({ request, vendor
   };
 
   const getAccountManagerName = (managerId: string | null) => {
-    if (!managerId) return "N/A";
+    if (!managerId) return "—";
     const manager = accountManagers?.find(am => am.id === managerId); // Buscar en la nueva lista de Account Managers
-    return manager ? `${manager.first_name} ${manager.last_name}` : "N/A";
+    return manager ? `${manager.first_name} ${manager.last_name}` : "—";
   };
 
   const handleViewQuote = async () => {
@@ -73,28 +73,27 @@ const RequestSummaryCard: React.FC<RequestSummaryCardProps> = ({ request, vendor
   const projectCodesDisplay = request.project_codes?.map(projectId => {
     const project = projects?.find(p => p.id === projectId); // Buscar en la nueva lista de Proyectos
     return project ? project.code : projectId;
-  }).join(", ") || "N/A";
+  }).join(", ") || "—";
 
-  const dateSubmitted = format(new Date(request.created_at), 'yyyy-MM-dd HH:mm');
+  const dateSubmitted = formatFechaHora(request.created_at);
   
   const shippingAddress = shippingAddresses?.find(a => a.id === request.shipping_address_id);
   const billingAddress = billingAddresses?.find(a => a.id === request.billing_address_id);
   
-  const displayRequestNumber = request.request_number || `ID: ${request.id.substring(0, 8)}`;
-
   return (
     <Card>
       <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between space-y-0 pb-2">
-        <CardTitle className="text-lg sm:text-2xl font-bold flex flex-col items-start min-w-0">
-          <span className="text-base font-semibold text-muted-foreground">Solicitud {displayRequestNumber}</span>
-          <span>{vendor?.name || "N/A"}</span>
+        {/* El número ya está en el título de la página; aquí basta el proveedor. */}
+        <CardTitle className="text-lg sm:text-2xl font-bold min-w-0">
+          <span className="block text-sm font-medium text-muted-foreground">Proveedor</span>
+          {vendor?.name || "—"}
         </CardTitle>
         <div className="flex items-center space-x-2">
           <Badge variant="outline" className={getRequestStatusBadgeClass(request.status)}>
             {getRequestStatusLabel(request.status)}
           </Badge>
           {isEditable && (
-            <Button variant="outline" size="icon" onClick={onEditDetails} title="Editar Detalles de la Solicitud">
+            <Button variant="outline" size="icon" onClick={onEditDetails} title="Editar detalles de la solicitud" aria-label="Editar detalles de la solicitud">
               <Edit className="h-4 w-4" />
             </Button>
           )}
@@ -107,11 +106,11 @@ const RequestSummaryCard: React.FC<RequestSummaryCardProps> = ({ request, vendor
             <p className="font-medium">{requesterName}</p>
           </div>
           <div>
-            <p className="text-sm text-muted-foreground">Gerente de Cuenta</p>
+            <p className="text-sm text-muted-foreground">Gerente de cuenta</p>
             <p className="font-medium">{accountManagerName}</p>
           </div>
           <div>
-            <p className="text-sm text-muted-foreground">Códigos de Proyecto</p>
+            <p className="text-sm text-muted-foreground">Códigos de proyecto</p>
             <p className="font-medium">{projectCodesDisplay}</p>
           </div>
         </div>
@@ -120,11 +119,11 @@ const RequestSummaryCard: React.FC<RequestSummaryCardProps> = ({ request, vendor
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <p className="text-sm text-muted-foreground mb-1">Dirección de Envío</p>
+            <p className="text-sm text-muted-foreground mb-1">Dirección de envío</p>
             {formatAddress(shippingAddress)}
           </div>
           <div>
-            <p className="text-sm text-muted-foreground mb-1">Dirección de Facturación</p>
+            <p className="text-sm text-muted-foreground mb-1">Dirección de facturación</p>
             {formatAddress(billingAddress)}
           </div>
         </div>
@@ -133,7 +132,7 @@ const RequestSummaryCard: React.FC<RequestSummaryCardProps> = ({ request, vendor
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
           <div>
-            <p className="text-sm text-muted-foreground">Fecha de Envío</p>
+            <p className="text-sm text-muted-foreground">Fecha de envío</p>
             <p className="font-medium">{dateSubmitted}</p>
           </div>
           <div>
@@ -153,12 +152,12 @@ const RequestSummaryCard: React.FC<RequestSummaryCardProps> = ({ request, vendor
                     "Ver presupuesto"
                   )}
                 </Button>
-              ) : "N/A"}
+              ) : "—"}
             </p>
           </div>
           <div>
             <p className="text-sm text-muted-foreground">Número de PO</p>
-            <p className="font-medium">{request.po_number || "N/A"}</p>
+            <p className="font-medium">{request.po_number || "—"}</p>
           </div>
         </div>
 

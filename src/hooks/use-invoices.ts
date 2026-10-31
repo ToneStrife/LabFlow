@@ -106,7 +106,7 @@ export const useInvoiceItems = () => {
         .select()
         .single();
 
-      if (invoiceError) throw new Error(`Fallo al crear factura: ${invoiceError.message}`);
+      if (invoiceError) throw new Error(`No se pudo crear la factura: ${invoiceError.message}`);
 
       // 3. Insertar Ítems Facturados
       const invoicedItemInserts = items.map(item => ({
@@ -119,7 +119,7 @@ export const useInvoiceItems = () => {
         .from('invoiced_items')
         .insert(invoicedItemInserts);
 
-      if (itemsError) throw new Error(`Fallo al insertar ítems facturados: ${itemsError.message}`);
+      if (itemsError) throw new Error(`No se pudieron guardar los artículos facturados: ${itemsError.message}`);
 
       return newInvoice;
     },
@@ -127,10 +127,10 @@ export const useInvoiceItems = () => {
       queryClient.invalidateQueries({ queryKey: ['invoices', newInvoice.request_id] });
       queryClient.invalidateQueries({ queryKey: ['aggregatedInvoicedItems', newInvoice.request_id] });
       invalidateRequestEvents(queryClient);
-      toast.success(`Factura ${newInvoice.invoice_number} registrada exitosamente.`);
+      toast.success(`Factura ${newInvoice.invoice_number} registrada.`);
     },
     onError: (error) => {
-      toast.error("Fallo al registrar la facturación.", { description: error.message });
+      toast.error("No se pudo registrar la facturación.", { description: error.message });
     },
   });
 };
@@ -157,7 +157,7 @@ export const useDeleteInvoice = () => {
             toast.success("Factura eliminada.");
         },
         onError: (error) => {
-            toast.error("Fallo al eliminar factura.", { description: error.message });
+            toast.error("No se pudo eliminar la factura.", { description: error.message });
         }
     });
 };

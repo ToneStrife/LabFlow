@@ -1,4 +1,5 @@
 import React from "react";
+import ErrorState from "@/components/ErrorState";
 import { usePendingInvoices } from "@/hooks/use-pending-invoices";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +12,7 @@ import { useShippingAddresses } from "@/hooks/use-addresses";
 import { filterRequestsBySede, getSedeLabel } from "@/lib/sedes";
 import { useClientPagination } from "@/hooks/use-client-pagination";
 import ListPagination from "@/components/ListPagination";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const compactTable = "[&_th]:h-9 [&_th]:px-3 [&_td]:px-3 [&_td]:py-2";
 
@@ -19,6 +21,7 @@ const PendingInvoicesList: React.FC = () => {
   const { data: requests, isLoading: isLoadingRequests } = useRequests();
   const { data: shippingAddresses, isLoading: isLoadingShipping } = useShippingAddresses();
   const { sedeActiva } = useSedeActiva();
+  const isMobile = useIsMobile();
 
   const invoicesForSede = React.useMemo(() => {
     const requestIds = new Set(
@@ -43,19 +46,19 @@ const PendingInvoicesList: React.FC = () => {
   }
 
   if (error) {
-    return <div className="text-red-500 dark:text-red-400 p-4">Error: {error.message}</div>;
+    return <ErrorState que="los artículos sin factura" error={error} />;
   }
 
   const emptyMessage =
     sedeActiva && totalSinFiltrar > 0
       ? `No hay artículos sin factura en ${getSedeLabel(sedeActiva)}. Hay ${totalSinFiltrar} en otras sedes o sin sede asignada.`
-      : "¡Excelente! Todos los artículos pedidos están correctamente facturados.";
+      : "Todo lo recibido tiene ya su factura.";
 
   return (
     <Card className="overflow-hidden shadow-sm border-sky-200 dark:border-sky-900/70">
       <CardHeader className="bg-sky-50/70 dark:bg-sky-950/30 border-b border-sky-200/60 dark:border-sky-900/50 py-3">
         <CardTitle className="text-lg flex items-center text-sky-800 dark:text-sky-300">
-          <CreditCard className="mr-2 h-5 w-5" /> Artículos Pendientes de Facturar
+          <CreditCard className="mr-2 h-5 w-5" /> Artículos sin factura
           {invoicesForSede.length > 0 && (
             <span className="ml-2 text-sm font-normal text-sky-700/80 dark:text-sky-400/80">
               ({invoicesForSede.length})
@@ -64,6 +67,30 @@ const PendingInvoicesList: React.FC = () => {
         </CardTitle>
       </CardHeader>
       <CardContent className="p-0">
+        {isMobile ? (
+          pagination.pageItems.length === 0 ? (
+            <p className="p-6 text-center text-sm text-muted-foreground">{emptyMessage}</p>
+          ) : (
+            <ul className="space-y-2 p-3">
+              {pagination.pageItems.map((item) => (
+                <li key={item.requestItemId}>
+                  <Link
+                    to={`/requests/${item.requestId}`}
+                    className="block rounded-md border bg-card px-3 py-2 hover:bg-muted/40"
+                  >
+                    <p className="font-medium text-sm leading-snug">{item.productName}</p>
+                    <div className="mt-1 flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                      <span className="truncate">#{item.requestNumber} · {item.vendorName}</span>
+                      <span className="shrink-0">
+                        Facturado {item.quantityInvoiced}/{item.quantityOrdered}
+                      </span>
+                    </div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )
+        ) : (
         <div className="overflow-x-auto">
           <Table className={compactTable}>
             <TableHeader>
@@ -107,7 +134,7 @@ const PendingInvoicesList: React.FC = () => {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Link to={`/requests/${item.requestId}`} title="Ver Solicitud y Registrar Factura">
+                      <Link to={`/requests/${item.requestId}`} title="Ver solicitud y registrar factura">
                         <ArrowRight className="h-4 w-4 text-muted-foreground hover:text-primary" />
                       </Link>
                     </TableCell>
@@ -117,6 +144,7 @@ const PendingInvoicesList: React.FC = () => {
             </TableBody>
           </Table>
         </div>
+        )}
         <ListPagination
           page={pagination.page}
           pageCount={pagination.pageCount}

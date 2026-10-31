@@ -21,7 +21,7 @@ import {
   canReceivePackages,
   isRequestAuthor,
 } from "@/lib/permissions";
-import { AccionSolicitud, accionesDeSolicitud } from "@/lib/request-actions";
+import { AccionSolicitud, accionesDeSolicitud, siguientePaso } from "@/lib/request-actions";
 
 interface RequestActionsProps {
   request: SupabaseRequest;
@@ -66,16 +66,18 @@ const RequestActions: React.FC<RequestActionsProps> = ({
   };
   const daElPo = canGivePurchaseOrder(approvalCtx);
 
+  const paso = siguientePaso(request);
+
   if (request.status === "Received") {
     return (
       <p className="text-sm text-green-600 dark:text-green-400 font-medium flex items-center">
-        <CheckCircle className="mr-2 h-4 w-4" /> Solicitud completada y recibida.
+        <CheckCircle className="mr-2 h-4 w-4" /> {paso}
       </p>
     );
   }
 
   if (request.status === "Denied" || request.status === "Cancelled") {
-    return null;
+    return <p className="text-sm text-muted-foreground">{paso}</p>;
   }
 
   const acciones = accionesDeSolicitud(request, {
@@ -101,16 +103,14 @@ const RequestActions: React.FC<RequestActionsProps> = ({
     "cancelar": { icono: XCircle, texto: "Cancelar solicitud", onClick: openCancelRequestDialog },
   };
 
-  if (acciones.length === 0) {
-    return (
-      <p className="text-sm text-muted-foreground italic">
-        No tienes acciones en esta solicitud.
-      </p>
-    );
-  }
-
   return (
     <div className="flex flex-col space-y-2">
+      <p className="text-sm text-muted-foreground pb-1">{paso}</p>
+      {acciones.length === 0 && (
+        <p className="text-sm text-muted-foreground italic">
+          Ahora mismo no te toca hacer nada en esta solicitud.
+        </p>
+      )}
       {acciones.map((accion, i) => {
         const { icono: Icono, texto, onClick } = boton[accion];
         const destructiva = accion === "denegar" || accion === "cancelar";

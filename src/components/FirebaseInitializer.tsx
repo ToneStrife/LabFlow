@@ -71,7 +71,7 @@ const FirebaseInitializer: React.FC = () => {
           {
             description: esErrorDeFirebase
               ? "No se pudo arrancar la mensajeria. Revisa la configuracion de Firebase."
-              : "Fallo al obtener el registro del Service Worker.",
+              : "No se pudo obtener el registro del Service Worker.",
           }
         );
       }

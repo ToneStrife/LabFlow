@@ -144,11 +144,16 @@ const EmailDialog: React.FC<EmailDialogProps> = ({
       return;
     }
 
-    await onSend({
-      ...data,
-      body,
-      attachments: storageAttachments,
-    });
+    try {
+      await onSend({
+        ...data,
+        body,
+        attachments: storageAttachments,
+      });
+    } catch {
+      // Quien envía ya avisa del fallo; el formulario conserva lo escrito.
+      return;
+    }
     form.reset();
     attachmentsForSendRef.current = [];
     composeApiRef.current = null;

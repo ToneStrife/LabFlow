@@ -730,7 +730,7 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
                                   </FormLabel>
                                   <FormControl>
                                     <Input
-                                      placeholder="ej. Nevera 2 / Estantería B"
+                                      placeholder="ej. Nevera 2 / estantería B"
                                       {...locationField}
                                       value={locationField.value || ""}
                                       onChange={(e) =>

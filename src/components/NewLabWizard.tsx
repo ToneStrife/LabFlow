@@ -327,7 +327,7 @@ const NewLabWizard: React.FC<NewLabWizardProps> = ({ onCreated, onCancel }) => {
         <div className="space-y-4">
           <div className="flex flex-wrap gap-2">
             <Button type="button" variant="outline" size="sm" onClick={() => applyTemplate("farmacia")}>
-              Plantilla: Solo Farmacia
+              Plantilla: solo Farmacia
             </Button>
             <Button
               type="button"

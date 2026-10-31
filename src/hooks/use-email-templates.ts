@@ -26,12 +26,12 @@ export const useUpdateEmailTemplate = () => {
         .single();
 
       if (error) {
-        throw new Error(`Fallo al actualizar plantilla: ${error.message}`);
+        throw new Error(`No se pudo actualizar la plantilla: ${error.message}`);
       }
       return updatedData as EmailTemplate;
     },
     onSuccess: (data) => {
-      toast.success(`Plantilla "${data.template_name}" actualizada exitosamente!`);
+      toast.success(`Plantilla "${data.template_name}" actualizada.`);
       queryClient.invalidateQueries({ queryKey: ['email_templates'] });
     },
     onError: (error) => {

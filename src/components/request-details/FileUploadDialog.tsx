@@ -135,9 +135,9 @@ const FileUploadDialog: React.FC<FileUploadDialogProps> = ({
 
   const getTitle = () =>
     fileType === "quote" ? "Subir presupuesto"
-    : fileType === "po"   ? "Subir Archivo de Orden de Compra"
-    : fileType === "slip" ? "Subir Albarán"
-    : "Subir Archivo";
+    : fileType === "po"   ? "Subir orden de compra"
+    : fileType === "slip" ? "Subir albarán"
+    : "Subir archivo";
 
   const getFileLabel = () =>
     fileType === "quote" ? "Archivo de presupuesto (obligatorio)"

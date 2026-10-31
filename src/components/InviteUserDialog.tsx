@@ -95,7 +95,7 @@ const InviteUserDialog: React.FC<InviteUserDialogProps> = ({ onSubmit, onCancel,
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Enviando...
               </>
             ) : (
-              "Enviar Invitación"
+              "Enviar invitación"
             )}
           </Button>
         </div>

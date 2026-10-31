@@ -63,16 +63,17 @@ const Historial = () => {
     resetKey: `${busqueda}|${tipo}`,
   });
 
+  const eventosPagina = pagination.pageItems;
   const grupos = React.useMemo(() => {
-    const map = new Map<string, typeof pagination.pageItems>();
-    for (const evento of pagination.pageItems) {
+    const map = new Map<string, typeof eventosPagina>();
+    for (const evento of eventosPagina) {
       const clave = startOfDay(new Date(evento.created_at)).toISOString();
       const lista = map.get(clave) ?? [];
       lista.push(evento);
       map.set(clave, lista);
     }
     return [...map.entries()];
-  }, [pagination.pageItems]);
+  }, [eventosPagina]);
 
   const conteos = React.useMemo(() => {
     const c: Record<string, number> = { todos: actividad.length };

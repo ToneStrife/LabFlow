@@ -1,11 +1,12 @@
 import React from "react";
+import { formatFecha } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FileText, Loader2, Paperclip, PlusCircle, Trash2 } from "lucide-react";
 import { useInvoices, useDeleteInvoice } from "@/hooks/use-invoices";
 import { generateSignedUrl } from "@/utils/supabase-storage";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import ConfirmDialog from "@/components/ConfirmDialog";
 
 interface InvoicesListProps {
   requestId: string;
@@ -16,6 +17,8 @@ const InvoicesList: React.FC<InvoicesListProps> = ({ requestId, onOpenInvoiceDia
   const { data: invoices, isLoading } = useInvoices(requestId);
   const deleteInvoiceMutation = useDeleteInvoice();
   const [isGenerating, setIsGenerating] = React.useState<string | null>(null);
+  const [facturaABorrar, setFacturaABorrar] = React.useState<string | null>(null);
+  const numeroABorrar = invoices?.find((inv) => inv.id === facturaABorrar)?.invoice_number;
 
   const handleViewClick = async (filePath: string) => {
     setIsGenerating(filePath);
@@ -31,7 +34,7 @@ const InvoicesList: React.FC<InvoicesListProps> = ({ requestId, onOpenInvoiceDia
       <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between space-y-0 pb-2">
         <CardTitle className="text-lg">Facturas</CardTitle>
         <Button variant="outline" size="sm" onClick={onOpenInvoiceDialog} className="w-full sm:w-auto shrink-0">
-          <PlusCircle className="mr-2 h-4 w-4" /> Registrar Factura
+          <PlusCircle className="mr-2 h-4 w-4" /> Registrar factura
         </Button>
       </CardHeader>
       <CardContent className="p-0">
@@ -41,7 +44,7 @@ const InvoicesList: React.FC<InvoicesListProps> = ({ requestId, onOpenInvoiceDia
               <div key={inv.id} className="flex flex-col gap-2 p-3 hover:bg-muted/50 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex flex-col min-w-0">
                   <span className="font-medium truncate">Factura: {inv.invoice_number}</span>
-                  <span className="text-xs text-muted-foreground">{format(new Date(inv.invoiced_at), 'yyyy-MM-dd')}</span>
+                  <span className="text-xs text-muted-foreground">{formatFecha(inv.invoiced_at)}</span>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   {inv.invoice_url && (
@@ -56,7 +59,7 @@ const InvoicesList: React.FC<InvoicesListProps> = ({ requestId, onOpenInvoiceDia
                       Ver PDF
                     </Button>
                   )}
-                  <Button variant="ghost" size="icon" onClick={() => deleteInvoiceMutation.mutate(inv.id)} className="text-red-500 dark:text-red-400 h-8 w-8">
+                  <Button variant="ghost" size="icon" onClick={() => setFacturaABorrar(inv.id)} title="Eliminar factura" aria-label="Eliminar factura" className="text-red-500 dark:text-red-400 h-8 w-8">
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
@@ -67,6 +70,17 @@ const InvoicesList: React.FC<InvoicesListProps> = ({ requestId, onOpenInvoiceDia
           <p className="text-muted-foreground text-center py-4 text-sm">No hay facturas registradas.</p>
         )}
       </CardContent>
+      <ConfirmDialog
+        open={Boolean(facturaABorrar)}
+        onOpenChange={(abierto) => !abierto && setFacturaABorrar(null)}
+        title={`Eliminar la factura ${numeroABorrar ?? ""}`.trim()}
+        description="Los artículos que cubría vuelven a quedar pendientes de facturar."
+        confirmLabel="Eliminar"
+        onConfirm={() => {
+          if (facturaABorrar) deleteInvoiceMutation.mutate(facturaABorrar, { onSettled: () => setFacturaABorrar(null) });
+        }}
+        isPending={deleteInvoiceMutation.isPending}
+      />
     </Card>
   );
 };

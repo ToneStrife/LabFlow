@@ -73,7 +73,7 @@ const ExpenditureForm: React.FC<ExpenditureFormProps> = ({ initialData, onSubmit
           name="project_id"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Proyecto / Centro de Costo</FormLabel>
+              <FormLabel>Proyecto / centro de costo</FormLabel>
               <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingProjects || isSubmitting}>
                 <FormControl>
                   <SelectTrigger>
@@ -116,7 +116,7 @@ const ExpenditureForm: React.FC<ExpenditureFormProps> = ({ initialData, onSubmit
             name="date_incurred"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Fecha del Gasto</FormLabel>
+                <FormLabel>Fecha del gasto</FormLabel>
                 <FormControl>
                   <Input type="date" {...field} disabled={isSubmitting} />
                 </FormControl>
@@ -156,7 +156,7 @@ const ExpenditureForm: React.FC<ExpenditureFormProps> = ({ initialData, onSubmit
                 </FormControl>
                 <SelectContent>
                   {/* Usamos un valor de cadena no vacía para representar null */}
-                  <SelectItem value="null-request">Sin Solicitud</SelectItem>
+                  <SelectItem value="null-request">Sin solicitud</SelectItem>
                   {requests?.map((req) => (
                     <SelectItem key={req.id} value={req.id}>
                       {req.request_number || req.id.substring(0, 8)} ({req.status})
@@ -180,7 +180,7 @@ const ExpenditureForm: React.FC<ExpenditureFormProps> = ({ initialData, onSubmit
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando...
               </>
             ) : (
-              initialData ? "Guardar Cambios" : "Registrar Gasto"
+              initialData ? "Guardar cambios" : "Registrar gasto"
             )}
           </Button>
         </div>

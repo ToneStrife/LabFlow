@@ -71,7 +71,7 @@ const SlipUploadButton: React.FC<SlipUploadButtonProps> = ({ requestId }) => {
           </>
         ) : (
           <>
-            <Upload className="h-4 w-4 mr-2" /> Subir Albarán
+            <Upload className="h-4 w-4 mr-2" /> Subir albarán
           </>
         )}
       </Button>

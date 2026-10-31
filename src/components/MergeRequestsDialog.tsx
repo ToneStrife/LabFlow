@@ -54,7 +54,7 @@ const useMergeRequests = () => {
         .eq('request_id', sourceId);
 
       if (updateError) {
-        throw new Error(`Fallo al mover ítems: ${updateError.message}`);
+        throw new Error(`No se pudieron mover los artículos: ${updateError.message}`);
       }
 
       // 2. Eliminar la solicitud de origen (esto también eliminará los ítems si la FK no se actualizó correctamente, pero ya lo hicimos manualmente)
@@ -64,12 +64,12 @@ const useMergeRequests = () => {
     },
     onSuccess: ({ targetId }) => {
       queryClient.invalidateQueries({ queryKey: ['requests'] });
-      toast.success("Solicitudes fusionadas exitosamente!", {
+      toast.success("Solicitudes fusionadas.", {
         description: `Los ítems se movieron a la Solicitud ${targetId.substring(0, 8)}.`,
       });
     },
     onError: (error) => {
-      toast.error("Fallo al fusionar solicitudes.", {
+      toast.error("No se pudieron fusionar las solicitudes.", {
         description: error.message,
       });
     },
@@ -106,9 +106,9 @@ const MergeRequestsDialog: React.FC<MergeRequestsDialogProps> = ({
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className={cn(mobileDialogClass, "sm:max-w-[425px]")}>
         <DialogHeader>
-          <DialogTitle>Fusionar Solicitudes</DialogTitle>
+          <DialogTitle>Fusionar solicitudes</DialogTitle>
           <DialogDescription>
-            Mover todos los artículos de la Solicitud <span className="font-bold text-primary">{sourceRequestNumber}</span> a otra solicitud del mismo proveedor.
+            Mover todos los artículos de la solicitud <span className="font-bold text-primary">{sourceRequestNumber}</span> a otra solicitud del mismo proveedor.
           </DialogDescription>
         </DialogHeader>
         
@@ -122,7 +122,7 @@ const MergeRequestsDialog: React.FC<MergeRequestsDialogProps> = ({
                   name="targetRequestId"
                   render={({ field }) => (
                     <FormItem className="flex-1">
-                      <FormLabel>Solicitud de Destino</FormLabel>
+                      <FormLabel>Solicitud de destino</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting}>
                         <FormControl>
                           <SelectTrigger>

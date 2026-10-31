@@ -113,12 +113,12 @@ const FileRow: React.FC<FileRowProps> = ({ label, filePath, fileType, onUploadCl
             </Button>
             
             {/* Botón de Reemplazar/Subir como icono */}
-            <Button variant="outline" size="icon" onClick={actionHandler} title="Reemplazar Archivo" className="h-8 w-8 flex-shrink-0" disabled={buttonDisabled}>
+            <Button variant="outline" size="icon" onClick={actionHandler} title="Reemplazar archivo" aria-label="Reemplazar archivo" className="h-8 w-8 flex-shrink-0" disabled={buttonDisabled}>
               {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
             </Button>
           </>
         ) : (
-          <Button variant="outline" size="sm" onClick={actionHandler} title="Subir Archivo" className="h-8 px-3 text-sm" disabled={buttonDisabled}>
+          <Button variant="outline" size="sm" onClick={actionHandler} title="Subir archivo" className="h-8 px-3 text-sm" disabled={buttonDisabled}>
             {isUploading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Upload className="h-4 w-4 mr-2" />}
             Subir
           </Button>
@@ -151,7 +151,7 @@ const RequestFilesCard: React.FC<RequestFilesCardProps> = ({ request, onUploadCl
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg">Archivos Adjuntos</CardTitle>
+        <CardTitle className="text-lg">Archivos adjuntos</CardTitle>
       </CardHeader>
       <CardContent className="p-0">
         <FileRow 

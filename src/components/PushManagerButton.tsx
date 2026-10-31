@@ -75,7 +75,7 @@ const PushManagerButton: React.FC = () => {
   if (sessionLoading || isLoading) {
     return (
       <Button disabled className="w-full">
-        <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Cargando Notificaciones...
+        <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Cargando notificaciones...
       </Button>
     );
   }
@@ -89,11 +89,11 @@ const PushManagerButton: React.FC = () => {
     >
       {isSubscribed ? (
         <>
-          <BellOff className="mr-2 h-4 w-4" /> Desactivar Notificaciones
+          <BellOff className="mr-2 h-4 w-4" /> Desactivar notificaciones
         </>
       ) : (
         <>
-          <Bell className="mr-2 h-4 w-4" /> Activar Notificaciones
+          <Bell className="mr-2 h-4 w-4" /> Activar notificaciones
         </>
       )}
     </Button>

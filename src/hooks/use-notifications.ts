@@ -27,7 +27,7 @@ export const useSendNotification = () => {
 
       if (error) {
         console.error("Error invoking send-notification:", error);
-        let errorMessage = 'Fallo al invocar la función Edge.';
+        let errorMessage = 'No se pudo contactar con el servidor.';
         if (data && typeof data === 'object' && 'error' in data) {
             errorMessage = (data as any).error;
         } else if (error.message) {
@@ -44,7 +44,7 @@ export const useSendNotification = () => {
       
       // Si todos fallaron, lanzamos un error
       if (totalAttempts > 0 && successCount === 0) {
-          throw new Error(`Fallo al enviar a todos los ${totalAttempts} tokens.`);
+          throw new Error(`No se pudo enviar a ninguno de los ${totalAttempts} dispositivos.`);
       }
       
       // Devolvemos el conteo para usarlo en onSuccess
@@ -54,7 +54,7 @@ export const useSendNotification = () => {
       const { totalAttempts, successCount, failedCount } = data;
       
       if (successCount > 0) {
-        toast.success('Notificación enviada exitosamente!', {
+        toast.success('Notificación enviada.', {
           description: `Enviada a ${successCount} de ${totalAttempts} tokens. ${failedCount > 0 ? `(${failedCount} fallos limpiados)` : ''}`,
         });
       } else {
@@ -65,7 +65,7 @@ export const useSendNotification = () => {
       }
     },
     onError: (error) => {
-      toast.error('Fallo al enviar la notificación.', {
+      toast.error('No se pudo enviar la notificación.', {
         description: error.message,
       });
     },

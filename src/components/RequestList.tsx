@@ -1,32 +1,26 @@
 import React from "react";
+import ErrorState from "@/components/ErrorState";
 import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { RequestStatus, SupabaseRequest, Vendor, Profile, AccountManager, Project, ShippingAddress, BillingAddress } from "@/data/types";
-import { useRequests, useUpdateRequestStatus, useSendEmail } from "@/hooks/use-requests";
+import { useRequests, useUpdateRequestStatus } from "@/hooks/use-requests";
+import { useRequestEmails } from "@/hooks/use-request-emails";
 import { useVendors } from "@/hooks/use-vendors";
 import { useAllProfiles, getFullName } from "@/hooks/use-profiles";
 import { useAccountManagers } from "@/hooks/use-account-managers";
-import EmailDialog, { EmailFormValues } from "@/components/EmailDialog";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+import EmailDialog from "@/components/EmailDialog";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import RequestListToolbar from "@/components/request-list/RequestListToolbar";
 import RequestListTable from "@/components/request-list/RequestListTable";
 import { toast } from "sonner";
-import { buildStorageAttachment, normalizeAttachments } from "@/utils/email-attachments";
 import { useSession } from "@/components/SessionContextProvider";
 import { useProjects } from "@/hooks/use-projects";
 import { useEmailTemplates } from "@/hooks/use-email-templates";
-import { processNamedEmailTemplate } from "@/utils/email-templating";
 import MergeRequestsDialog from "@/components/MergeRequestsDialog";
 import { useShippingAddresses, useBillingAddresses } from "@/hooks/use-addresses";
-import { cn } from "@/lib/utils";
-import { mobileDialogClass, dialogFooterMobileClass } from "@/lib/layout";
 import { useReceiveWizard } from "@/components/ReceiveWizardProvider";
 import { useSedeActiva } from "@/components/SedeContextProvider";
 import { requestMatchesSede } from "@/lib/sedes";
-import { camposCorreoConGestor, correoSiGestorLab } from "@/lib/farmacia";
-import { pickEmailTemplate } from "@/lib/email-templates";
-import { useLabsCatalog } from "@/components/LabsCatalogProvider";
 
 // Definir el orden de prioridad de los estados
 // Los números más bajos van ARRIBA (mayor prioridad de acción)
@@ -50,18 +44,17 @@ const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
   const navigate = useNavigate();
   const { session, profile } = useSession();
   const { sedeActiva } = useSedeActiva();
-  const { memberships } = useLabsCatalog();
   const { data: requests, isLoading: isLoadingRequests, error: requestsError } = useRequests();
   const { data: vendors, isLoading: isLoadingVendors } = useVendors();
   const { data: profiles, isLoading: isLoadingProfiles } = useAllProfiles();
   const { data: accountManagers, isLoading: isLoadingAccountManagers } = useAccountManagers();
-  const { data: projects, isLoading: isLoadingProjects } = useProjects();
-  const { data: emailTemplates, isLoading: isLoadingEmailTemplates } = useEmailTemplates();
+  const { isLoading: isLoadingProjects } = useProjects();
+  const { isLoading: isLoadingEmailTemplates } = useEmailTemplates();
   const { data: shippingAddresses, isLoading: isLoadingShippingAddresses } = useShippingAddresses();
-  const { data: billingAddresses, isLoading: isLoadingBillingAddresses } = useBillingAddresses();
+  const { isLoading: isLoadingBillingAddresses } = useBillingAddresses();
 
   const updateStatusMutation = useUpdateRequestStatus();
-  const sendEmailMutation = useSendEmail();
+  const correos = useRequestEmails();
   const { openReceive } = useReceiveWizard();
 
   const [searchTerm, setSearchTerm] = React.useState<string>("");
@@ -73,13 +66,6 @@ const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
     setFilterStatus(estadoInicial);
   }, [estadoInicial]);
 
-  const [isEmailDialogOpen, setIsEmailDialogOpen] = React.useState(false);
-  const [emailInitialData, setEmailInitialData] = React.useState<Partial<EmailFormValues>>({});
-  const [pendingStatusOnEmailSend, setPendingStatusOnEmailSend] = React.useState<{
-    requestId: string;
-    status: RequestStatus;
-  } | null>(null);
-  
   const [isDenyDialogOpen, setIsDenyDialogOpen] = React.useState(false);
   const [isCancelDialogOpen, setIsCancelDialogOpen] = React.useState(false);
   const [requestToModify, setRequestToModify] = React.useState<SupabaseRequest | null>(null);
@@ -93,118 +79,9 @@ const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
   };
 
   const getAccountManagerName = (managerId: string | null) => {
-    if (!managerId) return "N/A";
+    if (!managerId) return "—";
     const manager = accountManagers?.find(am => am.id === managerId);
-    return manager ? `${manager.first_name} ${manager.last_name}` : "N/A";
-  };
-
-  const getVendorQuoteEmail = (vendorId: string) => {
-    const vendor = vendors?.find((v) => v.id === vendorId);
-    return (vendor?.email_presupuesto || vendor?.email || "").trim();
-  };
-
-  const getAccountManagerEmail = (managerId: string | null) => {
-    return accountManagers?.find(am => am.id === managerId)?.email || "";
-  };
-
-  const correoGestor = (request: SupabaseRequest) =>
-    correoSiGestorLab({
-      shippingAddressId: request.shipping_address_id,
-      addresses: shippingAddresses,
-      requesterId: request.requester_id,
-      actorId: profile?.id,
-      personas: profiles,
-      labId: request.lab_id,
-      requestSedeId: request.sede_id,
-      memberships,
-    });
-
-  const handleEmailDialogOpenChange = (open: boolean) => {
-    setIsEmailDialogOpen(open);
-    if (!open) setPendingStatusOnEmailSend(null);
-  };
-
-  const handleSendEmail = async (emailData: EmailFormValues) => {
-    await sendEmailMutation.mutateAsync({
-      to: emailData.to!,
-      subject: emailData.subject,
-      body: emailData.body,
-      fromName: emailData.fromName,
-      from: emailData.from || undefined,
-      attachments: normalizeAttachments(emailData.attachments),
-    });
-
-    if (pendingStatusOnEmailSend) {
-      await updateStatusMutation.mutateAsync({
-        id: pendingStatusOnEmailSend.requestId,
-        status: pendingStatusOnEmailSend.status,
-      });
-      setPendingStatusOnEmailSend(null);
-    }
-
-    setIsEmailDialogOpen(false);
-  };
-
-  const buildPORequestEmailInitialData = async (request: SupabaseRequest) => {
-    const poRequestTemplate = pickEmailTemplate(emailTemplates, 'PO Request', request.lab_id);
-    if (!poRequestTemplate) {
-      toast.error("Plantilla de correo electrónico 'PO Request' no encontrada. Por favor, crea una en el panel de Admin.");
-      return null;
-    }
-    if (!request.quote_url) {
-      toast.error("No se puede enviar la solicitud de compra.", { description: "El archivo de presupuesto no está disponible." });
-      return null;
-    }
-
-    const context = {
-      request,
-      vendor: vendors?.find(v => v.id === request.vendor_id),
-      requesterProfile: profiles?.find(p => p.id === request.requester_id),
-      accountManager: accountManagers?.find(am => am.id === request.account_manager_id),
-      projects: projects,
-      profiles: profiles,
-      actorProfile: profile,
-      shippingAddress: shippingAddresses?.find(a => a.id === request.shipping_address_id),
-      billingAddress: billingAddresses?.find(a => a.id === request.billing_address_id),
-    };
-
-    const { forDialog, forSend } = await buildStorageAttachment(request.quote_url);
-    if (forDialog.length === 0) {
-      toast.warning("No se pudo generar la URL firmada para el presupuesto. El enlace adjunto en el diálogo podría estar roto.");
-    }
-
-    const especial = correoGestor(request);
-    if (especial?.error) {
-      toast.error(especial.error);
-      return null;
-    }
-    if (!especial && !request.account_manager_id) {
-      toast.error("No se puede enviar la solicitud de PO.", { description: "No hay un gerente de cuenta asignado a esta solicitud." });
-      return null;
-    }
-
-    const { subject, body } = processNamedEmailTemplate(
-      "PO Request",
-      poRequestTemplate.subject_template,
-      poRequestTemplate.body_template,
-      context
-    );
-
-    return {
-      ...camposCorreoConGestor(especial, getAccountManagerEmail(request.account_manager_id)),
-      subject,
-      body,
-      attachments: forDialog,
-      attachmentsForSend: forSend,
-    };
-  };
-
-  const handleSendPORequest = async (request: SupabaseRequest) => {
-    const emailData = await buildPORequestEmailInitialData(request);
-    if (!emailData) return;
-    setPendingStatusOnEmailSend({ requestId: request.id, status: "PO Requested" });
-    setEmailInitialData(emailData);
-    setIsEmailDialogOpen(true);
+    return manager ? `${manager.first_name} ${manager.last_name}` : "—";
   };
 
   const openQuoteAndPODetailsDialog = (request: SupabaseRequest) => {
@@ -223,6 +100,8 @@ const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
     openReceive(request.id);
   };
   
+  const numeroAModificar = requestToModify?.request_number || requestToModify?.id.substring(0, 8) || "";
+
   const handleDenyRequest = (request: SupabaseRequest) => {
     setRequestToModify(request);
     setIsDenyDialogOpen(true);
@@ -235,7 +114,11 @@ const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
   
   const confirmDenyRequest = async () => {
     if (requestToModify) {
-      await updateStatusMutation.mutateAsync({ id: requestToModify.id, status: "Denied" });
+      try {
+        await updateStatusMutation.mutateAsync({ id: requestToModify.id, status: "Denied" });
+      } catch {
+        return; // la mutación ya avisa del error
+      }
       setIsDenyDialogOpen(false);
       setRequestToModify(null);
     }
@@ -243,7 +126,11 @@ const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
 
   const confirmCancelRequest = async () => {
     if (requestToModify) {
-      await updateStatusMutation.mutateAsync({ id: requestToModify.id, status: "Cancelled" });
+      try {
+        await updateStatusMutation.mutateAsync({ id: requestToModify.id, status: "Cancelled" });
+      } catch {
+        return; // la mutación ya avisa del error
+      }
       setIsCancelDialogOpen(false);
       setRequestToModify(null);
     }
@@ -263,55 +150,6 @@ const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
       (req.status === "Pending" || req.status === "Quote Requested" || req.status === "PO Requested")
     );
   }, [sourceRequestToMerge, requests]);
-
-  const handleSendQuoteRequestFromList = async (request: SupabaseRequest) => {
-    const especial = correoGestor(request);
-    if (especial?.error) {
-      toast.error(especial.error);
-      return;
-    }
-
-    const quoteTemplate = pickEmailTemplate(emailTemplates, 'Quote Request', request.lab_id);
-    if (!quoteTemplate) {
-      toast.error("Plantilla de correo electrónico 'Quote Request' no encontrada. Por favor, crea una en el panel de Admin.");
-      return;
-    }
-
-    const context = {
-      request: { ...request, status: "Quote Requested" as const },
-      vendor: vendors?.find(v => v.id === request.vendor_id),
-      requesterProfile: profiles?.find(p => p.id === request.requester_id),
-      accountManager: accountManagers?.find(am => am.id === request.account_manager_id),
-      projects: projects,
-      profiles: profiles,
-      actorProfile: profile,
-      shippingAddress: shippingAddresses?.find(a => a.id === request.shipping_address_id),
-      billingAddress: billingAddresses?.find(a => a.id === request.billing_address_id),
-    };
-
-    try {
-      const { subject, body } = processNamedEmailTemplate(
-        "Quote Request",
-        quoteTemplate.subject_template,
-        quoteTemplate.body_template,
-        context
-      );
-
-      // El estado avanza solo cuando el correo se envía de verdad. Si se cierra el
-      // diálogo o algo falla antes, la solicitud sigue pendiente.
-      setPendingStatusOnEmailSend({ requestId: request.id, status: "Quote Requested" });
-      setEmailInitialData({
-        ...camposCorreoConGestor(especial, getVendorQuoteEmail(request.vendor_id)),
-        subject,
-        body,
-      });
-      setIsEmailDialogOpen(true);
-    } catch (error) {
-      toast.error("No se pudo preparar el correo de presupuesto.", {
-        description: error instanceof Error ? error.message : undefined,
-      });
-    }
-  };
 
   const filteredAndSortedRequests = React.useMemo(() => {
     if (!requests) return [];
@@ -370,13 +208,13 @@ const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
   if (isLoadingRequests || isLoadingVendors || isLoadingProfiles || isLoadingAccountManagers || isLoadingProjects || isLoadingEmailTemplates || isLoadingShippingAddresses || isLoadingBillingAddresses) {
     return (
       <div className="flex justify-center items-center h-40">
-        <Loader2 className="h-6 w-6 animate-spin mr-2" /> Cargando Solicitudes...
+        <Loader2 className="h-6 w-6 animate-spin mr-2" /> Cargando solicitudes...
       </div>
     );
   }
 
   if (requestsError) {
-    return <div className="text-red-500 dark:text-red-400">Error al cargar solicitudes: {requestsError.message}</div>;
+    return <ErrorState que="las solicitudes" error={requestsError} />;
   }
 
   return (
@@ -394,22 +232,16 @@ const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
         isUpdatingStatus={updateStatusMutation.isPending}
         onViewDetails={(id) => navigate(`/requests/${id}`)}
         onEnterQuoteDetails={openQuoteAndPODetailsDialog}
-        onSendPORequest={handleSendPORequest}
+        onSendPORequest={correos.solicitarPo}
         onMarkAsOrdered={openOrderConfirmationDialog}
         onMarkAsReceived={handleMarkAsReceived}
         onDeny={handleDenyRequest}
         onCancel={handleCancelRequest}
         onMerge={handleMergeRequest}
-        onSendQuoteRequest={handleSendQuoteRequestFromList}
+        onSendQuoteRequest={correos.solicitarPresupuesto}
       />
 
-      <EmailDialog
-        isOpen={isEmailDialogOpen}
-        onOpenChange={handleEmailDialogOpenChange}
-        initialData={emailInitialData}
-        onSend={handleSendEmail}
-        isSending={sendEmailMutation.isPending}
-      />
+      <EmailDialog {...correos.dialogProps} />
       
       {sourceRequestToMerge && (
         <MergeRequestsDialog
@@ -420,43 +252,29 @@ const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
         />
       )}
       
-      <Dialog open={isDenyDialogOpen} onOpenChange={setIsDenyDialogOpen}>
-        <DialogContent className={cn(mobileDialogClass, "sm:max-w-[425px]")}>
-          <DialogHeader>
-            <DialogTitle>Denegar Solicitud</DialogTitle>
-            <DialogDescription>
-              ¿Estás seguro de que deseas denegar la Solicitud {requestToModify?.request_number || requestToModify?.id.substring(0, 8)}? Esta acción cambiará su estado a "Denegada".
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDenyDialogOpen(false)} disabled={updateStatusMutation.isPending}>
-              Cancelar
-            </Button>
-            <Button variant="destructive" onClick={confirmDenyRequest} disabled={updateStatusMutation.isPending}>
-              {updateStatusMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Confirmar Denegación"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
-        <DialogContent className={cn(mobileDialogClass, "sm:max-w-[425px]")}>
-          <DialogHeader>
-            <DialogTitle>Cancelar Solicitud</DialogTitle>
-            <DialogDescription>
-              ¿Estás seguro de que deseas cancelar la Solicitud {requestToModify?.request_number || requestToModify?.id.substring(0, 8)}? Esta acción cambiará su estado a "Cancelada".
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsCancelDialogOpen(false)} disabled={updateStatusMutation.isPending}>
-              No, Mantener
-            </Button>
-            <Button variant="destructive" onClick={confirmCancelRequest} disabled={updateStatusMutation.isPending}>
-              {updateStatusMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Sí, Cancelar Solicitud"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={isDenyDialogOpen}
+        onOpenChange={setIsDenyDialogOpen}
+        title={`Denegar la solicitud ${numeroAModificar}`}
+        description="Quedará como denegada y ya no se podrá pedir."
+        confirmLabel="Denegar"
+        onConfirm={confirmDenyRequest}
+        isPending={updateStatusMutation.isPending}
+      />
+      <ConfirmDialog
+        open={isCancelDialogOpen}
+        onOpenChange={setIsCancelDialogOpen}
+        title={`Cancelar la solicitud ${numeroAModificar}`}
+        description={
+          requestToModify?.status === "Ordered"
+            ? "Ya está pedida: avisa tú al proveedor para anular el pedido. LabFlow no le manda ningún correo."
+            : "Quedará como cancelada y saldrá de las solicitudes activas."
+        }
+        cancelLabel="No, mantener"
+        confirmLabel="Sí, cancelar"
+        onConfirm={confirmCancelRequest}
+        isPending={updateStatusMutation.isPending}
+      />
     </div>
   );
 };

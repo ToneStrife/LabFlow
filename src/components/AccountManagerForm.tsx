@@ -102,7 +102,7 @@ const AccountManagerForm: React.FC<AccountManagerFormProps> = ({ initialData, on
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando...
               </>
             ) : (
-              initialData ? "Guardar Cambios" : "Añadir Gerente"
+              initialData ? "Guardar cambios" : "Añadir gerente"
             )}
           </Button>
         </div>

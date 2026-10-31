@@ -1,4 +1,6 @@
 import React from "react";
+import ErrorState from "@/components/ErrorState";
+import { formatEuros } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Loader2, DollarSign, Download } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -67,13 +69,13 @@ const Expenditures = () => {
   if (isLoading) {
     return (
       <div className="p-4 sm:p-6 flex justify-center items-center">
-        <Loader2 className="h-8 w-8 animate-spin mr-2" /> Cargando Gastos...
+        <Loader2 className="h-8 w-8 animate-spin mr-2" /> Cargando gastos...
       </div>
     );
   }
 
   if (expendituresError) {
-    return <div className="p-4 sm:p-6 text-red-600 dark:text-red-400">Error: {expendituresError.message}</div>;
+    return <ErrorState que="los gastos" error={expendituresError} />;
   }
   
   const unaccountedCount = unaccountedRequests?.length || 0;
@@ -81,7 +83,7 @@ const Expenditures = () => {
   return (
     <div className={pageContainerClass}>
       <div className={cn(pageHeaderClass, "items-center mb-2 sm:mb-6")}>
-        <h1 className="text-2xl sm:text-3xl font-bold">Gestión de Gastos</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold">Gestión de gastos</h1>
         <div className="flex flex-wrap gap-2 w-full sm:w-auto">
           {unaccountedCount > 0 && (
             <Button 
@@ -95,12 +97,12 @@ const Expenditures = () => {
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
               <Button>
-                <PlusCircle className="mr-2 h-4 w-4" /> Registrar Nuevo Gasto
+                <PlusCircle className="mr-2 h-4 w-4" /> Registrar nuevo gasto
               </Button>
             </DialogTrigger>
             <DialogContent className={cn(mobileDialogClass, "sm:max-w-[425px]")}>
               <DialogHeader>
-                <DialogTitle>Registrar Nuevo Gasto</DialogTitle>
+                <DialogTitle>Registrar nuevo gasto</DialogTitle>
               </DialogHeader>
               <ExpenditureForm
                 onSubmit={handleAddExpenditure}
@@ -116,7 +118,7 @@ const Expenditures = () => {
       </p>
       
       {/* 1. Detalle de Gastos (Tabla) */}
-      <h2 className="text-2xl font-bold mb-4">Detalle de Gastos</h2>
+      <h2 className="text-2xl font-bold mb-4">Detalle de gastos</h2>
       <div className="mb-8">
         <ExpenditureTable
           expenditures={expenditures || []}
@@ -127,15 +129,15 @@ const Expenditures = () => {
       </div>
 
       {/* 2. Gráficos de Distribución y Total */}
-      <h2 className="text-2xl font-bold mb-4">Análisis de Distribución</h2>
+      <h2 className="text-2xl font-bold mb-4">Análisis de distribución</h2>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <Card className="md:col-span-1 h-full">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Gasto Total Registrado</CardTitle>
+            <CardTitle className="text-sm font-medium">Gasto total registrado</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-red-600 dark:text-red-400">€{analytics.totalSpent.toFixed(2)}</div>
+            <div className="text-3xl font-bold">{formatEuros(analytics.totalSpent)}</div>
             <p className="text-xs text-muted-foreground mt-1">
               Total acumulado de todos los gastos.
             </p>
@@ -154,7 +156,7 @@ const Expenditures = () => {
       </div>
       
       {/* 3. Gasto Total por Años (Movido al final) */}
-      <h2 className="text-2xl font-bold mb-4">Gasto Histórico</h2>
+      <h2 className="text-2xl font-bold mb-4">Gasto histórico</h2>
       <div className="mb-8">
         <SpendingByYearChart data={analytics.spendingByYear} />
       </div>
@@ -163,7 +165,7 @@ const Expenditures = () => {
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className={cn(mobileDialogClass, "sm:max-w-[425px]")}>
           <DialogHeader>
-            <DialogTitle>Editar Gasto</DialogTitle>
+            <DialogTitle>Editar gasto</DialogTitle>
           </DialogHeader>
           {editingExpenditure && (
             <ExpenditureForm

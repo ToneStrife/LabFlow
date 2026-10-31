@@ -70,7 +70,7 @@ const RequestItemForm: React.FC<RequestItemFormProps> = ({ initialData, onSubmit
             name="product_name"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Nombre del Producto</FormLabel>
+                <FormLabel>Nombre del producto</FormLabel>
                 <FormControl><Input {...field} disabled={isSubmitting} /></FormControl>
                 <FormMessage />
               </FormItem>
@@ -81,7 +81,7 @@ const RequestItemForm: React.FC<RequestItemFormProps> = ({ initialData, onSubmit
             name="catalog_number"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Número de Catálogo</FormLabel>
+                <FormLabel>Número de catálogo</FormLabel>
                 <FormControl><Input {...field} disabled={isSubmitting} /></FormControl>
                 <FormMessage />
               </FormItem>

@@ -33,6 +33,8 @@ import {
   isRequestAuthor,
 } from "@/lib/permissions";
 import { AccionSolicitud, accionesDeSolicitud } from "@/lib/request-actions";
+const esDestructiva = (accion: AccionSolicitud) => accion === "denegar" || accion === "cancelar";
+
 interface RequestListActionsProps {
   request: SupabaseRequest;
   isUpdatingStatus: boolean;
@@ -84,21 +86,20 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
   });
 
   // Subir documentos, marcar como pedido y el correo al proveedor se hacen en la hoja de la solicitud.
-  const boton: Record<AccionSolicitud, { icono: LucideIcon; texto: string; color: string; onClick: () => void }> = {
-    "solicitar-presupuesto": { icono: Mail, texto: "Solicitar presupuesto", color: "text-blue-500 dark:text-blue-400", onClick: () => onSendQuoteRequest(request) },
-    "subir-presupuesto": { icono: FileText, texto: "Subir presupuesto", color: "text-blue-600 dark:text-blue-400", onClick: () => onEnterQuoteDetails(request) },
-    "solicitar-po": { icono: Send, texto: "Solicitar PO (correo)", color: "text-indigo-600 dark:text-indigo-400", onClick: () => onSendPORequest(request) },
-    "registrar-po": { icono: FileText, texto: "Registrar PO recibido", color: "text-orange-600 dark:text-orange-400", onClick: () => onEnterQuoteDetails(request) },
-    "marcar-pedido": { icono: Package, texto: "Marcar como pedido", color: "text-green-700 dark:text-green-400", onClick: () => onMarkAsOrdered(request) },
+  const boton: Record<AccionSolicitud, { icono: LucideIcon; texto: string; onClick: () => void }> = {
+    "solicitar-presupuesto": { icono: Mail, texto: "Solicitar presupuesto", onClick: () => onSendQuoteRequest(request) },
+    "subir-presupuesto": { icono: FileText, texto: "Subir presupuesto", onClick: () => onEnterQuoteDetails(request) },
+    "solicitar-po": { icono: Send, texto: "Solicitar PO (correo)", onClick: () => onSendPORequest(request) },
+    "registrar-po": { icono: FileText, texto: "Registrar PO recibido", onClick: () => onEnterQuoteDetails(request) },
+    "marcar-pedido": { icono: Package, texto: "Marcar como pedido", onClick: () => onMarkAsOrdered(request) },
     "correo-pedido": {
       icono: Mail,
       texto: request.status === "Ordered" ? "Reenviar correo de pedido" : "Enviar correo de pedido",
-      color: "text-violet-600 dark:text-violet-400",
       onClick: () => onMarkAsOrdered(request),
     },
-    "recibir": { icono: Receipt, texto: "Recibir artículos", color: "text-purple-600 dark:text-purple-400", onClick: () => onMarkAsReceived(request) },
-    "denegar": { icono: Ban, texto: "Denegar solicitud", color: "text-red-600 dark:text-red-400", onClick: () => onDeny(request) },
-    "cancelar": { icono: XCircle, texto: "Cancelar solicitud", color: "text-red-600 dark:text-red-400", onClick: () => onCancel(request) },
+    "recibir": { icono: Receipt, texto: "Recibir artículos", onClick: () => onMarkAsReceived(request) },
+    "denegar": { icono: Ban, texto: "Denegar solicitud", onClick: () => onDeny(request) },
+    "cancelar": { icono: XCircle, texto: "Cancelar solicitud", onClick: () => onCancel(request) },
   };
 
   if (isMobile) {
@@ -122,12 +123,12 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
           <DropdownMenuContent align="end" className="w-56">
             {canMerge && (
               <DropdownMenuItem onClick={() => onMerge(request)} disabled={isUpdatingStatus}>
-                <Combine className="mr-2 h-4 w-4 text-purple-600 dark:text-purple-400" /> Fusionar solicitud
+                <Combine className="mr-2 h-4 w-4" /> Fusionar solicitud
               </DropdownMenuItem>
             )}
             {acciones.map((accion) => {
-              const { icono: Icono, texto, color, onClick } = boton[accion];
-              const destructiva = accion === "denegar" || accion === "cancelar";
+              const { icono: Icono, texto, onClick } = boton[accion];
+              const destructiva = esDestructiva(accion);
               return (
                 <DropdownMenuItem
                   key={accion}
@@ -135,7 +136,7 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
                   disabled={isUpdatingStatus}
                   className={destructiva ? "text-red-600 dark:text-red-400" : undefined}
                 >
-                  <Icono className={cn("mr-2 h-4 w-4", !destructiva && color)} /> {texto}
+                  <Icono className="mr-2 h-4 w-4" /> {texto}
                 </DropdownMenuItem>
               );
             })}
@@ -151,8 +152,9 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
         variant="ghost"
         size="icon"
         onClick={() => onViewDetails(request.id)}
-        title="Ver Detalles"
-        className="shrink-0"
+        title="Ver detalles"
+        aria-label="Ver detalles"
+        className="shrink-0 text-muted-foreground hover:text-foreground"
       >
         <Eye className="h-4 w-4" />
       </Button>
@@ -163,15 +165,17 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
           size="icon"
           onClick={() => onMerge(request)}
           title="Fusionar con otra solicitud"
+          aria-label="Fusionar con otra solicitud"
           disabled={isUpdatingStatus}
-          className="shrink-0"
+          className="shrink-0 text-muted-foreground hover:text-foreground"
         >
-          <Combine className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+          <Combine className="h-4 w-4" />
         </Button>
       )}
 
-      {acciones.map((accion) => {
-        const { icono: Icono, texto, color, onClick } = boton[accion];
+      {acciones.map((accion, i) => {
+        const { icono: Icono, texto, onClick } = boton[accion];
+        const destructiva = esDestructiva(accion);
         return (
           <Button
             key={accion}
@@ -179,10 +183,18 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
             size="icon"
             onClick={onClick}
             title={texto}
+            aria-label={texto}
             disabled={isUpdatingStatus}
-            className="shrink-0"
+            className={cn(
+              "shrink-0",
+              destructiva
+                ? "text-red-600 hover:text-red-700 dark:text-red-400"
+                : i === 0
+                  ? "text-primary hover:text-primary"
+                  : "text-muted-foreground hover:text-foreground"
+            )}
           >
-            <Icono className={cn("h-4 w-4", color)} />
+            <Icono className="h-4 w-4" />
           </Button>
         );
       })}

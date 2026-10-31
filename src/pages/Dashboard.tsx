@@ -1,4 +1,5 @@
 import React from "react";
+import ErrorState from "@/components/ErrorState";
 import RequestList from "@/components/RequestList";
 import PendingItemsList from "@/components/PendingItemsList";
 import PendingInvoicesList from "@/components/PendingInvoicesList";
@@ -41,10 +42,15 @@ const Dashboard = () => {
   const { data: pendingItems, isLoading: isLoadingPending } = usePendingItems();
   const { data: pendingInvoices, isLoading: isLoadingInvoices } = usePendingInvoices();
 
-  const [pestana, setPestana] = React.useState<Pestana>("pending-items");
-  const [filtroEstado, setFiltroEstado] = React.useState<RequestStatus | "All" | "Active">("All");
+  // Quien gestiona pedidos empieza por lo que hay que recibir; el resto, por
+  // sus solicitudes en curso, que es lo que suele venir a mirar.
+  const [pestana, setPestana] = React.useState<Pestana>(isAdmin ? "pending-items" : "all-requests");
+  const [filtroEstado, setFiltroEstado] = React.useState<RequestStatus | "All" | "Active">(
+    isAdmin ? "All" : "Active"
+  );
+  const viendoEstado = (estado: RequestStatus) => pestana === "all-requests" && filtroEstado === estado;
 
-  const allRequests = requests || [];
+  const allRequests = React.useMemo(() => requests || [], [requests]);
   const requestsForSede = React.useMemo(
     () => filterRequestsBySede(allRequests, shippingAddresses, sedeActiva),
     [allRequests, shippingAddresses, sedeActiva]
@@ -80,6 +86,7 @@ const Dashboard = () => {
       icono: FileSearch,
       tono: "amber",
       onSelect: () => verHistorialFiltrado("Pending"),
+      activa: viendoEstado("Pending"),
     },
     {
       id: "quote",
@@ -89,6 +96,7 @@ const Dashboard = () => {
       icono: FileText,
       tono: "sky",
       onSelect: () => verHistorialFiltrado("Quote Requested"),
+      activa: viendoEstado("Quote Requested"),
     },
     {
       id: "po",
@@ -98,6 +106,7 @@ const Dashboard = () => {
       icono: CreditCard,
       tono: "indigo",
       onSelect: () => verHistorialFiltrado("PO Requested"),
+      activa: viendoEstado("PO Requested"),
     },
     {
       id: "ordered",
@@ -107,6 +116,7 @@ const Dashboard = () => {
       icono: Truck,
       tono: "violet",
       onSelect: () => setPestana("pending-items"),
+      activa: pestana === "pending-items",
     },
   ];
 
@@ -119,6 +129,7 @@ const Dashboard = () => {
       icono: Receipt,
       tono: "rose",
       onSelect: () => setPestana("pending-invoices"),
+      activa: pestana === "pending-invoices",
     });
   }
 
@@ -131,11 +142,7 @@ const Dashboard = () => {
   }
 
   if (error) {
-    return (
-      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
-        No se pudo cargar el panel: {error.message}
-      </div>
-    );
+    return <ErrorState que="el panel" error={error} />;
   }
 
   const nombreCorto = getFullName(profile).split(" ")[0];

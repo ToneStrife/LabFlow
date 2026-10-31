@@ -1,4 +1,5 @@
 import React from "react";
+import ErrorState from "@/components/ErrorState";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Loader2, MapPin, DollarSign, Users, Briefcase, Shield, Mail, ScrollText, Bell, KeyRound, Server, FlaskConical, Copy } from "lucide-react";
@@ -279,18 +280,18 @@ const AdminPage = () => {
   if (isLoading) {
     return (
       <div className="container mx-auto py-8 flex justify-center items-center">
-        <Loader2 className="h-8 w-8 animate-spin mr-2" /> Cargando Panel de Administración...
+        <Loader2 className="h-8 w-8 animate-spin mr-2" /> Cargando panel de administración...
       </div>
     );
   }
 
   if (error) {
-    return <div className="p-4 sm:p-6 text-red-600 dark:text-red-400">Error: {error.message}</div>;
+    return <ErrorState que="la administración" error={error} />;
   }
 
   return (
     <div className="p-4 sm:p-6 max-w-full mx-auto">
-      <h1 className="text-3xl font-bold mb-6">Panel de Administración</h1>
+      <h1 className="text-3xl font-bold mb-6">Panel de administración</h1>
       <p className="text-lg text-muted-foreground mb-8">
         Solo ves las secciones que puedes modificar. No hace falta el rol de administrador.
         El correo de cada persona se guarda en el menú Correo.
@@ -314,7 +315,7 @@ const AdminPage = () => {
           )}
           {puedeVer("account-managers") && (
           <TabsTrigger value="account-managers" className="flex items-center gap-2 px-4 py-2">
-            <Users className="h-4 w-4" /> Gerentes de Cuenta
+            <Users className="h-4 w-4" /> Gerentes de cuenta
           </TabsTrigger>
           )}
           {puedeVer("projects") && (
@@ -329,7 +330,7 @@ const AdminPage = () => {
           )}
           {puedeVer("email-templates") && (
           <TabsTrigger value="email-templates" className="flex items-center gap-2 px-4 py-2">
-            <Mail className="h-4 w-4" /> Plantillas de Email
+            <Mail className="h-4 w-4" /> Plantillas de email
           </TabsTrigger>
           )}
           {puedeVer("smtp-accounts") && (
@@ -339,7 +340,7 @@ const AdminPage = () => {
           )}
           {puedeVer("email-logs") && (
           <TabsTrigger value="email-logs" className="flex items-center gap-2 px-4 py-2">
-            <ScrollText className="h-4 w-4" /> Registros de Email
+            <ScrollText className="h-4 w-4" /> Registros de email
           </TabsTrigger>
           )}
           {puedeVer("notifications") && (
@@ -383,7 +384,7 @@ const AdminPage = () => {
               <Dialog open={isInviteUserDialogOpen} onOpenChange={setIsInviteUserDialogOpen}>
                 <DialogTrigger asChild><Button size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Invitar</Button></DialogTrigger>
                 <DialogContent className={cn(mobileDialogClass, "sm:max-w-[425px]")}>
-                  <DialogHeader><DialogTitle>Invitar Nuevo Usuario</DialogTitle></DialogHeader>
+                  <DialogHeader><DialogTitle>Invitar nuevo usuario</DialogTitle></DialogHeader>
                   <InviteUserDialog onSubmit={handleInviteUser} onCancel={() => setIsInviteUserDialogOpen(false)} isSubmitting={inviteUserMutation.isPending} />
                 </DialogContent>
               </Dialog>
@@ -408,7 +409,7 @@ const AdminPage = () => {
           </Card>
           <Dialog open={isEditAddressDialogOpen} onOpenChange={setIsEditAddressDialogOpen}>
             <DialogContent className={cn(mobileDialogClass, "sm:max-w-[425px]")}>
-              <DialogHeader><DialogTitle>Editar Dirección</DialogTitle></DialogHeader>
+              <DialogHeader><DialogTitle>Editar dirección</DialogTitle></DialogHeader>
               {editingAddress && (
                 <AddressForm
                   initialData={editingAddress}
@@ -428,11 +429,11 @@ const AdminPage = () => {
         <TabsContent value="account-managers" className="mt-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-2">
-              <CardTitle className="text-xl">Gerentes de Cuenta</CardTitle>
+              <CardTitle className="text-xl">Gerentes de cuenta</CardTitle>
               <Dialog open={isAddManagerDialogOpen} onOpenChange={setIsAddManagerDialogOpen}>
-                <DialogTrigger asChild><Button size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Añadir Nuevo Gerente</Button></DialogTrigger>
+                <DialogTrigger asChild><Button size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Añadir nuevo gerente</Button></DialogTrigger>
                 <DialogContent className={cn(mobileDialogClass, "sm:max-w-[425px]")}>
-                  <DialogHeader><DialogTitle>Añadir Nuevo Gerente de Cuenta</DialogTitle></DialogHeader>
+                  <DialogHeader><DialogTitle>Añadir nuevo gerente de cuenta</DialogTitle></DialogHeader>
                   <AccountManagerForm onSubmit={handleAddManager} onCancel={() => setIsAddManagerDialogOpen(false)} isSubmitting={addAccountManagerMutation.isPending} />
                 </DialogContent>
               </Dialog>
@@ -443,7 +444,7 @@ const AdminPage = () => {
           </Card>
           <Dialog open={isEditManagerDialogOpen} onOpenChange={setIsEditManagerDialogOpen}>
             <DialogContent className={cn(mobileDialogClass, "sm:max-w-[425px]")}>
-              <DialogHeader><DialogTitle>Editar Gerente de Cuenta</DialogTitle></DialogHeader>
+              <DialogHeader><DialogTitle>Editar gerente de cuenta</DialogTitle></DialogHeader>
               {editingManager && <AccountManagerForm initialData={editingManager} onSubmit={(data) => handleEditManager(editingManager.id, data)} onCancel={() => setIsEditManagerDialogOpen(false)} isSubmitting={updateAccountManagerMutation.isPending} />}
             </DialogContent>
           </Dialog>
@@ -457,9 +458,9 @@ const AdminPage = () => {
             <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-2">
               <CardTitle className="text-xl">Proyectos</CardTitle>
               <Dialog open={isAddProjectDialogOpen} onOpenChange={setIsAddProjectDialogOpen}>
-                <DialogTrigger asChild><Button size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Añadir Nuevo Proyecto</Button></DialogTrigger>
+                <DialogTrigger asChild><Button size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Añadir nuevo proyecto</Button></DialogTrigger>
                 <DialogContent className={cn(mobileDialogClass, "sm:max-w-[480px]")}>
-                  <DialogHeader><DialogTitle>Añadir Nuevo Proyecto</DialogTitle></DialogHeader>
+                  <DialogHeader><DialogTitle>Añadir nuevo proyecto</DialogTitle></DialogHeader>
                   <ProjectForm
                     profiles={allProfiles || []}
                     onSubmit={handleAddProject}
@@ -480,7 +481,7 @@ const AdminPage = () => {
           </Card>
           <Dialog open={isEditProjectDialogOpen} onOpenChange={setIsEditProjectDialogOpen}>
             <DialogContent className={cn(mobileDialogClass, "sm:max-w-[480px]")}>
-              <DialogHeader><DialogTitle>Editar Proyecto</DialogTitle></DialogHeader>
+              <DialogHeader><DialogTitle>Editar proyecto</DialogTitle></DialogHeader>
               {editingProject && (
                 <ProjectForm
                   initialData={editingProject}
@@ -501,8 +502,8 @@ const AdminPage = () => {
           {/* Shipping Addresses */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-2">
-              <CardTitle className="text-xl flex items-center"><MapPin className="mr-2 h-5 w-5" /> Direcciones de Envío</CardTitle>
-              <Button size="sm" onClick={() => openAddAddressDialog('shipping')}><PlusCircle className="mr-2 h-4 w-4" /> Añadir Dirección de Envío</Button>
+              <CardTitle className="text-xl flex items-center"><MapPin className="mr-2 h-5 w-5" /> Direcciones de envío</CardTitle>
+              <Button size="sm" onClick={() => openAddAddressDialog('shipping')}><PlusCircle className="mr-2 h-4 w-4" /> Añadir dirección de envío</Button>
             </CardHeader>
             <CardContent>
               <AddressTable 
@@ -517,8 +518,8 @@ const AdminPage = () => {
           {/* Billing Addresses */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-2">
-              <CardTitle className="text-xl flex items-center"><DollarSign className="mr-2 h-5 w-5" /> Direcciones de Facturación</CardTitle>
-              <Button size="sm" onClick={() => openAddAddressDialog('billing')}><PlusCircle className="mr-2 h-4 w-4" /> Añadir Dirección de Facturación</Button>
+              <CardTitle className="text-xl flex items-center"><DollarSign className="mr-2 h-5 w-5" /> Direcciones de facturación</CardTitle>
+              <Button size="sm" onClick={() => openAddAddressDialog('billing')}><PlusCircle className="mr-2 h-4 w-4" /> Añadir dirección de facturación</Button>
             </CardHeader>
             <CardContent>
               <AddressTable 
@@ -535,7 +536,7 @@ const AdminPage = () => {
         {puedeVer("email-templates") && (
         <TabsContent value="email-templates" className="mt-6">
           <Card>
-            <CardHeader><CardTitle className="text-xl">Plantillas de Correo Electrónico</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-xl">Plantillas de correo electrónico</CardTitle></CardHeader>
             <CardContent className="space-y-6">
               <Select value={selectedTemplateId} onValueChange={handleTemplateChange}>
                 <SelectTrigger className="w-full md:w-[360px]"><SelectValue placeholder="Selecciona una plantilla" /></SelectTrigger>
@@ -598,11 +599,11 @@ const AdminPage = () => {
                         </div>
                       )}
                     </div>
-                    <FormField control={emailTemplateForm.control} name="template_name" render={({ field }) => <FormItem><FormLabel>Nombre de la Plantilla</FormLabel><FormControl><Input {...field} disabled={updateTemplateMutation.isPending} /></FormControl><FormMessage /></FormItem>} />
+                    <FormField control={emailTemplateForm.control} name="template_name" render={({ field }) => <FormItem><FormLabel>Nombre de la plantilla</FormLabel><FormControl><Input {...field} disabled={updateTemplateMutation.isPending} /></FormControl><FormMessage /></FormItem>} />
                     <FormField control={emailTemplateForm.control} name="subject_template" render={({ field }) => <FormItem><FormLabel>Asunto</FormLabel><FormControl><Input {...field} disabled={updateTemplateMutation.isPending} /></FormControl><FormMessage /></FormItem>} />
-                    <FormField control={emailTemplateForm.control} name="body_template" render={({ field }) => <FormItem><FormLabel>Cuerpo del Correo</FormLabel><FormControl><Textarea rows={18} {...field} disabled={updateTemplateMutation.isPending} /></FormControl><FormMessage /></FormItem>} />
+                    <FormField control={emailTemplateForm.control} name="body_template" render={({ field }) => <FormItem><FormLabel>Cuerpo del correo</FormLabel><FormControl><Textarea rows={18} {...field} disabled={updateTemplateMutation.isPending} /></FormControl><FormMessage /></FormItem>} />
                     <div className="space-y-2">
-                      <FormLabel>Marcadores de Posición Disponibles</FormLabel>
+                      <FormLabel>Marcadores de posición disponibles</FormLabel>
                       <p className="text-sm text-muted-foreground">
                         Si el cuerpo sigue siendo el texto antiguo («Nos gustaría solicitar un presupuesto…»),
                         aplica la migración{" "}
@@ -637,7 +638,7 @@ const AdminPage = () => {
                     </div>
                     <div className="flex justify-end pt-4">
                       <Button type="submit" disabled={updateTemplateMutation.isPending}>
-                        {updateTemplateMutation.isPending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando...</> : <><Save className="mr-2 h-4 w-4" /> Guardar Plantilla</>}
+                        {updateTemplateMutation.isPending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando…</> : <><Save className="mr-2 h-4 w-4" /> Guardar plantilla</>}
                       </Button>
                     </div>
                   </form>
@@ -667,12 +668,12 @@ const AdminPage = () => {
         <TabsContent value="notifications" className="mt-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-xl">Enviar Notificación Push Dirigida</CardTitle>
+              <CardTitle className="text-xl">Enviar notificación push dirigida</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <NotificationSenderForm />
               <p className="text-sm text-red-500 dark:text-red-400">
-                Nota: Si no recibes la notificación, verifica que las claves `FIREBASE_PRIVATE_KEY`, `FIREBASE_CLIENT_EMAIL` y `FIREBASE_PROJECT_ID` estén configuradas correctamente en los secretos de Supabase y que hayas aceptado los permisos de notificación en tu navegador.
+                Nota: si no recibes la notificación, verifica que las claves `FIREBASE_PRIVATE_KEY`, `FIREBASE_CLIENT_EMAIL` y `FIREBASE_PROJECT_ID` estén configuradas correctamente en los secretos de Supabase y que hayas aceptado los permisos de notificación en tu navegador.
               </p>
             </CardContent>
           </Card>
@@ -685,7 +686,7 @@ const AdminPage = () => {
       <Dialog open={isAddAddressDialogOpen || isEditAddressDialogOpen} onOpenChange={isEditAddressDialogOpen ? setIsEditAddressDialogOpen : setIsAddAddressDialogOpen}>
         <DialogContent className={cn(mobileDialogClass, "sm:max-w-[425px]")}>
           <DialogHeader>
-            <DialogTitle>{editingAddress ? "Editar Dirección" : `Añadir Nueva Dirección de ${currentAddressType === 'shipping' ? 'Envío' : 'Facturación'}`}</DialogTitle>
+            <DialogTitle>{editingAddress ? "Editar dirección" : `Añadir dirección de ${currentAddressType === 'shipping' ? 'envío' : 'facturación'}`}</DialogTitle>
           </DialogHeader>
           <AddressForm 
             initialData={editingAddress} 

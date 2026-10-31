@@ -26,7 +26,7 @@ async function extractFunctionError(
       /* ignore */
     }
   }
-  return error.message || "No se pudo extraer productos del presupuesto.";
+  return error.message || "No se pudieron leer los productos del presupuesto.";
 }
 
 export const useParseQuotePdf = () => {
@@ -66,7 +66,7 @@ export const useParseQuotePdf = () => {
       return { items: result.items };
     },
     onError: (error) => {
-      toast.error("No se pudo extraer productos del presupuesto.", {
+      toast.error("No se pudieron leer los productos del presupuesto.", {
         description: error.message,
       });
     },

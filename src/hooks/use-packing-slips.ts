@@ -100,7 +100,7 @@ export const useCorrectReceivedItemQuantity = () => {
                 .eq('id', (data as any).slip_id)
                 .single();
                 
-            if (slipError) throw new Error(`Fallo al obtener request_id: ${slipError.message}`);
+            if (slipError) throw new Error(`No se pudo obtener request_id: ${slipError.message}`);
 
             return { receivedItem: data as any, requestId: slipData.request_id };
         },
@@ -115,7 +115,7 @@ export const useCorrectReceivedItemQuantity = () => {
             toast.success("Cantidad recibida corregida y inventario ajustado.");
         },
         onError: (error) => {
-            toast.error("Fallo al corregir la cantidad recibida.", { description: error.message });
+            toast.error("No se pudo corregir la cantidad recibida.", { description: error.message });
         }
     });
 };
@@ -128,7 +128,7 @@ async function uploadSlipFile(requestId: string, file: File): Promise<string> {
   });
 
   if (!filePath) {
-    throw new Error("Fallo al obtener la ruta del archivo subido.");
+    throw new Error("No se pudo obtener la ruta del archivo subido.");
   }
 
   return filePath;
@@ -177,7 +177,7 @@ export const useUploadAndCreateSlip = () => {
         .select()
         .single();
 
-      if (slipError) throw new Error(`Fallo al crear el registro de albarán: ${slipError.message}`);
+      if (slipError) throw new Error(`No se pudo crear el registro de albarán: ${slipError.message}`);
       
       await updateRequestSlipUrl(requestId, slipFilePath);
 
@@ -187,10 +187,10 @@ export const useUploadAndCreateSlip = () => {
       queryClient.invalidateQueries({ queryKey: ['packingSlips', newSlip.request_id] });
       queryClient.invalidateQueries({ queryKey: ['requests'] });
       invalidateRequestEvents(queryClient);
-      toast.success(`Albarán ${newSlip.slip_number} subido exitosamente!`);
+      toast.success(`Albarán ${newSlip.slip_number} subido.`);
     },
     onError: (error) => {
-      toast.error("Fallo al subir el albarán.", {
+      toast.error("No se pudo subir el albarán.", {
         description: error.message,
       });
     },
@@ -232,7 +232,7 @@ export const useDeleteSlip = () => {
                     .delete()
                     .eq('slip_id', slipId);
                     
-                if (deleteItemsError) throw new Error(`Fallo al eliminar ítems recibidos asociados: ${deleteItemsError.message}`);
+                if (deleteItemsError) throw new Error(`No se pudieron quitar los artículos recibidos: ${deleteItemsError.message}`);
             }
             
             // 4. Eliminar el registro del albarán (Packing Slip)
@@ -253,11 +253,11 @@ export const useDeleteSlip = () => {
             queryClient.invalidateQueries({ queryKey: ['requests'] }); 
             queryClient.invalidateQueries({ queryKey: ['inventory'] }); 
             invalidateRequestEvents(queryClient);
-            toast.success("Albarán eliminado exitosamente.");
+            toast.success("Albarán eliminado.");
         },
         onError: (error) => {
             // Mostrar el mensaje de error específico de la mutación
-            toast.error("Fallo al eliminar el albarán.", { description: error.message });
+            toast.error("No se pudo eliminar el albarán.", { description: error.message });
         }
     });
 };
@@ -323,7 +323,7 @@ export const useReceiveItems = () => {
         .select()
         .single();
 
-      if (slipError) throw new Error(`Fallo al crear el albarán: ${slipError.message}`);
+      if (slipError) throw new Error(`No se pudo crear el albarán: ${slipError.message}`);
       const primarySlipId = newSlip.id;
 
       if (slipFilePath) {
@@ -341,7 +341,7 @@ export const useReceiveItems = () => {
         .from('received_items')
         .insert(receivedItemInserts);
 
-      if (receivedItemsError) throw new Error(`Fallo al insertar artículos recibidos: ${receivedItemsError.message}`);
+      if (receivedItemsError) throw new Error(`No se pudieron guardar los artículos recibidos: ${receivedItemsError.message}`);
 
       // 3. Actualizar el Inventario (usando RPC para manejar la lógica de upsert)
       for (const item of items) {
@@ -355,7 +355,7 @@ export const useReceiveItems = () => {
             format_in: item.itemDetails.format,
             sede_id_in: sedeId,
           });
-          if (inventoryError) throw new Error(`Fallo al actualizar el inventario para ${item.itemDetails.product_name}: ${inventoryError.message}`);
+          if (inventoryError) throw new Error(`No se pudo actualizar el inventario para ${item.itemDetails.product_name}: ${inventoryError.message}`);
 
           if (item.storageLocation) {
             let locationQuery = supabase
@@ -387,7 +387,7 @@ export const useReceiveItems = () => {
         .eq('id', requestId)
         .single();
 
-      if (requestError) throw new Error(`Fallo al obtener detalles de la solicitud para la verificación de estado: ${requestError.message}`);
+      if (requestError) throw new Error(`No se pudo comprobar la solicitud: ${requestError.message}`);
 
       // Obtener el total recibido agregado (usando la misma lógica que el hook de fetch)
       const { data: aggregatedReceived, error: aggError } = await supabase
@@ -399,7 +399,7 @@ export const useReceiveItems = () => {
         `)
         .eq('slip_id.request_id', requestId);
 
-      if (aggError) throw new Error(`Fallo al obtener artículos recibidos agregados para la verificación de estado: ${aggError.message}`);
+      if (aggError) throw new Error(`No se pudo comprobar lo recibido: ${aggError.message}`);
 
       const aggregation = (aggregatedReceived as any[]).reduce((acc, item) => {
         const itemId = item.request_item_id;
@@ -438,12 +438,12 @@ export const useReceiveItems = () => {
       return newSlip;
     },
     onSuccess: (newSlip) => {
-      toast.success(`Artículos recibidos exitosamente!`, {
+      toast.success(`Artículos recibidos.`, {
         description: `Albarán ${newSlip.slip_number} registrado.`,
       });
     },
     onError: (error) => {
-      toast.error("Fallo al registrar la recepción del artículo.", {
+      toast.error("No se pudo registrar la recepción del artículo.", {
         description: error.message,
       });
     },

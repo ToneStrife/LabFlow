@@ -31,10 +31,10 @@ export const useUpdateRequestItem = () => {
     onSuccess: (updatedItem) => {
       // Invalidar la caché de solicitudes para que se recargue la solicitud detallada
       queryClient.invalidateQueries({ queryKey: ['requests'] });
-      toast.success(`Artículo "${updatedItem.product_name}" actualizado exitosamente!`);
+      toast.success(`Artículo "${updatedItem.product_name}" actualizado.`);
     },
     onError: (error) => {
-      toast.error('Fallo al actualizar el artículo de solicitud.', { description: error.message });
+      toast.error('No se pudo actualizar el artículo de solicitud.', { description: error.message });
     },
   });
 };
@@ -48,10 +48,10 @@ export const useDeleteRequestItem = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['requests'] });
-      toast.success('Artículo de solicitud eliminado exitosamente!');
+      toast.success('Artículo de solicitud eliminado.');
     },
     onError: (error) => {
-      toast.error('Fallo al eliminar el artículo de solicitud.', { description: error.message });
+      toast.error('No se pudo eliminar el artículo de solicitud.', { description: error.message });
     },
   });
 };

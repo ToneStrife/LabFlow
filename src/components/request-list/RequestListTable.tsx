@@ -1,4 +1,5 @@
 import React from "react";
+import { formatFecha } from "@/lib/format";
 import {
   Table,
   TableBody,
@@ -10,7 +11,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { SupabaseRequest, Vendor, Profile } from "@/data/types";
 import { useAccountManagers } from "@/hooks/use-account-managers";
-import { format } from "date-fns";
 import RequestListActions from "./RequestListActions";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { getFullName } from "@/hooks/use-profiles";
@@ -53,7 +53,7 @@ const RequestCard: React.FC<{ request: SupabaseRequest; vendor?: Vendor; request
           <Link to={`/requests/${request.id}`} className="text-sm text-primary hover:underline">
             Solicitud {displayRequestNumber}
           </Link>
-          <span className="text-xs font-medium text-muted-foreground">{vendor?.name || "N/A"}</span>
+          <span className="text-xs font-medium text-muted-foreground">{vendor?.name || "—"}</span>
         </CardTitle>
         <Badge variant="outline" className={cn("text-xs shrink-0 self-start sm:self-auto", getRequestStatusBadgeClass(request.status))}>
           {getRequestStatusLabel(request.status)}
@@ -135,7 +135,7 @@ const RequestListTable: React.FC<RequestListTableProps> = ({
             requests.map((request) => {
               const vendor = vendors?.find(v => v.id === request.vendor_id);
               const requesterName = getRequesterName(request.requester_id);
-              const date = format(new Date(request.created_at), 'yyyy-MM-dd');
+              const date = formatFecha(request.created_at);
               const displayRequestNumber = request.request_number || request.id.substring(0, 8);
               
               const totalItems = request.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
@@ -150,7 +150,7 @@ const RequestListTable: React.FC<RequestListTableProps> = ({
                   <TableCell className="font-medium">
                     <Link to={`/requests/${request.id}`} className="flex flex-col hover:underline">
                       <span className="font-bold text-primary">{displayRequestNumber}</span>
-                      <span className="text-xs text-muted-foreground">{vendor?.name || "N/A"}</span>
+                      <span className="text-xs text-muted-foreground">{vendor?.name || "—"}</span>
                     </Link>
                   </TableCell>
                   <TableCell>{requesterName}</TableCell>
@@ -198,7 +198,7 @@ const RequestListTable: React.FC<RequestListTableProps> = ({
         requests.map((request) => {
           const vendor = vendors?.find(v => v.id === request.vendor_id);
           const requesterName = getRequesterName(request.requester_id);
-          const date = format(new Date(request.created_at), 'yyyy-MM-dd');
+          const date = formatFecha(request.created_at);
 
           return (
             <RequestCard

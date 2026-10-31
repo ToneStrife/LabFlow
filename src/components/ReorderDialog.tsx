@@ -132,7 +132,7 @@ const ReorderDialog: React.FC<ReorderDialogProps> = ({ isOpen, onOpenChange, ite
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className={cn(mobileDialogClass, "sm:max-w-[600px]")}>
         <DialogHeader>
-          <DialogTitle>Reordenar Artículos de Inventario</DialogTitle>
+          <DialogTitle>Reordenar artículos de inventario</DialogTitle>
           <DialogDescription>
             Crear una nueva solicitud de compra para los {items.length} artículos seleccionados.
           </DialogDescription>
@@ -142,7 +142,7 @@ const ReorderDialog: React.FC<ReorderDialogProps> = ({ isOpen, onOpenChange, ite
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
             
             <div className="space-y-2">
-              <h4 className="font-semibold">Artículos a Reordenar:</h4>
+              <h4 className="font-semibold">Artículos a reordenar:</h4>
               <ul className="list-disc list-inside text-sm max-h-24 overflow-y-auto p-2 border rounded-md">
                 {items.map(item => (
                   <li key={item.id} className="truncate">
@@ -174,7 +174,7 @@ const ReorderDialog: React.FC<ReorderDialogProps> = ({ isOpen, onOpenChange, ite
                         </SelectGroup>
                       )}
                       <SelectGroup>
-                        <SelectLabel>Todos los Proveedores</SelectLabel>
+                        <SelectLabel>Todos los proveedores</SelectLabel>
                         {allVendors.map((vendor) => (
                           <SelectItem key={vendor.id} value={vendor.id}>{vendor.name}</SelectItem>
                         ))}
@@ -192,7 +192,7 @@ const ReorderDialog: React.FC<ReorderDialogProps> = ({ isOpen, onOpenChange, ite
                 name="shippingAddressId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Dirección de Envío</FormLabel>
+                    <FormLabel>Dirección de envío</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingShippingAddresses || isSubmitting}>
                       <FormControl>
                         <SelectTrigger>
@@ -216,7 +216,7 @@ const ReorderDialog: React.FC<ReorderDialogProps> = ({ isOpen, onOpenChange, ite
                 name="billingAddressId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Dirección de Facturación</FormLabel>
+                    <FormLabel>Dirección de facturación</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingBillingAddresses || isSubmitting}>
                       <FormControl>
                         <SelectTrigger>
@@ -242,10 +242,10 @@ const ReorderDialog: React.FC<ReorderDialogProps> = ({ isOpen, onOpenChange, ite
               <Button type="submit" disabled={isSubmitting || isLoading}>
                 {isSubmitting ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creando Solicitud...
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creando solicitud...
                   </>
                 ) : (
-                  "Crear Solicitud de Reordenamiento"
+                  "Crear solicitud de reposición"
                 )}
               </Button>
             </DialogFooter>

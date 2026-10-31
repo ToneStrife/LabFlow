@@ -50,7 +50,7 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
     if (error && error.code !== 'PGRST116') {
       console.error("Error fetching profile:", error);
       setProfile(null);
-      toast.error("Error fetching user profile.", { description: error.message });
+      toast.error("No se pudo cargar tu perfil.", { description: error.message });
     } else if (profileData) {
       setProfile(profileData as Profile);
     } else {
@@ -167,7 +167,7 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
     const { error } = await supabase.auth.signOut();
     if (error) {
       console.error("Error logging out:", error);
-      toast.error("Failed to log out.", { description: error.message });
+      toast.error("No se pudo cerrar la sesión.", { description: error.message });
     } else {
       // El listener onAuthStateChange manejará la actualización del estado
       toast.info("You have been logged out.");

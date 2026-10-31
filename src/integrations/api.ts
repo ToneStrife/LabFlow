@@ -305,6 +305,66 @@ const getRequesterProfile = async (requesterId: string): Promise<Profile | null>
     return data as Profile;
 };
 
+const avisarNuevaSolicitud = async (created: SupabaseRequest, requesterId: string): Promise<void> => {
+  try {
+    const requester = await getRequesterProfile(requesterId);
+    const requesterName = requester ? `${requester.first_name || ''} ${requester.last_name || ''}`.trim() : 'Alguien';
+    const requestNumber = created.request_number || created.id.substring(0, 8);
+    const sedeId = created.sede_id ?? null;
+    const pushIds = new Set<string>();
+
+    if (sedeId) {
+      const { data: destinatarios } = await supabase.rpc('destinatarios_aviso_solicitud', { p_sede_id: sedeId });
+      const lista = (destinatarios ?? []) as Array<{ user_id: string; email: string | null; push: boolean; correo: string }>;
+      const yaElegidos = new Set(lista.map((item) => item.user_id));
+      const envios: Promise<unknown>[] = [];
+      for (const item of lista) {
+        if (item.push) pushIds.add(item.user_id);
+        if (item.correo === 'daily') {
+          envios.push(Promise.resolve(supabase.rpc('encolar_aviso_diario', {
+            p_user_id: item.user_id,
+            p_request_id: created.id,
+            p_sede_id: sedeId,
+          })));
+        }
+        if (item.correo === 'instant' && item.email) {
+          envios.push(apiSendEmail({
+            to: item.email,
+            subject: `Nueva solicitud #${requestNumber}`,
+            body: `<p><strong>${requesterName}</strong> ha creado la solicitud #${requestNumber}.</p>`,
+          }));
+        }
+      }
+      const resultados = await Promise.allSettled(envios);
+      for (const r of resultados) {
+        if (r.status === 'rejected') console.error('No se pudo enviar un aviso de nueva solicitud:', r.reason);
+      }
+      const legacy = await getNotificationRecipients('notify_on_new_request', ['Admin']);
+      for (const admin of legacy) {
+        if (!yaElegidos.has(admin.id)) pushIds.add(admin.id);
+      }
+    } else {
+      const legacy = await getNotificationRecipients('notify_on_new_request', ['Admin']);
+      for (const admin of legacy) pushIds.add(admin.id);
+    }
+
+    if (pushIds.size > 0) {
+        await supabase.functions.invoke('send-notification', {
+            method: 'POST',
+            body: JSON.stringify({
+                user_ids: [...pushIds],
+                title: `🔔 Nueva solicitud #${requestNumber}`,
+                body: `${requesterName} ha creado una solicitud.`,
+                link: `/requests/${created.id}`,
+            }),
+        });
+    }
+  } catch (e) {
+    console.error("Failed to send notification for new request:", e);
+  }
+
+};
+
 export const apiAddRequest = async (data: AddRequestData): Promise<SupabaseRequest> => {
   const { vendorId, requesterId, accountManagerId, shippingAddressId, billingAddressId, notes, projectCodes, items } = data;
 
@@ -369,59 +429,9 @@ export const apiAddRequest = async (data: AddRequestData): Promise<SupabaseReque
     }
   }
 
-  try {
-    const requester = await getRequesterProfile(requesterId);
-    const requesterName = requester ? `${requester.first_name || ''} ${requester.last_name || ''}`.trim() : 'Alguien';
-    const requestNumber = created.request_number || created.id.substring(0, 8);
-    const sedeId = created.sede_id ?? null;
-    const pushIds = new Set<string>();
-
-    if (sedeId) {
-      const { data: destinatarios } = await supabase.rpc('destinatarios_aviso_solicitud', { p_sede_id: sedeId });
-      const lista = (destinatarios ?? []) as Array<{ user_id: string; email: string | null; push: boolean; correo: string }>;
-      const yaElegidos = new Set(lista.map((item) => item.user_id));
-      for (const item of lista) {
-        if (item.push) pushIds.add(item.user_id);
-        if (item.correo === 'daily') {
-          await supabase.rpc('encolar_aviso_diario', {
-            p_user_id: item.user_id,
-            p_request_id: created.id,
-            p_sede_id: sedeId,
-          });
-        }
-        if (item.correo === 'instant' && item.email) {
-          await apiSendEmail({
-            to: item.email,
-            subject: `Nueva solicitud #${requestNumber}`,
-            body: `<p><strong>${requesterName}</strong> ha creado la solicitud #${requestNumber}.</p>`,
-          }).catch((error) => {
-            console.error('No se pudo enviar el correo al momento:', error);
-          });
-        }
-      }
-      const legacy = await getNotificationRecipients('notify_on_new_request', ['Admin']);
-      for (const admin of legacy) {
-        if (!yaElegidos.has(admin.id)) pushIds.add(admin.id);
-      }
-    } else {
-      const legacy = await getNotificationRecipients('notify_on_new_request', ['Admin']);
-      for (const admin of legacy) pushIds.add(admin.id);
-    }
-
-    if (pushIds.size > 0) {
-        await supabase.functions.invoke('send-notification', {
-            method: 'POST',
-            body: JSON.stringify({
-                user_ids: [...pushIds],
-                title: `🔔 Nueva Solicitud #${requestNumber}`,
-                body: `El usuario ${requesterName} ha enviado una nueva solicitud pendiente.`,
-                link: `/requests/${created.id}`,
-            }),
-        });
-    }
-  } catch (e) {
-    console.error("Failed to send notification for new request:", e);
-  }
+  // Los avisos salen en segundo plano: la solicitud ya está creada y no
+  // hace falta que quien la crea espere a cada correo.
+  void avisarNuevaSolicitud(created, requesterId);
 
   return created;
 };
@@ -448,7 +458,12 @@ const notifyStatusChange = async (
   requestNumber: string
 ): Promise<void> => {
   try {
-    const allProfiles = await apiGetProfiles();
+    const ids = [requesterId, accountManagerId].filter((x): x is string => Boolean(x));
+    const { data: perfiles } = await supabase
+      .from('profiles')
+      .select('id, notify_on_status_change')
+      .in('id', ids);
+    const allProfiles = (perfiles ?? []) as Array<{ id: string; notify_on_status_change: boolean | null }>;
     let targetUserIds: string[] = [];
     let title: string;
     let body: string;
@@ -474,31 +489,31 @@ const notifyStatusChange = async (
     
     switch (status) {
       case 'Quote Requested':
-          title = `✅ Solicitud #${requestNumber} Aprobada`;
-          body = `Tu solicitud ha sido aprobada y se ha solicitado un presupuesto.`;
+          title = `📨 Presupuesto pedido para #${requestNumber}`;
+          body = `Se ha pedido presupuesto al proveedor.`;
           break;
       case 'PO Requested':
-          title = `📝 Presupuesto recibido para #${requestNumber}`;
-          body = `El presupuesto ha sido recibido. Se requiere la orden de compra.`;
+          title = `📝 Falta el PO de #${requestNumber}`;
+          body = `El presupuesto ya está. Ahora hace falta la orden de compra.`;
           break;
       case 'Ordered':
-          title = `📦 Solicitud #${requestNumber} Pedida`;
-          body = `Tu solicitud ha sido marcada como 'Pedido'. Esperando la recepción.`;
+          title = `📦 Solicitud #${requestNumber} pedida`;
+          body = `Ya se ha hecho el pedido. Falta que llegue.`;
           break;
       case 'Received':
-          title = `🎉 Solicitud #${requestNumber} Recibida`;
+          title = `🎉 Solicitud #${requestNumber} recibida`;
           body = `Los artículos de tu solicitud han sido recibidos y añadidos al inventario.`;
           break;
       case 'Denied':
-          title = `❌ Solicitud #${requestNumber} Denegada`;
+          title = `❌ Solicitud #${requestNumber} denegada`;
           body = `Tu solicitud ha sido denegada. Revisa los detalles para más información.`;
           break;
       case 'Cancelled':
-          title = `🚫 Solicitud #${requestNumber} Cancelada`;
+          title = `🚫 Solicitud #${requestNumber} cancelada`;
           body = `Tu solicitud ha sido cancelada.`;
           break;
       default:
-          title = `Cambio de Estado en Solicitud #${requestNumber}`;
+          title = `Cambio de estado en la solicitud #${requestNumber}`;
           body = `El estado ha cambiado a ${status}.`;
           break;
     }
@@ -557,7 +572,7 @@ export const apiUpdateRequestStatus = async (
   if (error) throw new Error(error.message);
 
   if (oldStatus !== status) {
-    await notifyStatusChange(id, status, requesterId, accountManagerId, requestNumber);
+    void notifyStatusChange(id, status, requesterId, accountManagerId, requestNumber);
   }
 
   return updatedRequest as SupabaseRequest;
@@ -678,7 +693,7 @@ export const apiUpdateRequestFile = async (
   // Adjuntar presupuesto o PO hace avanzar el estado en la base
   // (trigger requests_avanza_con_documentos): se avisa igual que si lo cambiara la app.
   if (before && after.status !== before.status) {
-    await notifyStatusChange(
+    void notifyStatusChange(
       id,
       after.status as RequestStatus,
       after.requester_id,
@@ -788,7 +803,7 @@ export const apiSendEmail = async (email: EmailData): Promise<void> => {
   });
 
   if (error) {
-    let errorMessage = 'Fallo al enviar correo via Edge Function.';
+    let errorMessage = 'No se pudo enviar el correo.';
     if (data && typeof data === 'object' && 'error' in data) {
         errorMessage = (data as any).error;
     } else if (error.message) {
