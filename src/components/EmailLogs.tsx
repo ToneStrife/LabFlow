@@ -1,4 +1,5 @@
 import React from "react";
+import ErrorState from "@/components/ErrorState";
 import { formatFechaHora } from "@/lib/format";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
@@ -41,7 +42,7 @@ const EmailLogs: React.FC = () => {
   }
 
   if (error) {
-    return <div className="text-red-500 dark:text-red-400">Error al cargar registros de correo: {error.message}</div>;
+    return <ErrorState que="el registro de correos" error={error} />;
   }
 
   return (

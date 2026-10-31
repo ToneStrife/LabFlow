@@ -1,4 +1,5 @@
 import React from "react";
+import ErrorState from "@/components/ErrorState";
 import { formatEuros } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Loader2, DollarSign, Download } from "lucide-react";
@@ -74,7 +75,7 @@ const Expenditures = () => {
   }
 
   if (expendituresError) {
-    return <div className="p-4 sm:p-6 text-red-600 dark:text-red-400">Error: {expendituresError.message}</div>;
+    return <ErrorState que="los gastos" error={expendituresError} />;
   }
   
   const unaccountedCount = unaccountedRequests?.length || 0;

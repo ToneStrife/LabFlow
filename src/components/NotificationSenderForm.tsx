@@ -228,7 +228,7 @@ const NotificationSenderForm: React.FC = () => {
               </>
             ) : (
               <>
-                <Bell className="mr-2 h-4 w-4" /> Enviar Prueba (Solo yo)
+                <Bell className="mr-2 h-4 w-4" /> Enviar prueba (solo a mí)
               </>
             )}
           </Button>

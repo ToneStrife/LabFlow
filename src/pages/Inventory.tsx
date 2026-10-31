@@ -1,4 +1,5 @@
 import React from "react";
+import ErrorState from "@/components/ErrorState";
 import InventoryTable from "@/components/InventoryTable";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Loader2 } from "lucide-react";
@@ -96,9 +97,7 @@ const Inventory = () => {
 
   if (error) {
     return (
-      <div className="p-4 sm:p-6 text-red-600 dark:text-red-400">
-        Error al cargar el inventario: {error.message}
-      </div>
+<ErrorState que="el inventario" error={error} />
     );
   }
 

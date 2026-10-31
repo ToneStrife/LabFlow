@@ -80,14 +80,13 @@ const RequestSummaryCard: React.FC<RequestSummaryCardProps> = ({ request, vendor
   const shippingAddress = shippingAddresses?.find(a => a.id === request.shipping_address_id);
   const billingAddress = billingAddresses?.find(a => a.id === request.billing_address_id);
   
-  const displayRequestNumber = request.request_number || `ID: ${request.id.substring(0, 8)}`;
-
   return (
     <Card>
       <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between space-y-0 pb-2">
-        <CardTitle className="text-lg sm:text-2xl font-bold flex flex-col items-start min-w-0">
-          <span className="text-base font-semibold text-muted-foreground">Solicitud {displayRequestNumber}</span>
-          <span>{vendor?.name || "—"}</span>
+        {/* El número ya está en el título de la página; aquí basta el proveedor. */}
+        <CardTitle className="text-lg sm:text-2xl font-bold min-w-0">
+          <span className="block text-sm font-medium text-muted-foreground">Proveedor</span>
+          {vendor?.name || "—"}
         </CardTitle>
         <div className="flex items-center space-x-2">
           <Badge variant="outline" className={getRequestStatusBadgeClass(request.status)}>

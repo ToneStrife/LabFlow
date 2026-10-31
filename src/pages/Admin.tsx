@@ -1,4 +1,5 @@
 import React from "react";
+import ErrorState from "@/components/ErrorState";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Loader2, MapPin, DollarSign, Users, Briefcase, Shield, Mail, ScrollText, Bell, KeyRound, Server, FlaskConical, Copy } from "lucide-react";
@@ -285,7 +286,7 @@ const AdminPage = () => {
   }
 
   if (error) {
-    return <div className="p-4 sm:p-6 text-red-600 dark:text-red-400">Error: {error.message}</div>;
+    return <ErrorState que="la administración" error={error} />;
   }
 
   return (

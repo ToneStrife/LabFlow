@@ -296,49 +296,48 @@ const RequestDetails: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
+      {/* En el móvil las acciones van primero: es lo que se viene a hacer.
+          En escritorio siguen en la columna derecha, arriba. */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:grid-rows-[auto_1fr] lg:items-start">
+        <section aria-labelledby="titulo-acciones" className="p-4 border rounded-lg bg-card shadow-sm lg:col-start-3 lg:row-start-1">
+          <h2 id="titulo-acciones" className="text-lg font-semibold mb-2">Siguiente paso</h2>
+          <RequestActions
+            request={request}
+            isUpdatingStatus={updateStatusMutation.isPending || updateFileMutation.isPending || revertReceptionMutation.isPending}
+            handleUploadQuote={handleUploadQuote}
+            handleUploadPOAndOrder={handleUploadPOAndOrder}
+            handleRegisterPo={handleRegisterPo}
+            handleSendPORequest={correos.solicitarPo}
+            handleMarkAsReceived={handleOpenReceiveItemsDialog}
+            handleMarkAsOrderedAndSendEmail={correos.enviarPedido}
+            openDenyRequestDialog={() => setIsDenyDialogOpen(true)}
+            openCancelRequestDialog={() => setIsCancelDialogOpen(true)}
+            onSendQuoteRequest={correos.solicitarPresupuesto}
+          />
+          {userIsAdmin && (request.status === "Ordered" || request.status === "Received") && (
+            <Button
+              variant="outline"
+              className="w-full mt-2 justify-start"
+              onClick={() => setIsInvoiceItemsDialogOpen(true)}
+            >
+              <CreditCard className="mr-2 h-4 w-4" /> Registrar facturación
+            </Button>
+          )}
+        </section>
+
+        <div className="space-y-6 min-w-0 lg:col-span-2 lg:col-start-1 lg:row-start-1 lg:row-span-2">
           <RequestSummaryCard request={request} vendor={vendor} profiles={profiles} onEditDetails={() => setIsEditMetadataDialogOpen(true)} isEditable={isEditableByRole} />
           <RequestItemsTable items={request.items} isEditable={isEditableByRole} />
         </div>
-        
-        <div className="lg:col-span-1 space-y-6">
-          <div className="p-4 border rounded-lg bg-card shadow-lg">
-            <h3 className="text-lg font-semibold mb-3">Acciones</h3>
-            <RequestActions
-              request={request}
-              isUpdatingStatus={updateStatusMutation.isPending || updateFileMutation.isPending || revertReceptionMutation.isPending}
-              handleUploadQuote={handleUploadQuote}
-              handleUploadPOAndOrder={handleUploadPOAndOrder}
-              handleRegisterPo={handleRegisterPo}
-              handleSendPORequest={correos.solicitarPo}
-              handleMarkAsReceived={handleOpenReceiveItemsDialog}
-              handleMarkAsOrderedAndSendEmail={correos.enviarPedido}
-              openDenyRequestDialog={() => setIsDenyDialogOpen(true)}
-              openCancelRequestDialog={() => setIsCancelDialogOpen(true)}
-              onSendQuoteRequest={correos.solicitarPresupuesto}
-            />
-            {userIsAdmin && (
-                <Button 
-                    variant="secondary" 
-                    className="w-full mt-2 justify-start" 
-                    onClick={() => setIsInvoiceItemsDialogOpen(true)}
-                >
-                    <CreditCard className="mr-2 h-4 w-4" /> Registrar facturación
-                </Button>
-            )}
-          </div>
-          
+
+        <div className="space-y-6 min-w-0 lg:col-start-3 lg:row-start-2">
           <RequestFilesCard request={request} onUploadClick={handleUploadClick} onSimpleFileUpload={() => Promise.resolve()} />
           <RequestActivityCard requestId={request.id} />
           <PackingSlipsList requestId={request.id} onOpenReceiveItemsDialog={handleOpenReceiveItemsDialog} requestNumber={displayRequestNumber} />
-          
-          {/* CRÍTICO: Envolver InvoicesList en check de isAdmin */}
           {userIsAdmin && <InvoicesList requestId={request.id} onOpenInvoiceDialog={() => setIsInvoiceItemsDialogOpen(true)} />}
         </div>
       </div>
-      
-      {/* ... (resto de diálogos sin cambios) */}
+
       <Dialog open={isEditMetadataDialogOpen} onOpenChange={setIsEditMetadataDialogOpen}>
         <DialogContent className={cn(mobileDialogClass, "sm:max-w-[600px] gap-0 overflow-hidden p-0")}>
           <div className="shrink-0 space-y-1.5 border-b px-6 py-4 pr-12">

@@ -71,3 +71,34 @@ export function accionesDeSolicitud(
 
   return acciones;
 }
+
+/**
+ * En qué punto está la solicitud y qué falta, en una frase. Lo que se ve
+ * arriba de las acciones, para saber de un vistazo a quién le toca.
+ */
+export function siguientePaso(
+  request: Pick<SupabaseRequest, "status" | "quote_url" | "po_url" | "po_number">
+): string | null {
+  const tienePresupuesto = Boolean(request.quote_url);
+  const tienePo = Boolean(request.po_url || request.po_number);
+
+  switch (request.status) {
+    case "Pending":
+    case "Quote Requested":
+    case "PO Requested":
+      if (tienePo) return "Ya hay PO. Falta hacer el pedido al proveedor.";
+      if (tienePresupuesto) return "Ya hay presupuesto. Falta el PO del gerente de cuenta.";
+      if (request.status === "Quote Requested") return "Esperando el presupuesto del proveedor.";
+      return "Falta pedir el presupuesto al proveedor o subirlo si ya lo tienes.";
+    case "Ordered":
+      return "Pedido hecho. Falta que lleguen los artículos.";
+    case "Received":
+      return "Todo recibido. Solicitud completada.";
+    case "Denied":
+      return "Solicitud denegada.";
+    case "Cancelled":
+      return "Solicitud cancelada.";
+    default:
+      return null;
+  }
+}

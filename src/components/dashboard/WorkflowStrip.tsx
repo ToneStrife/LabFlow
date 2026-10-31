@@ -20,6 +20,8 @@ export interface Etapa {
   icono: LucideIcon;
   tono: TonoEtapa;
   onSelect: () => void;
+  /** La fase que se está viendo ahora debajo. */
+  activa?: boolean;
 }
 
 /**
@@ -50,8 +52,10 @@ export const WorkflowStrip: React.FC<{ etapas: Etapa[] }> = ({ etapas }) => (
             key={etapa.id}
             type="button"
             onClick={etapa.onSelect}
+            aria-pressed={Boolean(etapa.activa)}
             className={cn(
               "group relative shrink-0 snap-start p-3 text-left transition-colors",
+              etapa.activa && "bg-muted/50",
               "min-w-[7.5rem] sm:min-w-0 sm:p-4",
               "hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
             )}
@@ -60,6 +64,7 @@ export const WorkflowStrip: React.FC<{ etapas: Etapa[] }> = ({ etapas }) => (
             <span
               className={cn(
                 "absolute inset-x-0 top-0 h-0.5 opacity-0 transition-opacity group-hover:opacity-100",
+                etapa.activa && "h-1 opacity-100",
                 tono.barra
               )}
             />

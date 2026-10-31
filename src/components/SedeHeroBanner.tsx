@@ -39,7 +39,7 @@ const SedeHeroBanner: React.FC<SedeHeroBannerProps> = ({ className }) => {
   return (
     <div
       className={cn(
-        "relative min-h-[9.5rem] overflow-hidden rounded-2xl border shadow-sm sm:min-h-[11rem]",
+        "relative min-h-[5.5rem] overflow-hidden rounded-2xl border shadow-sm sm:min-h-[11rem]",
         className
       )}
       style={fondoStyle}
@@ -51,24 +51,26 @@ const SedeHeroBanner: React.FC<SedeHeroBannerProps> = ({ className }) => {
         </>
       )}
 
-      <div className="relative flex h-full min-h-[9.5rem] flex-col justify-end gap-4 p-5 sm:min-h-[11rem] sm:flex-row sm:items-end sm:justify-between sm:gap-6 sm:p-6">
+      {/* En el móvil el banner era media pantalla antes del trabajo: aquí se queda
+          en una franja con el nombre de la sede y el logo pequeño. */}
+      <div className="relative flex h-full min-h-[5.5rem] flex-row items-end justify-between gap-3 p-4 sm:min-h-[11rem] sm:gap-6 sm:p-6">
         <div className="min-w-0 text-white drop-shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-widest text-white/80">
             {sede ? `Sede activa · ${labNombre}` : labNombre}
           </p>
-          <h2 className="mt-0.5 text-2xl font-bold tracking-tight sm:text-3xl">
+          <h2 className="mt-0.5 text-xl font-bold tracking-tight sm:text-3xl">
             {sede ? sede.name : "Todas las sedes"}
           </h2>
-          <p className="mt-1 max-w-xl text-sm leading-snug text-white/90 sm:text-base">
+          <p className="mt-1 hidden max-w-xl text-sm leading-snug text-white/90 sm:block sm:text-base">
             {sede?.descripcion ?? labDesc}
           </p>
         </div>
 
-        <div className="shrink-0 self-start rounded-xl bg-white/95 p-3 shadow-md ring-1 ring-black/5 backdrop-blur-sm dark:bg-white sm:self-end">
+        <div className="shrink-0 self-end rounded-lg bg-white/95 p-2 shadow-md ring-1 ring-black/5 backdrop-blur-sm dark:bg-white sm:rounded-xl sm:p-3">
           <img
             src={labLogo}
             alt={`Logo ${labNombre}`}
-            className="h-12 w-auto max-w-[200px] object-contain sm:h-14"
+            className="h-8 w-auto max-w-[120px] object-contain sm:h-14 sm:max-w-[200px]"
           />
         </div>
       </div>

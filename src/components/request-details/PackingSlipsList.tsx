@@ -1,4 +1,5 @@
 import React from "react";
+import ErrorState from "@/components/ErrorState";
 import { formatFecha } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -209,7 +210,7 @@ const PackingSlipsList: React.FC<PackingSlipsListProps> = ({ requestId, requestN
   }
 
   if (error) {
-    return <div className="text-red-500 dark:text-red-400 p-4">Error al cargar albaranes: {error.message}</div>;
+    return <ErrorState que="los albaranes" error={error} />;
   }
   
   // Formatear el nombre del albarán según el requisito: Solicitud Corta + Albarán + 00X

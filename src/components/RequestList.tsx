@@ -1,4 +1,5 @@
 import React from "react";
+import ErrorState from "@/components/ErrorState";
 import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { RequestStatus, SupabaseRequest, Vendor, Profile, AccountManager, Project, ShippingAddress, BillingAddress } from "@/data/types";
@@ -213,7 +214,7 @@ const RequestList: React.FC<RequestListProps> = ({ estadoInicial = "All" }) => {
   }
 
   if (requestsError) {
-    return <div className="text-red-500 dark:text-red-400">Error al cargar solicitudes: {requestsError.message}</div>;
+    return <ErrorState que="las solicitudes" error={requestsError} />;
   }
 
   return (

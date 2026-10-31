@@ -1,4 +1,5 @@
 import React from "react";
+import ErrorState from "@/components/ErrorState";
 import { usePendingItems } from "@/hooks/use-pending-items";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -64,7 +65,7 @@ const PendingItemsList: React.FC = () => {
   }
 
   if (error) {
-    return <div className="text-red-500 dark:text-red-400 p-4">Error: {error.message}</div>;
+    return <ErrorState que="los artículos por recibir" error={error} />;
   }
 
   const emptyMessage =
@@ -76,7 +77,7 @@ const PendingItemsList: React.FC = () => {
     <Card className="overflow-hidden shadow-sm border-amber-200 dark:border-amber-900/70">
       <CardHeader className="bg-amber-50/70 dark:bg-amber-950/30 border-b border-amber-200/60 dark:border-amber-900/50 py-3">
         <CardTitle className="text-lg flex items-center text-amber-800 dark:text-amber-300">
-          <PackageSearch className="mr-2 h-5 w-5" /> Artículos Pendientes de Recibir
+          <PackageSearch className="mr-2 h-5 w-5" /> Artículos por recibir
           {itemsForSede.length > 0 && (
             <span className="ml-2 text-sm font-normal text-amber-700/80 dark:text-amber-400/80">
               ({itemsForSede.length})
