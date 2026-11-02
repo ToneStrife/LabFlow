@@ -13,7 +13,7 @@ import { useExpenditureAnalytics } from "@/hooks/use-expenditure-analytics";
 import ExpenditureTable from "@/components/ExpenditureTable";
 import ExpenditureForm from "@/components/ExpenditureForm";
 import ImportExpendituresDialog from "@/components/ImportExpendituresDialog";
-import { pageContainerClass, pageHeaderClass, mobileDialogClass } from "@/lib/layout";
+import { pageContainerClass, pageHeaderClass, mobileDialogClass, pageTitleClass, pageDescriptionClass, sectionTitleClass } from "@/lib/layout";
 import { cn } from "@/lib/utils";
 import SpendingByProjectChart from "@/components/charts/SpendingByProjectChart";
 import SpendingByVendorChart from "@/components/charts/SpendingByVendorChart";
@@ -82,8 +82,13 @@ const Expenditures = () => {
 
   return (
     <div className={pageContainerClass}>
-      <div className={cn(pageHeaderClass, "items-center mb-2 sm:mb-6")}>
-        <h1 className="text-2xl sm:text-3xl font-bold">Gestión de gastos</h1>
+      <div className={cn(pageHeaderClass, "items-center")}>
+        <div>
+          <h1 className={pageTitleClass}>Gestión de gastos</h1>
+          <p className={pageDescriptionClass}>
+            Rastrea los gastos incurridos, vinculándolos a proyectos y solicitudes específicas.
+          </p>
+        </div>
         <div className="flex flex-wrap gap-2 w-full sm:w-auto">
           {unaccountedCount > 0 && (
             <Button 
@@ -113,12 +118,8 @@ const Expenditures = () => {
           </Dialog>
         </div>
       </div>
-      <p className="text-lg text-muted-foreground mb-8">
-        Rastrea los gastos incurridos, vinculándolos a proyectos y solicitudes específicas.
-      </p>
-      
       {/* 1. Detalle de Gastos (Tabla) */}
-      <h2 className="text-2xl font-bold mb-4">Detalle de gastos</h2>
+      <h2 className={cn(sectionTitleClass, "mb-3")}>Detalle de gastos</h2>
       <div className="mb-8">
         <ExpenditureTable
           expenditures={expenditures || []}
@@ -129,7 +130,7 @@ const Expenditures = () => {
       </div>
 
       {/* 2. Gráficos de Distribución y Total */}
-      <h2 className="text-2xl font-bold mb-4">Análisis de distribución</h2>
+      <h2 className={cn(sectionTitleClass, "mb-3")}>Análisis de distribución</h2>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <Card className="md:col-span-1 h-full">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -156,7 +157,7 @@ const Expenditures = () => {
       </div>
       
       {/* 3. Gasto Total por Años (Movido al final) */}
-      <h2 className="text-2xl font-bold mb-4">Gasto histórico</h2>
+      <h2 className={cn(sectionTitleClass, "mb-3")}>Gasto histórico</h2>
       <div className="mb-8">
         <SpendingByYearChart data={analytics.spendingByYear} />
       </div>

@@ -122,7 +122,7 @@ const PorRol: React.FC = () => {
                               }
                             />
                             {fijoParaAdmin && (
-                              <span className="text-[10px] text-muted-foreground">fijo</span>
+                              <span className="text-[11px] text-muted-foreground">fijo</span>
                             )}
                           </div>
                         </TableCell>

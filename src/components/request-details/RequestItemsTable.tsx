@@ -110,7 +110,7 @@ const RequestItemsTable: React.FC<RequestItemsTableProps> = ({ items, isEditable
                   Rec: {received}
                 </Badge>
                 {isAdmin && (
-                  <Badge variant={isFullyInvoiced ? "secondary" : "outline"} className={cn("gap-1", isFullyInvoiced && "bg-blue-600 text-white")}>
+                  <Badge variant={isFullyInvoiced ? "secondary" : "outline"} className={cn("gap-1", isFullyInvoiced && "bg-primary text-primary-foreground")}>
                     Fac: {invoiced}
                   </Badge>
                 )}
@@ -121,7 +121,7 @@ const RequestItemsTable: React.FC<RequestItemsTableProps> = ({ items, isEditable
                   <Button variant="outline" size="sm" className="flex-1" onClick={() => handleEditItem(item)}>
                     <Edit className="h-4 w-4 mr-2" /> Editar
                   </Button>
-                  <Button variant="outline" size="sm" className="text-red-500 dark:text-red-400" onClick={() => handleDeleteItem(item)} aria-label="Quitar artículo">
+                  <Button variant="outline" size="sm" className="text-destructive" onClick={() => handleDeleteItem(item)} aria-label="Quitar artículo">
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
@@ -171,7 +171,7 @@ const RequestItemsTable: React.FC<RequestItemsTableProps> = ({ items, isEditable
                     <TableCell className="text-center">
                         <Badge 
                             variant={isFullyInvoiced ? "secondary" : "outline"} 
-                            className={cn("gap-1", isFullyInvoiced ? "bg-blue-600 text-white hover:bg-blue-700" : "")}
+                            className={cn("gap-1", isFullyInvoiced ? "bg-primary text-primary-foreground hover:bg-primary/90" : "")}
                         >
                             {invoiced} {isFullyInvoiced && <CheckCircle2 className="h-3 w-3" />}
                         </Badge>
@@ -181,7 +181,7 @@ const RequestItemsTable: React.FC<RequestItemsTableProps> = ({ items, isEditable
                   {isEditable && (
                     <TableCell className="text-right">
                       <Button variant="ghost" size="icon" onClick={() => handleEditItem(item)} className="mr-1" title="Editar artículo" aria-label="Editar artículo"><Edit className="h-4 w-4" /></Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDeleteItem(item)} className="text-red-500 dark:text-red-400" title="Quitar artículo" aria-label="Quitar artículo"><Trash2 className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleDeleteItem(item)} className="text-destructive" title="Quitar artículo" aria-label="Quitar artículo"><Trash2 className="h-4 w-4" /></Button>
                     </TableCell>
                   )}
                 </TableRow>

@@ -8,7 +8,7 @@ import { useInventory, useAddInventoryItem, useUpdateInventoryItem, useDeleteInv
 import InventoryForm, { InventoryFormValues } from "@/components/InventoryForm";
 import InventoryToolbar from "@/components/InventoryToolbar";
 import ReorderDialog from "@/components/ReorderDialog";
-import { pageContainerClass, pageHeaderClass, mobileDialogClass } from "@/lib/layout";
+import { pageContainerClass, pageHeaderClass, mobileDialogClass, pageTitleClass, pageDescriptionClass } from "@/lib/layout";
 import { cn } from "@/lib/utils";
 import { useClientPagination } from "@/hooks/use-client-pagination";
 import ListPagination from "@/components/ListPagination";
@@ -105,8 +105,8 @@ const Inventory = () => {
     <div className={pageContainerClass}>
       <div className={cn(pageHeaderClass, "items-center")}>
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold">Inventario</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <h1 className={pageTitleClass}>Inventario</h1>
+          <p className={pageDescriptionClass}>
             {sedeActiva
               ? `Stock de ${getSedeLabel(sedeActiva)}. Cambia la sede en la cabecera para ver otra.`
               : "Stock de todas las sedes. Usa el selector de sede para filtrar."}

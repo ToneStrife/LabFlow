@@ -42,7 +42,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAggregatedReceivedItems } from "@/hooks/use-packing-slips";
 import { RequestStatus as RequestStatusType, Vendor, Profile, AccountManager, Project, ShippingAddress, BillingAddress } from "@/data/types";
 import { cn } from "@/lib/utils";
-import { pageContainerClass, mobileDialogClass } from "@/lib/layout";
+import { pageContainerClass, mobileDialogClass, pageTitleClass } from "@/lib/layout";
 import { getRequestStatusLabelLong, REQUEST_STATUS_ORDER } from "@/lib/request-status";
 
 const RequestDetails: React.FC = () => {
@@ -281,7 +281,7 @@ const RequestDetails: React.FC = () => {
           <ArrowLeft className="mr-1.5 h-4 w-4" /> Volver al panel
         </Button>
         <div className="flex items-center justify-between gap-2 min-w-0">
-          <h1 className="text-xl sm:text-3xl font-bold text-foreground truncate min-w-0">
+          <h1 className={cn(pageTitleClass, "truncate min-w-0")}>
             Solicitud {displayRequestNumber}
           </h1>
           <DropdownMenu>
@@ -290,7 +290,7 @@ const RequestDetails: React.FC = () => {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               {canOverrideStatus(profile?.role) && <DropdownMenuItem onClick={() => { setNewStatus(request.status); setIsStatusOverrideDialogOpen(true); }}><Edit className="mr-2 h-4 w-4" /> Cambiar estado manualmente</DropdownMenuItem>}
-              {canDelete && <><DropdownMenuSeparator /><DropdownMenuItem onClick={() => setIsDeleteDialogOpen(true)} className="text-red-600 dark:text-red-400"><Trash2 className="mr-2 h-4 w-4" /> Eliminar solicitud</DropdownMenuItem></>}
+              {canDelete && <><DropdownMenuSeparator /><DropdownMenuItem onClick={() => setIsDeleteDialogOpen(true)} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Eliminar solicitud</DropdownMenuItem></>}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

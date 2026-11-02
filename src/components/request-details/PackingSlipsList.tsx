@@ -289,7 +289,7 @@ const PackingSlipsList: React.FC<PackingSlipsListProps> = ({ requestId, requestN
                         size="sm" 
                         onClick={() => handleViewClick(slip.slip_url!)} 
                         disabled={isGenerating === slip.slip_url}
-                        className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center p-0 h-auto truncate max-w-full sm:max-w-[200px]"
+                        className="text-xs text-primary hover:underline flex items-center p-0 h-auto truncate max-w-full sm:max-w-[200px]"
                         title={getFileNameFromPath(slip.slip_url)}
                       >
                         {isGenerating === slip.slip_url ? (

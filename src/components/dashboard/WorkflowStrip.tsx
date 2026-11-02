@@ -73,7 +73,7 @@ export const WorkflowStrip: React.FC<{ etapas: Etapa[] }> = ({ etapas }) => (
               <span className={cn("flex h-6 w-6 shrink-0 items-center justify-center rounded-md sm:h-7 sm:w-7", tono.caja)}>
                 <Icono className={cn("h-3.5 w-3.5 sm:h-4 sm:w-4", tono.icono)} />
               </span>
-              <span className="truncate text-[10px] font-semibold uppercase tracking-wide text-muted-foreground sm:text-[11px]">
+              <span className="truncate text-[11px] font-semibold uppercase tracking-wide text-muted-foreground sm:text-xs">
                 {etapa.etiqueta}
               </span>
             </div>

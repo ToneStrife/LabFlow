@@ -66,9 +66,9 @@ const VendorTable: React.FC<VendorTableProps> = ({
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="font-medium leading-tight">{vendor.name}</p>
                         {vendor.scope === "lab" ? (
-                          <Badge variant="outline" className="text-[10px]">Solo lab</Badge>
+                          <Badge variant="outline" className="text-[11px]">Solo lab</Badge>
                         ) : (
-                          <Badge variant="secondary" className="text-[10px]">Global</Badge>
+                          <Badge variant="secondary" className="text-[11px]">Global</Badge>
                         )}
                       </div>
                       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground md:hidden">
@@ -112,7 +112,7 @@ const VendorTable: React.FC<VendorTableProps> = ({
                         <>
                           {emailPpto ? (
                             <div className="min-w-0">
-                              <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                              <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
                                 Presupuesto
                               </p>
                               <a
@@ -126,7 +126,7 @@ const VendorTable: React.FC<VendorTableProps> = ({
                           ) : null}
                           {emailPedido ? (
                             <div className="min-w-0">
-                              <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                              <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
                                 Pedidos
                               </p>
                               <a

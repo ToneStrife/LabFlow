@@ -127,7 +127,7 @@ const PendingInvoicesList: React.FC = () => {
                       </Link>
                     </TableCell>
                     <TableCell className="text-center">{item.quantityOrdered}</TableCell>
-                    <TableCell className="text-center text-blue-600 dark:text-blue-400">{item.quantityInvoiced}</TableCell>
+                    <TableCell className="text-center text-primary">{item.quantityInvoiced}</TableCell>
                     <TableCell className="text-right">
                       <Badge variant="outline" className="font-bold border-sky-300 text-sky-700 bg-sky-50 dark:border-sky-800 dark:text-sky-300 dark:bg-sky-950">
                         {item.quantityPending}

@@ -11,7 +11,7 @@ import SmtpAccountsSection from "@/components/SmtpAccountsSection";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { pageContainerClass, mobileDialogClass } from "@/lib/layout";
+import { pageContainerClass, mobileDialogClass, pageTitleClass, pageDescriptionClass } from "@/lib/layout";
 
 import AccountManagerTable from "@/components/AccountManagerTable";
 import AccountManagerForm, { AccountManagerFormValues } from "@/components/AccountManagerForm";
@@ -290,12 +290,14 @@ const AdminPage = () => {
   }
 
   return (
-    <div className="p-4 sm:p-6 max-w-full mx-auto">
-      <h1 className="text-3xl font-bold mb-6">Panel de administración</h1>
-      <p className="text-lg text-muted-foreground mb-8">
-        Solo ves las secciones que puedes modificar. No hace falta el rol de administrador.
-        El correo de cada persona se guarda en el menú Correo.
-      </p>
+    <div className={pageContainerClass}>
+      <div>
+        <h1 className={pageTitleClass}>Panel de administración</h1>
+        <p className={pageDescriptionClass}>
+          Solo ves las secciones que puedes modificar. No hace falta el rol de administrador.
+          El correo de cada persona se guarda en el menú Correo.
+        </p>
+      </div>
 
       {pestanasVisibles.length === 0 ? (
         <p className="text-muted-foreground">No tienes secciones de administración asignadas.</p>
@@ -672,7 +674,7 @@ const AdminPage = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <NotificationSenderForm />
-              <p className="text-sm text-red-500 dark:text-red-400">
+              <p className="text-sm text-destructive">
                 Nota: si no recibes la notificación, verifica que las claves `FIREBASE_PRIVATE_KEY`, `FIREBASE_CLIENT_EMAIL` y `FIREBASE_PROJECT_ID` estén configuradas correctamente en los secretos de Supabase y que hayas aceptado los permisos de notificación en tu navegador.
               </p>
             </CardContent>

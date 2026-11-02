@@ -256,8 +256,23 @@ const Login: React.FC = () => {
                   default: {
                     colors: {
                       brand: 'hsl(var(--primary))',
-                      brandAccent: 'hsl(var(--primary-foreground))',
+                      // brandAccent es el fondo del botón al pasar el ratón.
+                      // Antes era el color del texto y el botón desaparecía.
+                      brandAccent: 'hsl(var(--primary) / 0.85)',
+                      brandButtonText: 'hsl(var(--primary-foreground))',
                     },
+                  },
+                },
+              }}
+              localization={{
+                variables: {
+                  sign_in: {
+                    email_label: 'Correo electrónico',
+                    password_label: 'Contraseña',
+                    email_input_placeholder: 'tu@correo.es',
+                    password_input_placeholder: 'Tu contraseña',
+                    button_label: 'Entrar',
+                    loading_button_label: 'Entrando…',
                   },
                 },
               }}

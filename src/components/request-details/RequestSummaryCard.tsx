@@ -144,7 +144,7 @@ const RequestSummaryCard: React.FC<RequestSummaryCardProps> = ({ request, vendor
                   size="sm" 
                   onClick={handleViewQuote} 
                   disabled={isGeneratingQuoteUrl}
-                  className="p-0 h-auto text-blue-500 dark:text-blue-400"
+                  className="p-0 h-auto text-primary"
                 >
                   {isGeneratingQuoteUrl ? (
                     <Loader2 className="h-4 w-4 animate-spin mr-1" />
