@@ -30,7 +30,7 @@ export interface NavItem {
  * repetir el nombre de la app en todas las pantallas.
  */
 export const navItems: NavItem[] = [
-  { title: "Panel de Control", href: "/dashboard", icon: ShoppingCart },
+  { title: "Panel de control", href: "/dashboard", icon: ShoppingCart },
   { title: "Proveedores", href: "/vendors", icon: Users, permission: "vendors.view" },
   { title: "Inventario", href: "/inventory", icon: Warehouse, permission: "inventory.view" },
   { title: "Registro", href: "/historial", icon: History },

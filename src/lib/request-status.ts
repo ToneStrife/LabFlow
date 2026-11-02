@@ -8,7 +8,7 @@ import { RequestStatus } from "@/data/types";
 
 /** Etiqueta corta, para insignias y celdas de tabla. */
 export const REQUEST_STATUS_LABEL: Record<RequestStatus, string> = {
-  "Pending": "Pendiente de presupuesto",
+  "Pending": "Sin presupuesto",
   "Quote Requested": "Presupuesto solicitado",
   "PO Requested": "PO solicitado",
   "Ordered": "Pedido",

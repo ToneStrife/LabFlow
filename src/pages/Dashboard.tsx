@@ -71,7 +71,7 @@ const Dashboard = () => {
   const cuentaPorEstado = (estado: RequestStatus) =>
     requestsForSede.filter((req) => req.status === estado).length;
 
-  /** Ir al historial ya filtrado por una fase concreta. */
+  /** Ir a la pestaña de solicitudes ya filtrada por una fase concreta. */
   const verHistorialFiltrado = (estado: RequestStatus) => {
     setFiltroEstado(estado);
     setPestana("all-requests");
@@ -200,7 +200,7 @@ const Dashboard = () => {
             </TabsTrigger>
           )}
           <TabsTrigger value="all-requests" className={claseTab}>
-            <LayoutDashboard className="mr-2 h-4 w-4" /> Historial
+            <LayoutDashboard className="mr-2 h-4 w-4" /> Solicitudes
           </TabsTrigger>
         </TabsList>
 

@@ -1,39 +1,42 @@
 import React from 'react';
 import { formatEuros } from "@/lib/format";
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend, TooltipProps } from 'recharts';
 import { ChartData } from '@/hooks/use-expenditure-analytics';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { ChartTooltipBox, chartColors, chartOtherColor } from './chart-theme';
 
 interface SpendingByVendorChartProps {
   data: ChartData[];
 }
 
-// Colores para las secciones del pastel (usando tonos cálidos/fríos)
-const COLORS = ['#FF8042', '#00C49F', '#FFBB28', '#0088FE', '#8884d8', '#82ca9d', '#ffc658', '#d0ed57', '#a4de6c', '#8dd1e1'];
-
 // Componente de Tooltip personalizado
-const CustomTooltip = ({ active, payload }: any) => {
+const CustomTooltip = ({ active, payload }: TooltipProps<number, string>) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
     const percentage = (data.percent * 100).toFixed(1);
     return (
-      <div className="p-2 bg-white border rounded-md shadow-lg text-sm">
-        <p className="font-bold">{data.name}</p>
-        <p className="text-muted-foreground">Gasto: <span className="font-semibold text-foreground">{formatEuros(data.value)}</span></p>
-        <p className="text-muted-foreground">Porcentaje: <span className="font-semibold">{percentage}%</span></p>
-      </div>
+      <ChartTooltipBox
+        titulo={data.name}
+        filas={[
+          { etiqueta: "Gasto", valor: formatEuros(data.value) },
+          { etiqueta: "Porcentaje", valor: `${percentage}%` },
+        ]}
+      />
     );
   }
   return null;
 };
 
 const SpendingByVendorChart: React.FC<SpendingByVendorChartProps> = ({ data }) => {
+  const isMobile = useIsMobile();
+
   // Mostrar solo el top 5 para el gráfico de pastel, el resto se agrupa
   const topData = data.slice(0, 5);
   const otherTotal = data.slice(5).reduce((sum, entry) => sum + entry.value, 0);
-  
-  const chartData = otherTotal > 0 
-    ? [...topData, { id: 'other', name: 'Otros', value: otherTotal }] 
+
+  const chartData = otherTotal > 0
+    ? [...topData, { id: 'other', name: 'Otros', value: otherTotal }]
     : topData;
 
   return (
@@ -55,16 +58,27 @@ const SpendingByVendorChart: React.FC<SpendingByVendorChartProps> = ({ data }) =
                 nameKey="name"
                 cx="50%"
                 cy="50%"
-                outerRadius={100}
-                fill="#8884d8"
+                outerRadius={isMobile ? 80 : 100}
+                stroke="hsl(var(--card))"
                 labelLine={false}
               >
                 {chartData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={entry.id === 'other' ? chartOtherColor : chartColors[index % chartColors.length]}
+                  />
                 ))}
               </Pie>
               <Tooltip content={<CustomTooltip />} />
-              <Legend layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{ fontSize: '12px' }} />
+              {/* En el móvil la leyenda va debajo: a la derecha le quitaba medio ancho al gráfico. */}
+              <Legend
+                layout={isMobile ? "horizontal" : "vertical"}
+                verticalAlign={isMobile ? "bottom" : "middle"}
+                align={isMobile ? "center" : "right"}
+                iconType="circle"
+                wrapperStyle={{ fontSize: '12px' }}
+                formatter={(value) => <span className="text-foreground">{value}</span>}
+              />
             </PieChart>
           </ResponsiveContainer>
         )}

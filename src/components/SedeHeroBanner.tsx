@@ -39,7 +39,7 @@ const SedeHeroBanner: React.FC<SedeHeroBannerProps> = ({ className }) => {
   return (
     <div
       className={cn(
-        "relative min-h-[5.5rem] overflow-hidden rounded-2xl border shadow-sm sm:min-h-[11rem]",
+        "relative overflow-hidden rounded-lg border shadow-sm",
         className
       )}
       style={fondoStyle}
@@ -51,26 +51,26 @@ const SedeHeroBanner: React.FC<SedeHeroBannerProps> = ({ className }) => {
         </>
       )}
 
-      {/* En el móvil el banner era media pantalla antes del trabajo: aquí se queda
-          en una franja con el nombre de la sede y el logo pequeño. */}
-      <div className="relative flex h-full min-h-[5.5rem] flex-row items-end justify-between gap-3 p-4 sm:min-h-[11rem] sm:gap-6 sm:p-6">
+      {/* Una franja que dice en qué sede estás. No lleva a ninguna acción, así
+          que no debe quitarle el sitio al saludo ni a las fases que van debajo. */}
+      <div className="relative flex flex-row items-center justify-between gap-3 px-4 py-3 sm:gap-6 sm:px-5">
         <div className="min-w-0 text-white drop-shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-widest text-white/80">
             {sede ? `Sede activa · ${labNombre}` : labNombre}
           </p>
-          <h2 className="mt-0.5 text-xl font-bold tracking-tight sm:text-3xl">
+          <p className="mt-0.5 text-lg font-bold tracking-tight sm:text-xl">
             {sede ? sede.name : "Todas las sedes"}
-          </h2>
-          <p className="mt-1 hidden max-w-xl text-sm leading-snug text-white/90 sm:block sm:text-base">
+          </p>
+          <p className="mt-0.5 hidden max-w-xl truncate text-sm text-white/90 md:block">
             {sede?.descripcion ?? labDesc}
           </p>
         </div>
 
-        <div className="shrink-0 self-end rounded-lg bg-white/95 p-2 shadow-md ring-1 ring-black/5 backdrop-blur-sm dark:bg-white sm:rounded-xl sm:p-3">
+        <div className="shrink-0 rounded-md bg-white/95 p-1.5 shadow-sm ring-1 ring-black/5 backdrop-blur-sm dark:bg-white sm:p-2">
           <img
             src={labLogo}
             alt={`Logo ${labNombre}`}
-            className="h-8 w-auto max-w-[120px] object-contain sm:h-14 sm:max-w-[200px]"
+            className="h-7 w-auto max-w-[110px] object-contain sm:h-10 sm:max-w-[160px]"
           />
         </div>
       </div>

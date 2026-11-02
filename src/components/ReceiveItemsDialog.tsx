@@ -516,7 +516,7 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
             <>
               {step === 1 && (
                 <div className="space-y-5">
-                  <div className="rounded-2xl border bg-muted/40 p-5 space-y-4">
+                  <div className="rounded-lg border bg-muted/40 p-5 space-y-4">
                     <div className="flex items-start gap-3">
                       <div className="rounded-full bg-primary/10 p-3 shrink-0">
                         <Camera className="h-6 w-6 text-primary" />
@@ -616,7 +616,7 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
                       <div
                         key={item.id}
                         className={cn(
-                          "rounded-xl border p-3 space-y-2.5 transition-colors sm:p-3.5",
+                          "rounded-lg border p-3 space-y-2.5 transition-colors sm:p-3.5",
                           hasQty && "border-primary/40 bg-primary/5",
                           isFullyReceived && "opacity-60 bg-muted/40"
                         )}
@@ -755,7 +755,7 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
               {step === 3 && (
                 <div className="space-y-4">
                   {/* Bloque del albaran: dos datos, leidos de un vistazo */}
-                  <div className="overflow-hidden rounded-2xl border bg-card">
+                  <div className="overflow-hidden rounded-lg border bg-card">
                     <div className="flex items-center gap-2 border-b bg-muted/40 px-4 py-2.5">
                       <FileText className="h-4 w-4 text-muted-foreground" />
                       <h3 className="text-sm font-semibold">Albarán</h3>
@@ -791,7 +791,7 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
                         No hay cantidades marcadas. Vuelve al paso anterior.
                       </p>
                     ) : (
-                      <div className="overflow-hidden rounded-2xl border">
+                      <div className="overflow-hidden rounded-lg border">
                         <ul className="divide-y">
                           {summaryItems.map((item) => (
                             <li

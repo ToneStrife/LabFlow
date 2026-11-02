@@ -203,7 +203,7 @@ const SeccionFormulario: React.FC<{
   icono: LucideIcon;
   children: React.ReactNode;
 }> = ({ titulo, descripcion, icono: Icono, children }) => (
-  <section className="overflow-hidden rounded-xl border bg-card">
+  <section className="overflow-hidden rounded-lg border bg-card">
     <header className="flex items-start gap-3 border-b bg-muted/30 px-4 py-3">
       <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
         <Icono className="h-4 w-4" />
@@ -746,7 +746,7 @@ const RequestForm: React.FC = () => {
         >
         <div className="space-y-4">
           {fields.map((field, index) => (
-            <div key={field.id} className="relative space-y-4 rounded-xl border bg-card p-4">
+            <div key={field.id} className="relative space-y-4 rounded-lg border bg-card p-4">
               {/* Numero, ayudas de relleno y borrado, todo en una sola fila */}
               <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-3">
                 <h3 className="flex items-center gap-2 text-sm font-semibold">
@@ -884,7 +884,7 @@ const RequestForm: React.FC = () => {
 
         {/* Con varios articulos el formulario se hace largo; las acciones
             acompañan al usuario en vez de quedarse al final del todo. */}
-        <div className="sticky bottom-0 z-20 flex flex-col-reverse gap-2 rounded-xl border bg-card/95 p-3 shadow-lg backdrop-blur sm:flex-row sm:items-center sm:justify-between">
+        <div className="sticky bottom-0 z-20 flex flex-col-reverse gap-2 rounded-lg border bg-card/95 p-3 shadow-lg backdrop-blur sm:flex-row sm:items-center sm:justify-between">
             <Button type="button" variant="outline" onClick={handleClearForm} disabled={isSubmitting} className="text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive">
                 <RotateCcw className="h-4 w-4 mr-2" /> Limpiar formulario
             </Button>

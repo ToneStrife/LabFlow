@@ -29,7 +29,7 @@ const VendorTable: React.FC<VendorTableProps> = ({
   emptyMessage = "No se encontraron proveedores.",
 }) => {
   return (
-    <div className="overflow-hidden rounded-xl border bg-card">
+    <div className="overflow-hidden rounded-lg border bg-card">
       <Table>
         <TableHeader>
           <TableRow className="bg-muted/40 hover:bg-muted/40">

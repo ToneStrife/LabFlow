@@ -166,7 +166,7 @@ const Documentos = () => {
       </div>
 
       {/* Buscador siempre a la vista: se queda pegado bajo la cabecera al bajar */}
-      <div className="sticky top-14 z-30 space-y-3 rounded-xl border bg-card/95 p-3 shadow-sm backdrop-blur">
+      <div className="sticky top-14 z-30 space-y-3 rounded-lg border bg-card/95 p-3 shadow-sm backdrop-blur">
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -322,7 +322,7 @@ const Documentos = () => {
           No se pudieron cargar los documentos: {error.message}
         </div>
       ) : filtrados.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed py-16 text-center">
+        <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed py-16 text-center">
           <FileSearch className="h-8 w-8 text-muted-foreground/60" />
           <p className="text-sm text-muted-foreground">
             {documentos.length === 0
