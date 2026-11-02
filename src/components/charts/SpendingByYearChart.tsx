@@ -1,6 +1,6 @@
 import React from 'react';
 import { formatEuros, formatEurosRedondos } from "@/lib/format";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, TooltipProps } from 'recharts';
 import { ChartData } from '@/hooks/use-expenditure-analytics';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartTooltipBox, chartAxisProps, chartCursor, chartGridProps, chartPrimaryColor } from './chart-theme';
@@ -10,7 +10,7 @@ interface SpendingByYearChartProps {
 }
 
 // Componente de Tooltip personalizado
-const CustomTooltip = ({ active, payload, label }: any) => {
+const CustomTooltip = ({ active, payload, label }: TooltipProps<number, string>) => {
   if (active && payload && payload.length) {
     return <ChartTooltipBox titulo={`Año ${label}`} filas={[{ etiqueta: "Gasto", valor: formatEuros(payload[0].value) }]} />;
   }

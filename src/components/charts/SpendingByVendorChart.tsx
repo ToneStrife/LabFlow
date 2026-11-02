@@ -1,6 +1,6 @@
 import React from 'react';
 import { formatEuros } from "@/lib/format";
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend, TooltipProps } from 'recharts';
 import { ChartData } from '@/hooks/use-expenditure-analytics';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -11,7 +11,7 @@ interface SpendingByVendorChartProps {
 }
 
 // Componente de Tooltip personalizado
-const CustomTooltip = ({ active, payload }: any) => {
+const CustomTooltip = ({ active, payload }: TooltipProps<number, string>) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
     const percentage = (data.percent * 100).toFixed(1);
