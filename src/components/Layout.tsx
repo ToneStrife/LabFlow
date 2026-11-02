@@ -25,6 +25,8 @@ interface LayoutProps {
   children: React.ReactNode;
 }
 
+const PANTALLAS_SIN_SESION = ["/login", "/reset-password"];
+
 /** Marca de la barra lateral: LabFlow + logo FarBioQ bien visible. */
 const Marca: React.FC<{ onClick?: () => void }> = ({ onClick }) => (
   <Link to="/dashboard" className="group flex flex-col gap-3" onClick={onClick}>
@@ -34,7 +36,7 @@ const Marca: React.FC<{ onClick?: () => void }> = ({ onClick }) => (
       </span>
       <span className="flex min-w-0 flex-col leading-none">
         <span className="text-xl font-extrabold tracking-tight text-sidebar-foreground">LabFlow</span>
-        <span className="mt-1 truncate text-[11px] font-medium text-sidebar-foreground/60">
+        <span className="mt-1 truncate text-xs font-medium text-sidebar-foreground/60">
           Solicitudes de laboratorio
         </span>
       </span>
@@ -76,7 +78,7 @@ const BloqueUsuario: React.FC<{ onLinkClick?: () => void }> = ({ onLinkClick }) 
           </Avatar>
           <span className="flex min-w-0 flex-1 flex-col leading-tight">
             <span className="truncate text-sm font-medium text-sidebar-foreground">{nombre}</span>
-            <span className="truncate text-[11px] text-sidebar-foreground/60">
+            <span className="truncate text-xs text-sidebar-foreground/60">
               {ROL_ETIQUETA[profile.role] ?? profile.role}
             </span>
           </span>
@@ -118,6 +120,19 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const shouldRenderNav = !!profile;
   const tituloPagina = getPageTitle(location.pathname);
+
+  // Sin sesión no hay menú que cargar: la barra lateral se quedaba girando
+  // para siempre detrás del formulario. Estas pantallas van solas.
+  if (PANTALLAS_SIN_SESION.includes(location.pathname)) {
+    return (
+      <div className="relative min-h-screen bg-canvas text-foreground">
+        {children}
+        <div className="absolute right-3 top-3">
+          <ThemeToggle />
+        </div>
+      </div>
+    );
+  }
 
   const contenidoBarraLateral = (enSheet: boolean) => (
     <>
@@ -169,9 +184,16 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             </Sheet>
           )}
 
-          <h1 className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground sm:text-base">
-            {tituloPagina}
-          </h1>
+          {/* En escritorio la barra lateral ya marca dónde estás y la página
+              lleva su propio título; repetirlo aquí era ruido. En el móvil
+              se queda, porque al bajar el título de la página se pierde. */}
+          {isMobile ? (
+            <span className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">
+              {tituloPagina}
+            </span>
+          ) : (
+            <span className="flex-1" />
+          )}
 
           <div className="ml-auto flex shrink-0 items-center gap-1">
             {shouldRenderNav && <SedeSelector />}

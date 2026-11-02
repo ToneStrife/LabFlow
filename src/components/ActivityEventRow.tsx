@@ -76,7 +76,7 @@ const ActivityEventRow: React.FC<ActivityEventRowProps> = ({
           <p className="truncate text-sm font-medium">{event.titulo}</p>
           <time
             dateTime={event.created_at}
-            className="shrink-0 font-mono text-[11px] tabular-nums text-muted-foreground"
+            className="shrink-0 font-mono text-xs tabular-nums text-muted-foreground"
             title={cuando}
           >
             {cuando}

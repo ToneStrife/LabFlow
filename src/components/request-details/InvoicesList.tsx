@@ -53,13 +53,13 @@ const InvoicesList: React.FC<InvoicesListProps> = ({ requestId, onOpenInvoiceDia
                       size="sm" 
                       onClick={() => handleViewClick(inv.invoice_url!)} 
                       disabled={isGenerating === inv.invoice_url}
-                      className="text-xs text-blue-600 dark:text-blue-400"
+                      className="text-xs text-primary"
                     >
                       {isGenerating === inv.invoice_url ? <Loader2 className="h-3 w-3 animate-spin" /> : <Paperclip className="h-3 w-3 mr-1" />}
                       Ver PDF
                     </Button>
                   )}
-                  <Button variant="ghost" size="icon" onClick={() => setFacturaABorrar(inv.id)} title="Eliminar factura" aria-label="Eliminar factura" className="text-red-500 dark:text-red-400 h-8 w-8">
+                  <Button variant="ghost" size="icon" onClick={() => setFacturaABorrar(inv.id)} title="Eliminar factura" aria-label="Eliminar factura" className="text-destructive h-8 w-8">
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>

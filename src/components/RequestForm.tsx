@@ -763,7 +763,7 @@ const RequestForm: React.FC = () => {
                       variant="ghost"
                       size="icon"
                       onClick={() => remove(index)}
-                      className="h-8 w-8 flex-shrink-0 text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-950/50"
+                      className="h-8 w-8 flex-shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
                       title="Eliminar artículo"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -885,7 +885,7 @@ const RequestForm: React.FC = () => {
         {/* Con varios articulos el formulario se hace largo; las acciones
             acompañan al usuario en vez de quedarse al final del todo. */}
         <div className="sticky bottom-0 z-20 flex flex-col-reverse gap-2 rounded-xl border bg-card/95 p-3 shadow-lg backdrop-blur sm:flex-row sm:items-center sm:justify-between">
-            <Button type="button" variant="outline" onClick={handleClearForm} disabled={isSubmitting} className="text-red-600 dark:text-red-400 border-red-300 dark:border-red-900 hover:bg-red-50 dark:hover:bg-red-950/50">
+            <Button type="button" variant="outline" onClick={handleClearForm} disabled={isSubmitting} className="text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive">
                 <RotateCcw className="h-4 w-4 mr-2" /> Limpiar formulario
             </Button>
             <Button type="submit" className="sm:min-w-52" disabled={isSubmitting}>

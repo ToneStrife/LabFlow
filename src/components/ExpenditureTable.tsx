@@ -53,7 +53,7 @@ const ExpenditureTable: React.FC<ExpenditureTableProps> = ({ expenditures, proje
         onClick={() => setABorrar(expenditure)}
         title="Eliminar gasto"
         aria-label="Eliminar gasto"
-        className="text-red-500 dark:text-red-400"
+        className="text-destructive"
       >
         <Trash2 className="h-4 w-4" />
       </Button>

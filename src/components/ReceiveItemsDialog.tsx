@@ -491,7 +491,7 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
               </span>
               <span
                 className={cn(
-                  "text-[11px] font-medium transition-colors",
+                  "text-xs font-medium transition-colors",
                   active ? "text-foreground" : done ? "text-primary" : "text-muted-foreground"
                 )}
               >
@@ -653,7 +653,7 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
                               name={`items.${index}.quantityReceived`}
                               render={({ field: quantityField }) => (
                                 <FormItem className="space-y-1.5">
-                                  <FormLabel className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                                  <FormLabel className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                                     Cantidad a recibir
                                   </FormLabel>
                                   <div className="flex items-center gap-1.5">
@@ -725,7 +725,7 @@ const ReceiveItemsDialog: React.FC<ReceiveItemsDialogProps> = ({
                               name={`items.${index}.storageLocation`}
                               render={({ field: locationField }) => (
                                 <FormItem className="space-y-1.5">
-                                  <FormLabel className="flex items-center gap-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                                  <FormLabel className="flex items-center gap-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                                     <MapPin className="h-3 w-3" /> Ubicación (opcional)
                                   </FormLabel>
                                   <FormControl>

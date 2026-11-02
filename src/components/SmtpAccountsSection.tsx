@@ -161,7 +161,7 @@ const SmtpAccountsSection: React.FC<SmtpAccountsSectionProps> = ({
 
   if (error) {
     return (
-      <div className="text-red-600 dark:text-red-400">
+      <div className="text-destructive">
         Error al cargar cuentas SMTP: {error.message}
       </div>
     );

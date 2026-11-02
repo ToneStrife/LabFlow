@@ -134,7 +134,7 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
                   key={accion}
                   onClick={onClick}
                   disabled={isUpdatingStatus}
-                  className={destructiva ? "text-red-600 dark:text-red-400" : undefined}
+                  className={destructiva ? "text-destructive" : undefined}
                 >
                   <Icono className="mr-2 h-4 w-4" /> {texto}
                 </DropdownMenuItem>
@@ -188,7 +188,7 @@ const RequestListActions: React.FC<RequestListActionsProps> = ({
             className={cn(
               "shrink-0",
               destructiva
-                ? "text-red-600 hover:text-red-700 dark:text-red-400"
+                ? "text-destructive hover:text-destructive/80"
                 : i === 0
                   ? "text-primary hover:text-primary"
                   : "text-muted-foreground hover:text-foreground"

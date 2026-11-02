@@ -26,7 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { pageContainerClass } from "@/lib/layout";
+import { pageContainerClass, pageTitleClass, pageDescriptionClass } from "@/lib/layout";
 import { generateSignedUrl } from "@/utils/supabase-storage";
 import {
   useDocumentos,
@@ -156,8 +156,8 @@ const Documentos = () => {
   return (
     <div className={pageContainerClass}>
       <div>
-        <h2 className="text-2xl font-bold tracking-tight">Documentos</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <h1 className={pageTitleClass}>Documentos</h1>
+        <p className={pageDescriptionClass}>
           Presupuestos, órdenes de compra, albaranes y facturas
           {sedeActiva
             ? ` de ${getSedeLabel(sedeActiva)}.`
@@ -233,7 +233,7 @@ const Documentos = () => {
         {panelAbierto && (
           <div className="grid gap-3 border-t pt-3 sm:grid-cols-2 lg:grid-cols-4">
             <div className="space-y-1.5">
-              <Label className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+              <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 Proveedor
               </Label>
               <Select value={proveedorId} onValueChange={setProveedorId}>
@@ -252,7 +252,7 @@ const Documentos = () => {
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+              <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 Solicitante
               </Label>
               <Select value={solicitanteId} onValueChange={setSolicitanteId}>
@@ -273,7 +273,7 @@ const Documentos = () => {
             <div className="space-y-1.5">
               <Label
                 htmlFor="doc-desde"
-                className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground"
+                className="text-xs font-medium uppercase tracking-wide text-muted-foreground"
               >
                 Desde
               </Label>
@@ -290,7 +290,7 @@ const Documentos = () => {
             <div className="space-y-1.5">
               <Label
                 htmlFor="doc-hasta"
-                className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground"
+                className="text-xs font-medium uppercase tracking-wide text-muted-foreground"
               >
                 Hasta
               </Label>

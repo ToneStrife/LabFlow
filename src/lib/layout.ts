@@ -27,3 +27,12 @@ export const dialogFooterMobileClass = cn(
 );
 
 export const dialogBodyScrollClass = "flex-1 min-h-0 overflow-y-auto";
+
+/** Título de cada página: el mismo tamaño en todas. */
+export const pageTitleClass = "text-2xl font-bold tracking-tight sm:text-3xl";
+
+/** Frase bajo el título de la página. */
+export const pageDescriptionClass = "mt-1 text-sm text-muted-foreground";
+
+/** Título de una sección dentro de una página. */
+export const sectionTitleClass = "text-lg font-semibold tracking-tight sm:text-xl";

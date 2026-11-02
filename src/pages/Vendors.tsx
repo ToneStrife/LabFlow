@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import VendorForm from "@/components/VendorForm";
 import { useVendors, useAddVendor, useUpdateVendor, useDeleteVendor, useVendorLabOverrides, VendorFormValues } from "@/hooks/use-vendors";
 import { Vendor } from "@/data/types";
-import { pageContainerClass, pageHeaderClass, mobileDialogClass } from "@/lib/layout";
+import { pageContainerClass, pageHeaderClass, mobileDialogClass, pageTitleClass } from "@/lib/layout";
 import { cn } from "@/lib/utils";
 import { useLabsCatalog } from "@/components/LabsCatalogProvider";
 import { useSedeActiva } from "@/components/SedeContextProvider";
@@ -126,7 +126,7 @@ const Vendors = () => {
     <div className={pageContainerClass}>
       <div className={cn(pageHeaderClass, "items-start sm:items-end")}>
         <div className="min-w-0 space-y-1">
-          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Proveedores</h1>
+          <h1 className={pageTitleClass}>Proveedores</h1>
           <p className="text-sm text-muted-foreground">
             Contactos, correos de presupuesto/pedido y marcas del laboratorio.
           </p>

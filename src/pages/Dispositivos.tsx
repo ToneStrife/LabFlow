@@ -25,7 +25,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
-import { pageContainerClass } from "@/lib/layout";
+import { pageContainerClass, pageTitleClass, pageDescriptionClass } from "@/lib/layout";
 import { SEDES } from "@/lib/sedes";
 import SedeDot from "@/components/SedeDot";
 import { useSession } from "@/components/SessionContextProvider";
@@ -885,10 +885,10 @@ const Dispositivos: React.FC = () => {
   return (
     <div className={cn(pageContainerClass, "max-w-3xl")}>
       <div>
-        <h2 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
+        <h1 className={cn(pageTitleClass, "flex items-center gap-2")}>
           <Bot className="h-6 w-6" /> Mis SofIAs
-        </h2>
-        <p className="mt-1 text-sm text-muted-foreground">
+        </h1>
+        <p className={pageDescriptionClass}>
           Tu asistente de voz del laboratorio: su nombre, su voz y cómo hace los pedidos que le dictas.
         </p>
       </div>

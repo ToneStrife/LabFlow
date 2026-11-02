@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { pageContainerClass } from "@/lib/layout";
+import { pageContainerClass, pageTitleClass, pageDescriptionClass } from "@/lib/layout";
 import { useActivityEvents } from "@/hooks/use-request-events";
 import { useClientPagination } from "@/hooks/use-client-pagination";
 import ListPagination from "@/components/ListPagination";
@@ -87,8 +87,8 @@ const Historial = () => {
   return (
     <div className={pageContainerClass}>
       <div>
-        <h2 className="text-2xl font-bold tracking-tight">Registro</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <h1 className={pageTitleClass}>Registro</h1>
+        <p className={pageDescriptionClass}>
           Qué ha pasado y qué ha llegado: busca por producto, albarán o solicitud.
         </p>
       </div>
@@ -151,7 +151,7 @@ const Historial = () => {
         <div className="overflow-hidden rounded-md border bg-card">
           {grupos.map(([dia, eventos]) => (
             <section key={dia}>
-              <h3 className="border-b bg-muted/40 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <h3 className="border-b bg-muted/40 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 {etiquetaDia(eventos[0].created_at)}
               </h3>
               <ul className="divide-y">

@@ -38,7 +38,7 @@ interface RequestActionsProps {
 }
 
 const claseRoja =
-  "text-red-600 dark:text-red-400 border-red-200 dark:border-red-900 hover:bg-red-50 dark:hover:bg-red-950/50";
+  "text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive";
 
 const RequestActions: React.FC<RequestActionsProps> = ({
   request,

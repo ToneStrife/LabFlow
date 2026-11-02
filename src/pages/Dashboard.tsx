@@ -19,7 +19,7 @@ import { filterRequestsBySede } from "@/lib/sedes";
 import { usePendingItems } from "@/hooks/use-pending-items";
 import { usePendingInvoices } from "@/hooks/use-pending-invoices";
 import { cn } from "@/lib/utils";
-import { pageContainerClass } from "@/lib/layout";
+import { pageContainerClass, pageTitleClass } from "@/lib/layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSession } from "@/components/SessionContextProvider";
 import { WorkflowStrip, type Etapa } from "@/components/dashboard/WorkflowStrip";
@@ -173,9 +173,9 @@ const Dashboard = () => {
       )}
 
       <div>
-        <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
+        <h1 className={pageTitleClass}>
           {nombreCorto ? `Hola, ${nombreCorto}` : "Panel de control"}
-        </h2>
+        </h1>
         <p className="mt-1 text-sm text-muted-foreground">
           {sedeActiva
             ? totalPendiente === 0

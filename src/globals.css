@@ -26,12 +26,18 @@
     --accent: 210 40% 96.1%;
     --accent-foreground: 222.2 47.4% 11.2%;
 
-    --destructive: 0 84.2% 60.2%;
+    /* Rojo de borrar y de error: un punto más oscuro para que se lea el
+       texto blanco del botón y el texto rojo sobre blanco. */
+    --destructive: 0 72.2% 50.6%;
     --destructive-foreground: 210 40% 98%;
 
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 217.2 91.2% 59.8%; /* Usar el primario para el ring */
+    --ring: 217.2 91.2% 53%; /* El mismo azul que el primario */
+
+    /* Verde de exito (correo enviado, recibido...) */
+    --success: 142.1 76.2% 36.3%;
+    --success-foreground: 0 0% 100%;
 
     --radius: 0.5rem;
 
@@ -82,12 +88,16 @@
     --accent: 217.2 32.6% 17.5%;
     --accent-foreground: 210 40% 98%;
 
-    --destructive: 0 62.8% 30.6%;
+    /* Antes 30 % de luz: el texto rojo sobre fondo oscuro no se leía. */
+    --destructive: 0 72.2% 58%;
     --destructive-foreground: 210 40% 98%;
 
     --border: 217.2 32.6% 20%;
     --input: 217.2 32.6% 20%;
     --ring: 217.2 91.2% 59.8%;
+
+    --success: 142.1 70.6% 45.3%;
+    --success-foreground: 144.9 80.4% 10%;
     
     /* Sidebar Dark Mode: Invertir para mantener el contraste */
     --sidebar-background: 222.2 84% 4.9%; /* Darker background */

@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 const OPCIONES = [
   { valor: "light", etiqueta: "Claro", icono: Sun },
   { valor: "dark", etiqueta: "Oscuro", icono: Moon },
-  { valor: "system", etiqueta: "Segun el sistema", icono: Monitor },
+  { valor: "system", etiqueta: "Según el sistema", icono: Monitor },
 ] as const;
 
 export function ThemeToggle() {
