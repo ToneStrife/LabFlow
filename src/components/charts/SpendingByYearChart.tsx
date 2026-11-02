@@ -3,6 +3,7 @@ import { formatEuros, formatEurosRedondos } from "@/lib/format";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { ChartData } from '@/hooks/use-expenditure-analytics';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ChartTooltipBox, chartAxisProps, chartCursor, chartGridProps, chartPrimaryColor } from './chart-theme';
 
 interface SpendingByYearChartProps {
   data: ChartData[];
@@ -11,12 +12,7 @@ interface SpendingByYearChartProps {
 // Componente de Tooltip personalizado
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
-    return (
-      <div className="p-2 bg-white border rounded-md shadow-lg text-sm">
-        <p className="font-bold">Año: {label}</p>
-        <p className="text-muted-foreground">Gasto: <span className="font-semibold text-foreground">{formatEuros(payload[0].value)}</span></p>
-      </div>
-    );
+    return <ChartTooltipBox titulo={`Año ${label}`} filas={[{ etiqueta: "Gasto", valor: formatEuros(payload[0].value) }]} />;
   }
   return null;
 };
@@ -38,11 +34,11 @@ const SpendingByYearChart: React.FC<SpendingByYearChartProps> = ({ data }) => {
               data={data}
               margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="name" />
-              <YAxis tickFormatter={(value) => formatEurosRedondos(value)} />
-              <Tooltip content={<CustomTooltip />} />
-              <Bar dataKey="value" name="Gasto" fill="#10b981" radius={[4, 4, 0, 0]} />
+              <CartesianGrid {...chartGridProps} vertical={false} />
+              <XAxis dataKey="name" {...chartAxisProps} />
+              <YAxis tickFormatter={(value) => formatEurosRedondos(value)} {...chartAxisProps} />
+              <Tooltip content={<CustomTooltip />} cursor={chartCursor} />
+              <Bar dataKey="value" name="Gasto" fill={chartPrimaryColor} radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         )}

@@ -39,6 +39,15 @@
     --success: 142.1 76.2% 36.3%;
     --success-foreground: 0 0% 100%;
 
+    /* Graficos: el azul de la app y cuatro tonos que se distinguen bien
+       entre si y se leen sobre blanco. El 6 es gris, para "Otros". */
+    --chart-1: 217.2 91.2% 53%;
+    --chart-2: 173 80% 36%;
+    --chart-3: 262 70% 58%;
+    --chart-4: 32 95% 46%;
+    --chart-5: 330 75% 52%;
+    --chart-6: 215 16% 62%;
+
     --radius: 0.5rem;
 
     /* Lienzo: el fondo del area de contenido, un punto por debajo de las
@@ -98,6 +107,13 @@
 
     --success: 142.1 70.6% 45.3%;
     --success-foreground: 144.9 80.4% 10%;
+
+    --chart-1: 217.2 91.2% 59.8%;
+    --chart-2: 173 70% 45%;
+    --chart-3: 262 80% 72%;
+    --chart-4: 35 92% 56%;
+    --chart-5: 330 80% 66%;
+    --chart-6: 215 16% 48%;
     
     /* Sidebar Dark Mode: Invertir para mantener el contraste */
     --sidebar-background: 222.2 84% 4.9%; /* Darker background */

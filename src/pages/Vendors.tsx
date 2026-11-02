@@ -154,7 +154,7 @@ const Vendors = () => {
         </Dialog>
       </div>
 
-      <div className="sticky top-14 z-30 space-y-2 rounded-xl border bg-card/95 p-3 shadow-sm backdrop-blur">
+      <div className="sticky top-14 z-30 space-y-2 rounded-lg border bg-card/95 p-3 shadow-sm backdrop-blur">
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input

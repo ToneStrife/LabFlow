@@ -31,7 +31,7 @@ export interface Etapa {
  * donde se actua sobre ella.
  */
 export const WorkflowStrip: React.FC<{ etapas: Etapa[] }> = ({ etapas }) => (
-  <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
+  <div className="overflow-hidden rounded-lg border bg-card shadow-sm">
     {/* En el móvil las cinco fases apiladas ocupaban media pantalla antes de
         llegar a lo que de verdad se usa desde el teléfono. Aquí van en una
         sola fila deslizable de unos 70 px; a partir de tablet, en rejilla. */}

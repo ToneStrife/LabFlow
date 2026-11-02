@@ -47,10 +47,10 @@ const RequestCard: React.FC<{ request: SupabaseRequest; vendor?: Vendor; request
   const displayRequestNumber = request.request_number || request.id.substring(0, 8);
 
   return (
-    <Card className="w-full shadow-md">
+    <Card className="w-full shadow-sm">
       <CardHeader className="p-4 pb-2 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-        <CardTitle className="text-lg font-bold flex flex-col min-w-0">
-          <Link to={`/requests/${request.id}`} className="text-sm text-primary hover:underline">
+        <CardTitle className="flex flex-col min-w-0">
+          <Link to={`/requests/${request.id}`} className="text-base font-bold text-primary hover:underline">
             Solicitud {displayRequestNumber}
           </Link>
           <span className="text-xs font-medium text-muted-foreground">{vendor?.name || "—"}</span>
@@ -82,7 +82,7 @@ const RequestCard: React.FC<{ request: SupabaseRequest; vendor?: Vendor; request
               </li>
             ))}
             {request.items && request.items.length > 2 && (
-              <li className="text-primary font-medium">... y {request.items.length - 2} más</li>
+              <li className="font-medium text-muted-foreground">… y {request.items.length - 2} más</li>
             )}
           </ul>
         </div>
@@ -158,12 +158,12 @@ const RequestListTable: React.FC<RequestListTableProps> = ({
                     <div className="space-y-1">
                       {displayItems}
                       {request.items && request.items.length > 2 && (
-                        <div className="text-xs font-medium text-primary">
+                        <div className="text-xs font-medium text-foreground">
                           (+{request.items.length - 2} más, {totalItems} unidades)
                         </div>
                       )}
                       {request.items && request.items.length <= 2 && (
-                        <div className="text-xs font-medium text-primary">
+                        <div className="text-xs font-medium text-foreground">
                           ({totalItems} unidades)
                         </div>
                       )}
