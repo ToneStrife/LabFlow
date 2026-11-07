@@ -262,7 +262,7 @@ const RequestDetails: React.FC = () => {
     },
     request.status
   );
-  const canDelete = canDeleteRequest(profile?.role, session?.user?.id, request.requester_id);
+  const canDelete = canDeleteRequest(profile?.role, session?.user?.id, request.requester_id, request.status);
   const vendor = vendors?.find(v => v.id === request.vendor_id);
   const displayRequestNumber = request.request_number || `#${request.id.substring(0, 8)}`;
 

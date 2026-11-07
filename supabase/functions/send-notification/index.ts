@@ -80,6 +80,22 @@ serve(async (req) => {
   }
 
   try {
+    // Solo con sesión: esta función usa la clave de servicio y puede avisar a
+    // todo el laboratorio, así que no puede quedar abierta a quien tenga la
+    // clave pública de la app (que va en el JS de la web).
+    const authClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: req.headers.get('Authorization') ?? '' } } }
+    )
+    const { data: { user }, error: authError } = await authClient.auth.getUser()
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: 'No autorizado' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+      })
+    }
+
     const FIREBASE_PROJECT_ID = Deno.env.get('FIREBASE_PROJECT_ID')
     const FIREBASE_CLIENT_EMAIL = Deno.env.get('FIREBASE_CLIENT_EMAIL')
     const FIREBASE_PRIVATE_KEY = Deno.env.get('FIREBASE_PRIVATE_KEY')?.replace(/\\n/g, '\n')
@@ -186,8 +202,9 @@ serve(async (req) => {
       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
     })
   } catch (error: any) {
+    // El detalle va al log; al cliente solo un mensaje genérico.
     console.error('Error in function:', error)
-    return new Response(JSON.stringify({ error: String(error?.message ?? error) }), {
+    return new Response(JSON.stringify({ error: 'No se pudo enviar la notificación.' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
     })

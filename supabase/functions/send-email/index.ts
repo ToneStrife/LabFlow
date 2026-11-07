@@ -359,8 +359,15 @@ serve(async (req) => {
     } else {
       logErrorMessage = raw;
     }
+    // El mensaje crudo del servidor se guarda en el log de correo, que solo ve
+    // quien tiene permiso; al cliente le llega uno genérico salvo que sea de
+    // credenciales, que sí tiene que saber qué arreglar.
+    const mensajeCliente =
+      pideAppPassword || esCredenciales
+        ? logErrorMessage
+        : "No se pudo enviar el correo. Revisa el registro de correos para ver el motivo.";
     return new Response(
-      JSON.stringify({ error: logErrorMessage }),
+      JSON.stringify({ error: mensajeCliente }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } finally {
