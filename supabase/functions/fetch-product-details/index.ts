@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { GoogleGenAI } from "npm:@google/genai@^1.28.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -25,6 +26,20 @@ serve(async (req) => {
         error: "Falta GEMINI_API_KEY en los secretos de Supabase. Un administrador debe configurarla."
       }), {
         status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
+
+    // Solo con sesión: cada llamada gasta cuota de Gemini.
+    const authClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+      { global: { headers: { Authorization: req.headers.get("Authorization") ?? "" } } }
+    );
+    const { data: { user }, error: authError } = await authClient.auth.getUser();
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: "No autorizado" }), {
+        status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }
@@ -105,9 +120,10 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" }
     });
   } catch (error: any) {
+    // El detalle va al log; al cliente solo un mensaje genérico.
     console.error("Edge Function Error:", error);
     return new Response(JSON.stringify({
-      error: error.message || 'No se pudo enriquecer el producto con IA.'
+      error: 'No se pudo enriquecer el producto con IA.'
     }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" }

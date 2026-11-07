@@ -108,13 +108,25 @@ export function canEditRequestDetails(
   return canPerformWorkflowAction(ctx, status);
 }
 
+/** Estados en los que quien pidió aún puede borrar su solicitud (igual que la RLS). */
+const ESTADOS_BORRABLES_POR_AUTOR: RequestStatus[] = [
+  "Pending",
+  "Quote Requested",
+  "PO Requested",
+  "Denied",
+  "Cancelled",
+];
+
 export function canDeleteRequest(
   role?: UserRole,
   userId?: string,
-  requesterId?: string
+  requesterId?: string,
+  status?: RequestStatus
 ): boolean {
   if (!role) return false;
   if (gestionaPedidos(role)) return true;
+  // Una vez pedida ya cuelgan albaranes, facturas e inventario de ella.
+  if (status && !ESTADOS_BORRABLES_POR_AUTOR.includes(status)) return false;
   return !!userId && !!requesterId && userId === requesterId;
 }
 
