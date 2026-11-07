@@ -122,7 +122,8 @@ alter function public.update_last_used_timestamp() set search_path = public, ext
 
 -- Sin sesión estas devuelven falso o nada, pero no tienen por qué estar
 -- expuestas. Las sofia_* con token siguen abiertas: la placa entra con la
--- clave pública.
+-- clave pública. El EXECUTE viene del pseudorrol PUBLIC (toda función lo trae
+-- de serie), así que hay que quitarlo de ahí y volver a darlo a quien toca.
 revoke execute on function
   public.am_i_owner(),
   public.has_permission(text),
@@ -139,4 +140,22 @@ revoke execute on function
   public.search_inventory(text),
   public.search_request_items(text),
   public.slip_items_payload(uuid)
-from anon;
+from public, anon;
+
+grant execute on function
+  public.am_i_owner(),
+  public.has_permission(text),
+  public.is_admin(),
+  public.is_lab_manager(uuid),
+  public.is_owner_row(uuid),
+  public.my_permissions(),
+  public.sede_lab_id(text),
+  public.user_in_lab(uuid),
+  public.user_lab_role(uuid),
+  public.correct_received_item_quantity(uuid, integer),
+  public.generate_request_number(),
+  public.request_event_actor(uuid),
+  public.search_inventory(text),
+  public.search_request_items(text),
+  public.slip_items_payload(uuid)
+to authenticated, service_role;
