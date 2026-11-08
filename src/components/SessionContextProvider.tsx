@@ -164,6 +164,17 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
   const login = async () => {};
 
   const logout = async () => {
+    // Antes de cerrar sesión se suelta el token de avisos de este navegador (con un
+    // tope de 3 s para que nunca retrase el cierre de sesión).
+    if (session?.user?.id) {
+      const userId = session.user.id;
+      await Promise.race([
+        import('@/utils/fcm-utils')
+          .then((modulo) => modulo.releasePushTokenOnLogout(userId))
+          .catch(() => undefined),
+        new Promise((resolve) => setTimeout(resolve, 3000)),
+      ]);
+    }
     const { error } = await supabase.auth.signOut();
     if (error) {
       console.error("Error logging out:", error);

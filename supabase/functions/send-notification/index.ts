@@ -114,6 +114,20 @@ serve(async (req) => {
 
     const { token, user_ids, title, body, data: payloadData, link } = await req.json()
 
+    // Avisar a todo el laboratorio (sin lista de personas) o a un token suelto es
+    // cosa de quien tiene el permiso de enviar notificaciones. Avisar a personas
+    // concretas lo hace la app de forma automática (cambios de estado).
+    const esDifusion = Boolean(token) || !(Array.isArray(user_ids) && user_ids.length > 0)
+    if (esDifusion) {
+      const { data: puedeEnviar } = await authClient.rpc('has_permission', { p_key: 'notifications.send' })
+      if (!puedeEnviar) {
+        return new Response(JSON.stringify({ error: 'No tienes permiso para enviar avisos a todos.' }), {
+          status: 403,
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        })
+      }
+    }
+
     let tokensToSend: string[] = []
     if (token) {
       tokensToSend = [token]
@@ -143,7 +157,7 @@ serve(async (req) => {
     }
 
     const fcmEndpoint = `https://fcm.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/messages:send`
-    const results: Array<{ token: string; success: boolean; status: number; body?: any }> = []
+    const results: Array<{ success: boolean; status: number }> = []
 
     for (const fcmToken of tokensToSend) {
       // Data-only: FCM no pinta sola; el service worker muestra UNA vez.
@@ -161,8 +175,9 @@ serve(async (req) => {
             // Mismo tag = el SO colapsa duplicados del mismo aviso
             tag: ('labflow:' + notifTitle + '|' + notifBody).slice(0, 120),
           },
+          // Sin fcmOptions.link: FCM exige https absoluto y rechazaba la ruta relativa
+          // con un 400. Al hacer clic, el service worker abre data.link.
           webpush: {
-            fcmOptions: link ? { link } : undefined,
             headers: {
               Urgency: 'high',
             },
@@ -181,9 +196,18 @@ serve(async (req) => {
 
       let bodyJson: any = null
       try { bodyJson = await res.json() } catch {}
-      results.push({ token: fcmToken, success: res.ok, status: res.status, body: bodyJson })
+      // La respuesta ya no devuelve los tokens de otras personas ni el cuerpo de FCM.
+      results.push({ success: res.ok, status: res.status })
 
-      if (!res.ok && (res.status === 400 || res.status === 404)) {
+      // Solo se borra el token si FCM dice que ya no existe. Antes cualquier 400
+      // (también un mensaje mal formado) borraba tokens que seguían siendo válidos.
+      const codigoFcm = bodyJson?.error?.details?.find?.((d: any) => d?.errorCode)?.errorCode
+      const tokenInvalido =
+        res.status === 404 ||
+        codigoFcm === 'UNREGISTERED' ||
+        (res.status === 400 && /registration token/i.test(String(bodyJson?.error?.message ?? '')))
+
+      if (!res.ok && tokenInvalido) {
           console.warn(`FCM token ${fcmToken} failed with status ${res.status}. Deleting from DB.`)
           const { error: deleteError } = await supabase
             .from('fcm_tokens')

@@ -319,8 +319,14 @@ serve(async (req) => {
       attachments: processedAttachments.length > 0 ? processedAttachments : undefined,
     });
 
-    await client.close();
+    // Si cerrar la conexión falla el correo ya ha salido: no se marca como fallido
+    // (el usuario reintentaba y el proveedor lo recibía dos veces).
     logStatus = "success";
+    try {
+      await client.close();
+    } catch (closeError) {
+      console.warn("[send-email] Error al cerrar la conexión SMTP (el correo ya salió):", closeError);
+    }
 
     return new Response(
       JSON.stringify({
@@ -376,15 +382,20 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    const bodyPreview = requestBody?.body?.substring(0, 247) + "...";
+    // Solo se registra lo que viene de una sesión válida. Antes también se anotaban
+    // las peticiones sin sesión, y con solo la clave pública se podía llenar el
+    // registro de correos de filas falsas.
+    if (sentByUserId) {
+      const bodyPreview = String(requestBody?.body ?? "").substring(0, 247) + "...";
 
-    await supabaseAdmin.from("email_logs").insert({
-      to_email: requestBody?.to,
-      subject: requestBody?.subject,
-      body_preview: bodyPreview,
-      status: logStatus,
-      error_message: logErrorMessage,
-      sent_by: sentByUserId,
-    });
+      await supabaseAdmin.from("email_logs").insert({
+        to_email: requestBody?.to,
+        subject: requestBody?.subject,
+        body_preview: bodyPreview,
+        status: logStatus,
+        error_message: logErrorMessage,
+        sent_by: sentByUserId,
+      });
+    }
   }
 });

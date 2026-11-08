@@ -145,3 +145,32 @@ export async function unregisterPushToken(token: string) {
     return false;
   }
 }
+
+/**
+ * Al cerrar sesión se suelta el token de avisos de este navegador. Sin esto, en
+ * un equipo compartido los avisos de la persona anterior seguían saliendo y la
+ * siguiente no podía registrar el token (la fila seguía siendo de la otra).
+ * Es silencioso y nunca debe impedir cerrar sesión.
+ */
+export async function releasePushTokenOnLogout(userId: string) {
+  try {
+    if (!isFirebaseConfigured()) return;
+    if (typeof Notification === "undefined" || Notification.permission !== "granted") return;
+
+    const messaging = getFirebaseMessaging();
+    if (!messaging) return;
+
+    const swRegistration = await navigator.serviceWorker.getRegistration(getBasePath());
+    if (!swRegistration) return;
+
+    const token = await getToken(messaging, {
+      vapidKey: VAPID_KEY,
+      serviceWorkerRegistration: swRegistration,
+    });
+    if (!token) return;
+
+    await supabase.from("fcm_tokens").delete().eq("user_id", userId).eq("token", token);
+  } catch (error) {
+    console.warn("No se pudo soltar el token de avisos al cerrar sesión:", error);
+  }
+}

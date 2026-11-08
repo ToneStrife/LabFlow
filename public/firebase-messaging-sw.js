@@ -69,7 +69,11 @@ self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const clickAction = event.notification.data?.link || '/dashboard';
   const base = self.registration.scope;
-  const targetUrl = new URL(clickAction, base).toString();
+  // La app usa rutas con # (HashRouter): «/requests/ID» tiene que ir como
+  // «<base>#/requests/ID». Sin esto el aviso abria una pagina que no existe.
+  const targetUrl = /^https?:\/\//i.test(clickAction)
+    ? clickAction
+    : new URL('#' + (clickAction.startsWith('/') ? clickAction : '/' + clickAction), base).toString();
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
