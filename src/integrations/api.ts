@@ -16,6 +16,7 @@ import {
 import { buildAuthReturnUrl } from "@/lib/auth-redirect";
 import { esHostGmailSmtp, resolveSmtpUser } from "@/lib/smtp";
 import { uploadRequestFile } from "@/utils/upload-request-file";
+import { escapeHtml } from "@/utils/escape-html";
 import { InventoryItemFormData } from "@/hooks/use-inventory"; 
 
 interface FuzzySearchResult {
@@ -331,7 +332,7 @@ const avisarNuevaSolicitud = async (created: SupabaseRequest, requesterId: strin
           envios.push(apiSendEmail({
             to: item.email,
             subject: `Nueva solicitud #${requestNumber}`,
-            body: `<p><strong>${requesterName}</strong> ha creado la solicitud #${requestNumber}.</p>`,
+            body: `<p><strong>${escapeHtml(requesterName)}</strong> ha creado la solicitud #${escapeHtml(requestNumber)}.</p>`,
           }));
         }
       }

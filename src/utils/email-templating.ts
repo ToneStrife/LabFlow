@@ -1,6 +1,7 @@
 import { SupabaseRequest, Vendor, Profile, AccountManager, Project, SupabaseRequestItem, Address } from "@/data/types";
 import { getFullName } from "@/hooks/use-profiles";
 import { resolveTemplateForSend } from "@/utils/email-template-defaults";
+import { escapeHtml } from "@/utils/escape-html";
 import {
   buildItemsTableHtml,
   buildBillingBoxHtml,
@@ -97,14 +98,6 @@ const datosProyecto = (context: EmailTemplateContext) => {
   };
 };
 
-/** Escapa texto para insertarlo en HTML del cuerpo del correo. */
-const escapeHtml = (value: string | number | null | undefined): string =>
-  String(value ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-
 /** Lista de artículos en párrafos (fallback cuando no hay {{items_table}}). */
 const formatItemsListHtml = (items: SupabaseRequestItem[] | null): string => {
   if (!items || items.length === 0) {
@@ -149,10 +142,10 @@ const formatAddressHtml = (address: Address | undefined): string => {
   if (!address) return "N/A";
   // Solo nombre, líneas y CP: sin ciudad ni provincia.
   return `
-    <p style="margin: 0;"><strong>${address.name}</strong></p>
-    <p style="margin: 0;">${address.address_line_1}</p>
-    ${address.address_line_2 ? `<p style="margin: 0;">${address.address_line_2}</p>` : ""}
-    ${address.zip_code ? `<p style="margin: 0;">${address.zip_code}</p>` : ""}
+    <p style="margin: 0;"><strong>${escapeHtml(address.name)}</strong></p>
+    <p style="margin: 0;">${escapeHtml(address.address_line_1)}</p>
+    ${address.address_line_2 ? `<p style="margin: 0;">${escapeHtml(address.address_line_2)}</p>` : ""}
+    ${address.zip_code ? `<p style="margin: 0;">${escapeHtml(address.zip_code)}</p>` : ""}
   `;
 };
 
@@ -167,19 +160,34 @@ const formatAddressPlainText = (address: Address | undefined): string => {
   return lines.join("\n");
 };
 
-const replacePlaceholder = (template: string, placeholder: string, value: string | number | null | undefined): string => {
+const sustituirMarcador = (
+  template: string,
+  placeholder: string,
+  value: string | number | null | undefined,
+  escapar: boolean
+): string => {
   // Regex para encontrar {{placeholder | "valor por defecto"}} o {{placeholder}}
   const regex = new RegExp(`{{${placeholder}(?:\\s*\\|\\s*"(.*?)")?}}`, "g");
   return template.replace(regex, (_match, defaultValue) => {
-    // Si el valor es null, undefined o una cadena vacía, usa el valor por defecto o 'N/A'
-    return value !== null && value !== undefined && String(value).trim() !== ""
-      ? String(value)
-      : defaultValue || "N/A";
+    // Si el valor es null, undefined o una cadena vacia, usa el valor por defecto o 'N/A'
+    if (value === null || value === undefined || String(value).trim() === "") {
+      return defaultValue || "N/A";
+    }
+    // En el HTML del correo los datos de la persona (nombre del proveedor,
+    // notas, direcciones...) se escapan: el dialogo los mete en un editor con
+    // innerHTML, y sin escapar un nombre con "<img onerror=...>" se ejecutaba.
+    return escapar ? escapeHtml(value) : String(value);
   });
 };
 
 /** Placeholders comunes a asunto, texto plano y HTML. */
-const applySharedPlaceholders = (templateString: string, context: EmailTemplateContext): string => {
+const applySharedPlaceholders = (
+  templateString: string,
+  context: EmailTemplateContext,
+  escapar = false
+): string => {
+  const replacePlaceholder = (template: string, placeholder: string, value: string | number | null | undefined) =>
+    sustituirMarcador(template, placeholder, value, escapar);
   let processedString = templateString;
   const {
     request,
@@ -289,7 +297,7 @@ export const processEmailTemplate = (
   context: EmailTemplateContext,
   variante: VarianteTabla = "claro"
 ): string => {
-  let processedString = applySharedPlaceholders(templateString, context);
+  let processedString = applySharedPlaceholders(templateString, context, true);
   const { request, shippingAddress, billingAddress } = context;
   const proyecto = datosProyecto(context);
 
