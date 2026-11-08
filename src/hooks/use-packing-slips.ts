@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { PackingSlip, ReceivedItem, SupabaseRequestItem, RequestStatus } from "@/data/types";
 import { useSession } from "@/components/SessionContextProvider";
 import { uploadRequestFile } from "@/utils/upload-request-file";
-import { invalidateRequestEvents } from "@/lib/activity";
+import { invalidateRequestEvents, invalidatePendingLists } from "@/lib/activity";
 
 // Obtener todos los albaranes para una solicitud
 export const usePackingSlips = (requestId: string) => {
@@ -111,6 +111,7 @@ export const useCorrectReceivedItemQuantity = () => {
             queryClient.invalidateQueries({ queryKey: ['receivedItemsBySlip', receivedItem.slip_id] }); // Invalida el detalle del albarán
             queryClient.invalidateQueries({ queryKey: ['inventory'] });
             queryClient.invalidateQueries({ queryKey: ['requests'] }); // Por si el estado de la solicitud cambia
+            invalidatePendingLists(queryClient);
             invalidateRequestEvents(queryClient);
             toast.success("Cantidad recibida corregida y inventario ajustado.");
         },
@@ -199,64 +200,29 @@ export const useUploadAndCreateSlip = () => {
 
 export const useDeleteSlip = () => {
     const queryClient = useQueryClient();
-    
+
     return useMutation({
         mutationFn: async (slipId: string) => {
-            // 1. Obtener el albarán y la solicitud asociada
-            const { data: slipData, error: fetchError } = await supabase
-                .from('packing_slips')
-                .select(`
-                    request_id,
-                    received_items (id),
-                    request:requests (status)
-                `)
-                .eq('id', slipId)
-                .single();
-                
-            if (fetchError) throw new Error(fetchError.message);
-            
-            const requestId = slipData.request_id; // Obtener el ID de la solicitud
-            const requestStatus = (slipData.request as any)?.status;
-            const hasReceivedItems = (slipData.received_items as any[])?.length > 0;
-            
-            // 2. Lógica de validación
-            if (requestStatus === 'Received' && hasReceivedItems) {
-                throw new Error("No se puede eliminar el albarán. La solicitud está en estado 'Recibido' y tiene artículos asociados. Utiliza la opción de Revertir Recepción.");
-            }
-            
-            // 3. Si hay ítems recibidos pero la solicitud NO está en 'Received', eliminamos los ítems primero.
-            if (hasReceivedItems) {
-                // Esto es una corrección de un registro de recepción que no completó la solicitud.
-                const { error: deleteItemsError } = await supabase
-                    .from('received_items')
-                    .delete()
-                    .eq('slip_id', slipId);
-                    
-                if (deleteItemsError) throw new Error(`No se pudieron quitar los artículos recibidos: ${deleteItemsError.message}`);
-            }
-            
-            // 4. Eliminar el registro del albarán (Packing Slip)
-            const { error: deleteError } = await supabase
-                .from('packing_slips')
-                .delete()
-                .eq('id', slipId);
-                
-            if (deleteError) throw new Error(deleteError.message);
-            
-            return { requestId, slipId }; // Devolver el ID de la solicitud y el ID del albarán
+            // Una sola función en la base de datos: descuenta del inventario lo que
+            // sumó el albarán y lo borra, todo o nada. Si la solicitud está recibida
+            // y el albarán tiene artículos, se niega (hay que revertir la recepción).
+            const { data, error } = await supabase.rpc('delete_packing_slip', { p_slip_id: slipId });
+            if (error) throw new Error(error.message);
+
+            const requestId = (data as { request_id: string }).request_id;
+            return { requestId, slipId };
         },
         onSuccess: ({ requestId, slipId }) => {
-            // Invalidación específica para la solicitud afectada
             queryClient.invalidateQueries({ queryKey: ['packingSlips', requestId] });
             queryClient.invalidateQueries({ queryKey: ['aggregatedReceivedItems', requestId] });
-            queryClient.invalidateQueries({ queryKey: ['receivedItemsBySlip', slipId] }); // CRÍTICO: Invalidar el detalle del albarán
-            queryClient.invalidateQueries({ queryKey: ['requests'] }); 
-            queryClient.invalidateQueries({ queryKey: ['inventory'] }); 
+            queryClient.invalidateQueries({ queryKey: ['receivedItemsBySlip', slipId] });
+            queryClient.invalidateQueries({ queryKey: ['requests'] });
+            queryClient.invalidateQueries({ queryKey: ['inventory'] });
+            invalidatePendingLists(queryClient);
             invalidateRequestEvents(queryClient);
             toast.success("Albarán eliminado.");
         },
         onError: (error) => {
-            // Mostrar el mensaje de error específico de la mutación
             toast.error("No se pudo eliminar el albarán.", { description: error.message });
         }
     });
@@ -283,169 +249,63 @@ export const useReceiveItems = () => {
   return useMutation({
     mutationFn: async (data: ReceiveItemsData) => {
       const { requestId, slipNumber, file, items } = data;
-      const receivedBy = session?.user?.id;
 
-      if (!receivedBy) throw new Error("El usuario debe iniciar sesión para recibir artículos.");
+      if (!session?.user?.id) throw new Error("El usuario debe iniciar sesión para recibir artículos.");
 
-      // Resolver sede: la del request, o la pasada por el diálogo
-      let sedeId = data.sedeId ?? null;
-      if (!sedeId) {
-        const { data: reqRow } = await supabase
-          .from("requests")
-          .select("sede_id, shipping_address_id")
-          .eq("id", requestId)
-          .maybeSingle();
-        sedeId = (reqRow as { sede_id?: string | null } | null)?.sede_id ?? null;
-        if (!sedeId && (reqRow as { shipping_address_id?: string | null } | null)?.shipping_address_id) {
-          const { data: addr } = await supabase
-            .from("shipping_addresses")
-            .select("sede_id")
-            .eq("id", (reqRow as { shipping_address_id: string }).shipping_address_id)
-            .maybeSingle();
-          sedeId = (addr as { sede_id?: string | null } | null)?.sede_id ?? null;
-        }
-      }
+      // El archivo se sube antes porque la recepción necesita su ruta; si la
+      // recepción falla se borra, para no dejar archivos sin albarán.
+      const slipFilePath = file ? await uploadSlipFile(requestId, file) : null;
 
-      let slipFilePath: string | null = null;
-      if (file) {
-        slipFilePath = await uploadSlipFile(requestId, file);
-      }
+      // Albarán, líneas, inventario y estado de la solicitud, en una sola
+      // transacción en la base de datos. Antes eran cuatro llamadas sueltas: un
+      // fallo a medias y un reintento duplicaban lo recibido y el inventario.
+      const { data: result, error } = await supabase.rpc('receive_items', {
+        p_request_id: requestId,
+        p_slip_number: slipNumber ?? '',
+        p_slip_url: slipFilePath,
+        p_sede_id: data.sedeId ?? null,
+        p_items: items.map((item) => ({
+          request_item_id: item.requestItemId,
+          quantity_received: item.quantityReceived,
+          storage_location: item.storageLocation ?? null,
+        })),
+      });
 
-      // 1. Insertar el Albarán (Packing Slip)
-      const { data: newSlip, error: slipError } = await supabase
-        .from('packing_slips')
-        .insert({
-            request_id: requestId,
-            slip_number: slipNumber.trim() || `SLIP-${Date.now()}`,
-            received_by: receivedBy,
-            slip_url: slipFilePath,
-        })
-        .select()
-        .single();
-
-      if (slipError) throw new Error(`No se pudo crear el albarán: ${slipError.message}`);
-      const primarySlipId = newSlip.id;
-
-      if (slipFilePath) {
-        await updateRequestSlipUrl(requestId, slipFilePath);
-      }
-
-      // 2. Insertar los Ítems Recibidos y actualizar el Inventario
-      const receivedItemInserts = items.map(item => ({
-        slip_id: primarySlipId,
-        request_item_id: item.requestItemId,
-        quantity_received: item.quantityReceived,
-      }));
-
-      const { error: receivedItemsError } = await supabase
-        .from('received_items')
-        .insert(receivedItemInserts);
-
-      if (receivedItemsError) throw new Error(`No se pudieron guardar los artículos recibidos: ${receivedItemsError.message}`);
-
-      // 3. Actualizar el Inventario (usando RPC para manejar la lógica de upsert)
-      for (const item of items) {
-        if (item.quantityReceived !== 0) {
-          const { error: inventoryError } = await supabase.rpc('add_or_update_inventory_item', {
-            product_name_in: item.itemDetails.product_name,
-            catalog_number_in: item.itemDetails.catalog_number,
-            brand_in: item.itemDetails.brand,
-            quantity_in: item.quantityReceived,
-            unit_price_in: item.itemDetails.unit_price,
-            format_in: item.itemDetails.format,
-            sede_id_in: sedeId,
-          });
-          if (inventoryError) throw new Error(`No se pudo actualizar el inventario para ${item.itemDetails.product_name}: ${inventoryError.message}`);
-
-          if (item.storageLocation) {
-            let locationQuery = supabase
-              .from('inventory')
-              .update({ location: item.storageLocation })
-              .eq('catalog_number', item.itemDetails.catalog_number)
-              .eq('product_name', item.itemDetails.product_name);
-            locationQuery = sedeId
-              ? locationQuery.eq('sede_id', sedeId)
-              : locationQuery.is('sede_id', null);
-            const { error: locationError } = await locationQuery;
-            if (locationError) {
-              console.error("Error updating inventory location:", locationError);
-            }
+      if (error) {
+        if (slipFilePath) {
+          try {
+            await supabase.storage.from('LabFlow').remove([slipFilePath]);
+          } catch (cleanupError) {
+            console.error("No se pudo borrar el albarán subido tras el fallo:", cleanupError);
           }
         }
-      }
-      
-      // 4. Verificar si la solicitud está completamente recibida y actualizar el estado
-      
-      // Obtener la solicitud completa con ítems
-      const { data: requestData, error: requestError } = await supabase
-        .from('requests')
-        .select(`
-          id,
-          status,
-          items:request_items (id, quantity)
-        `)
-        .eq('id', requestId)
-        .single();
-
-      if (requestError) throw new Error(`No se pudo comprobar la solicitud: ${requestError.message}`);
-
-      // Obtener el total recibido agregado (usando la misma lógica que el hook de fetch)
-      const { data: aggregatedReceived, error: aggError } = await supabase
-        .from('received_items')
-        .select(`
-          quantity_received,
-          request_item_id,
-          slip_id!inner (request_id)
-        `)
-        .eq('slip_id.request_id', requestId);
-
-      if (aggError) throw new Error(`No se pudo comprobar lo recibido: ${aggError.message}`);
-
-      const aggregation = (aggregatedReceived as any[]).reduce((acc, item) => {
-        const itemId = item.request_item_id;
-        acc[itemId] = (acc[itemId] || 0) + item.quantity_received;
-        return acc;
-      }, {} as Record<string, number>);
-
-      const allItemsReceived = requestData.items.every(item => {
-        const totalOrdered = item.quantity;
-        const totalReceived = aggregation[item.id] || 0;
-        return totalReceived >= totalOrdered;
-      });
-
-      if (allItemsReceived && requestData.status !== 'Received') {
-        // Actualizar el estado de la solicitud a 'Received'
-        const { error: statusUpdateError } = await supabase
-          .from('requests')
-          .update({ status: 'Received' as RequestStatus })
-          .eq('id', requestId);
-        
-        if (statusUpdateError) {
-          console.error("Error updating request status to Received:", statusUpdateError);
-          // No lanzamos un error fatal, solo registramos.
-        } else {
-          toast.info(`Solicitud ${requestId} recibida completamente! Estado actualizado.`);
-        }
+        throw new Error(error.message);
       }
 
-      // Invalidar consultas para forzar la verificación del estado completo
-      queryClient.invalidateQueries({ queryKey: ['requests'] });
-      queryClient.invalidateQueries({ queryKey: ['aggregatedReceivedItems', requestId] });
-      queryClient.invalidateQueries({ queryKey: ['packingSlips', requestId] });
-      queryClient.invalidateQueries({ queryKey: ['inventory'] });
-      invalidateRequestEvents(queryClient);
-
-      return newSlip;
+      return result as { id: string; request_id: string; slip_number: string; completa: boolean };
     },
-    onSuccess: (newSlip) => {
+    onSuccess: (result) => {
       toast.success(`Artículos recibidos.`, {
-        description: `Albarán ${newSlip.slip_number} registrado.`,
+        description: `Albarán ${result.slip_number} registrado.`,
       });
+      if (result.completa) {
+        toast.info("Solicitud recibida completamente. Estado actualizado.");
+      }
     },
     onError: (error) => {
       toast.error("No se pudo registrar la recepción del artículo.", {
         description: error.message,
       });
+    },
+    // Tanto si sale bien como si falla se vuelve a pedir lo recibido: tras un
+    // fallo el asistente seguía con cantidades «ya recibidas» desfasadas.
+    onSettled: (_result, _error, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['requests'] });
+      queryClient.invalidateQueries({ queryKey: ['aggregatedReceivedItems', variables.requestId] });
+      queryClient.invalidateQueries({ queryKey: ['packingSlips', variables.requestId] });
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
+      invalidatePendingLists(queryClient);
+      invalidateRequestEvents(queryClient);
     },
   });
 };
