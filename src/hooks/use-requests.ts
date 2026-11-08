@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { SupabaseRequest as SupabaseRequestType, SupabaseRequestItem as SupabaseRequestItemType, RequestItem, RequestStatus } from "@/data/types";
 import { toast } from "sonner";
 import { apiGetRequests, apiAddRequest, apiUpdateRequestStatus, apiDeleteRequest, apiAddInventoryItem, apiSendEmail, apiUpdateRequestFile, apiUpdateRequestMetadata, apiUpdateFullRequest, apiRevertRequestReception } from "@/integrations/api";
-import { invalidateRequestEvents } from "@/lib/activity";
+import { invalidateRequestEvents, invalidatePendingLists } from "@/lib/activity";
 import { getRequestStatusLabel } from "@/lib/request-status";
 
 export interface SupabaseRequestItem extends SupabaseRequestItemType {}
@@ -225,6 +225,7 @@ export const useRevertRequestReception = () => {
       queryClient.invalidateQueries({ queryKey: ["inventory"] });
       queryClient.invalidateQueries({ queryKey: ["packingSlips", requestId] });
       queryClient.invalidateQueries({ queryKey: ["aggregatedReceivedItems", requestId] });
+      invalidatePendingLists(queryClient);
       invalidateRequestEvents(queryClient);
       toast.success("Reversión de recepción exitosa!", {
         description: "Artículos eliminados del inventario y estado establecido a Pedido.",

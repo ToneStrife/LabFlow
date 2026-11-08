@@ -8,6 +8,16 @@ export function invalidateRequestEvents(queryClient: QueryClient) {
   queryClient.invalidateQueries({ queryKey: REQUEST_EVENTS_QUERY_KEY });
 }
 
+/**
+ * Los listados de «artículos pendientes» y «pendientes de facturar» llevan las
+ * solicitudes dentro de su clave, y una recepción parcial o una factura no
+ * cambian las solicitudes: sin esto el panel enseñaba datos viejos.
+ */
+export function invalidatePendingLists(queryClient: QueryClient) {
+  queryClient.invalidateQueries({ queryKey: ["allPendingItems"] });
+  queryClient.invalidateQueries({ queryKey: ["allPendingInvoices"] });
+}
+
 export type RequestEventType =
   | "created"
   | "status_changed"

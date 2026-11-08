@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import SlipUploadButton from "../SlipUploadButton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { useRevertRequestReception, useRequests, SupabaseRequest } from "@/hooks/use-requests";
+import { useCan } from "@/hooks/use-permissions";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useQueryClient } from "@tanstack/react-query";
@@ -116,6 +117,7 @@ const PackingSlipsList: React.FC<PackingSlipsListProps> = ({ requestId, requestN
   const deleteSlipMutation = useDeleteSlip();
   const revertReceptionMutation = useRevertRequestReception();
   const queryClient = useQueryClient();
+  const { can } = useCan();
 
   const [isGenerating, setIsGenerating] = React.useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
@@ -225,7 +227,7 @@ const PackingSlipsList: React.FC<PackingSlipsListProps> = ({ requestId, requestN
       <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between space-y-0 pb-2">
         <CardTitle className="text-base sm:text-lg">Albaranes de Recepción ({slips?.length || 0})</CardTitle>
         <div className="flex flex-wrap gap-2 w-full sm:w-auto sm:justify-end">
-            {isRequestReceived && (
+            {isRequestReceived && can('requests.override_status') && (
                 <Button 
                     variant="destructive" 
                     size="sm" 
