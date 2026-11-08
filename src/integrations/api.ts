@@ -17,6 +17,8 @@ import { buildAuthReturnUrl } from "@/lib/auth-redirect";
 import { esHostGmailSmtp, resolveSmtpUser } from "@/lib/smtp";
 import { uploadRequestFile } from "@/utils/upload-request-file";
 import { escapeHtml } from "@/utils/escape-html";
+import { mensajeDeErrorDeFuncion } from "@/utils/function-error";
+import { availableStatusNotifications } from "@/hooks/use-notification-preferences";
 import { InventoryItemFormData } from "@/hooks/use-inventory"; 
 
 interface FuzzySearchResult {
@@ -447,7 +449,10 @@ const getUserStatusPreferences = async (userId: string): Promise<RequestStatus[]
     if (error && error.code !== 'PGRST116') {
         return [];
     }
-    return data?.notified_statuses || [];
+    // Sin fila de preferencias (casi todos los perfiles) la pantalla enseña todos
+    // los estados marcados. Aquí antes se leía como «ninguno» y no llegaba ningún
+    // aviso hasta que la persona guardaba sus preferencias a mano.
+    return data?.notified_statuses ?? availableStatusNotifications;
 };
 
 /** Avisa del cambio de estado a quien lo tenga activado en sus preferencias. */
@@ -804,13 +809,7 @@ export const apiSendEmail = async (email: EmailData): Promise<void> => {
   });
 
   if (error) {
-    let errorMessage = 'No se pudo enviar el correo.';
-    if (data && typeof data === 'object' && 'error' in data) {
-        errorMessage = (data as any).error;
-    } else if (error.message) {
-        errorMessage = error.message;
-    }
-    throw new Error(errorMessage);
+    throw new Error(await mensajeDeErrorDeFuncion(error, data, 'No se pudo enviar el correo.'));
   }
 
   // La Edge Function puede devolver { error } con HTTP 200 en algunos casos.

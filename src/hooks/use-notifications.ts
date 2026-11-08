@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
+import { mensajeDeErrorDeFuncion } from '@/utils/function-error';
 
 interface SendNotificationData {
   user_ids?: string[]; // Lista de IDs de usuario a los que enviar (si está vacío, envía a todos)
@@ -27,13 +28,7 @@ export const useSendNotification = () => {
 
       if (error) {
         console.error("Error invoking send-notification:", error);
-        let errorMessage = 'No se pudo contactar con el servidor.';
-        if (data && typeof data === 'object' && 'error' in data) {
-            errorMessage = (data as any).error;
-        } else if (error.message) {
-            errorMessage = error.message;
-        }
-        throw new Error(errorMessage);
+        throw new Error(await mensajeDeErrorDeFuncion(error, data, 'No se pudo contactar con el servidor.'));
       }
       
       // La función Edge devuelve un objeto con 'results'
